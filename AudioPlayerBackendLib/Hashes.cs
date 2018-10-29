@@ -1,26 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace AudioPlayerBackendLib
+﻿namespace AudioPlayerBackendLib
 {
-    [DataContract]
     public struct Hashes
     {
-        [DataMember]
-        public int MediaSourcesHash { get; private set; }
+        public int MediaSourcesHash { get; set; }
 
-        [DataMember]
-        public int CurrentSongHash { get; private set; }
+        public int CurrentSongHash { get; set; }
 
-        [DataMember]
-        public int AllSongsHash { get; private set; }
+        public int AllSongsHash { get; set; }
 
-        [DataMember]
-        public int SearchSongsHash { get; private set; }
+        public int SearchSongsHash { get; set; }
 
         public Hashes(object mediaSources, object currentSong, object allSongs, object searchSongs) : this()
         {

@@ -5,24 +5,17 @@ using System.IO;
 
 namespace AudioPlayerBackendLib
 {
-    [DataContract]
     public struct Song : IEquatable<Song>
     {
         private const string seperator = " - ", unkownArtist = "Unkown";
 
-        [DataMember]
         public int Index { get; set; }
 
-        [DataMember]
-        public string Title { get; private set; }
+        public string Title { get; set; }
 
-        [DataMember]
-        public string Artist { get; private set; }
+        public string Artist { get; set; }
 
-        [DataMember]
-        public string FullPath { get; private set; }
-
-        public Uri Uri { get { return new Uri(FullPath); } }
+        public string FullPath { get; set; }
 
         public Song(string path)
         {
@@ -60,8 +53,7 @@ namespace AudioPlayerBackendLib
 
         public bool Equals(Song other)
         {
-            return Index == other.Index &&
-                   Title == other.Title &&
+            return Title == other.Title &&
                    Artist == other.Artist &&
                    FullPath == other.FullPath;
         }
@@ -69,7 +61,6 @@ namespace AudioPlayerBackendLib
         public override int GetHashCode()
         {
             var hashCode = -982487627;
-            hashCode = hashCode * -1521134295 + Index.GetHashCode();
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Title);
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Artist);
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(FullPath);

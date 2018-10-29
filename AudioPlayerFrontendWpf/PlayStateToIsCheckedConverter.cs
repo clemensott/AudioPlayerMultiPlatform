@@ -1,20 +1,21 @@
 ﻿using AudioPlayerBackendLib;
+using NAudio.Wave;
 using System;
 using System.Globalization;
 using System.Windows.Data;
 
 namespace AudioPlayerFrontendWpf
 {
-    class IsCheckedToPlayState : IValueConverter
+    class PlayStateToIsCheckedConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return (PlayState)value == PlayState.Play;
+            return (PlaybackState)value == PlaybackState.Playing;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return (bool)value ? PlayState.Play : PlayState.Pause;
+            return (bool)value ? PlaybackState.Playing : PlaybackState.Paused;
         }
     }
 }

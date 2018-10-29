@@ -1,171 +1,224 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Timers;
 using System.Windows;
-using System.Windows.Controls;
+using System.Windows.Threading;
+using NAudio.Wave;
 
 namespace AudioPlayerBackendLib
 {
-    public class AudioService : IAudioService
+    public class AudioService : AudioClient
     {
-        private static Instance instance;
+        private const int updateIntervall = 100;
+        private static Random ran = new Random();
 
-        private static Instance Instance
+        private bool isUpdatingPosition;
+        private readonly Timer timer;
+        private readonly IntPtr? windowHandle;
+        private readonly Player player;
+        private AudioFileReader reader;
+
+        public override IntPtr? WindowHandle { get { return windowHandle; } }
+
+        public AudioService(IntPtr? windowHandle = null)
         {
-            get
-            {
-                if (instance == null) instance = new Instance(false);
+            this.windowHandle = windowHandle;
 
-                return instance;
+            player = Player.GetPlayer(windowHandle);
+            player.PlaybackStopped += Player_PlaybackStopped;
+
+            timer = new Timer(updateIntervall);
+            timer.Elapsed += Timer_Elapsed;
+
+            Volume = player.Volume;
+        }
+
+        private static Dispatcher GetDefaultDispatcher()
+        {
+            if (Application.Current?.Dispatcher != null) return Application.Current.Dispatcher;
+
+            return Dispatcher.CurrentDispatcher;
+        }
+
+        private void Player_PlaybackStopped(object sender, StoppedEventArgs e)
+        {
+            if (e.Exception == null) SetNextSong();
+        }
+
+        private void Player_MediaEnded(object sender, EventArgs args)
+        {
+            SetNextSong();
+        }
+
+        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            isUpdatingPosition = true;
+
+            if (reader != null) Position = reader.CurrentTime;
+
+            isUpdatingPosition = false;
+        }
+
+        protected override void OnAllSongsShuffledChanged()
+        {
+            if (!AllSongsShuffled.Any()) CurrentSong = null;
+            else if (!CurrentSong.HasValue || !AllSongsShuffled.Contains(CurrentSong.Value))
+            {
+                CurrentSong = AllSongsShuffled.FirstOrDefault();
             }
         }
 
-        public void CloseInstance()
+        protected override void OnCurrentSongChanged()
         {
-            instance?.Dispose();
-            instance = null;
+            timer.Stop();
+
+            Task.Factory.StartNew(SetCurrentSong);
         }
 
-        public Song[] GetAllSongs()
+        private void SetCurrentSong()
         {
-            return Instance.AllSongs;
+            if (reader != null) player.DisposeReader(reader);
+
+            try
+            {
+                if (CurrentSong.HasValue)
+                {
+                    reader = new AudioFileReader(CurrentSong.Value.FullPath);
+                    player.Init(ToWaveProvider(reader));
+
+                    Duration = reader.TotalTime;
+                }
+                else
+                {
+                    reader = null;
+                    Format = null;
+                }
+            }
+            catch
+            {
+                reader = null;
+                Format = null;
+            }
+
+            EnableTimer();
         }
 
-        public Song GetCurrentSong()
+        protected virtual IWaveProvider ToWaveProvider(IWaveProvider waveProvider)
         {
-            return Instance.CurrentSong;
+            return waveProvider;
         }
 
-        public string GetDebugInfo()
+        protected override void OnMediaSourcesChanged()
         {
-            throw new NotImplementedException();
+            Reload();
         }
 
-        public TimeSpan GetDuration()
+        public override void Reload()
         {
-            Duration duration = Instance.Player.NaturalDuration;
-            return duration.HasTimeSpan ? duration.TimeSpan : TimeSpan.Zero;
+            Song[] allSongsShuffled = GetShuffledSongs(LoadAllSongs()).ToArray();
+
+            for (int i = 0; i < allSongsShuffled.Length; i++) allSongsShuffled[i].Index = i;
+
+            AllSongsShuffled = allSongsShuffled;
         }
 
-        public bool GetIsAllShuffle()
+        private IEnumerable<Song> LoadAllSongs()
         {
-            return Instance.IsAllShuffle;
+            try
+            {
+                IEnumerable<string> sourcePaths = MediaSources ?? Enumerable.Empty<string>();
+                IEnumerable<string> nonHiddenFiles = sourcePaths.SelectMany(LoadFilePaths).Where(IsNotHidden);
+
+                return nonHiddenFiles.Select(p => new Song(p));
+            }
+            catch
+            {
+                return Enumerable.Empty<Song>();
+            }
         }
 
-        public bool GetIsOnlySearch()
+        private IEnumerable<string> LoadFilePaths(string path)
         {
-            return Instance.IsOnlySearch;
+            if (File.Exists(path)) yield return path;
+
+            if (Directory.Exists(path))
+            {
+                foreach (string file in Directory.GetFiles(path)) yield return file;
+            }
         }
 
-        public bool GetIsSearchShuffle()
+        private bool IsNotHidden(string path)
         {
-            return Instance.IsSearchShuffle;
+            FileInfo file = new FileInfo(path);
+
+            return (file.Attributes & FileAttributes.Hidden) == 0;
         }
 
-        public MediaElement GetMediaElement()
+        private IEnumerable<Song> GetShuffledSongs(IEnumerable<Song> songs)
         {
-            if (instance == null) instance = new Instance(false);
-
-            return instance.Player;
+            return songs.OrderBy(s => ran.Next());
         }
 
-        public string[] GetMediaSources()
+        protected override void OnPlayStateChanged()
         {
-            return Instance.MediaSources;
+            player.PlayState = PlayState;
+
+            EnableTimer();
         }
 
-        public PlayState GetPlayState()
+        protected override void OnPositionChanged()
         {
-            return Instance.Player.LoadedBehavior.ToPlayState();
+            if (!isUpdatingPosition && reader != null) reader.CurrentTime = Position;
         }
 
-        public TimeSpan GetPositon()
+        private void EnableTimer()
         {
-            return Instance.Player.Position;
+            timer.Enabled = CurrentSong.HasValue && PlayState == PlaybackState.Playing;
         }
 
-        public string GetSearchKey()
+        protected override void OnServiceVolumeChanged()
         {
-            return Instance.SearchKey;
+            player.Volume = Volume;
         }
 
-        public Song[] GetSearchSongs()
+        protected override void OnDurationChanged()
         {
-            return Instance.SearchSongs;
         }
 
-        public States GetStates()
+        protected override void OnIsAllShuffleChanged()
         {
-            return new States(GetPositon(), GetDuration(), GetPlayState(), GetIsAllShuffle(), GetIsSearchShuffle(),
-                GetIsOnlySearch(), GetMediaSources(), GetCurrentSong(), GetAllSongs(), GetSearchSongs());
         }
 
-        public void Next()
+        protected override void OnIsSearchShuffleChanged()
         {
-            Instance.SetNextSong();
         }
 
-        public void Pause()
+        protected override void OnIsOnlySearchChanged()
         {
-            Instance.Player.LoadedBehavior = PlayState.Pause.ToMediaState();
         }
 
-        public void Play()
+        protected override void OnSearchKeyChanged()
         {
-            Instance.Player.LoadedBehavior = PlayState.Play.ToMediaState();
         }
 
-        public void Previous()
+        protected override void OnFormatChanged()
         {
-            Instance.SetPreviousSong();
         }
 
-        public void Refresh()
+        protected override void OnCurrentAudioDataChanged()
         {
-            Instance.Refresh();
         }
 
-        public void SetCurrentSong(Song song)
+        public override void Dispose()
         {
-            Instance.CurrentSong = song;
-        }
-
-        public void SetIsAllShuffle(bool isAllShuffle)
-        {
-            Instance.IsAllShuffle = isAllShuffle;
-        }
-
-        public void SetIsOnlySearch(bool isOnlySearch)
-        {
-            Instance.IsOnlySearch = isOnlySearch;
-        }
-
-        public void SetIsSearchShuffle(bool isSearchShuffle)
-        {
-            Instance.IsSearchShuffle = isSearchShuffle;
-        }
-
-        public void SetMediaSources(string[] sources)
-        {
-            Instance.MediaSources = sources;
-        }
-
-        public void SetPlayState(PlayState state)
-        {
-            Instance.Player.LoadedBehavior = state.ToMediaState();
-        }
-
-        public void SetPosition(TimeSpan position)
-        {
-            Instance.Player.Position = position;
-        }
-
-        public void SetSearchKey(string searchKey)
-        {
-            Instance.SearchKey = searchKey;
-        }
-
-        public void Stop()
-        {
-            Instance.Player.LoadedBehavior = PlayState.Stop.ToMediaState();
+            if (reader != null)
+            {
+                player.DisposeReader(reader);
+                reader = null;
+            }
         }
     }
 }

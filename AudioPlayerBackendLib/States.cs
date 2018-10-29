@@ -1,36 +1,27 @@
-﻿using System;
-using System.Runtime.Serialization;
+﻿using NAudio.Wave;
+using System;
 
 namespace AudioPlayerBackendLib
 {
-    [DataContract]
     public struct States
     {
-        [DataMember]
-        public TimeSpan Position { get; private set; }
+        public TimeSpan Position { get; set; }
 
-        [DataMember]
-        public TimeSpan Duration { get; private set; }
+        public TimeSpan Duration { get; set; }
 
-        [DataMember]
-        public PlayState PlayState { get; private set; }
+        public PlaybackState PlayState { get; set; }
 
-        [DataMember]
-        public bool IsAllShuffle { get; private set; }
+        public bool IsAllShuffle { get; set; }
 
-        [DataMember]
-        public bool IsSearchShuffle { get; private set; }
+        public bool IsSearchShuffle { get; set; }
 
-        [DataMember]
-        public bool IsOnlySearch { get; private set; }
+        public bool IsOnlySearch { get; set; }
 
-        [DataMember]
-        public string SearchKey { get; private set; }
+        public string SearchKey { get; set; }
 
-        [DataMember]
-        public Hashes Hashes { get; private set; }
+        public Hashes Hashes { get; set; }
 
-        public States(TimeSpan position, TimeSpan duration, PlayState playState, bool isAllShuffle, bool isSearchShuffle,
+        public States(TimeSpan position, TimeSpan duration, PlaybackState playState, bool isAllShuffle, bool isSearchShuffle,
             bool isOnlySearch, object mediaSources, object currentSong, object allSongs, object searchSongs) : this()
         {
             Position = position;
@@ -42,7 +33,7 @@ namespace AudioPlayerBackendLib
             Hashes = new Hashes(mediaSources.GetHashCode(), currentSong.GetHashCode(), allSongs.GetHashCode(), searchSongs.GetHashCode());
         }
 
-        public States(TimeSpan position, TimeSpan duration, PlayState playState, bool isAllShuffle, bool isSearchShuffle,
+        public States(TimeSpan position, TimeSpan duration, PlaybackState playState, bool isAllShuffle, bool isSearchShuffle,
             bool isOnlySearch, string searchKey, Hashes hashes) : this()
         {
             Position = position;
