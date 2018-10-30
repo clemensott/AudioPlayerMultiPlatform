@@ -10,6 +10,8 @@
 
     <Window.Resources>
         <con:InvertConverter x:Key="inverter"/>
+        <local:FloatNullableToFloatConverter x:Key="volCon"/>
+        <local:FloatNullableToFloatConverter x:Key="clientVolCon"/>
     </Window.Resources>
 
     <TabControl>
@@ -22,18 +24,21 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Orientation="Horizontal">
-                    <StackPanel>
-                        <RadioButton x:Name="rbnStandalone" Content="Standalone" Checked="RbnStandalone_Checked"/>
-                        <RadioButton x:Name="rbnServer" Content="Server" Checked="RbnServer_Checked"/>
-                        <RadioButton x:Name="rbnClient" Content="Client" Checked="RbnClient_Checked"/>
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,0,5">
+                        <RadioButton Content="Standalone" IsChecked="{Binding BuildStandalone,Mode=OneWay}"
+                                     Margin="5,5,0,0" Checked="RbnStandalone_Checked"/>
+                        <RadioButton Content="Server" IsChecked="{Binding BuildServer,Mode=OneWay}"
+                                     Margin="5,5,0,0" Checked="RbnServer_Checked"/>
+                        <RadioButton Content="Client" IsChecked="{Binding BuildClient,Mode=OneWay}"
+                                     Margin="5,5,0,0" Checked="RbnClient_Checked"/>
                     </StackPanel>
 
-                    <Grid Grid.Column="1" 
+                    <Grid Grid.Column="1" Margin="10,0,10,3" VerticalAlignment="Center"
                           IsEnabled="{Binding ElementName=rbnStandalone,Path=IsChecked,
                             Converter={StaticResource inverter}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto" MinWidth="50"/>
+                            <ColumnDefinition Width="Auto" MinWidth="100"/>
                         </Grid.ColumnDefinitions>
 
                         <Grid.RowDefinitions>
@@ -41,45 +46,99 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Text="Server:"/>
-                        <TextBlock Grid.Row="1" Text="Port:"/>
+                        <TextBlock Grid.Row="0" Text="Server:" Margin="3,3,0,0"/>
+                        <TextBlock Grid.Row="1" Text="Port:" Margin="3,3,0,0"/>
 
                         <TextBox Grid.Column="1" Grid.Row="0" Name="tbxServerAddress" 
-                                 Text="{Binding ServerAddress,Mode=TwoWay}"
+                                 Margin="3,3,0,0" Text="{Binding ServerAddress,Mode=TwoWay}"
                                  IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"/>
                         <TextBox Grid.Column="1" Grid.Row="1" Name="tbxPort" Text="1884"
-                                 TextChanged="TbxPort_TextChanged"/>
+                                 Margin="3,3,0,0" TextChanged="TbxPort_TextChanged"/>
                     </Grid>
 
-                    <StackPanel>
-                        <CheckBox Name="cbxPlay" Content="Play" IsChecked="{Binding Play,Mode=TwoWay}"
+                    <Grid VerticalAlignment="Center" Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto" MinWidth="100"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="5"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <CheckBox Grid.Column="0" Name="cbxPlay" Content="Play" 
+                                  IsChecked="{Binding Play,Mode=TwoWay}"
                                   MouseRightButtonUp="CbxPlay_MouseRightButtonUp"/>
-                        <Slider Name="sldVolume" Maximum="1" ValueChanged="SldVolume_ValueChanged"
+
+                        <TextBlock Grid.Column="1" Text="Volume:" HorizontalAlignment="Right"/>
+                        <Slider Grid.Column="2" Maximum="1" Width="100" Margin="3,0,0,0"
+                                Value="{Binding Volume,Mode=TwoWay,Converter={StaticResource volCon}}"
                                 MouseRightButtonUp="SldVolume_MouseRightButtonUp"/>
-                    </StackPanel>
 
-                    <StackPanel IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}">
-                        <CheckBox Name="cbxStreaming" Content="IsStreaming"
+                        <CheckBox Grid.ColumnSpan="2" Grid.Row="2" Content="Stream to client:"
                                   IsChecked="{Binding IsStreaming,Mode=TwoWay}"
+                                  IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"
                                   MouseRightButtonUp="CbxStreaming_MouseRightButtonUp"/>
-                        <Slider Name="sldClientVolume" Maximum="1"
-                                ValueChanged="SldClientVolume_ValueChanged"
+                        <Slider Grid.Column="2" Grid.Row="2" Maximum="1" Margin="3,0,0,0"  Width="100"
+                                IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"
+                                Value="{Binding Volume,Mode=TwoWay,Converter={StaticResource clientVolCon}}"
                                 MouseRightButtonUp="SldClientVolume_MouseRightButtonUp"/>
-                    </StackPanel>
+                    </Grid>
                 </StackPanel>
-                
-                <TextBox Grid.Row="1" Name="tbxMediaSources" AcceptsReturn="True"
-                         TextChanged="TbxMediaSources_TextChanged"/>
 
-                <StackPanel Grid.Row="2" Orientation="Horizontal">
-                    <CheckBox Name="cbxIfNon" Content="If non" IsChecked="{Binding IfNon,Mode=TwoWay}"/>
-                    <CheckBox Name="cbxReload" Content="Reload" IsChecked="{Binding Reload,Mode=TwoWay}"/>
+                <TextBox Grid.Row="1" AcceptsReturn="True" Margin="5,0"/>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="5">
+                    <CheckBox Name="cbxIfNon" Content="Only use if none given" IsChecked="{Binding IfNon,Mode=TwoWay}"/>
+                    <CheckBox Name="cbxReload" Content="Reload" Margin="10,0,0,0"
+                              IsChecked="{Binding Reload,Mode=TwoWay}"/>
                 </StackPanel>
             </Grid>
         </TabItem>
-        
-        <TabItem Name="timHotKeys" Header="Hotkeys">
 
+        <TabItem Name="timHotKeys" Header="Hotkeys">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto" MinWidth="150"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Toggle playback" Margin="5,5,0,0"/>
+                <local:HotKeyBox Grid.Column="1" Grid.Row="0" Margin="15,5,0,0"
+                                 HotKey="{Binding Toggle,Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="1" Text="Next song" Margin="5,5,0,0"/>
+                <local:HotKeyBox Grid.Column="1" Grid.Row="1" Margin="15,5,0,0"
+                                 HotKey="{Binding Next,Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="2" Text="Previous song" Margin="5,5,0,0"/>
+                <local:HotKeyBox Grid.Column="1" Grid.Row="2" Margin="15,5,0,0"
+                                 HotKey="{Binding Previous,Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="3" Text="Play" Margin="5,5,0,0"/>
+                <local:HotKeyBox Grid.Column="1" Grid.Row="3" Margin="15,5,0,0"
+                                 HotKey="{Binding Play,Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="4" Text="Pause" Margin="5,5,0,0"/>
+                <local:HotKeyBox Grid.Column="1" Grid.Row="4" Margin="15,5,0,0"
+                                 HotKey="{Binding Pause,Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="5" Text="Restart song" Margin="5,5,0,0"/>
+                <local:HotKeyBox Grid.Column="1" Grid.Row="5" Margin="15,5,0,0"
+                                 HotKey="{Binding Restart,Mode=TwoWay}"/>
+            </Grid>
         </TabItem>
     </TabControl>
 </Window>

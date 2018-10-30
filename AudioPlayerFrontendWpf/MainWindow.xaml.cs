@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 
@@ -16,9 +17,6 @@ namespace AudioPlayerFrontendWpf
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const string hotKeyFileName = "hotkeys.txt",
-            previousKey = "Previous=", playPauseKey = "PlayPause=", nextKey = "Next=";
-
         private ViewModel viewModel;
         private HotKeys hotKeys;
         private WidthService widthService;
@@ -26,6 +24,16 @@ namespace AudioPlayerFrontendWpf
         public MainWindow()
         {
             InitializeComponent();
+
+            widthService = new WidthService(tblTitle, tblArtist, cdSong, sldPosition);
+
+            var dpd = DependencyPropertyDescriptor.FromProperty(ItemsControl.ItemsSourceProperty, typeof(ListBox));
+            dpd.AddValueChanged(lbxSongs, OnItemsSourceChanged);
+        }
+
+        private void OnItemsSourceChanged(object sender, EventArgs e)
+        {
+            Scroll();
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -38,10 +46,7 @@ namespace AudioPlayerFrontendWpf
                     .WithArgs(args)
                     .WithWindowHandler(windowHandle);
 
-                viewModel = new ViewModel(await serviceBuilder.Build());
-                viewModel.PropertyChanged += ViewModel_PropertyChanged;
-
-                DataContext = viewModel;
+                DataContext = viewModel = new ViewModel(await serviceBuilder.Build());
             }
             catch (Exception exc)
             {
@@ -67,28 +72,6 @@ namespace AudioPlayerFrontendWpf
             catch (Exception exc)
             {
                 MessageBox.Show(Utils.Convert(exc), "Building hotkeys", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-
-            widthService = new WidthService(tblTitle, tblArtist, cdSong, cdSlider);
-            widthService.Reset();
-        }
-
-        private void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            switch (e.PropertyName)
-            {
-                case nameof(viewModel.CurrentSong):
-                    widthService.Reset();
-
-                    if (lbxSongs.Items.Contains(viewModel.CurrentSong)) lbxSongs.ScrollIntoView(viewModel.CurrentSong);
-                    break;
-
-                case nameof(viewModel.ViewSongs):
-                    if (!viewModel.CurrentSong.HasValue) break;
-
-                    if (lbxSongs.Items.Contains(viewModel.CurrentSong.Value)) lbxSongs.ScrollIntoView(viewModel.CurrentSong.Value);
-                    else if (lbxSongs.Items.Count > 0) lbxSongs.ScrollIntoView(lbxSongs.Items[0]);
-                    break;
             }
         }
 
@@ -118,11 +101,6 @@ namespace AudioPlayerFrontendWpf
         private void Refresh_Click(object sender, RoutedEventArgs e)
         {
             viewModel.Reload();
-        }
-
-        private void Grid_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            widthService?.Update();
         }
 
         private void OnPrevious(object sender, EventArgs e)
@@ -187,8 +165,22 @@ namespace AudioPlayerFrontendWpf
             if (service != viewModel.Parent)
             {
                 viewModel.Dispose();
+
                 DataContext = viewModel = new ViewModel(service);
             }
+
+            hotKeys = window.HotKeysBuilder.Build();
+        }
+
+        private void lbxSongs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Scroll();
+        }
+
+        private void Scroll()
+        {
+            if (lbxSongs.SelectedItem != null) lbxSongs.ScrollIntoView(lbxSongs.SelectedItem);
+            else if (lbxSongs.Items.Count > 0) lbxSongs.ScrollIntoView(lbxSongs.Items[0]);
         }
 
         private void Restart()

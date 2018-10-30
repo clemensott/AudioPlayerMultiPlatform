@@ -62,6 +62,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="FilePathsToSingleStringConverter.cs" />
+    <Compile Include="FloatNullableToFloatConverter.cs" />
+    <Compile Include="HotKeyBox.xaml.cs">
+      <DependentUpon>HotKeyBox.xaml</DependentUpon>
+    </Compile>
     <Compile Include="HotKeysBuilder.cs" />
     <Compile Include="HotKeys.cs" />
     <Compile Include="ServiceBuilder.cs" />
@@ -70,6 +75,10 @@
     </Compile>
     <Compile Include="ViewModel.cs" />
     <Compile Include="WidthService.cs" />
+    <Page Include="HotKeyBox.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

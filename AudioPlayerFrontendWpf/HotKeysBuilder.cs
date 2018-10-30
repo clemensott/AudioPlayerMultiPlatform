@@ -2,15 +2,88 @@
 using StdOttWpfLib.Hotkey;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows.Input;
 
 namespace AudioPlayerFrontendWpf
 {
-    public class HotKeysBuilder
+    public class HotKeysBuilder : INotifyPropertyChanged
     {
         private HotKey toggle, next, previous, play, pause, restart;
         private HotKeys hotKeys;
+
+        public HotKey Toggle
+        {
+            get { return toggle; }
+            set
+            {
+                if (value == toggle) return;
+
+                toggle = value;
+                OnPropertyChanged(nameof(Toggle));
+            }
+        }
+
+        public HotKey Next
+        {
+            get { return next; }
+            set
+            {
+                if (value == next) return;
+
+                next = value;
+                OnPropertyChanged(nameof(Next));
+            }
+        }
+
+        public HotKey Previous
+        {
+            get { return previous; }
+            set
+            {
+                if (value == previous) return;
+
+                previous = value;
+                OnPropertyChanged(nameof(Previous));
+            }
+        }
+
+        public HotKey Play
+        {
+            get { return play; }
+            set
+            {
+                if (value == play) return;
+
+                play = value;
+                OnPropertyChanged(nameof(Play));
+            }
+        }
+
+        public HotKey Pause
+        {
+            get { return pause; }
+            set
+            {
+                if (value == pause) return;
+
+                pause = value;
+                OnPropertyChanged(nameof(Pause));
+            }
+        }
+
+        public HotKey Restart
+        {
+            get { return restart; }
+            set
+            {
+                if (value == restart) return;
+
+                restart = value;
+                OnPropertyChanged(nameof(Restart));
+            }
+        }
 
         public HotKeysBuilder WithHotKeys(HotKeys hotKeys)
         {
@@ -126,6 +199,13 @@ namespace AudioPlayerFrontendWpf
             if (restart != null) hotKeys.Restart = restart;
 
             return hotKeys;
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private void OnPropertyChanged(string name)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

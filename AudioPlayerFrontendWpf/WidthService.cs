@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -16,19 +13,37 @@ namespace AudioPlayerFrontendWpf
 
         private Behavior state;
         private TextBlock tblTitle, tblArtist;
-        private ColumnDefinition cdSong, cdSlider;
+        private ColumnDefinition cdSong;
+        private FrameworkElement slider;
 
-        public WidthService(TextBlock tblTitle, TextBlock tblArtist, ColumnDefinition cdSong, ColumnDefinition cdSlider)
+        public WidthService(TextBlock tblTitle, TextBlock tblArtist, ColumnDefinition cdSong, FrameworkElement slider)
         {
             this.tblTitle = tblTitle;
             this.tblArtist = tblArtist;
             this.cdSong = cdSong;
-            this.cdSlider = cdSlider;
+            this.slider = slider;
+
+            var tblDPD = DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
+            tblDPD.AddValueChanged(tblTitle, OnReset);
+            tblDPD.AddValueChanged(tblArtist, OnReset);
+
+            var cdDPD = DependencyPropertyDescriptor.FromProperty(FrameworkElement.ActualWidthProperty, typeof(FrameworkElement));
+            cdDPD.AddValueChanged(slider, OnUpdate);
+        }
+
+        private void OnReset(object sender, EventArgs e)
+        {
+            Reset();
+        }
+
+        private void OnUpdate(object sender, EventArgs e)
+        {
+            Update();
         }
 
         public void Reset()
         {
-            double rawWidth = cdSong.ActualWidth + cdSlider.ActualWidth;
+            double rawWidth = cdSong.ActualWidth + slider.ActualWidth;
 
             tblTitle.TextWrapping = TextWrapping.NoWrap;
             tblArtist.TextWrapping = TextWrapping.NoWrap;
@@ -41,13 +56,14 @@ namespace AudioPlayerFrontendWpf
                 tblTitle.TextWrapping = TextWrapping.Wrap;
                 tblArtist.TextWrapping = TextWrapping.Wrap;
 
-                maxSongWidth = WidthSmallerThan(rawWidth - sliderTargetWidth);
-
-                if (maxSongWidth >= songTitleArtistMinWidth) state = Behavior.Medium;
+                if (rawWidth - sliderTargetWidth >= songTitleArtistMinWidth)
+                {
+                    maxSongWidth = WidthSmallerThan(rawWidth - sliderTargetWidth);
+                    state = Behavior.Medium;
+                }
                 else
                 {
                     maxSongWidth = WidthSmallerThan(songTitleArtistMinWidth);
-
                     state = Behavior.Small;
                 }
             }
@@ -60,7 +76,7 @@ namespace AudioPlayerFrontendWpf
                 message += "\r\ntblTitle: " + tblTitle.ActualWidth;
                 message += "\r\ntblArtist: " + tblArtist.ActualWidth;
                 message += "\r\ncdSong: " + cdSong.ActualWidth;
-                message += "\r\ncdSlider: " + cdSlider.ActualWidth;
+                message += "\r\ncdSlider: " + slider.ActualWidth;
 
                 MessageBox.Show(message, "WidthService.Reset");
 
@@ -68,9 +84,6 @@ namespace AudioPlayerFrontendWpf
             }
 
             cdSong.Width = new GridLength(maxSongWidth);
-            cdSlider.Width = new GridLength(1, GridUnitType.Star);
-
-            //System.Diagnostics.Debug.WriteLine(state + ": " + maxSongWidth);
         }
 
         public void Update()
@@ -78,7 +91,7 @@ namespace AudioPlayerFrontendWpf
             switch (state)
             {
                 case Behavior.Big:
-                    if (cdSlider.ActualWidth <= sliderTargetWidth) Reset();
+                    if (slider.ActualWidth <= sliderTargetWidth) Reset();
                     return;
 
                 case Behavior.Medium:
@@ -86,7 +99,7 @@ namespace AudioPlayerFrontendWpf
                     return;
 
                 case Behavior.Small:
-                    if (cdSlider.ActualWidth > sliderTargetWidth) Reset();
+                    if (slider.ActualWidth > sliderTargetWidth) Reset();
                     return;
             }
         }

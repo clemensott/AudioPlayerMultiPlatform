@@ -49,7 +49,8 @@
         </Grid>
 
         <ListBox Grid.Row="1" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
-                 ItemsSource="{Binding ViewSongs}" SelectedItem="{Binding CurrentViewSong}">
+                 ItemsSource="{Binding ViewSongs}" SelectedItem="{Binding CurrentViewSong}"
+                 SelectionChanged="lbxSongs_SelectionChanged">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Grid Margin="3">
@@ -81,7 +82,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto" Name="cdSong"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*" Name="cdSlider"/>
+                <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
