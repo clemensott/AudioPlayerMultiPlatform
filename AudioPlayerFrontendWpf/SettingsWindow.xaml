@@ -25,11 +25,14 @@
 
                 <StackPanel Orientation="Horizontal">
                     <StackPanel VerticalAlignment="Center" Margin="0,0,0,5">
-                        <RadioButton Content="Standalone" IsChecked="{Binding BuildStandalone,Mode=OneWay}"
+                        <RadioButton x:Name="rbnStandalone" Content="Standalone" 
+                                     IsChecked="{Binding BuildStandalone,Mode=OneWay}"
                                      Margin="5,5,0,0" Checked="RbnStandalone_Checked"/>
-                        <RadioButton Content="Server" IsChecked="{Binding BuildServer,Mode=OneWay}"
+                        <RadioButton x:Name="rbnServer" Content="Server" 
+                                     IsChecked="{Binding BuildServer,Mode=OneWay}"
                                      Margin="5,5,0,0" Checked="RbnServer_Checked"/>
-                        <RadioButton Content="Client" IsChecked="{Binding BuildClient,Mode=OneWay}"
+                        <RadioButton x:Name="rbnClient" Content="Client" 
+                                     IsChecked="{Binding BuildClient,Mode=OneWay}"
                                      Margin="5,5,0,0" Checked="RbnClient_Checked"/>
                     </StackPanel>
 
