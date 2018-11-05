@@ -130,7 +130,7 @@ namespace AudioPlayerBackendLib
                     MqttApplicationMessage message = new MqttApplicationMessage()
                     {
                         Topic = "Debug",
-                        Payload = Encoding.UTF8.GetBytes(Utils.Convert(e)),
+                        Payload = Encoding.UTF8.GetBytes(Utils.GetTypeMessageAndStack(e)),
                         QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce,
                         Retain = true
                     };
@@ -178,16 +178,16 @@ namespace AudioPlayerBackendLib
             Publish(nameof(AllSongsShuffled), queue);
         }
 
-        protected override void OnCurrentAudioDataChanged()
+        protected override void OnAudioDataChanged()
         {
-            base.OnCurrentAudioDataChanged();
+            base.OnAudioDataChanged();
 
-            PublishCurrentAudioData();
+            PublishAudioData();
         }
 
-        private void PublishCurrentAudioData()
+        private void PublishAudioData()
         {
-            Publish(nameof(CurrentAudioData), CurrentAudioData, MqttQualityOfServiceLevel.AtMostOnce);
+            Publish(nameof(AudioData), AudioData, MqttQualityOfServiceLevel.AtMostOnce);
         }
 
         protected override void OnCurrentSongChanged()
@@ -357,7 +357,6 @@ namespace AudioPlayerBackendLib
 
         protected override IWaveProvider ToWaveProvider(IWaveProvider waveProvider)
         {
-            return base.ToWaveProvider(waveProvider);
             if (this.waveProvider != null) this.waveProvider.ReadEvent -= WaveProvider_Read;
 
             Format = waveProvider.WaveFormat;
@@ -370,7 +369,7 @@ namespace AudioPlayerBackendLib
 
         private void WaveProvider_Read(object sender, WaveProviderReadEventArgs e)
         {
-            Task.Factory.StartNew(() => CurrentAudioData = e.Buffer.Skip(e.Offset).Take(e.ReturnCount).ToArray());
+            Task.Factory.StartNew(() => AudioData = e.Buffer.Skip(e.Offset).Take(e.ReturnCount).ToArray());
         }
 
         public async override void Dispose()

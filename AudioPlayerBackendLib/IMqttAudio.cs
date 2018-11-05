@@ -9,7 +9,7 @@ namespace AudioPlayerBackendLib
 
         WaveFormat Format { get; set; }
 
-        byte[] CurrentAudioData { get; set; }
+        byte[] AudioData { get; set; }
 
         Task OpenAsync();
 

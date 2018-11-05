@@ -16,7 +16,7 @@ namespace AudioPlayerBackendLib
         protected Song? currentSong;
         protected Song[] allSongsShuffled;
         protected WaveFormat format;
-        protected byte[] currentAudioData;
+        protected byte[] audioData;
         protected float serviceVolume;
 
         public TimeSpan Position
@@ -127,7 +127,7 @@ namespace AudioPlayerBackendLib
             get { return mediaSources; }
             set
             {
-                if (value.NullOrSequenceEqual(mediaSources)) return;
+                if (value.BothNullOrSequenceEqual(mediaSources)) return;
 
                 mediaSources = value;
                 OnMediaSourcesChanged();
@@ -153,7 +153,7 @@ namespace AudioPlayerBackendLib
             get { return allSongsShuffled; }
             set
             {
-                if (value.NullOrSequenceEqual(allSongsShuffled)) return;
+                if (value.BothNullOrSequenceEqual(allSongsShuffled)) return;
 
                 allSongsShuffled = value;
 
@@ -179,16 +179,16 @@ namespace AudioPlayerBackendLib
             }
         }
 
-        public byte[] CurrentAudioData
+        public byte[] AudioData
         {
-            get { return currentAudioData; }
+            get { return audioData; }
             set
             {
-                if (value.NullOrSequenceEqual(currentAudioData)) return;
+                if (value.BothNullOrSequenceEqual(audioData)) return;
 
-                currentAudioData = value;
-                OnCurrentAudioDataChanged();
-                OnPropertyChanged(nameof(CurrentAudioData));
+                audioData = value;
+                OnAudioDataChanged();
+                OnPropertyChanged(nameof(AudioData));
             }
         }
 
@@ -214,7 +214,6 @@ namespace AudioPlayerBackendLib
         public AudioClient()
         {
             playState = PlaybackState.Stopped;
-            isAllShuffle = true;
             mediaSources = new string[0];
             allSongsShuffled = new Song[0];
         }
@@ -241,7 +240,7 @@ namespace AudioPlayerBackendLib
 
         protected abstract void OnFormatChanged();
 
-        protected abstract void OnCurrentAudioDataChanged();
+        protected abstract void OnAudioDataChanged();
 
         protected abstract void OnServiceVolumeChanged();
 

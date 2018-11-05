@@ -34,11 +34,11 @@ namespace AudioPlayerBackendLib
                 if (value)
                 {
                     client.SubscribeAsync(nameof(Format), MqttQualityOfServiceLevel.AtLeastOnce);
-                    client.SubscribeAsync(nameof(CurrentAudioData), MqttQualityOfServiceLevel.AtMostOnce);
+                    client.SubscribeAsync(nameof(AudioData), MqttQualityOfServiceLevel.AtMostOnce);
                 }
                 else
                 {
-                    client.UnsubscribeAsync(nameof(CurrentAudioData));
+                    client.UnsubscribeAsync(nameof(AudioData));
                     client.UnsubscribeAsync(nameof(Format));
                 }
 
@@ -116,7 +116,7 @@ namespace AudioPlayerBackendLib
         {
             await client.UnsubscribeAsync(GetTopicFilters().Select(tp => tp.Topic));
             await client.UnsubscribeAsync(nameof(Format));
-            await client.UnsubscribeAsync(nameof(CurrentAudioData));
+            await client.UnsubscribeAsync(nameof(AudioData));
             await client.DisconnectAsync();
         }
 
@@ -151,8 +151,8 @@ namespace AudioPlayerBackendLib
                         AllSongsShuffled = queue.DequeueSongs();
                         break;
 
-                    case nameof(CurrentAudioData):
-                        CurrentAudioData = queue;
+                    case nameof(AudioData):
+                        AudioData = queue;
                         break;
 
                     case nameof(CurrentSong):
@@ -207,7 +207,7 @@ namespace AudioPlayerBackendLib
                     MqttApplicationMessage message = new MqttApplicationMessage()
                     {
                         Topic = "Debug",
-                        Payload = Encoding.UTF8.GetBytes(Utils.Convert(exc)),
+                        Payload = Encoding.UTF8.GetBytes(Utils.GetTypeMessageAndStack(exc)),
                         QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce,
                         Retain = true
                     };
@@ -320,12 +320,13 @@ namespace AudioPlayerBackendLib
             }
             else return;
 
+            System.Diagnostics.Debug.WriteLine("OnFormatChanged");
             player.Init(buffer);
         }
 
-        protected override void OnCurrentAudioDataChanged()
+        protected override void OnAudioDataChanged()
         {
-            if (buffer != null) buffer.AddSamples(CurrentAudioData, 0, CurrentAudioData.Length);
+            if (buffer != null) buffer.AddSamples(AudioData, 0, AudioData.Length);
 
             player.PlayState = PlaybackState.Playing;
         }

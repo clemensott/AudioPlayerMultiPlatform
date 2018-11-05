@@ -15,6 +15,8 @@
     <Window.Resources>
         <local:PlayStateToIsCheckedConverter x:Key="isPlayingCon"/>
         <con:TimeSpanToStringConverter x:Key="timeCon"/>
+        <local:ToIAudioClientConverter x:Key="toClientCon"/>
+        <con:IsValueToTwoValueConverter x:Key="isClientCon" EqualsValue="Collapsed" NotEqualsValue="Visible"/>
     </Window.Resources>
 
     <Grid Name="mainGrid" Margin="5">
@@ -22,31 +24,37 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="0"/>
         </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <TextBox Name="tbxSearch" HorizontalAlignment="Stretch"
-                     Text="{Binding SearchKey,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
-                     KeyDown="TbxSearch_KeyDown"/>
-
-            <CheckBox Grid.Column="1" Margin="5,0,0,0" Content="PlayOnlySearch" VerticalAlignment="Center"
+        <WrapPanel Margin="5,3">
+            <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
+                <TextBlock Text="Search:" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                <TextBox Name="tbxSearch" HorizontalAlignment="Stretch" MinWidth="200"
+                         Text="{Binding SearchKey,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+                         KeyDown="TbxSearch_KeyDown"/>
+            </StackPanel>
+            
+            <CheckBox Margin="5,3" Content="PlayOnlySearch" VerticalAlignment="Center"
                       IsChecked="{Binding IsOnlySearch,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
-            <CheckBox Grid.Column="2" Margin="5,0,0,0" Content="Shuffle" VerticalAlignment="Center"
+            <CheckBox Margin="5,3" Content="Shuffle" VerticalAlignment="Center"
                       IsChecked="{Binding IsShuffle,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
-            <Button Grid.Column="3" Margin="5,0,0,0" Content="Refresh" Width="100" Click="Refresh_Click"/>
-            <Slider Grid.Column="4" Margin="5,0,0,0" Maximum="1" Value="{Binding Volume}" Width="100"/>
-            <Button Grid.Column="5" Content="Settings" Click="BtnSettings_Click"/>
-        </Grid>
+
+            <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
+                <TextBlock Text="Volume:" VerticalAlignment="Center" Margin="0,-3,5,0"/>
+                <Slider Maximum="1" Value="{Binding Volume}" Width="100" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center"
+                        DataContext="{Binding Parent,Converter={StaticResource toClientCon}}"
+                        Visibility="{Binding Converter={StaticResource isClientCon}}">
+                <CheckBox Content="Stream" VerticalAlignment="Center" HorizontalAlignment="Right"
+                          Margin="0,0,5,0" IsChecked="{Binding IsStreaming,Mode=TwoWay}"/>
+                <Slider Maximum="1" Value="{Binding ClientVolume}" Width="100" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <Button Margin="5,3" Content="Reload" Width="100" Click="Reload_Click"/>
+            <Button Margin="5,3" Content="Settings" Width="100" Click="BtnSettings_Click"/>
+        </WrapPanel>
 
         <ListBox Grid.Row="1" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
                  ItemsSource="{Binding ViewSongs}" SelectedItem="{Binding CurrentViewSong}"
@@ -75,7 +83,7 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <Grid Grid.Row="2" SizeChanged="Grid_SizeChanged">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>

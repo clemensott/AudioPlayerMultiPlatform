@@ -7,6 +7,7 @@ using System.Timers;
 using System.Windows;
 using System.Windows.Threading;
 using NAudio.Wave;
+using StdOttWpfLib;
 
 namespace AudioPlayerBackendLib
 {
@@ -129,7 +130,7 @@ namespace AudioPlayerBackendLib
         {
             try
             {
-                IEnumerable<string> sourcePaths = MediaSources ?? Enumerable.Empty<string>();
+                IEnumerable<string> sourcePaths = MediaSources.ToNotNull();
                 IEnumerable<string> nonHiddenFiles = sourcePaths.SelectMany(LoadFilePaths).Where(IsNotHidden);
 
                 return nonHiddenFiles.Select(p => new Song(p));
@@ -208,12 +209,14 @@ namespace AudioPlayerBackendLib
         {
         }
 
-        protected override void OnCurrentAudioDataChanged()
+        protected override void OnAudioDataChanged()
         {
         }
 
         public override void Dispose()
         {
+            player.PlaybackStopped -= Player_PlaybackStopped;
+
             if (reader != null)
             {
                 player.DisposeReader(reader);

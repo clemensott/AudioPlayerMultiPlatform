@@ -1,11 +1,9 @@
 ﻿using System;
-using System.ComponentModel;
-using System.Threading.Tasks;
 using NAudio.Wave;
 
 namespace AudioPlayerBackendLib
 {
-    public interface IAudio : INotifyPropertyChanged
+    public interface IAudio
     {
         Song[] AllSongsShuffled { get; set; }
 

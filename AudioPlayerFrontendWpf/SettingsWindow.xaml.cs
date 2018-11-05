@@ -44,6 +44,9 @@ namespace AudioPlayerFrontendWpf
 
             if (serviceBuilder.BuildServer) tbxPort.Text = serverPortConverter.Convert(serviceBuilder.ServerPort);
             else if (serviceBuilder.BuildClient) tbxPort.Text = clientPortConverter.Convert(serviceBuilder.ClientPort);
+            else tbxPort.Text = "1884";
+
+            if (string.IsNullOrWhiteSpace(ServiceBuilder.ServerAddress)) ServiceBuilder.ServerAddress = "127.0.0.1";
         }
 
         private void RbnStandalone_Checked(object sender, RoutedEventArgs e)
@@ -53,17 +56,17 @@ namespace AudioPlayerFrontendWpf
 
         private void RbnServer_Checked(object sender, RoutedEventArgs e)
         {
-            ServiceBuilder.WithServer(serverPortConverter.CurrentValue);
+            ServiceBuilder.WithServer(serverPortConverter.Value);
         }
 
         private void RbnClient_Checked(object sender, RoutedEventArgs e)
         {
-            ServiceBuilder.WithClient(tbxServerAddress.Text, clientPortConverter.CurrentValue);
+            ServiceBuilder.WithClient(tbxServerAddress.Text, clientPortConverter.Value);
         }
 
         private void TbxPort_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (!IsLoaded) return;
+            if (ServiceBuilder == null) return;
 
             ServiceBuilder.ServerPort = serverPortConverter.ConvertBack(tbxPort.Text);
             ServiceBuilder.ClientPort = clientPortConverter.ConvertBack(tbxPort.Text);
@@ -84,46 +87,24 @@ namespace AudioPlayerFrontendWpf
             ServiceBuilder.IsStreaming = null;
         }
 
-        private void SldClientVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (!IsLoaded) return;
-
-            ServiceBuilder.ClientVolume = (float)e.NewValue;
-        }
-
         private void SldClientVolume_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             ServiceBuilder.ClientVolume = null;
         }
 
-        private void TbxToggle_KeyUp(object sender, KeyEventArgs e)
+        private void CbxAllShuffle_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            
+            ServiceBuilder.IsAllShuffle = null;
         }
 
-        private void TbxNext_KeyUp(object sender, KeyEventArgs e)
+        private void CbxSearchShuffle_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-
+            ServiceBuilder.IsSearchShuffle = null;
         }
 
-        private void TbxPrevious_KeyUp(object sender, KeyEventArgs e)
+        private void CbxOnlySearch_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-
-        }
-
-        private void TbxPlay_KeyUp(object sender, KeyEventArgs e)
-        {
-
-        }
-
-        private void TbxPause_KeyUp(object sender, KeyEventArgs e)
-        {
-
-        }
-
-        private void TbxRestart_KeyUp(object sender, KeyEventArgs e)
-        {
-
+            ServiceBuilder.IsOnlySearch = null;
         }
     }
 }

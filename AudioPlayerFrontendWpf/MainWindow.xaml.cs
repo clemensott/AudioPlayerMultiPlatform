@@ -50,7 +50,7 @@ namespace AudioPlayerFrontendWpf
             }
             catch (Exception exc)
             {
-                MessageBox.Show(Utils.Convert(exc), "Building service", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(Utils.GetTypeMessageAndStack(exc), "Building service", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
 
@@ -71,7 +71,7 @@ namespace AudioPlayerFrontendWpf
             }
             catch (Exception exc)
             {
-                MessageBox.Show(Utils.Convert(exc), "Building hotkeys", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(Utils.GetTypeMessageAndStack(exc), "Building hotkeys", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -98,61 +98,40 @@ namespace AudioPlayerFrontendWpf
             }
         }
 
-        private void Refresh_Click(object sender, RoutedEventArgs e)
+        private void Reload_Click(object sender, RoutedEventArgs e)
         {
             viewModel.Reload();
         }
 
         private void OnPrevious(object sender, EventArgs e)
         {
-            Previous();
-        }
-
-        private void Previous()
-        {
             viewModel.SetPreviousSong();
         }
 
-        private void OnTogglePlayPause(object sender, EventArgs e) => TogglePlayPause();
-
-        private void TogglePlayPause()
+        private void OnTogglePlayPause(object sender, EventArgs e)
         {
-            viewModel.PlayState = viewModel.PlayState == PlaybackState.Playing ? PlaybackState.Paused : PlaybackState.Playing;
+            viewModel.PlayState = viewModel.PlayState == PlaybackState.Playing ?
+                PlaybackState.Paused : PlaybackState.Playing;
         }
 
         private void OnNext(object sender, EventArgs e)
-        {
-            Next();
-        }
-
-        private void Next()
         {
             viewModel.SetNextSong();
         }
 
         private void OnPlay(object sender, EventArgs e)
         {
-            Play();
-        }
-
-        private void Play()
-        {
             viewModel.PlayState = PlaybackState.Playing;
         }
 
         private void OnPause(object sender, EventArgs e)
-        {
-            Pause();
-        }
-
-        private void Pause()
         {
             viewModel.PlayState = PlaybackState.Paused;
         }
 
         private void OnRestart(object sender, EventArgs e)
         {
-            Restart();
+            viewModel.Position = TimeSpan.Zero;
         }
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)
@@ -181,11 +160,6 @@ namespace AudioPlayerFrontendWpf
         {
             if (lbxSongs.SelectedItem != null) lbxSongs.ScrollIntoView(lbxSongs.SelectedItem);
             else if (lbxSongs.Items.Count > 0) lbxSongs.ScrollIntoView(lbxSongs.Items[0]);
-        }
-
-        private void Restart()
-        {
-            viewModel.Position = TimeSpan.Zero;
         }
 
         private void Window_Drop(object sender, DragEventArgs e)
