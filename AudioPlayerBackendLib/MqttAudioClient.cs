@@ -243,6 +243,8 @@ namespace AudioPlayerBackendLib
                 Retain = retain
             };
 
+            if (!client.IsConnected) OpenAsync().Wait();
+
             client.PublishAsync(message);
         }
 

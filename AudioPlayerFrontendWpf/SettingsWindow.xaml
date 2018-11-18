@@ -12,6 +12,7 @@
         <con:InvertConverter x:Key="inverter"/>
         <local:FloatNullableToFloatConverter x:Key="volCon"/>
         <local:FloatNullableToFloatConverter x:Key="clientVolCon"/>
+        <local:FilePathsToSingleStringConverter x:Key="pathsCon"/>
     </Window.Resources>
 
     <TabControl>
@@ -115,7 +116,8 @@
                     <TextBox Grid.Column="1" Text="{Binding SearchKey,Mode=TwoWay}"/>
                 </Grid>
                 
-                <TextBox Grid.Row="2" AcceptsReturn="True" Margin="5,0"/>
+                <TextBox Grid.Row="2" AcceptsReturn="True" Margin="5,0" 
+                         Text="{Binding MediaSources,Converter={StaticResource pathsCon}}"/>
 
                 <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="5">
                     <CheckBox Name="cbxIfNon" Content="Only use if none given"

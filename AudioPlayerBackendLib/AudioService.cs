@@ -20,6 +20,7 @@ namespace AudioPlayerBackendLib
         private readonly Timer timer;
         private readonly IntPtr? windowHandle;
         private readonly Player player;
+        private readonly object readerLockObj = new object();
         private AudioFileReader reader;
 
         public override IntPtr? WindowHandle { get { return windowHandle; } }
@@ -81,27 +82,30 @@ namespace AudioPlayerBackendLib
 
         private void SetCurrentSong()
         {
-            if (reader != null) player.DisposeReader(reader);
-
-            try
+            lock (readerLockObj)
             {
-                if (CurrentSong.HasValue)
-                {
-                    reader = new AudioFileReader(CurrentSong.Value.FullPath);
-                    player.Init(ToWaveProvider(reader));
+                if (reader != null) player.DisposeReader(reader);
 
-                    Duration = reader.TotalTime;
+                try
+                {
+                    if (CurrentSong.HasValue)
+                    {
+                        reader = new AudioFileReader(CurrentSong.Value.FullPath);
+                        player.Init(ToWaveProvider(reader));
+
+                        Duration = reader.TotalTime;
+                    }
+                    else
+                    {
+                        reader = null;
+                        Format = null;
+                    }
                 }
-                else
+                catch
                 {
                     reader = null;
                     Format = null;
                 }
-            }
-            catch
-            {
-                reader = null;
-                Format = null;
             }
 
             EnableTimer();
