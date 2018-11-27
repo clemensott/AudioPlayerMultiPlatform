@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AudioPlayerFrontendWpf"
-        xmlns:con="clr-namespace:StdOttWpfLib.Converters;assembly=StdOttWpfLib"
+        xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
         mc:Ignorable="d"
         Title="Hotkey Music" Height="650" Width="625"
         AllowDrop="True" Drop="Window_Drop"

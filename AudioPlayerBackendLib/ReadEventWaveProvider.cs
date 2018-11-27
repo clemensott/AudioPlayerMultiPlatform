@@ -1,9 +1,7 @@
-﻿using NAudio.Wave;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System;
+using AudioPlayerBackend.Common;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
     class ReadEventWaveProvider : IWaveProvider
     {
@@ -26,6 +24,11 @@ namespace AudioPlayerBackendLib
             ReadEvent?.Invoke(this, args);
 
             return readCount;
+        }
+
+        public void Dispose()
+        {
+            parent.Dispose();
         }
     }
 }

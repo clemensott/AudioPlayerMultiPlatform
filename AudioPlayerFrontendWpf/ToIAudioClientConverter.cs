@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackendLib;
+﻿using AudioPlayerBackend;
 using System;
 using System.Globalization;
 using System.Windows.Data;

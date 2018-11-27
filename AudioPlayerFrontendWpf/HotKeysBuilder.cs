@@ -1,5 +1,5 @@
-﻿using StdOttWpfLib.CommendlinePaser;
-using StdOttWpfLib.Hotkey;
+﻿using StdOttFramework.Hotkey;
+using StdOttStandard.CommendlinePaser;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

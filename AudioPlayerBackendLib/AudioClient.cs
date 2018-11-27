@@ -1,10 +1,10 @@
-﻿using NAudio.Wave;
-using StdOttWpfLib;
+﻿using AudioPlayerBackend.Common;
+using StdOttStandard;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
     public abstract class AudioClient : IAudioExtended
     {
@@ -209,7 +209,7 @@ namespace AudioPlayerBackendLib
 
         public IEnumerable<Song> SearchSongs { get { return SongsService.GetSearchSongs(this); } }
 
-        public abstract IntPtr? WindowHandle { get; }
+        public abstract IPlayer Player { get; }
 
         public AudioClient()
         {

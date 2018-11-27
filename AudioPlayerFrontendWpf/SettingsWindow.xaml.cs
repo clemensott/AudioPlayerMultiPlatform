@@ -1,6 +1,5 @@
-﻿using AudioPlayerBackendLib;
-using StdOttWpfLib.Converters;
-using System.Linq;
+﻿using AudioPlayerBackend;
+using StdOttFramework.Converters;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -19,12 +18,12 @@ namespace AudioPlayerFrontendWpf
 
         public HotKeysBuilder HotKeysBuilder { get; private set; }
 
-        public SettingsWindow() : this(new ServiceBuilder(), new HotKeysBuilder())
+        public SettingsWindow() : this(new Join.ServiceBuilder(), new HotKeysBuilder())
         {
         }
 
         public SettingsWindow(IAudioExtended service, HotKeys hotKeys)
-            : this(new ServiceBuilder().WithService(service), new HotKeysBuilder().WithHotKeys(hotKeys))
+            : this(new Join.ServiceBuilder().WithService(service), new HotKeysBuilder().WithHotKeys(hotKeys))
         {
         }
 

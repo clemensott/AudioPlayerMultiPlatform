@@ -1,11 +1,10 @@
-﻿using StdOttWpfLib.Hotkey;
+﻿using StdOttFramework.Hotkey;
 using System;
 
 namespace AudioPlayerFrontendWpf
 {
     public class HotKeys : IDisposable
     {
-
         private HotKey toggle, next, previous, play, pause, restart;
 
         public HotKey Toggle

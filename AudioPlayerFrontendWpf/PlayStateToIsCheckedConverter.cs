@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackendLib;
-using NAudio.Wave;
+﻿using AudioPlayerBackend.Common;
 using System;
 using System.Globalization;
 using System.Windows.Data;

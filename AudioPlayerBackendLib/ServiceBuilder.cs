@@ -1,16 +1,15 @@
-﻿using AudioPlayerBackendLib;
-using NAudio.Wave;
-using StdOttWpfLib;
-using StdOttWpfLib.CommendlinePaser;
+﻿using AudioPlayerBackend.Common;
+using StdOttStandard;
+using StdOttStandard.CommendlinePaser;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace AudioPlayerFrontendWpf
+namespace AudioPlayerBackend
 {
-    public class ServiceBuilder : INotifyPropertyChanged
+    public abstract class ServiceBuilder : INotifyPropertyChanged
     {
         private bool ifNon, reload;
         private bool? isAllShuffle, isSearchShuffle, isOnlySearch, play, isStreaming;
@@ -20,7 +19,7 @@ namespace AudioPlayerFrontendWpf
         private float? volume, clientVolume;
         private string[] mediaSources;
         private IAudioExtended service;
-        private IntPtr? windowHandler;
+        private IPlayer player;
 
         public bool BuildStandalone { get; private set; }
 
@@ -286,11 +285,11 @@ namespace AudioPlayerFrontendWpf
                 .WithIsSearchShuffle(service.IsSearchShuffle)
                 .WithIsOnlySearch(service.IsOnlySearch)
                 .WithSearchKey(service.SearchKey)
-                .WithPlay(service.PlayState == PlaybackState.Playing)
+                //.WithPlay(service.PlayState == PlaybackState.Playing)
                 .WithReload(false)
                 .WithSetMediaIfNon(false)
                 .WithVolume(service.Volume)
-                .WithWindowHandler(service.WindowHandle);
+                .WithPlayer(service.Player);
         }
 
         private ServiceBuilder WithService(IMqttAudioClient client)
@@ -430,9 +429,9 @@ namespace AudioPlayerFrontendWpf
             return this;
         }
 
-        public ServiceBuilder WithWindowHandler(IntPtr? windowHandler = null)
+        public ServiceBuilder WithPlayer(IPlayer player)
         {
-            this.windowHandler = windowHandler;
+            this.player = player;
 
             return this;
         }
@@ -445,7 +444,7 @@ namespace AudioPlayerFrontendWpf
             {
                 IMqttAudioService server = Service as IMqttAudioService;
 
-                if (server != null && (ServerPort != server.Port || windowHandler != server.WindowHandle))
+                if (server != null && (ServerPort != server.Port || player != server.Player))
                 {
                     if (server.IsOpen) await server.CloseAsync();
 
@@ -454,7 +453,7 @@ namespace AudioPlayerFrontendWpf
 
                 if (server == null)
                 {
-                    server = new MqttAudioService(ServerPort, windowHandler);
+                    server = CreateAudioServer(player, ServerPort);
                 }
 
                 if (!server.IsOpen) await server.OpenAsync();
@@ -466,15 +465,14 @@ namespace AudioPlayerFrontendWpf
                 IMqttAudioClient client = Service as IMqttAudioClient;
 
                 if (client != null && (ServerAddress != client.ServerAddress ||
-                    ClientPort != client.Port || windowHandler != client.WindowHandle))
+                    ClientPort != client.Port || player != client.Player))
                 {
                     client = null;
                 }
 
                 if (client == null)
                 {
-                    client = clientPort.HasValue ? new MqttAudioClient(serverAddress, clientPort.Value, windowHandler)
-                        : new MqttAudioClient(serverAddress, windowHandler);
+                    client = CreateAudioClient(player, serverAddress, clientPort);
                 }
 
                 if (!client.IsOpen) await client.OpenAsync();
@@ -486,7 +484,7 @@ namespace AudioPlayerFrontendWpf
             }
             else
             {
-                service = Service == null || Service is IMqttAudio ? new AudioService(windowHandler) : Service;
+                service = Service == null || Service is IMqttAudio ? CreateAudioService(player) : Service;
 
                 if (mediaSources == null) mediaSources = new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) };
             }
@@ -511,6 +509,12 @@ namespace AudioPlayerFrontendWpf
 
             return service;
         }
+
+        protected abstract IAudioExtended CreateAudioService(IPlayer player);
+
+        protected abstract IMqttAudioClient CreateAudioClient(IPlayer player, string serverAddress, int? port);
+
+        protected abstract IMqttAudioService CreateAudioServer(IPlayer player, int port);
 
         private bool ContainsSameSongs(IEnumerable<Song> enum1, IEnumerable<Song> enum2)
         {

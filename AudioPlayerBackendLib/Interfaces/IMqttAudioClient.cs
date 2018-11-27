@@ -1,4 +1,4 @@
-﻿namespace AudioPlayerBackendLib
+﻿namespace AudioPlayerBackend
 {
     public interface IMqttAudioClient : IMqttAudio
     {

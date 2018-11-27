@@ -1,8 +1,5 @@
-﻿using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Protocol;
-using NAudio.Wave;
-using StdOttWpfLib;
+﻿using AudioPlayerBackend.Common;
+using StdOttStandard;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,17 +7,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
-    public class MqttAudioClient : AudioClient, IMqttAudioClient
+    public abstract class MqttAudioClient : AudioClient, IMqttAudioClient
     {
         private bool isStreaming;
         private List<string> initProps;
         private readonly List<string> messageReceivingTopics;
         private readonly IMqttClient client;
-        private readonly IntPtr? windowHandle;
-        private readonly Player player;
-        private BufferedWaveProvider buffer;
+        private readonly IPlayer player;
+        private IBufferedWaveProvider buffer;
 
         public bool IsStreaming
         {
@@ -62,47 +58,35 @@ namespace AudioPlayerBackendLib
 
         public int? Port { get; private set; }
 
-        public override IntPtr? WindowHandle { get { return windowHandle; } }
+        public bool IsOpen { get { return client?.IsConnected ?? false; } }
 
-        public bool IsOpen { get { return client.IsConnected; } }
+        public override IPlayer Player { get { return player; } }
 
-        private MqttAudioClient(IntPtr? windowHandle)
+        private MqttAudioClient(IPlayer player)
         {
-            this.windowHandle = windowHandle;
-
-            player = Player.GetPlayer(windowHandle);
-            player.PlaybackStopped += Player_PlaybackStopped;
+            this.player = player;
 
             messageReceivingTopics = new List<string>();
 
-            client = new MqttFactory().CreateMqttClient();
+            client = CreateMqttClient();
             client.ApplicationMessageReceived += Client_ApplicationMessageReceived;
         }
 
-        private void Player_PlaybackStopped(object sender, StoppedEventArgs e)
-        {
-        }
-
-        public MqttAudioClient(string server, IntPtr? windowHandle = null) : this(windowHandle)
-        {
-            ServerAddress = server;
-        }
-
-        public MqttAudioClient(string server, int port, IntPtr? windowHandler = null) : this(windowHandler)
+        public MqttAudioClient(IPlayer player, string server, int? port=null) : this(player)
         {
             ServerAddress = server;
             Port = port;
         }
 
+        protected abstract IMqttClient CreateMqttClient();
+
         public async Task OpenAsync()
         {
             initProps = GetTopicFilters().Select(tf => tf.Topic).ToList();
 
-            IMqttClientOptions options = Port.HasValue ? new MqttClientOptionsBuilder().WithTcpServer(ServerAddress, Port).Build()
-                : new MqttClientOptionsBuilder().WithTcpServer(ServerAddress).Build();
+            await client.ConnectAsync(ServerAddress, Port);
 
-            await client.ConnectAsync(options);
-            await client.SubscribeAsync(GetTopicFilters());
+            foreach (TopicFilter tf in GetTopicFilters()) await client.SubscribeAsync(tf.Topic, tf.Qos);
 
             lock (initProps)
             {
@@ -114,7 +98,8 @@ namespace AudioPlayerBackendLib
 
         public async Task CloseAsync()
         {
-            await client.UnsubscribeAsync(GetTopicFilters().Select(tp => tp.Topic));
+            foreach (TopicFilter tf in GetTopicFilters()) await client.UnsubscribeAsync(tf.Topic);
+
             await client.UnsubscribeAsync(nameof(Format));
             await client.UnsubscribeAsync(nameof(AudioData));
             await client.DisconnectAsync();
@@ -137,7 +122,7 @@ namespace AudioPlayerBackendLib
             yield return new TopicFilter(nameof(Volume), qos);
         }
 
-        private void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
+        private async void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
         {
             messageReceivingTopics.Add(e.ApplicationMessage.Topic);
 
@@ -212,7 +197,7 @@ namespace AudioPlayerBackendLib
                         Retain = true
                     };
 
-                    client.PublishAsync(message);
+                    await client.PublishAsync(message);
                 }
                 catch { }
             }
@@ -314,17 +299,18 @@ namespace AudioPlayerBackendLib
 
         protected override void OnFormatChanged()
         {
-            if (buffer == null) buffer = new BufferedWaveProvider(Format);
+            if (buffer == null) buffer = CreateBufferedWaveProvider(Format);
             else if (buffer.WaveFormat != Format)
             {
                 buffer.ClearBuffer();
-                buffer = new BufferedWaveProvider(Format);
+                buffer = CreateBufferedWaveProvider(Format);
             }
             else return;
 
-            System.Diagnostics.Debug.WriteLine("OnFormatChanged");
-            player.Init(buffer);
+            player.Play(buffer);
         }
+
+        protected abstract IBufferedWaveProvider CreateBufferedWaveProvider(WaveFormat format);
 
         protected override void OnAudioDataChanged()
         {
@@ -362,6 +348,8 @@ namespace AudioPlayerBackendLib
         public async override void Dispose()
         {
             if (IsOpen) await CloseAsync();
+
+            player.Stop(buffer);
         }
     }
 }

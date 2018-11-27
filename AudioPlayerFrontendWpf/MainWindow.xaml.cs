@@ -1,6 +1,6 @@
-﻿using AudioPlayerBackendLib;
-using NAudio.Wave;
-using StdOttWpfLib;
+﻿using AudioPlayerBackend;
+using AudioPlayerBackend.Common;
+using StdOttStandard;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -42,9 +42,9 @@ namespace AudioPlayerFrontendWpf
             {
                 IEnumerable<string> args = Environment.GetCommandLineArgs().Skip(1);
                 IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-                ServiceBuilder serviceBuilder = new ServiceBuilder()
+                ServiceBuilder serviceBuilder = new Join.ServiceBuilder()
                     .WithArgs(args)
-                    .WithWindowHandler(windowHandle);
+                    .WithPlayer(new Join.Player(-1, windowHandle));
 
                 DataContext = viewModel = new ViewModel(await serviceBuilder.Build());
             }

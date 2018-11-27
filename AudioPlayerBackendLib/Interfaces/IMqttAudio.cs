@@ -1,7 +1,7 @@
-﻿using NAudio.Wave;
+﻿using AudioPlayerBackend.Common;
 using System.Threading.Tasks;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
     public interface IMqttAudio : IAudioExtended
     {

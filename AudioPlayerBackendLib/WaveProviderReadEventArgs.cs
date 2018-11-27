@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
     class WaveProviderReadEventArgs:EventArgs
     {

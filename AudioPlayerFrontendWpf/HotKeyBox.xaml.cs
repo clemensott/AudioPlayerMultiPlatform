@@ -1,4 +1,4 @@
-﻿using StdOttWpfLib.Hotkey;
+﻿using StdOttFramework.Hotkey;
 using System;
 using System.Collections.Generic;
 using System.Linq;

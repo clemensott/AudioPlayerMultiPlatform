@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
     public interface IAudioExtended : IAudio, IDisposable, INotifyPropertyChanged
     {
@@ -12,7 +12,7 @@ namespace AudioPlayerBackendLib
 
         IEnumerable<Song> SearchSongs { get; }
 
-        IntPtr? WindowHandle { get; }
+        IPlayer Player { get; }
 
         void SetNextSong();
 

@@ -1,11 +1,11 @@
-﻿using System;
+﻿using AudioPlayerBackend.Common;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using NAudio.Wave;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
     class ByteQueue : IEnumerable<byte>
     {
@@ -217,35 +217,9 @@ namespace AudioPlayerBackendLib
             WaveFormatEncoding encoding = DequeueWaveFormatEncoding();
             int sampleRate = DequeueInt();
 
-            return WaveFormat.CreateCustomFormat(encoding, sampleRate,
+            return new WaveFormat(encoding, sampleRate,
                 channels, averageBytesPerSecond, blockAlign, bitsPerSample);
         }
-
-        //public Hashes DequeueHashes()
-        //{
-        //    return new Hashes()
-        //    {
-        //        AllSongsHash = DequeueInt(),
-        //        CurrentSongHash = DequeueInt(),
-        //        MediaSourcesHash = DequeueInt(),
-        //        SearchSongsHash = DequeueInt()
-        //    };
-        //}
-
-        //public States DequeueStates()
-        //{
-        //    return new States()
-        //    {
-        //        Duration = DequeueTimeSpan(),
-        //        Hashes = DequeueHashes(),
-        //        IsAllShuffle = DequeueBool(),
-        //        IsOnlySearch = DequeueBool(),
-        //        IsSearchShuffle = DequeueBool(),
-        //        PlayState = DequeuePlayState(),
-        //        Position = DequeueTimeSpan(),
-        //        SearchKey = DequeueString(),
-        //    };
-        //}
 
         public IEnumerator<byte> GetEnumerator()
         {

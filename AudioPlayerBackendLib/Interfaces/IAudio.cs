@@ -1,7 +1,7 @@
-﻿using System;
-using NAudio.Wave;
+﻿using AudioPlayerBackend.Common;
+using System;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
     public interface IAudio
     {

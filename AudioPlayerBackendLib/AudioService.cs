@@ -1,17 +1,16 @@
-﻿using System;
+﻿using AudioPlayerBackend.Common;
+using StdOttStandard;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
-using System.Windows.Threading;
-using NAudio.Wave;
-using StdOttWpfLib;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
-    public class AudioService : AudioClient
+    public abstract class AudioService : AudioClient
     {
         private const int updateIntervall = 100;
         private static Random ran = new Random();
@@ -19,30 +18,22 @@ namespace AudioPlayerBackendLib
         private bool isUpdatingPosition;
         private readonly Timer timer;
         private readonly IntPtr? windowHandle;
-        private readonly Player player;
+        private readonly IPlayer player;
         private readonly object readerLockObj = new object();
-        private AudioFileReader reader;
+        private IPositionWaveProvider reader;
 
-        public override IntPtr? WindowHandle { get { return windowHandle; } }
+        public override IPlayer Player { get { return player; } }
 
-        public AudioService(IntPtr? windowHandle = null)
+        public AudioService(IPlayer player)
         {
-            this.windowHandle = windowHandle;
+            this.player = player;
 
-            player = Player.GetPlayer(windowHandle);
             player.PlaybackStopped += Player_PlaybackStopped;
 
             timer = new Timer(updateIntervall);
             timer.Elapsed += Timer_Elapsed;
 
             Volume = player.Volume;
-        }
-
-        private static Dispatcher GetDefaultDispatcher()
-        {
-            if (Application.Current?.Dispatcher != null) return Application.Current.Dispatcher;
-
-            return Dispatcher.CurrentDispatcher;
         }
 
         private void Player_PlaybackStopped(object sender, StoppedEventArgs e)
@@ -84,14 +75,14 @@ namespace AudioPlayerBackendLib
         {
             lock (readerLockObj)
             {
-                if (reader != null) player.DisposeReader(reader);
+                if (reader != null) player.Stop(reader);
 
                 try
                 {
                     if (CurrentSong.HasValue)
                     {
-                        reader = new AudioFileReader(CurrentSong.Value.FullPath);
-                        player.Init(ToWaveProvider(reader));
+                        reader = CreateWaveProvider(CurrentSong.Value);
+                        player.Play(ToWaveProvider(reader));
 
                         Duration = reader.TotalTime;
                     }
@@ -110,6 +101,8 @@ namespace AudioPlayerBackendLib
 
             EnableTimer();
         }
+
+        protected abstract IPositionWaveProvider CreateWaveProvider(Song song);
 
         protected virtual IWaveProvider ToWaveProvider(IWaveProvider waveProvider)
         {
@@ -223,7 +216,7 @@ namespace AudioPlayerBackendLib
 
             if (reader != null)
             {
-                player.DisposeReader(reader);
+                player.Stop(reader);
                 reader = null;
             }
         }

@@ -1,5 +1,5 @@
-﻿using AudioPlayerBackendLib;
-using NAudio.Wave;
+﻿using AudioPlayerBackend;
+using AudioPlayerBackend.Common;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -108,7 +108,7 @@ namespace AudioPlayerFrontendWpf
             set { Parent.Volume = value; }
         }
 
-        public IntPtr? WindowHandle { get { return Parent.WindowHandle; } }
+        public IPlayer Player => throw new NotImplementedException();
 
         public ViewModel(IAudioExtended parent)
         {

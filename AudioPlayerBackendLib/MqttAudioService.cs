@@ -1,17 +1,14 @@
-﻿using MQTTnet;
-using MQTTnet.Protocol;
-using MQTTnet.Server;
-using NAudio.Wave;
-using StdOttWpfLib;
+﻿using AudioPlayerBackend.Common;
+using StdOttStandard;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
-    public class MqttAudioService : AudioService, IMqttAudioService
+    public abstract class MqttAudioService : AudioService, IMqttAudioService
     {
         private readonly List<string> messageInterceptingTopics;
         private readonly IMqttServer server;
@@ -21,24 +18,21 @@ namespace AudioPlayerBackendLib
 
         public bool IsOpen { get; private set; }
 
-        public MqttAudioService(int port, IntPtr? windowHandle = null) : base(windowHandle)
+        public MqttAudioService(IPlayer player, int port) : base(player)
         {
             messageInterceptingTopics = new List<string>();
-            server = new MqttFactory().CreateMqttServer();
+            server = CreateMqttServer();
 
             Port = port;
         }
+
+        protected abstract IMqttServer CreateMqttServer();
 
         public async Task OpenAsync()
         {
             IsOpen = true;
 
-            IMqttServerOptions options = new MqttServerOptionsBuilder()
-                .WithDefaultEndpointPort(Port)
-                .WithApplicationMessageInterceptor(OnApplicationMessageInterception)
-                .Build();
-
-            await server.StartAsync(options);
+            await server.StartAsync(Port, OnApplicationMessageInterception);
 
             PublishAllSongsShuffled();
             PublishCurrentSong();
@@ -60,7 +54,7 @@ namespace AudioPlayerBackendLib
             await server.StopAsync();
         }
 
-        private void OnApplicationMessageInterception(MqttApplicationMessageInterceptorContext context)
+        private async void OnApplicationMessageInterception(MqttApplicationMessageInterceptorContext context)
         {
             if (context.ClientId == null) return;
 
@@ -135,7 +129,7 @@ namespace AudioPlayerBackendLib
                         Retain = true
                     };
 
-                    server.PublishAsync(message);
+                    await server.PublishAsync(message);
                 }
                 catch { }
             }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.IO;
 
-namespace AudioPlayerBackendLib
+namespace AudioPlayerBackend
 {
     public struct Song : IEquatable<Song>
     {
