@@ -80,18 +80,19 @@ namespace AudioPlayerFrontend
 
                     try
                     {
-                        StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
+                        serviceBuilder.WithClient("nas-server", 1884);
+                        //StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
 
-                        using (Stream stream = await file.OpenStreamForReadAsync())
-                        {
-                            ServiceProfile profile = (ServiceProfile)serializer.Deserialize(stream);
-                            profile.ToClient();
-                            profile.FillServiceBuilder(serviceBuilder);
-                        }
+                        //using (Stream stream = await file.OpenStreamForReadAsync())
+                        //{
+                        //    ServiceProfile profile = (ServiceProfile)serializer.Deserialize(stream);
+                        //    profile.ToClient();
+                        //    profile.FillServiceBuilder(serviceBuilder);
+                        //}
                     }
                     catch
                     {
-                        serviceBuilder.WithClient("127.0.0.1", 1884);
+                        serviceBuilder.WithClient("nas-server", 1884);
                     }
 
                     rootFrame.Navigate(typeof(MainPage), serviceBuilder);

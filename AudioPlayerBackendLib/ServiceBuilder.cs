@@ -487,7 +487,7 @@ namespace AudioPlayerBackend
             {
                 service = Service == null || Service is IMqttAudio ? CreateAudioService(player) : Service;
 
-                if (mediaSources == null) mediaSources = new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) };
+                //if (mediaSources == null) mediaSources = new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) };
             }
 
             bool setMediaSources = mediaSources != null && (!ifNon || !service.MediaSources.ToNotNull().Any());

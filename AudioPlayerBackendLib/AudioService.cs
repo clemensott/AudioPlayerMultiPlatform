@@ -3,8 +3,8 @@ using StdOttStandard;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 
 namespace AudioPlayerBackend
 {
@@ -27,8 +27,7 @@ namespace AudioPlayerBackend
 
             player.PlaybackStopped += Player_PlaybackStopped;
 
-            timer = new Timer(updateIntervall);
-            timer.Elapsed += Timer_Elapsed;
+            timer = new Timer(Timer_Elapsed, null, updateIntervall, updateIntervall);
 
             Volume = player.Volume;
         }
@@ -43,7 +42,7 @@ namespace AudioPlayerBackend
             SetNextSong();
         }
 
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        private void Timer_Elapsed(object state)
         {
             isUpdatingPosition = true;
 
@@ -63,7 +62,7 @@ namespace AudioPlayerBackend
 
         protected override void OnCurrentSongChanged()
         {
-            timer.Stop();
+            StopTimer();
 
             Task.Factory.StartNew(SetCurrentSong);
         }
@@ -166,7 +165,19 @@ namespace AudioPlayerBackend
 
         private void EnableTimer()
         {
-            timer.Enabled = CurrentSong.HasValue && PlayState == PlaybackState.Playing;
+            if (CurrentSong.HasValue && PlayState == PlaybackState.Playing) StartTimer();
+            else StopTimer();
+        }
+
+        private void StartTimer()
+        {
+            timer.Change(updateIntervall, updateIntervall);
+        }
+
+
+        private void StopTimer()
+        {
+            timer.Change(-1, -1);
         }
 
         protected override void OnServiceVolumeChanged()

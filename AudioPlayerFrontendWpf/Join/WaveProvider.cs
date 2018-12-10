@@ -29,7 +29,7 @@ namespace AudioPlayerFrontend.Join
 
         public int Read(byte[] buffer, int offset, int count)
         {
-            return Read(buffer, offset, count);
+            return Parent.Read(buffer, offset, count);
         }
     }
 }
