@@ -6,7 +6,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows.Input;
 
-namespace AudioPlayerFrontendWpf
+namespace AudioPlayerFrontend
 {
     public class HotKeysBuilder : INotifyPropertyChanged
     {

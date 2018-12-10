@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace AudioPlayerFrontendWpf
+namespace AudioPlayerFrontend
 {
     public partial class App : Application
     {

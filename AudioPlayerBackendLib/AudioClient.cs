@@ -260,7 +260,14 @@ namespace AudioPlayerBackend
 
         protected void OnPropertyChanged(string name)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            if (PropertyChanged == null) return;
+
+            InvokeDispatcher(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)));
+        }
+
+        protected virtual void InvokeDispatcher(Action action)
+        {
+            action();
         }
 
         public abstract void Dispose();

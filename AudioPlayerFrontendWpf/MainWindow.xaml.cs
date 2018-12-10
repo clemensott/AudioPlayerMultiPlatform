@@ -10,7 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 
-namespace AudioPlayerFrontendWpf
+namespace AudioPlayerFrontend
 {
     /// <summary>
     /// Interaktionslogik für MainWindow.xaml

@@ -1,7 +1,8 @@
-﻿using AudioPlayerBackend;
+﻿using System.Collections.Generic;
+using AudioPlayerBackend;
 using AudioPlayerBackend.Common;
 
-namespace AudioPlayerFrontendWpf.Join
+namespace AudioPlayerFrontend.Join
 {
     class MqttAudioService : AudioPlayerBackend.MqttAudioService
     {
@@ -17,6 +18,11 @@ namespace AudioPlayerFrontendWpf.Join
         protected override IPositionWaveProvider CreateWaveProvider(Song song)
         {
             return new AudioFileReader(song.FullPath);
+        }
+
+        protected override IEnumerable<string> LoadFilePaths(string path)
+        {
+            return AudioService.LoadFilePathsStatic(path);
         }
     }
 }

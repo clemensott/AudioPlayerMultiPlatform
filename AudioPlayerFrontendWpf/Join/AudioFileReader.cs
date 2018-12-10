@@ -1,12 +1,12 @@
 ﻿using AudioPlayerBackend.Common;
 
-namespace AudioPlayerFrontendWpf.Join
+namespace AudioPlayerFrontend.Join
 {
-    class AudioFileReader : NAudio.Wave.AudioFileReader, IPositionWaveProvider
+    class AudioFileReader : NAudio.Wave.AudioFileReader, IWaveProvider, IPositionWaveProvider
     {
         private readonly WaveFormat format;
 
-        WaveFormat IWaveProvider.WaveFormat { get { return format; } }
+        WaveFormat AudioPlayerBackend.Common.IWaveProvider.WaveFormat { get { return format; } }
 
         public AudioFileReader(string path) : base(path)
         {

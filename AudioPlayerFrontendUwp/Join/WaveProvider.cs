@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace AudioPlayerFrontend.Join
+﻿namespace AudioPlayerFrontend.Join
 {
     class WaveProvider : IWaveProvider
     {
@@ -11,10 +9,6 @@ namespace AudioPlayerFrontend.Join
         public NAudio.Wave.WaveFormat WaveFormat { get { return format; } }
 
         AudioPlayerBackend.Common.WaveFormat AudioPlayerBackend.Common.IWaveProvider.WaveFormat { get { return Parent.WaveFormat; } }
-
-        public TimeSpan CurrentTime { get { throw new NotImplementedException(); } set { throw new NotImplementedException(); } }
-
-        public TimeSpan TotalTime => throw new NotImplementedException();
 
         public WaveProvider(AudioPlayerBackend.Common.IWaveProvider parent)
         {
@@ -29,7 +23,7 @@ namespace AudioPlayerFrontend.Join
 
         public int Read(byte[] buffer, int offset, int count)
         {
-            return Read(buffer, offset, count);
+            return Parent.Read(buffer, offset, count);
         }
     }
 }

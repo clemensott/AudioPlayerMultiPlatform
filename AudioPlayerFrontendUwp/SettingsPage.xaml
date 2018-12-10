@@ -1,0 +1,147 @@
+﻿<Page
+    x:Class="AudioPlayerFrontend.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:AudioPlayerFrontend"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:con="using:StdOttUwp.Converters"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <con:InvertConverter x:Key="inverter"/>
+        <local:FloatNullableToFloatConverter x:Key="volCon"/>
+        <local:FloatNullableToFloatConverter x:Key="clientVolCon"/>
+        <local:FilePathsToSingleStringConverter x:Key="pathsCon"/>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel VerticalAlignment="Center" Margin="0,0,0,5">
+                <RadioButton x:Name="rbnStandalone" Content="Standalone" 
+                             IsChecked="{Binding BuildStandalone,Mode=OneWay}"
+                             Margin="5,5,0,0" Checked="RbnStandalone_Checked"/>
+                <RadioButton x:Name="rbnServer" Content="Server" 
+                             IsChecked="{Binding BuildServer,Mode=OneWay}"
+                             Margin="5,5,0,0" Checked="RbnServer_Checked"/>
+                <RadioButton x:Name="rbnClient" Content="Client" 
+                             IsChecked="{Binding BuildClient,Mode=OneWay}"
+                             Margin="5,5,0,0" Checked="RbnClient_Checked"/>
+            </StackPanel>
+
+            <ContentControl Grid.Column="1" Margin="10,0,10,3" VerticalAlignment="Center"
+                            IsEnabled="{Binding ElementName=rbnStandalone,Path=IsChecked,
+                              Converter={StaticResource inverter}}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Server:" Margin="3,3,0,0" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="1" Text="Port:" Margin="3,3,0,0" VerticalAlignment="Center"/>
+
+                    <TextBox Grid.Column="1" Grid.Row="0" Name="tbxServerAddress" 
+                             Margin="3,3,0,0" Text="{Binding ServerAddress,Mode=TwoWay}"
+                             IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"/>
+                    <TextBox Grid.Column="1" Grid.Row="1" Name="tbxPort" Text=""
+                             Margin="3,3,0,0" TextChanged="TbxPort_TextChanged"/>
+                </Grid>
+            </ContentControl>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Margin="3" VerticalAlignment="Center">
+            <CheckBox Content="Shuffle all songs" Margin="3"
+                      IsChecked="{Binding IsAllShuffle,Mode=TwoWay}"
+                      RightTapped="CbxAllShuffle_RightTapped"/>
+            <CheckBox Content="Shuffle search songs" Margin="3"
+                          IsChecked="{Binding IsSearchShuffle,Mode=TwoWay}"
+                          RightTapped="CbxSearchShuffle_RightTapped"/>
+            <CheckBox Content="Play only search songs"  Margin="3"
+                          IsChecked="{Binding IsOnlySearch,Mode=TwoWay}"
+                          RightTapped="CbxOnlySearch_RightTapped"/>
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+            <Grid VerticalAlignment="Center" Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto" MinWidth="100"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <CheckBox Grid.Column="0" Name="cbxPlay" Content="Play" 
+                          Margin="0,0,-50,0" IsChecked="{Binding Play,Mode=TwoWay}"
+                          RightTapped="CbxPlay_RightTapped"/>
+
+                <TextBlock Grid.Column="1" Text="Volume:" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                <Slider Grid.Column="2" Maximum="1" Width="100" Margin="3,0,0,-8"
+                        Value="{Binding Volume,Mode=TwoWay,Converter={StaticResource volCon}}"
+                        RightTapped="SldVolume_RightTapped"/>
+
+                <CheckBox Grid.ColumnSpan="2" Grid.Row="2" Content="Stream to client:"
+                          IsChecked="{Binding IsStreaming,Mode=TwoWay}"
+                          IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"
+                          RightTapped="CbxStreaming_RightTapped"/>
+                <Slider Grid.Column="2" Grid.Row="2" Maximum="1" Margin="3,0,0,-8"  Width="100"
+                        IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"
+                        Value="{Binding Volume,Mode=TwoWay,Converter={StaticResource clientVolCon}}"
+                        RightTapped="SldClientVolume_RightTapped"/>
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="Serach:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBox Grid.Column="1" Text="{Binding SearchKey,Mode=TwoWay}"/>
+        </Grid>
+
+        <TextBox Grid.Row="4" AcceptsReturn="True" Margin="5,0" 
+                 Text="{Binding MediaSources,Converter={StaticResource pathsCon}}"/>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="5">
+            <CheckBox Name="cbxIfNon" Content="Only use if none given"
+                              IsChecked="{Binding IfNon,Mode=TwoWay}"/>
+            <CheckBox Name="cbxReload" Content="Reload" Margin="10,0,0,0"
+                              IsChecked="{Binding Reload,Mode=TwoWay}"/>
+        </StackPanel>
+    </Grid>
+
+    <Page.BottomAppBar>
+        <CommandBar>
+            <CommandBar.PrimaryCommands>
+                <AppBarButton Icon="BackToWindow" Label="Go back" Click="AbbGoBack_Click"/>
+            </CommandBar.PrimaryCommands>
+        </CommandBar>
+    </Page.BottomAppBar>
+</Page>

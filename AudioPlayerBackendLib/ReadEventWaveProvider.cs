@@ -3,22 +3,30 @@ using AudioPlayerBackend.Common;
 
 namespace AudioPlayerBackend
 {
-    class ReadEventWaveProvider : IWaveProvider
+    public class ReadEventWaveProvider : IPositionWaveProvider
     {
-        private IWaveProvider parent;
+        public IPositionWaveProvider Parent { get; private set; }
 
-        public event EventHandler<WaveProviderReadEventArgs> ReadEvent;
+        internal event EventHandler<WaveProviderReadEventArgs> ReadEvent;
 
-        public ReadEventWaveProvider(IWaveProvider parent)
+        public WaveFormat WaveFormat { get { return Parent.WaveFormat; } }
+
+        public TimeSpan CurrentTime
         {
-            this.parent = parent;
+            get { return Parent.CurrentTime; }
+            set { Parent.CurrentTime = value; }
         }
 
-        public WaveFormat WaveFormat { get { return parent.WaveFormat; } }
+        internal ReadEventWaveProvider(IPositionWaveProvider parent)
+        {
+            this.Parent = parent;
+        }
+
+        public TimeSpan TotalTime { get { return Parent.TotalTime; } }
 
         public int Read(byte[] buffer, int offset, int count)
         {
-            int readCount = parent.Read(buffer, offset, count);
+            int readCount = Parent.Read(buffer, offset, count);
 
             var args = new WaveProviderReadEventArgs(buffer, offset, count, readCount);
             ReadEvent?.Invoke(this, args);
@@ -28,7 +36,7 @@ namespace AudioPlayerBackend
 
         public void Dispose()
         {
-            parent.Dispose();
+            Parent.Dispose();
         }
     }
 }

@@ -94,6 +94,7 @@
     <Compile Include="Join\AudioService.cs" />
     <Compile Include="Join\BufferedWaveProvider.cs" />
     <Compile Include="Join\Convert.cs" />
+    <Compile Include="Join\IWaveProvider.cs" />
     <Compile Include="Join\MqttAudioClient.cs" />
     <Compile Include="Join\MqttAudioService.cs" />
     <Compile Include="Join\MqttClient.cs" />

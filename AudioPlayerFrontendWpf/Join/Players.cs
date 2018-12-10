@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AudioPlayerFrontendWpf.Join
+namespace AudioPlayerFrontend.Join
 {
     class Players : IPlayer
     {
@@ -20,8 +20,7 @@ namespace AudioPlayerFrontendWpf.Join
             set
             {
                 playState = value;
-
-                foreach (IPlayer player in players) player.PlayState = value;
+                ExecutePlayState();
             }
         }
 
@@ -40,17 +39,18 @@ namespace AudioPlayerFrontendWpf.Join
 
         public Players()
         {
+            players = new List<IPlayer>();
             Volume = 1;
         }
 
-        public void Play(IWaveProvider waveProvider)
+        public void Play(Func<AudioPlayerBackend.Common.IWaveProvider> waveProviderFunc)
         {
-            foreach (IPlayer player in players) player.Play(waveProvider);
+            foreach (IPlayer player in players) player.Play(waveProviderFunc);
         }
 
-        public void Stop(IWaveProvider waveProvider)
+        public void Stop(IDisposable dispose)
         {
-            foreach (IPlayer player in players) player.Stop(waveProvider);
+            foreach (IPlayer player in players) player.Stop(dispose);
         }
 
         public void AddPlayer(IPlayer player)
@@ -73,6 +73,11 @@ namespace AudioPlayerFrontendWpf.Join
         private void Player_PlaybackStopped(object sender, StoppedEventArgs e)
         {
             PlaybackStopped?.Invoke(this, e);
+        }
+
+        public void ExecutePlayState()
+        {
+            foreach (IPlayer player in players) player.PlayState = PlayState;
         }
     }
 }

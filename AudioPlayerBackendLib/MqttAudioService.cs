@@ -54,7 +54,7 @@ namespace AudioPlayerBackend
             await server.StopAsync();
         }
 
-        private async void OnApplicationMessageInterception(MqttApplicationMessageInterceptorContext context)
+        private void OnApplicationMessageInterception(MqttApplicationMessageInterceptorContext context)
         {
             if (context.ClientId == null) return;
 
@@ -119,22 +119,27 @@ namespace AudioPlayerBackend
             {
                 context.AcceptPublish = false;
 
-                try
-                {
-                    MqttApplicationMessage message = new MqttApplicationMessage()
-                    {
-                        Topic = "Debug",
-                        Payload = Encoding.UTF8.GetBytes(Utils.GetTypeMessageAndStack(e)),
-                        QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce,
-                        Retain = true
-                    };
-
-                    await server.PublishAsync(message);
-                }
-                catch { }
+                PublishDebug(e);
             }
 
             messageInterceptingTopics.Remove(context.ApplicationMessage.Topic);
+        }
+
+        private async void PublishDebug(Exception e)
+        {
+            try
+            {
+                MqttApplicationMessage message = new MqttApplicationMessage()
+                {
+                    Topic = "Debug",
+                    Payload = Encoding.UTF8.GetBytes(Utils.GetTypeMessageAndStack(e)),
+                    QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce,
+                    Retain = true
+                };
+
+                await server.PublishAsync(message);
+            }
+            catch { }
         }
 
         private void Publish(string topic, byte[] payload,
@@ -154,7 +159,10 @@ namespace AudioPlayerBackend
             {
                 server.PublishAsync(message);
             }
-            catch { }
+            catch (Exception e)
+            {
+                PublishDebug(e);
+            }
         }
 
         protected override void OnAllSongsShuffledChanged()
@@ -174,6 +182,7 @@ namespace AudioPlayerBackend
 
         protected override void OnAudioDataChanged()
         {
+            System.Diagnostics.Debug.WriteLine("OnAudioDataChanged");
             base.OnAudioDataChanged();
 
             PublishAudioData();
@@ -349,7 +358,7 @@ namespace AudioPlayerBackend
             Publish(nameof(Volume), queue);
         }
 
-        protected override IWaveProvider ToWaveProvider(IWaveProvider waveProvider)
+        internal override IPositionWaveProvider ToWaveProvider(IPositionWaveProvider waveProvider)
         {
             if (this.waveProvider != null) this.waveProvider.ReadEvent -= WaveProvider_Read;
 
@@ -363,6 +372,7 @@ namespace AudioPlayerBackend
 
         private void WaveProvider_Read(object sender, WaveProviderReadEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine("WaveProvider_Read");
             Task.Factory.StartNew(() => AudioData = e.Buffer.Skip(e.Offset).Take(e.ReturnCount).ToArray());
         }
 

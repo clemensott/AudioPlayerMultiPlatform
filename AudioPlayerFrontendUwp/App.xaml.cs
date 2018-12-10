@@ -1,12 +1,16 @@
-﻿using System;
+﻿using AudioPlayerFrontend.Join;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
+using System.Xml.Serialization;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -15,21 +19,28 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
-namespace AudioPlayerFrontendUwp
+namespace AudioPlayerFrontend
 {
     /// <summary>
     /// Stellt das anwendungsspezifische Verhalten bereit, um die Standardanwendungsklasse zu ergänzen.
     /// </summary>
     sealed partial class App : Application
     {
+        private const string serviceProfileFilename = "serviceProfile.xml";
+        private static readonly XmlSerializer serializer = new XmlSerializer(typeof(ServiceProfile));
         /// <summary>
         /// Initialisiert das Singletonanwendungsobjekt. Dies ist die erste Zeile von erstelltem Code
         /// und daher das logische Äquivalent von main() bzw. WinMain().
         /// </summary>
+
+        private ServiceBuilder serviceBuilder;
+
         public App()
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+
+            serviceBuilder = new ServiceBuilder();
         }
 
         /// <summary>
@@ -37,7 +48,7 @@ namespace AudioPlayerFrontendUwp
         /// werden z. B. verwendet, wenn die Anwendung gestartet wird, um eine bestimmte Datei zu öffnen.
         /// </summary>
         /// <param name="e">Details über Startanforderung und -prozess.</param>
-        protected override void OnLaunched(LaunchActivatedEventArgs e)
+        protected async override void OnLaunched(LaunchActivatedEventArgs e)
         {
             Frame rootFrame = Window.Current.Content as Frame;
 
@@ -66,7 +77,24 @@ namespace AudioPlayerFrontendUwp
                     // Wenn der Navigationsstapel nicht wiederhergestellt wird, zur ersten Seite navigieren
                     // und die neue Seite konfigurieren, indem die erforderlichen Informationen als Navigationsparameter
                     // übergeben werden
-                    rootFrame.Navigate(typeof(MainPage), e.Arguments);
+
+                    try
+                    {
+                        StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
+
+                        using (Stream stream = await file.OpenStreamForReadAsync())
+                        {
+                            ServiceProfile profile = (ServiceProfile)serializer.Deserialize(stream);
+                            profile.ToClient();
+                            profile.FillServiceBuilder(serviceBuilder);
+                        }
+                    }
+                    catch
+                    {
+                        serviceBuilder.WithClient("127.0.0.1", 1884);
+                    }
+
+                    rootFrame.Navigate(typeof(MainPage), serviceBuilder);
                 }
                 // Sicherstellen, dass das aktuelle Fenster aktiv ist
                 Window.Current.Activate();
@@ -90,11 +118,35 @@ namespace AudioPlayerFrontendUwp
         /// </summary>
         /// <param name="sender">Die Quelle der Anhalteanforderung.</param>
         /// <param name="e">Details zur Anhalteanforderung.</param>
-        private void OnSuspending(object sender, SuspendingEventArgs e)
+        private async void OnSuspending(object sender, SuspendingEventArgs e)
         {
             var deferral = e.SuspendingOperation.GetDeferral();
-            //TODO: Anwendungszustand speichern und alle Hintergrundaktivitäten beenden
+
+            try
+            {
+                ServiceProfile profile = new ServiceProfile(serviceBuilder);
+                StorageFile file = await GetOrCreateStorageFile(serviceProfileFilename);
+
+                using (Stream stream = await file.OpenStreamForWriteAsync())
+                {
+                    serializer.Serialize(stream, profile);
+                }
+            }
+            catch { }
+
             deferral.Complete();
+        }
+
+        private async Task<StorageFile> GetOrCreateStorageFile(string filename)
+        {
+            try
+            {
+                return await ApplicationData.Current.LocalFolder.GetFileAsync(filename);
+            }
+            catch
+            {
+                return await ApplicationData.Current.LocalFolder.CreateFileAsync(filename);
+            }
         }
     }
 }

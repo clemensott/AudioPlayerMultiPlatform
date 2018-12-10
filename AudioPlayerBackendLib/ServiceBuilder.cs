@@ -366,28 +366,28 @@ namespace AudioPlayerBackend
             return this;
         }
 
-        private ServiceBuilder WithIsAllShuffle(bool? value = true)
+        public ServiceBuilder WithIsAllShuffle(bool? value = true)
         {
             IsAllShuffle = value;
 
             return this;
         }
 
-        private ServiceBuilder WithIsSearchShuffle(bool? value = true)
+        public ServiceBuilder WithIsSearchShuffle(bool? value = true)
         {
             IsSearchShuffle = value;
 
             return this;
         }
 
-        private ServiceBuilder WithIsOnlySearch(bool? value = true)
+        public ServiceBuilder WithIsOnlySearch(bool? value = true)
         {
             IsOnlySearch = value;
 
             return this;
         }
 
-        private ServiceBuilder WithSearchKey(string value)
+        public ServiceBuilder WithSearchKey(string value)
         {
             SearchKey = value;
 
@@ -408,7 +408,7 @@ namespace AudioPlayerBackend
             return this;
         }
 
-        public ServiceBuilder WithVolume(float volume)
+        public ServiceBuilder WithVolume(float? volume)
         {
             Volume = volume;
 
@@ -467,6 +467,7 @@ namespace AudioPlayerBackend
                 if (client != null && (ServerAddress != client.ServerAddress ||
                     ClientPort != client.Port || player != client.Player))
                 {
+                    await client.CloseAsync();
                     client = null;
                 }
 
@@ -494,7 +495,8 @@ namespace AudioPlayerBackend
             if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.MediaSources)) service.MediaSources = mediaSources;
             else if (reload) service.Reload();
 
-            if (!reload && Service != null && ContainsSameSongs(Service.AllSongsShuffled, service.AllSongsShuffled))
+            if (!reload && Service != null && !(service is IMqttAudioClient) && 
+                ContainsSameSongs(Service.AllSongsShuffled, service.AllSongsShuffled))
             {
                 service.AllSongsShuffled = Service.AllSongsShuffled;
                 service.CurrentSong = Service.CurrentSong;

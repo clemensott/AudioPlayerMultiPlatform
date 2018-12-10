@@ -9,7 +9,8 @@ namespace AudioPlayerBackend
 
         PlaybackState PlayState { get; set; }
         float Volume { get; set; }
-        void Play(IWaveProvider waveProvider);
-        void Stop(IWaveProvider waveProvider);
+        void Play(Func<IWaveProvider> waveProviderFunc);
+        void Stop(IDisposable waveProvider);
+        void ExecutePlayState();
     }
 }

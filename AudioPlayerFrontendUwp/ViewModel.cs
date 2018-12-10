@@ -1,21 +1,66 @@
 ﻿using AudioPlayerBackend;
 using AudioPlayerBackend.Common;
+using StdOttStandard;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Windows;
+using Windows.ApplicationModel.Core;
+using Windows.UI.Core;
 
 namespace AudioPlayerFrontend
 {
     class ViewModel : IAudioExtended
     {
+        private bool viewAdvancedSettings, syncPositionAndSlider;
+        private double positionSliderPosition;
+
+        public bool ViewAdvancedSettings
+        {
+            get { return viewAdvancedSettings; }
+            set
+            {
+                if (value == viewAdvancedSettings) return;
+
+                viewAdvancedSettings = value;
+                OnPropertyChanged(nameof(ViewAdvancedSettings));
+            }
+        }
+
         public IAudioExtended Parent { get; private set; }
 
-        public double PositionFactor
+        public bool SyncPositionAndSlider
         {
-            get { return Duration > TimeSpan.Zero ? Position.TotalDays / Duration.TotalDays : 0; }
-            set { if (value != PositionFactor) Position = TimeSpan.FromDays(Duration.TotalDays * value); }
+            get { return syncPositionAndSlider; }
+            set
+            {
+                if (value == syncPositionAndSlider) return;
+
+                syncPositionAndSlider = value;
+                OnPropertyChanged(nameof(SyncPositionAndSlider));
+
+                Position = TimeSpan.FromSeconds(value);
+            }
+        }
+
+        public double PositionSliderValue
+        {
+            get
+            {
+                if (SyncPositionAndSlider) positionSliderPosition = Position.TotalSeconds;
+
+                return positionSliderPosition;
+            }
+
+            set
+            {
+                if (value == positionSliderPosition) return;
+
+                positionSliderPosition = value;
+                OnPropertyChanged(nameof(PositionSliderValue));
+
+                if (SyncPositionAndSlider) Position = TimeSpan.FromSeconds(value);
+            }
         }
 
         public TimeSpan Position
@@ -84,10 +129,10 @@ namespace AudioPlayerFrontend
             set { Parent.CurrentSong = value; }
         }
 
-        public Song? CurrentViewSong
+        public int CurrentViewSongIndex
         {
-            get { return CurrentSong.HasValue && ViewSongs.Contains(CurrentSong.Value) ? CurrentSong : null; }
-            set { if (value.HasValue) CurrentSong = value.Value; }
+            get { return CurrentSong.HasValue ? ViewSongs.IndexOf(CurrentSong.Value) : -1; }
+            set { if (value >= 0 && value < ViewSongs.Count()) CurrentSong = ViewSongs.ElementAt(value); }
         }
 
         public Song[] AllSongsShuffled
@@ -138,7 +183,7 @@ namespace AudioPlayerFrontend
             switch (e.PropertyName)
             {
                 case nameof(Position):
-                    OnPropertyChanged(nameof(PositionFactor));
+                    OnPropertyChanged(nameof(PositionSliderValue));
                     break;
 
                 case nameof(IsAllShuffle):
@@ -157,7 +202,7 @@ namespace AudioPlayerFrontend
                     if (!IsSearching)
                     {
                         OnPropertyChanged(nameof(ViewSongs));
-                        OnPropertyChanged(nameof(CurrentViewSong));
+                        OnPropertyChanged(nameof(CurrentViewSongIndex));
                     }
                     break;
 
@@ -165,28 +210,29 @@ namespace AudioPlayerFrontend
                     if (IsSearching)
                     {
                         OnPropertyChanged(nameof(ViewSongs));
-                        OnPropertyChanged(nameof(CurrentViewSong));
+                        OnPropertyChanged(nameof(CurrentViewSongIndex));
                     }
                     break;
 
                 case nameof(CurrentSong):
-                    OnPropertyChanged(nameof(CurrentViewSong));
+                    OnPropertyChanged(nameof(CurrentViewSongIndex));
                     break;
             }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected void OnPropertyChanged(string propertyName)
+        protected async void OnPropertyChanged(string propertyName)
         {
             if (PropertyChanged == null) return;
 
             try
             {
-                Application.Current?.Dispatcher?.Invoke(() =>
-                {
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-                });
+                CoreDispatcher dispatcher = CoreApplication.MainView.CoreWindow.Dispatcher;
+
+                if (dispatcher.HasThreadAccess) PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+                else await dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+                    () => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName)));
             }
             catch { }
         }

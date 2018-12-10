@@ -3,7 +3,7 @@ using System;
 using System.Globalization;
 using System.Windows.Data;
 
-namespace AudioPlayerFrontendWpf
+namespace AudioPlayerFrontend
 {
     class ToIAudioClientConverter : IValueConverter
     {

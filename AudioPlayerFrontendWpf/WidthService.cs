@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace AudioPlayerFrontendWpf
+namespace AudioPlayerFrontend
 {
     class WidthService
     {

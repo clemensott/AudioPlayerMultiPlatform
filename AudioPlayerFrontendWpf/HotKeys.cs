@@ -1,7 +1,7 @@
 ﻿using StdOttFramework.Hotkey;
 using System;
 
-namespace AudioPlayerFrontendWpf
+namespace AudioPlayerFrontend
 {
     public class HotKeys : IDisposable
     {

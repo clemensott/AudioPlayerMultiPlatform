@@ -2,11 +2,9 @@
 using StdOttStandard;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
-using System.Windows;
 
 namespace AudioPlayerBackend
 {
@@ -17,10 +15,9 @@ namespace AudioPlayerBackend
 
         private bool isUpdatingPosition;
         private readonly Timer timer;
-        private readonly IntPtr? windowHandle;
         private readonly IPlayer player;
         private readonly object readerLockObj = new object();
-        private IPositionWaveProvider reader;
+        protected IPositionWaveProvider reader;
 
         public override IPlayer Player { get { return player; } }
 
@@ -75,39 +72,49 @@ namespace AudioPlayerBackend
         {
             lock (readerLockObj)
             {
-                if (reader != null) player.Stop(reader);
-
-                try
-                {
-                    if (CurrentSong.HasValue)
-                    {
-                        reader = CreateWaveProvider(CurrentSong.Value);
-                        player.Play(ToWaveProvider(reader));
-
-                        Duration = reader.TotalTime;
-                    }
-                    else
-                    {
-                        reader = null;
-                        Format = null;
-                    }
-                }
-                catch
-                {
-                    reader = null;
-                    Format = null;
-                }
+                SetCurrentSongThreadSafe();
             }
 
             EnableTimer();
         }
 
-        protected abstract IPositionWaveProvider CreateWaveProvider(Song song);
+        protected virtual void SetCurrentSongThreadSafe()
+        {
+            if (reader != null) player.Stop(reader);
 
-        protected virtual IWaveProvider ToWaveProvider(IWaveProvider waveProvider)
+            try
+            {
+                if (CurrentSong.HasValue)
+                {
+                    player.Play(GetWaveProvider);
+                }
+                else
+                {
+                    reader = null;
+                    Format = null;
+                }
+            }
+            catch
+            {
+                reader = null;
+                Format = null;
+            }
+        }
+
+        private IPositionWaveProvider GetWaveProvider()
+        {
+            reader = ToWaveProvider(CreateWaveProvider(CurrentSong.Value));
+            Duration = reader.TotalTime;
+
+            return reader;
+        }
+
+        internal virtual IPositionWaveProvider ToWaveProvider(IPositionWaveProvider waveProvider)
         {
             return waveProvider;
         }
+
+        protected abstract IPositionWaveProvider CreateWaveProvider(Song song);
 
         protected override void OnMediaSourcesChanged()
         {
@@ -128,7 +135,7 @@ namespace AudioPlayerBackend
             try
             {
                 IEnumerable<string> sourcePaths = MediaSources.ToNotNull();
-                IEnumerable<string> nonHiddenFiles = sourcePaths.SelectMany(LoadFilePaths).Where(IsNotHidden);
+                IEnumerable<string> nonHiddenFiles = sourcePaths.SelectMany(LoadFilePaths);
 
                 return nonHiddenFiles.Select(p => new Song(p));
             }
@@ -138,22 +145,7 @@ namespace AudioPlayerBackend
             }
         }
 
-        private IEnumerable<string> LoadFilePaths(string path)
-        {
-            if (File.Exists(path)) yield return path;
-
-            if (Directory.Exists(path))
-            {
-                foreach (string file in Directory.GetFiles(path)) yield return file;
-            }
-        }
-
-        private bool IsNotHidden(string path)
-        {
-            FileInfo file = new FileInfo(path);
-
-            return (file.Attributes & FileAttributes.Hidden) == 0;
-        }
+        protected abstract IEnumerable<string> LoadFilePaths(string path);
 
         private IEnumerable<Song> GetShuffledSongs(IEnumerable<Song> songs)
         {

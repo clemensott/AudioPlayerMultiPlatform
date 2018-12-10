@@ -72,7 +72,7 @@ namespace AudioPlayerBackend
             client.ApplicationMessageReceived += Client_ApplicationMessageReceived;
         }
 
-        public MqttAudioClient(IPlayer player, string server, int? port=null) : this(player)
+        public MqttAudioClient(IPlayer player, string server, int? port = null) : this(player)
         {
             ServerAddress = server;
             Port = port;
@@ -299,15 +299,19 @@ namespace AudioPlayerBackend
 
         protected override void OnFormatChanged()
         {
+            player.Play(GetBufferedWaveProvider);
+        }
+
+        private IWaveProvider GetBufferedWaveProvider()
+        {
             if (buffer == null) buffer = CreateBufferedWaveProvider(Format);
             else if (buffer.WaveFormat != Format)
             {
                 buffer.ClearBuffer();
                 buffer = CreateBufferedWaveProvider(Format);
             }
-            else return;
 
-            player.Play(buffer);
+            return buffer;
         }
 
         protected abstract IBufferedWaveProvider CreateBufferedWaveProvider(WaveFormat format);

@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Globalization;
-using System.Windows.Data;
+using Windows.UI.Xaml.Data;
 
 namespace AudioPlayerFrontend
 {
@@ -9,13 +8,13 @@ namespace AudioPlayerFrontend
         private float destValue;
         private float? srcValue;
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object value, Type targetType, object parameter, string language)
         {
             srcValue = (float?)value;
             return destValue = srcValue ?? destValue;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object value, Type targetType, object parameter, string language)
         {
             float newValue = (float)value;
 

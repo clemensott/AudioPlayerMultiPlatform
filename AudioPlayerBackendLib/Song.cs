@@ -53,6 +53,7 @@ namespace AudioPlayerBackend
 
         public bool Equals(Song other)
         {
+            if (FullPath == other.FullPath) { }
             return Title == other.Title &&
                    Artist == other.Artist &&
                    FullPath == other.FullPath;
@@ -65,6 +66,11 @@ namespace AudioPlayerBackend
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Artist);
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(FullPath);
             return hashCode;
+        }
+
+        public override string ToString()
+        {
+            return FullPath;
         }
 
         public static bool operator ==(Song song1, Song song2)
