@@ -13,7 +13,7 @@
     <Page.Resources>
         <local:VolumeToolTipConverter x:Key="volTooTipCon"/>
         <local:PositionToolTipConverter x:Key="posToolTipCon"/>
-        <con:IsTrueToValueConverter x:Key="viewAdvSetCon" EqualsValue="Visibile" NotEqualsValue="Collapsed"/>
+        <con:IsTrueToValueConverter x:Key="viewAdvSetCon" EqualsValue="Visible" NotEqualsValue="Collapsed"/>
         <local:ToIAudioClientConverter x:Key="toClientCon"/>
         <con:IsTypeToValueConverter x:Key="viewClientSetCon" CompareValue="IMqttAudioClient"
                                     EqualsValue="Visible" NotEqualsValue="Collapsed"/>
@@ -122,24 +122,8 @@
             <TextBlock Text="{Binding Artist}" FontStyle="Italic" Margin="3" TextWrapping="Wrap"/>
         </StackPanel>
 
-        <Grid Grid.Row="4" Margin="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <TextBlock Grid.Column="0" Margin="5,0" VerticalAlignment="Center"
-                       Text="{Binding Position,Converter={StaticResource timeStringCon}}"/>
-            <Slider Grid.Column="1" x:Name="sldPosition" Margin="0,0,0,-10" Minimum="0" ManipulationMode="All"
-                    VerticalAlignment="Center" ThumbToolTipValueConverter="{StaticResource posToolTipCon}"
-                    Value="{Binding PositionSliderValue,Mode=TwoWay}"
-                    Maximum="{Binding Duration.TotalSeconds,Mode=OneWay}"
-                    ManipulationStarted="sldPosition_ManipulationStarted"
-                    ManipulationCompleted="sldPosition_ManipulationCompleted"/>
-            <TextBlock Grid.Column="2" x:Name="tblDuration" Margin="5,0" VerticalAlignment="Center"
-                       Text="{Binding Duration,Converter={StaticResource timeStringCon}}"/>
-        </Grid>
+        <local:AudioPositionSlider Grid.Row="4" Position="{Binding Position,Mode=TwoWay}"
+                                   Duration="{Binding Duration}"/>
     </Grid>
 
     <Page.BottomAppBar>

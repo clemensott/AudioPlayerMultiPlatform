@@ -12,8 +12,7 @@ namespace AudioPlayerFrontend
 {
     class ViewModel : IAudioExtended
     {
-        private bool viewAdvancedSettings, syncPositionAndSlider;
-        private double positionSliderPosition;
+        private bool viewAdvancedSettings;
 
         public bool ViewAdvancedSettings
         {
@@ -28,40 +27,6 @@ namespace AudioPlayerFrontend
         }
 
         public IAudioExtended Parent { get; private set; }
-
-        public bool SyncPositionAndSlider
-        {
-            get { return syncPositionAndSlider; }
-            set
-            {
-                if (value == syncPositionAndSlider) return;
-
-                syncPositionAndSlider = value;
-                OnPropertyChanged(nameof(SyncPositionAndSlider));
-
-                Position = TimeSpan.FromSeconds(value);
-            }
-        }
-
-        public double PositionSliderValue
-        {
-            get
-            {
-                if (SyncPositionAndSlider) positionSliderPosition = Position.TotalSeconds;
-
-                return positionSliderPosition;
-            }
-
-            set
-            {
-                if (value == positionSliderPosition) return;
-
-                positionSliderPosition = value;
-                OnPropertyChanged(nameof(PositionSliderValue));
-
-                if (SyncPositionAndSlider) Position = TimeSpan.FromSeconds(value);
-            }
-        }
 
         public TimeSpan Position
         {
@@ -182,10 +147,6 @@ namespace AudioPlayerFrontend
 
             switch (e.PropertyName)
             {
-                case nameof(Position):
-                    OnPropertyChanged(nameof(PositionSliderValue));
-                    break;
-
                 case nameof(IsAllShuffle):
                     if (!IsSearching) OnPropertyChanged(nameof(IsShuffle));
                     break;

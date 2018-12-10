@@ -80,15 +80,5 @@ namespace AudioPlayerFrontend
 
             Frame.Navigate(typeof(SettingsPage), builder);
         }
-
-        private void sldPosition_ManipulationStarted(object sender, ManipulationStartedRoutedEventArgs e)
-        {
-            viewModel.SyncPositionAndSlider = false;
-        }
-
-        private void sldPosition_ManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs e)
-        {
-            viewModel.SyncPositionAndSlider = true;
-        }
     }
 }
