@@ -6,6 +6,7 @@ using System.Xml.Serialization;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
+using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -17,6 +18,7 @@ namespace AudioPlayerFrontend
     /// </summary>
     sealed partial class App : Application
     {
+        public static DateTime CreateTime = DateTime.MinValue;
         private const string serviceProfileFilename = "serviceProfile.xml";
         private static readonly XmlSerializer serializer = new XmlSerializer(typeof(ServiceProfile));
         /// <summary>
@@ -28,10 +30,22 @@ namespace AudioPlayerFrontend
 
         public App()
         {
+            CreateTime = DateTime.Now;
             this.InitializeComponent();
             this.Suspending += OnSuspending;
 
             serviceBuilder = new ServiceBuilder();
+
+            UnhandledException += App_UnhandledException;
+        }
+
+        private async void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            //MessageDialog dialog = new MessageDialog(e.Exception.ToString());
+            //dialog.ShowAsync();
+
+            StorageFile file = await GetOrCreateStorageFile("Exception.txt");
+            await FileIO.WriteTextAsync(file, e.Exception.ToString());
         }
 
         /// <summary>

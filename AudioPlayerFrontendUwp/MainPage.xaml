@@ -5,7 +5,6 @@
     xmlns:local="using:AudioPlayerFrontend"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:int="using:AudioPlayerBackend"
     xmlns:com="using:AudioPlayerBackend.Common"
     xmlns:con="using:StdOttUwp.Converters"
     mc:Ignorable="d"
@@ -118,9 +117,9 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <StackPanel Grid.Row="3" Margin="3" DataContext="{Binding CurrentSong}">
-            <TextBlock Text="{Binding Title}" Margin="3" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding Artist}" FontStyle="Italic" Margin="3" TextWrapping="Wrap"/>
+        <StackPanel Grid.Row="3" Margin="1" DataContext="{Binding CurrentSong}">
+            <TextBlock Text="{Binding Title}" Margin="1" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding Artist}" FontStyle="Italic" Margin="1" TextWrapping="Wrap"/>
         </StackPanel>
 
         <local:AudioPositionSlider Grid.Row="4" Position="{Binding Position,Mode=TwoWay}"
@@ -145,6 +144,7 @@
                 <AppBarToggleButton Icon="ViewAll" Label="Advanced settings" 
                                     IsChecked="{Binding ViewAdvancedSettings,Mode=TwoWay}"/>
                 <AppBarButton Icon="Setting" Label="All settings" Click="AbbSettings_Click"/>
+                <AppBarButton Icon="Admin" Label="Debug" Click="AbbDebug_Click"/>
             </CommandBar.SecondaryCommands>
         </CommandBar>
     </Page.BottomAppBar>

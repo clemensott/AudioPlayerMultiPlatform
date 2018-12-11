@@ -2,6 +2,8 @@
 using AudioPlayerBackend.Common;
 using System;
 using System.Threading.Tasks;
+using Windows.Storage;
+using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -111,6 +113,26 @@ namespace AudioPlayerFrontend
             builder.WithService(viewModel.Parent);
 
             Frame.Navigate(typeof(SettingsPage), builder);
+        }
+
+        private async void AbbDebug_Click(object sender, RoutedEventArgs e)
+        {
+            await new MessageDialog(App.CreateTime.ToString()).ShowAsync();
+
+            string exceptionText;
+
+            try
+            {
+                StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync("Exception.txt");
+
+                exceptionText = await FileIO.ReadTextAsync(file);
+            }
+            catch (Exception exc)
+            {
+                exceptionText = exc.ToString();
+            }
+
+            await new MessageDialog(exceptionText).ShowAsync();
         }
     }
 }
