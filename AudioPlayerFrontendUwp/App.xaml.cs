@@ -1,22 +1,13 @@
 ﻿using AudioPlayerFrontend.Join;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
 namespace AudioPlayerFrontend
@@ -80,18 +71,20 @@ namespace AudioPlayerFrontend
 
                     try
                     {
-                        serviceBuilder.WithClient("nas-server", 1884);
-                        //StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
+                        //serviceBuilder.WithClient("nas-server", 1884);
+                        StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
+                        string xmlText = await FileIO.ReadTextAsync(file);
+                        StringReader reader = new StringReader(xmlText);
+                        System.Diagnostics.Debug.WriteLine(xmlText);
 
-                        //using (Stream stream = await file.OpenStreamForReadAsync())
-                        //{
-                        //    ServiceProfile profile = (ServiceProfile)serializer.Deserialize(stream);
-                        //    profile.ToClient();
-                        //    profile.FillServiceBuilder(serviceBuilder);
-                        //}
+                        ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
+                        profile.ToClient();
+                        profile.FillServiceBuilder(serviceBuilder);
                     }
-                    catch
+                    catch (Exception exc)
                     {
+                        System.Diagnostics.Debug.WriteLine("Loading service profile failed:\n" + exc);
+
                         serviceBuilder.WithClient("nas-server", 1884);
                     }
 
@@ -126,14 +119,17 @@ namespace AudioPlayerFrontend
             try
             {
                 ServiceProfile profile = new ServiceProfile(serviceBuilder);
-                StorageFile file = await GetOrCreateStorageFile(serviceProfileFilename);
+                StringWriter writer = new StringWriter();
+                serializer.Serialize(writer, profile);
+                System.Diagnostics.Debug.WriteLine(writer);
 
-                using (Stream stream = await file.OpenStreamForWriteAsync())
-                {
-                    serializer.Serialize(stream, profile);
-                }
+                StorageFile file = await GetOrCreateStorageFile(serviceProfileFilename);
+                await FileIO.WriteTextAsync(file, writer.ToString());
             }
-            catch { }
+            catch (Exception exc)
+            {
+                System.Diagnostics.Debug.WriteLine("Saving service profile failed:\n" + exc);
+            }
 
             deferral.Complete();
         }

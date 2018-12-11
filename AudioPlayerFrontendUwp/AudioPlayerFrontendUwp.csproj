@@ -98,8 +98,9 @@
     <Compile Include="AudioPositionSlider.xaml.cs">
       <DependentUpon>AudioPositionSlider.xaml</DependentUpon>
     </Compile>
-    <Compile Include="FilePathsToSingleStringConverter.cs" />
-    <Compile Include="FloatNullableToFloatConverter.cs" />
+    <Compile Include="Converter\FilePathsToSingleStringConverter.cs" />
+    <Compile Include="Converter\FloatNullableToFloatConverter.cs" />
+    <Compile Include="Converter\IsIMqttAudioConverter.cs" />
     <Compile Include="Join\AudioFileReader.cs" />
     <Compile Include="Join\AudioService.cs" />
     <Compile Include="Join\BufferedWaveProvider.cs" />
@@ -115,14 +116,13 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="PositionToolTipConverter.cs" />
+    <Compile Include="Converter\PositionToolTipConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceProfile.cs" />
     <Compile Include="SettingsPage.xaml.cs">
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="TimeSpanToSecondsConverter.cs" />
-    <Compile Include="ToIAudioClientConverter.cs" />
+    <Compile Include="Converter\TimeSpanToSecondsConverter.cs" />
     <Compile Include="ViewModel.cs" />
     <Compile Include="VolumeToolTipConverter.cs" />
   </ItemGroup>

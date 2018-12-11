@@ -140,7 +140,7 @@
     <Page.BottomAppBar>
         <CommandBar>
             <CommandBar.PrimaryCommands>
-                <AppBarButton Icon="BackToWindow" Label="Go back" Click="AbbGoBack_Click"/>
+                <AppBarButton Icon="Back" Label="Go back" Click="AbbGoBack_Click"/>
             </CommandBar.PrimaryCommands>
         </CommandBar>
     </Page.BottomAppBar>

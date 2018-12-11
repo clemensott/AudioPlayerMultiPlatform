@@ -182,7 +182,6 @@ namespace AudioPlayerBackend
 
         protected override void OnAudioDataChanged()
         {
-            System.Diagnostics.Debug.WriteLine("OnAudioDataChanged");
             base.OnAudioDataChanged();
 
             PublishAudioData();
@@ -372,7 +371,6 @@ namespace AudioPlayerBackend
 
         private void WaveProvider_Read(object sender, WaveProviderReadEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("WaveProvider_Read");
             Task.Factory.StartNew(() => AudioData = e.Buffer.Skip(e.Offset).Take(e.ReturnCount).ToArray());
         }
 

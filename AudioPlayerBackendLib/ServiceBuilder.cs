@@ -195,6 +195,18 @@ namespace AudioPlayerBackend
             }
         }
 
+        public IPlayer Player
+        {
+            get { return player; }
+            set
+            {
+                if (value == player) return;
+
+                player = value;
+                OnPropertyChanged(nameof(Player));
+            }
+        }
+
         public IAudioExtended Service
         {
             get { return service; }

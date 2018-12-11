@@ -25,6 +25,7 @@ namespace AudioPlayerBackend
         {
             this.player = player;
 
+            player.PlayState = PlayState;
             player.PlaybackStopped += Player_PlaybackStopped;
 
             timer = new Timer(Timer_Elapsed, null, updateIntervall, updateIntervall);
@@ -34,7 +35,7 @@ namespace AudioPlayerBackend
 
         private void Player_PlaybackStopped(object sender, StoppedEventArgs e)
         {
-            if (e.Exception == null) SetNextSong();
+            if (e.Exception == null && (PlayState != PlaybackState.Stopped || Position >= Duration)) SetNextSong();
         }
 
         private void Player_MediaEnded(object sender, EventArgs args)

@@ -4,8 +4,6 @@ using System;
 using System.Threading.Tasks;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x407 dokumentiert.
@@ -18,22 +16,56 @@ namespace AudioPlayerFrontend
     public sealed partial class MainPage : Page
     {
         private ServiceBuilder builder;
+        private Task<IAudioExtended> buildTask;
         private ViewModel viewModel;
 
         public MainPage()
         {
             this.InitializeComponent();
+
+            System.Diagnostics.Debug.WriteLine("MainPageCtor");
+            Application.Current.EnteredBackground += Current_EnteredBackground;
+            Application.Current.LeavingBackground += Current_LeavingBackground;
         }
 
-        protected async override void OnNavigatedTo(NavigationEventArgs e)
+        private async void Current_LeavingBackground(object sender, Windows.ApplicationModel.LeavingBackgroundEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("Leaving: " + (viewModel == null));
+            if (viewModel?.Parent is IMqttAudioClient client && !client.IsOpen) await client.OpenAsync();
+        }
+
+        private async void Current_EnteredBackground(object sender, Windows.ApplicationModel.EnteredBackgroundEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("Entering: " + (viewModel == null));
+            if (viewModel?.Parent is IMqttAudioClient client && client.IsOpen) await client.CloseAsync();
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             if (e.Parameter is ServiceBuilder)
             {
                 builder = e.Parameter as ServiceBuilder;
-                builder.WithPlayer(new Join.Player());
 
-                DataContext = viewModel = new ViewModel(await builder.Build());
+                if (builder.Player == null) builder.WithPlayer(new Join.Player());
+
+                buildTask = builder.Build();
             }
+        }
+
+        private async void Page_Loaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                await buildTask;
+
+                DataContext = viewModel = new ViewModel(buildTask.Result);
+            }
+            catch
+            {
+                DataContext = viewModel = null;
+            }
+
+            if (viewModel == null) Frame.Navigate(typeof(SettingsPage), builder);
         }
 
         private void Reload_Click(object sender, RoutedEventArgs e)

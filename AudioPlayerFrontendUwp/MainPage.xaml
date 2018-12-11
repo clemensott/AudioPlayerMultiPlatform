@@ -5,23 +5,24 @@
     xmlns:local="using:AudioPlayerFrontend"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:be="using:AudioPlayerBackend.Common"
+    xmlns:int="using:AudioPlayerBackend"
+    xmlns:com="using:AudioPlayerBackend.Common"
     xmlns:con="using:StdOttUwp.Converters"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    Loaded="Page_Loaded">
 
     <Page.Resources>
         <local:VolumeToolTipConverter x:Key="volTooTipCon"/>
         <local:PositionToolTipConverter x:Key="posToolTipCon"/>
         <con:IsTrueToValueConverter x:Key="viewAdvSetCon" EqualsValue="Visible" NotEqualsValue="Collapsed"/>
-        <local:ToIAudioClientConverter x:Key="toClientCon"/>
-        <con:IsTypeToValueConverter x:Key="viewClientSetCon" CompareValue="IMqttAudioClient"
+        <local:IsIMqttAudioConverter x:Key="viewClientSetCon"
                                     EqualsValue="Visible" NotEqualsValue="Collapsed"/>
-
+        
         <con:TimeSpanToStringConverter x:Key="timeStringCon"/>
         <local:TimeSpanToSecondsConverter x:Key="timeSecCon"/>
 
-        <be:PlaybackState x:Key="playingState">Playing</be:PlaybackState>
+        <com:PlaybackState x:Key="playingState">Playing</com:PlaybackState>
         <Symbol x:Key="playSym">Play</Symbol>
         <Symbol x:Key="pauseSym">Pause</Symbol>
         <con:IsEnumToValueConverter x:Key="isPlayPauseIconCon"
