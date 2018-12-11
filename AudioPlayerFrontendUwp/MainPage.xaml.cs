@@ -44,6 +44,8 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
+            tbxSearchKey.IsEnabled = false;
+
             if (e.Parameter is ServiceBuilder)
             {
                 builder = e.Parameter as ServiceBuilder;
@@ -68,6 +70,7 @@ namespace AudioPlayerFrontend
             }
 
             if (viewModel == null) Frame.Navigate(typeof(SettingsPage), builder);
+            else tbxSearchKey.IsEnabled = true;
         }
 
         private void Reload_Click(object sender, RoutedEventArgs e)

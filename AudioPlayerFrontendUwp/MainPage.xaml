@@ -83,8 +83,9 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBox Text="{Binding SearchKey,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
-                     Margin="3" GotFocus="TbxSearchKey_GotFocus"/>
+            <TextBox Name="tbxSearchKey" IsEnabled="False" Margin="3" 
+                     Text="{Binding SearchKey,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+                     GotFocus="TbxSearchKey_GotFocus"/>
 
             <CheckBox Grid.Column="1" Content="OnlySearch" Margin="3,3,-10,3"
                       IsChecked="{Binding IsOnlySearch,Mode=TwoWay}"/>
@@ -95,7 +96,7 @@
                  SelectionChanged="LbxSongs_SelectionChanged">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Grid Margin="3">
+                    <Grid Margin="0,-8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="5"/>
