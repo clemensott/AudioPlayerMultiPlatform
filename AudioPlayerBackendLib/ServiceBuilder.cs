@@ -9,8 +9,9 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend
 {
-    public abstract class ServiceBuilder : INotifyPropertyChanged
+    public class ServiceBuilder : INotifyPropertyChanged
     {
+        private IServiceBuilderHelper helper;
         private bool ifNon, reload;
         private bool? isAllShuffle, isSearchShuffle, isOnlySearch, play, isStreaming;
         private int serverPort;
@@ -219,8 +220,10 @@ namespace AudioPlayerBackend
             }
         }
 
-        public ServiceBuilder()
+        public ServiceBuilder(IServiceBuilderHelper helper = null)
         {
+            this.helper = helper;
+
             WithStandalone();
         }
 
@@ -507,7 +510,7 @@ namespace AudioPlayerBackend
             if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.MediaSources)) service.MediaSources = mediaSources;
             else if (reload) service.Reload();
 
-            if (!reload && Service != null && !(service is IMqttAudioClient) && 
+            if (!reload && Service != null && !(service is IMqttAudioClient) &&
                 ContainsSameSongs(Service.AllSongsShuffled, service.AllSongsShuffled))
             {
                 service.AllSongsShuffled = Service.AllSongsShuffled;
@@ -524,11 +527,20 @@ namespace AudioPlayerBackend
             return service;
         }
 
-        protected abstract IAudioExtended CreateAudioService(IPlayer player);
+        protected virtual IAudioExtended CreateAudioService(IPlayer player)
+        {
+            return helper.CreateAudioService(player, this);
+        }
 
-        protected abstract IMqttAudioClient CreateAudioClient(IPlayer player, string serverAddress, int? port);
+        protected virtual IMqttAudioClient CreateAudioClient(IPlayer player, string serverAddress, int? port)
+        {
+            return helper.CreateAudioClient(player, serverAddress, port, this);
+        }
 
-        protected abstract IMqttAudioService CreateAudioServer(IPlayer player, int port);
+        protected virtual IMqttAudioService CreateAudioServer(IPlayer player, int port)
+        {
+            return helper.CreateAudioServer(player, port, this);
+        }
 
         private bool ContainsSameSongs(IEnumerable<Song> enum1, IEnumerable<Song> enum2)
         {

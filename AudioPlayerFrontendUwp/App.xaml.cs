@@ -1,4 +1,5 @@
-﻿using AudioPlayerFrontend.Join;
+﻿using AudioPlayerBackend;
+using AudioPlayerFrontend.Join;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -6,7 +7,6 @@ using System.Xml.Serialization;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
-using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -34,7 +34,7 @@ namespace AudioPlayerFrontend
             this.InitializeComponent();
             this.Suspending += OnSuspending;
 
-            serviceBuilder = new ServiceBuilder();
+            serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper());
 
             UnhandledException += App_UnhandledException;
         }
@@ -89,7 +89,6 @@ namespace AudioPlayerFrontend
                         StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
                         string xmlText = await FileIO.ReadTextAsync(file);
                         StringReader reader = new StringReader(xmlText);
-                        System.Diagnostics.Debug.WriteLine(xmlText);
 
                         ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
                         profile.ToClient();
@@ -135,7 +134,6 @@ namespace AudioPlayerFrontend
                 ServiceProfile profile = new ServiceProfile(serviceBuilder);
                 StringWriter writer = new StringWriter();
                 serializer.Serialize(writer, profile);
-                System.Diagnostics.Debug.WriteLine(writer);
 
                 StorageFile file = await GetOrCreateStorageFile(serviceProfileFilename);
                 await FileIO.WriteTextAsync(file, writer.ToString());

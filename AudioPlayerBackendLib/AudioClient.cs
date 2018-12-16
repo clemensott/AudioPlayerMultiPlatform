@@ -8,6 +8,7 @@ namespace AudioPlayerBackend
 {
     public abstract class AudioClient : IAudioExtended
     {
+        private readonly IAudioClientHelper helper;
         protected TimeSpan position, duration;
         protected PlaybackState playState;
         protected bool isAllShuffle, isSearchShuffle, isOnlySearch;
@@ -211,8 +212,10 @@ namespace AudioPlayerBackend
 
         public abstract IPlayer Player { get; }
 
-        public AudioClient()
+        public AudioClient(IAudioClientHelper helper = null)
         {
+            this.helper = helper;
+
             playState = PlaybackState.Stopped;
             mediaSources = new string[0];
             allSongsShuffled = new Song[0];
@@ -246,12 +249,18 @@ namespace AudioPlayerBackend
 
         public void SetNextSong()
         {
-            CurrentSong = SongsService.GetNextSong(this);
+            ChangeCurrentSongOrRestart(SongsService.GetNextSong(this));
         }
 
         public void SetPreviousSong()
         {
-            CurrentSong = SongsService.GetPreviousSong(this);
+            ChangeCurrentSongOrRestart(SongsService.GetPreviousSong(this));
+        }
+
+        private void ChangeCurrentSongOrRestart(Song? newCurrentSong)
+        {
+            if (newCurrentSong != CurrentSong) CurrentSong = newCurrentSong;
+            else Position = TimeSpan.Zero;
         }
 
         public abstract void Reload();
@@ -267,7 +276,8 @@ namespace AudioPlayerBackend
 
         protected virtual void InvokeDispatcher(Action action)
         {
-            action();
+            if (helper.InvokeDispatcher != null) helper.InvokeDispatcher(action);
+            else action();
         }
 
         public abstract void Dispose();

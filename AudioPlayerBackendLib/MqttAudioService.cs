@@ -8,8 +8,9 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend
 {
-    public abstract class MqttAudioService : AudioService, IMqttAudioService
+    public class MqttAudioService : AudioService, IMqttAudioService
     {
+        private readonly IMqttAudioServiceHelper helper;
         private readonly List<string> messageInterceptingTopics;
         private readonly IMqttServer server;
         private ReadEventWaveProvider waveProvider;
@@ -18,15 +19,20 @@ namespace AudioPlayerBackend
 
         public bool IsOpen { get; private set; }
 
-        public MqttAudioService(IPlayer player, int port) : base(player)
+        public MqttAudioService(IPlayer player, int port, IMqttAudioServiceHelper helper = null) : base(player, helper)
         {
             messageInterceptingTopics = new List<string>();
+
+            this.helper = helper;
             server = CreateMqttServer();
 
             Port = port;
         }
 
-        protected abstract IMqttServer CreateMqttServer();
+        protected virtual IMqttServer CreateMqttServer()
+        {
+            return helper.CreateMqttServer(this);
+        }
 
         public async Task OpenAsync()
         {

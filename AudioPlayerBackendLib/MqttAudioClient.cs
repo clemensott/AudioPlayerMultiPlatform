@@ -9,13 +9,14 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend
 {
-    public abstract class MqttAudioClient : AudioClient, IMqttAudioClient
+    public class MqttAudioClient : AudioClient, IMqttAudioClient
     {
         private bool isStreaming;
         private List<string> initProps;
         private readonly List<string> messageReceivingTopics;
         private readonly IMqttClient client;
         private readonly IPlayer player;
+        private readonly IMqttAudioClientHelper helper;
         private IBufferedWaveProvider buffer;
 
         public bool IsStreaming
@@ -62,9 +63,10 @@ namespace AudioPlayerBackend
 
         public override IPlayer Player { get { return player; } }
 
-        private MqttAudioClient(IPlayer player)
+        private MqttAudioClient(IPlayer player, IMqttAudioClientHelper helper) : base(helper)
         {
             this.player = player;
+            this.helper = helper;
 
             messageReceivingTopics = new List<string>();
 
@@ -72,33 +74,33 @@ namespace AudioPlayerBackend
             client.ApplicationMessageReceived += Client_ApplicationMessageReceived;
         }
 
-        public MqttAudioClient(IPlayer player, string server, int? port = null) : this(player)
+        public MqttAudioClient(IPlayer player, string server, int? port = null, IMqttAudioClientHelper helper = null) : this(player, helper)
         {
+            this.helper = helper;
             ServerAddress = server;
             Port = port;
         }
 
-        protected abstract IMqttClient CreateMqttClient();
+        protected virtual IMqttClient CreateMqttClient()
+        {
+            return helper.CreateMqttClient(this);
+        }
 
         public async Task OpenAsync()
         {
             initProps = GetTopicFilters().Select(tf => tf.Topic).ToList();
 
             await client.ConnectAsync(ServerAddress, Port);
+            await Task.WhenAll(GetTopicFilters().Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
 
-            foreach (TopicFilter tf in GetTopicFilters()) await client.SubscribeAsync(tf.Topic, tf.Qos);
-
-            lock (initProps)
-            {
-                while (initProps.Count > 0) Monitor.Wait(initProps);
-            }
+            await Utils.WaitAsync(initProps, () => initProps.Count > 0);
 
             initProps = null;
         }
 
         public async Task CloseAsync()
         {
-            foreach (TopicFilter tf in GetTopicFilters()) await client.UnsubscribeAsync(tf.Topic);
+            await Task.WhenAll(GetTopicFilters().Select(tf => client.UnsubscribeAsync(tf.Topic)));
 
             await client.UnsubscribeAsync(nameof(Format));
             await client.UnsubscribeAsync(nameof(AudioData));
@@ -124,13 +126,14 @@ namespace AudioPlayerBackend
 
         private async void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
         {
-            messageReceivingTopics.Add(e.ApplicationMessage.Topic);
-
+            string topic = e.ApplicationMessage.Topic;
             ByteQueue queue = e.ApplicationMessage.Payload;
+
+            messageReceivingTopics.Add(topic);
 
             try
             {
-                switch (e.ApplicationMessage.Topic)
+                switch (topic)
                 {
                     case nameof(AllSongsShuffled):
                         AllSongsShuffled = queue.DequeueSongs();
@@ -202,17 +205,17 @@ namespace AudioPlayerBackend
                 catch { }
             }
 
-            if (initProps != null && initProps.Contains(e.ApplicationMessage.Topic))
+            if (initProps != null && initProps.Contains(topic))
             {
                 lock (initProps)
                 {
-                    initProps.Remove(e.ApplicationMessage.Topic);
+                    initProps.Remove(topic);
 
                     Monitor.Pulse(initProps);
                 }
             }
 
-            messageReceivingTopics.Remove(e.ApplicationMessage.Topic);
+            messageReceivingTopics.Remove(topic);
         }
 
         private void Publish(string topic, byte[] payload,
@@ -314,7 +317,10 @@ namespace AudioPlayerBackend
             return buffer;
         }
 
-        protected abstract IBufferedWaveProvider CreateBufferedWaveProvider(WaveFormat format);
+        protected virtual IBufferedWaveProvider CreateBufferedWaveProvider(WaveFormat format)
+        {
+            return helper.CreateBufferedWaveProvider(format, this);
+        }
 
         protected override void OnAudioDataChanged()
         {

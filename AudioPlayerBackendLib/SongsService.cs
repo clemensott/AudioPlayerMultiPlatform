@@ -103,7 +103,8 @@ namespace AudioPlayerBackend
 
         public static Song? GetNextSong(IAudio audio)
         {
-            Song[] songs = (audio.IsOnlySearch ? GetSearchSongs(audio) : GetAllSongs(audio)).ToArray();
+            Song[] songs = (audio.IsOnlySearch && GetIsSearching(audio.SearchKey) ?
+                GetSearchSongs(audio) : GetAllSongs(audio)).ToArray();
 
             return GetNextSong(songs, audio.CurrentSong);
         }
@@ -121,7 +122,8 @@ namespace AudioPlayerBackend
 
         public static Song? GetPreviousSong(IAudio audio)
         {
-            Song[] songs = (audio.IsOnlySearch ? GetSearchSongs(audio) : GetAllSongs(audio)).ToArray();
+            Song[] songs = (audio.IsOnlySearch && GetIsSearching(audio.SearchKey) ?
+               GetSearchSongs(audio) : GetAllSongs(audio)).ToArray();
 
             return GetPreviousSong(songs, audio.CurrentSong);
         }

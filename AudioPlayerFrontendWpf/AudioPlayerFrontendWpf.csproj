@@ -55,8 +55,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="MQTTnet, Version=2.8.5.0, Culture=neutral, PublicKeyToken=b69712f52770c0a7, processorArchitecture=MSIL">
-      <HintPath>..\packages\MQTTnet.2.8.5\lib\net461\MQTTnet.dll</HintPath>
+    <Reference Include="MQTTnet, Version=2.8.4.0, Culture=neutral, PublicKeyToken=b69712f52770c0a7, processorArchitecture=MSIL">
+      <HintPath>..\packages\MQTTnet.2.8.4\lib\net461\MQTTnet.dll</HintPath>
     </Reference>
     <Reference Include="NAudio, Version=1.8.5.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NAudio.1.8.5\lib\net35\NAudio.dll</HintPath>
@@ -91,17 +91,15 @@
     <Compile Include="HotKeysBuilder.cs" />
     <Compile Include="HotKeys.cs" />
     <Compile Include="Join\AudioFileReader.cs" />
-    <Compile Include="Join\AudioService.cs" />
     <Compile Include="Join\BufferedWaveProvider.cs" />
     <Compile Include="Join\Convert.cs" />
     <Compile Include="Join\IWaveProvider.cs" />
-    <Compile Include="Join\MqttAudioClient.cs" />
-    <Compile Include="Join\MqttAudioService.cs" />
+    <Compile Include="Join\AudioHelper.cs" />
     <Compile Include="Join\MqttClient.cs" />
     <Compile Include="Join\MqttServer.cs" />
     <Compile Include="Join\Player.cs" />
     <Compile Include="Join\Players.cs" />
-    <Compile Include="Join\ServiceBuilder.cs" />
+    <Compile Include="Join\ServiceBuilderHelper.cs" />
     <Compile Include="Join\WaveProvider.cs" />
     <Compile Include="SettingsWindow.xaml.cs">
       <DependentUpon>SettingsWindow.xaml</DependentUpon>

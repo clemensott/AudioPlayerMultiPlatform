@@ -8,22 +8,25 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend
 {
-    public abstract class AudioService : AudioClient
+    public class AudioService : AudioClient, IAudioService
     {
         private const int updateIntervall = 100;
         private static Random ran = new Random();
 
         private bool isUpdatingPosition;
+        private IAudioServiceHelper helper;
         private readonly Timer timer;
         private readonly IPlayer player;
         private readonly object readerLockObj = new object();
-        protected IPositionWaveProvider reader;
+
+        public IPositionWaveProvider Reader { get; set; }
 
         public override IPlayer Player { get { return player; } }
 
-        public AudioService(IPlayer player)
+        public AudioService(IPlayer player, IAudioServiceHelper helper = null) : base(helper)
         {
             this.player = player;
+            this.helper = helper;
 
             player.PlayState = PlayState;
             player.PlaybackStopped += Player_PlaybackStopped;
@@ -47,7 +50,11 @@ namespace AudioPlayerBackend
         {
             isUpdatingPosition = true;
 
-            if (reader != null) Position = reader.CurrentTime;
+            try
+            {
+                if (Reader != null) Position = Reader.CurrentTime;
+            }
+            catch { }
 
             isUpdatingPosition = false;
         }
@@ -80,7 +87,13 @@ namespace AudioPlayerBackend
 
         protected virtual void SetCurrentSongThreadSafe()
         {
-            if (reader != null) player.Stop(reader);
+            if (helper?.SetCurrentSongThreadSafe != null)
+            {
+                helper.SetCurrentSongThreadSafe(this);
+                return;
+            }
+
+            if (Reader != null) player.Stop(Reader);
 
             try
             {
@@ -90,23 +103,23 @@ namespace AudioPlayerBackend
                 }
                 else
                 {
-                    reader = null;
+                    Reader = null;
                     Format = null;
                 }
             }
             catch
             {
-                reader = null;
+                Reader = null;
                 Format = null;
             }
         }
 
         private IPositionWaveProvider GetWaveProvider()
         {
-            reader = ToWaveProvider(CreateWaveProvider(CurrentSong.Value));
-            Duration = reader.TotalTime;
+            Reader = ToWaveProvider(CreateWaveProvider(CurrentSong.Value));
+            Duration = Reader.TotalTime;
 
-            return reader;
+            return Reader;
         }
 
         internal virtual IPositionWaveProvider ToWaveProvider(IPositionWaveProvider waveProvider)
@@ -114,7 +127,10 @@ namespace AudioPlayerBackend
             return waveProvider;
         }
 
-        protected abstract IPositionWaveProvider CreateWaveProvider(Song song);
+        protected virtual IPositionWaveProvider CreateWaveProvider(Song song)
+        {
+            return helper.CreateWaveProvider(song, this);
+        }
 
         protected override void OnMediaSourcesChanged()
         {
@@ -145,7 +161,10 @@ namespace AudioPlayerBackend
             }
         }
 
-        protected abstract IEnumerable<string> LoadFilePaths(string path);
+        protected virtual IEnumerable<string> LoadFilePaths(string path)
+        {
+            return helper.LoadFilePaths(path, this);
+        }
 
         private IEnumerable<Song> GetShuffledSongs(IEnumerable<Song> songs)
         {
@@ -161,7 +180,11 @@ namespace AudioPlayerBackend
 
         protected override void OnPositionChanged()
         {
-            if (!isUpdatingPosition && reader != null) reader.CurrentTime = Position;
+            if (!isUpdatingPosition && Reader != null)
+            {
+                Reader.CurrentTime = Position;
+                Player.ExecutePlayState();
+            }
         }
 
         private void EnableTimer()
@@ -218,10 +241,10 @@ namespace AudioPlayerBackend
         {
             player.PlaybackStopped -= Player_PlaybackStopped;
 
-            if (reader != null)
+            if (Reader != null)
             {
-                player.Stop(reader);
-                reader = null;
+                player.Stop(Reader);
+                Reader = null;
             }
         }
     }

@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend;
+using AudioPlayerFrontend.Join;
 using StdOttFramework.Converters;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,12 +19,12 @@ namespace AudioPlayerFrontend
 
         public HotKeysBuilder HotKeysBuilder { get; private set; }
 
-        public SettingsWindow() : this(new Join.ServiceBuilder(), new HotKeysBuilder())
+        public SettingsWindow() : this(new ServiceBuilder(new ServiceBuilderHelper()), new HotKeysBuilder())
         {
         }
 
         public SettingsWindow(IAudioExtended service, HotKeys hotKeys)
-            : this(new Join.ServiceBuilder().WithService(service), new HotKeysBuilder().WithHotKeys(hotKeys))
+            : this(new ServiceBuilder(new ServiceBuilderHelper()).WithService(service), new HotKeysBuilder().WithHotKeys(hotKeys))
         {
         }
 

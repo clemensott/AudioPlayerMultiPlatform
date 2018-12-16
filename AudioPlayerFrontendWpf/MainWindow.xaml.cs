@@ -1,5 +1,6 @@
 ﻿using AudioPlayerBackend;
 using AudioPlayerBackend.Common;
+using AudioPlayerFrontend.Join;
 using StdOttStandard;
 using System;
 using System.Collections.Generic;
@@ -42,7 +43,7 @@ namespace AudioPlayerFrontend
             {
                 IEnumerable<string> args = Environment.GetCommandLineArgs().Skip(1);
                 IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-                ServiceBuilder serviceBuilder = new Join.ServiceBuilder()
+                ServiceBuilder serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper())
                     .WithArgs(args)
                     .WithPlayer(new Join.Player(-1, windowHandle));
 
@@ -151,7 +152,7 @@ namespace AudioPlayerFrontend
             hotKeys = window.HotKeysBuilder.Build();
         }
 
-        private void lbxSongs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void LbxSongs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             Scroll();
         }

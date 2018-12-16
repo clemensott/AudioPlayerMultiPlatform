@@ -102,16 +102,14 @@
     <Compile Include="Converter\FloatNullableToFloatConverter.cs" />
     <Compile Include="Converter\IsIMqttAudioConverter.cs" />
     <Compile Include="Join\AudioFileReader.cs" />
-    <Compile Include="Join\AudioService.cs" />
     <Compile Include="Join\BufferedWaveProvider.cs" />
     <Compile Include="Join\Convert.cs" />
     <Compile Include="Join\IWaveProvider.cs" />
-    <Compile Include="Join\MqttAudioClient.cs" />
-    <Compile Include="Join\MqttAudioService.cs" />
+    <Compile Include="Join\AudioHelper.cs" />
     <Compile Include="Join\MqttClient.cs" />
     <Compile Include="Join\MqttServer.cs" />
     <Compile Include="Join\Player.cs" />
-    <Compile Include="Join\ServiceBuilder.cs" />
+    <Compile Include="Join\ServiceBuilderHelper.cs" />
     <Compile Include="Join\WaveProvider.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>

@@ -2,6 +2,7 @@
 using AudioPlayerBackend.Common;
 using System;
 using System.Threading.Tasks;
+using Windows.ApplicationModel;
 using Windows.Storage;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
@@ -25,21 +26,40 @@ namespace AudioPlayerFrontend
         {
             this.InitializeComponent();
 
-            System.Diagnostics.Debug.WriteLine("MainPageCtor");
             Application.Current.EnteredBackground += Current_EnteredBackground;
             Application.Current.LeavingBackground += Current_LeavingBackground;
         }
 
-        private async void Current_LeavingBackground(object sender, Windows.ApplicationModel.LeavingBackgroundEventArgs e)
+        private async void Current_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("Leaving: " + (viewModel == null));
-            if (viewModel?.Parent is IMqttAudioClient client && !client.IsOpen) await client.OpenAsync();
+            try
+            {
+                if (viewModel?.Parent is IMqttAudioClient client && !client.IsOpen) await client.OpenAsync();
+            }
+            catch (Exception exc)
+            {
+                await new MessageDialog(exc.ToString()).ShowAsync();
+
+                builder.WithService(viewModel.Parent);
+
+                Frame.Navigate(typeof(SettingsPage), builder);
+            }
         }
 
-        private async void Current_EnteredBackground(object sender, Windows.ApplicationModel.EnteredBackgroundEventArgs e)
+        private async void Current_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("Entering: " + (viewModel == null));
-            if (viewModel?.Parent is IMqttAudioClient client && client.IsOpen) await client.CloseAsync();
+            try
+            {
+                if (viewModel?.Parent is IMqttAudioClient client && client.IsOpen) await client.CloseAsync();
+            }
+            catch (Exception exc)
+            {
+                await new MessageDialog(exc.ToString()).ShowAsync();
+
+                builder.WithService(viewModel.Parent);
+
+                Frame.Navigate(typeof(SettingsPage), builder);
+            }
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
