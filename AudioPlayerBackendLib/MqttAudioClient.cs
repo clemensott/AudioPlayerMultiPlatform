@@ -13,7 +13,8 @@ namespace AudioPlayerBackend
     {
         private bool isStreaming;
         private List<string> initProps;
-        private readonly List<string> messageReceivingTopics;
+        private readonly List<(string topic, byte[] payload)> receivingTuples;
+        private readonly Dictionary<string, byte[]> sendingTuples;
         private readonly IMqttClient client;
         private readonly IPlayer player;
         private readonly IMqttAudioClientHelper helper;
@@ -68,7 +69,8 @@ namespace AudioPlayerBackend
             this.player = player;
             this.helper = helper;
 
-            messageReceivingTopics = new List<string>();
+            receivingTuples = new List<(string topic, byte[] payload)>();
+            sendingTuples = new Dictionary<string, byte[]>();
 
             client = CreateMqttClient();
             client.ApplicationMessageReceived += Client_ApplicationMessageReceived;
@@ -127,9 +129,22 @@ namespace AudioPlayerBackend
         private async void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
         {
             string topic = e.ApplicationMessage.Topic;
-            ByteQueue queue = e.ApplicationMessage.Payload;
+            byte[] payload = e.ApplicationMessage.Payload;
 
-            messageReceivingTopics.Add(topic);
+            if (sendingTuples.TryGetValue(topic, out byte[] dictPayload) && dictPayload.SequenceEqual(payload))
+            {
+                lock (dictPayload)
+                {
+                    sendingTuples.Remove(topic);
+                    Monitor.PulseAll(dictPayload);
+                }
+
+                return;
+            }
+
+            receivingTuples.Add((topic, payload));
+
+            ByteQueue queue = payload;
 
             try
             {
@@ -215,13 +230,13 @@ namespace AudioPlayerBackend
                 }
             }
 
-            messageReceivingTopics.Remove(topic);
+            receivingTuples.Remove((topic, payload));
         }
 
-        private void Publish(string topic, byte[] payload,
+        private async Task Publish(string topic, byte[] payload,
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)
         {
-            if (messageReceivingTopics.Contains(topic)) return;
+            if (receivingTuples.Contains((topic, payload))) return;
 
             MqttApplicationMessage message = new MqttApplicationMessage()
             {
@@ -231,73 +246,82 @@ namespace AudioPlayerBackend
                 Retain = retain
             };
 
-            if (!client.IsConnected) OpenAsync().Wait();
+            byte[] dictPayload;
+            while (sendingTuples.TryGetValue(topic, out dictPayload)) await Utils.WaitAsync(dictPayload);
 
-            client.PublishAsync(message);
+            sendingTuples.Add(topic, payload);
+
+            try
+            {
+                if (!client.IsConnected) await OpenAsync();
+
+                await client.PublishAsync(message);
+            }
+            catch { }
         }
 
-        protected override void OnCurrentSongChanged()
+        protected async override void OnCurrentSongChanged()
         {
             ByteQueue queue = new ByteQueue();
             if (CurrentSong.HasValue) queue.Enqueue(CurrentSong.Value);
 
-            Publish(nameof(CurrentSong), queue);
+            await Publish(nameof(CurrentSong), queue);
         }
 
-        protected override void OnIsAllShuffleChanged()
+        protected async override void OnIsAllShuffleChanged()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(IsAllShuffle);
 
-            Publish(nameof(IsAllShuffle), queue);
+            await Publish(nameof(IsAllShuffle), queue);
         }
 
-        protected override void OnIsOnlySearchChanged()
+        protected async override void OnIsOnlySearchChanged()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(IsOnlySearch);
 
-            Publish(nameof(IsOnlySearch), queue);
+            await Publish(nameof(IsOnlySearch), queue);
         }
 
-        protected override void OnIsSearchShuffleChanged()
+        protected async override void OnIsSearchShuffleChanged()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(IsSearchShuffle);
 
-            Publish(nameof(IsSearchShuffle), queue);
+            await Publish(nameof(IsSearchShuffle), queue);
         }
 
-        protected override void OnMediaSourcesChanged()
+        protected async override void OnMediaSourcesChanged()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(MediaSources);
 
-            Publish(nameof(MediaSources), queue);
+            await Publish(nameof(MediaSources), queue);
         }
 
-        protected override void OnPlayStateChanged()
+        protected async override void OnPlayStateChanged()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(PlayState);
 
-            Publish(nameof(PlayState), queue);
+            await Publish(nameof(PlayState), queue);
         }
 
-        protected override void OnPositionChanged()
+        protected async override void OnPositionChanged()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(Position);
 
-            Publish(nameof(Position), queue);
+            await Publish(nameof(Position), queue);
         }
 
-        protected override void OnSearchKeyChanged()
+        protected async override void OnSearchKeyChanged()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(SearchKey);
 
-            Publish(nameof(SearchKey), queue);
+            await Publish(nameof(SearchKey), queue);
         }
 
         protected override void OnFormatChanged()
@@ -334,17 +358,17 @@ namespace AudioPlayerBackend
             PublishServiceVolume();
         }
 
-        private void PublishServiceVolume()
+        private async void PublishServiceVolume()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(Volume);
 
-            Publish(nameof(Volume), queue);
+            await Publish(nameof(Volume), queue);
         }
 
-        public override void Reload()
+        public async override void Reload()
         {
-            Publish(nameof(AllSongsShuffled), new byte[0]);
+            await Publish(nameof(AllSongsShuffled), new byte[0]);
         }
 
         protected override void OnDurationChanged()

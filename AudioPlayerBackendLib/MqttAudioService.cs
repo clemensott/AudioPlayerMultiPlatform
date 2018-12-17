@@ -11,7 +11,7 @@ namespace AudioPlayerBackend
     public class MqttAudioService : AudioService, IMqttAudioService
     {
         private readonly IMqttAudioServiceHelper helper;
-        private readonly List<string> messageInterceptingTopics;
+        private readonly List<(string topic, byte[] payload)> interceptingTuples;
         private readonly IMqttServer server;
         private ReadEventWaveProvider waveProvider;
 
@@ -21,7 +21,7 @@ namespace AudioPlayerBackend
 
         public MqttAudioService(IPlayer player, int port, IMqttAudioServiceHelper helper = null) : base(player, helper)
         {
-            messageInterceptingTopics = new List<string>();
+            interceptingTuples = new List<(string topic, byte[] payload)>();
 
             this.helper = helper;
             server = CreateMqttServer();
@@ -40,17 +40,17 @@ namespace AudioPlayerBackend
 
             await server.StartAsync(Port, OnApplicationMessageInterception);
 
-            PublishAllSongsShuffled();
-            PublishCurrentSong();
-            PublishDuration();
-            PublishIsAllShuffle();
-            PublishIsOnlySearch();
-            PublishIsSearchShuffle();
-            PublishMediaSources();
-            PublishPlayState();
-            PublishPosition();
-            PublishSearchKey();
-            PublishServiceVolume();
+            await PublishAllSongsShuffled();
+            await PublishCurrentSong();
+            await PublishDuration();
+            await PublishIsAllShuffle();
+            await PublishIsOnlySearch();
+            await PublishIsSearchShuffle();
+            await PublishMediaSources();
+            await PublishPlayState();
+            await PublishPosition();
+            await PublishSearchKey();
+            await PublishServiceVolume();
         }
 
         public async Task CloseAsync()
@@ -60,11 +60,14 @@ namespace AudioPlayerBackend
             await server.StopAsync();
         }
 
-        private void OnApplicationMessageInterception(MqttApplicationMessageInterceptorContext context)
+        private async void OnApplicationMessageInterception(MqttApplicationMessageInterceptorContext context)
         {
             if (context.ClientId == null) return;
 
-            messageInterceptingTopics.Add(context.ApplicationMessage.Topic);
+            string topic = context.ApplicationMessage.Topic;
+            byte[] payload = context.ApplicationMessage.Payload;
+
+            interceptingTuples.Add((topic, payload));
 
             ByteQueue queue = context.ApplicationMessage.Payload;
 
@@ -125,13 +128,13 @@ namespace AudioPlayerBackend
             {
                 context.AcceptPublish = false;
 
-                PublishDebug(e);
+                await PublishDebug(e);
             }
 
-            messageInterceptingTopics.Remove(context.ApplicationMessage.Topic);
+            interceptingTuples.Remove((topic, payload));
         }
 
-        private async void PublishDebug(Exception e)
+        private async Task PublishDebug(Exception e)
         {
             try
             {
@@ -148,10 +151,10 @@ namespace AudioPlayerBackend
             catch { }
         }
 
-        private void Publish(string topic, byte[] payload,
+        private async Task Publish(string topic, byte[] payload,
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)
         {
-            if (messageInterceptingTopics != null && messageInterceptingTopics.Contains(topic)) return;
+            if (interceptingTuples?.Any(t => t.topic == topic && t.payload.SequenceEqual(payload)) ?? false) return;
 
             MqttApplicationMessage message = new MqttApplicationMessage()
             {
@@ -163,204 +166,204 @@ namespace AudioPlayerBackend
 
             try
             {
-                server.PublishAsync(message);
+                await server.PublishAsync(message);
             }
             catch (Exception e)
             {
-                PublishDebug(e);
+                await PublishDebug(e);
             }
         }
 
-        protected override void OnAllSongsShuffledChanged()
+        protected async override void OnAllSongsShuffledChanged()
         {
             base.OnAllSongsShuffledChanged();
 
-            PublishAllSongsShuffled();
+            await PublishAllSongsShuffled();
         }
 
-        private void PublishAllSongsShuffled()
+        private async Task PublishAllSongsShuffled()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(AllSongsShuffled);
 
-            Publish(nameof(AllSongsShuffled), queue);
+            await Publish(nameof(AllSongsShuffled), queue);
         }
 
-        protected override void OnAudioDataChanged()
+        protected async override void OnAudioDataChanged()
         {
             base.OnAudioDataChanged();
 
-            PublishAudioData();
+            await PublishAudioData();
         }
 
-        private void PublishAudioData()
+        private async Task PublishAudioData()
         {
-            Publish(nameof(AudioData), AudioData, MqttQualityOfServiceLevel.AtMostOnce);
+            await Publish(nameof(AudioData), AudioData, MqttQualityOfServiceLevel.AtMostOnce);
         }
 
-        protected override void OnCurrentSongChanged()
+        protected async override void OnCurrentSongChanged()
         {
             base.OnCurrentSongChanged();
 
-            PublishCurrentSong();
+            await PublishCurrentSong();
         }
 
-        private void PublishCurrentSong()
+        private async Task PublishCurrentSong()
         {
             ByteQueue queue = new ByteQueue();
             if (CurrentSong.HasValue) queue.Enqueue(CurrentSong.Value);
 
-            Publish(nameof(CurrentSong), queue);
+            await Publish(nameof(CurrentSong), queue);
         }
 
-        protected override void OnDurationChanged()
+        protected async override void OnDurationChanged()
         {
             base.OnDurationChanged();
 
-            PublishDuration();
+            await PublishDuration();
         }
 
-        private void PublishDuration()
+        private async Task PublishDuration()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(Duration);
 
-            Publish(nameof(Duration), queue);
+            await Publish(nameof(Duration), queue);
         }
 
-        protected override void OnFormatChanged()
+        protected async override void OnFormatChanged()
         {
             base.OnFormatChanged();
 
-            PublishFormat();
+            await PublishFormat();
         }
 
-        private void PublishFormat()
+        private async Task PublishFormat()
         {
             ByteQueue queue = new ByteQueue();
             if (Format != null) queue.Enqueue(Format);
 
-            Publish(nameof(Format), queue, MqttQualityOfServiceLevel.AtLeastOnce);
+            await Publish(nameof(Format), queue, MqttQualityOfServiceLevel.AtLeastOnce);
         }
 
-        protected override void OnIsAllShuffleChanged()
+        protected async override void OnIsAllShuffleChanged()
         {
             base.OnIsAllShuffleChanged();
 
-            PublishIsAllShuffle();
+            await PublishIsAllShuffle();
         }
 
-        private void PublishIsAllShuffle()
+        private async Task PublishIsAllShuffle()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(IsAllShuffle);
 
-            Publish(nameof(IsAllShuffle), queue);
+            await Publish(nameof(IsAllShuffle), queue);
         }
 
-        protected override void OnIsOnlySearchChanged()
+        protected async override void OnIsOnlySearchChanged()
         {
             base.OnIsOnlySearchChanged();
 
-            PublishIsOnlySearch();
+            await PublishIsOnlySearch();
         }
 
-        private void PublishIsOnlySearch()
+        private async Task PublishIsOnlySearch()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(IsOnlySearch);
 
-            Publish(nameof(IsOnlySearch), queue);
+            await Publish(nameof(IsOnlySearch), queue);
         }
 
-        protected override void OnIsSearchShuffleChanged()
+        protected async override void OnIsSearchShuffleChanged()
         {
             base.OnIsSearchShuffleChanged();
 
-            PublishIsSearchShuffle();
+            await PublishIsSearchShuffle();
         }
 
-        private void PublishIsSearchShuffle()
+        private async Task PublishIsSearchShuffle()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(IsSearchShuffle);
 
-            Publish(nameof(IsSearchShuffle), queue);
+            await Publish(nameof(IsSearchShuffle), queue);
         }
 
-        protected override void OnMediaSourcesChanged()
+        protected async override void OnMediaSourcesChanged()
         {
             base.OnMediaSourcesChanged();
 
-            PublishMediaSources();
+            await PublishMediaSources();
         }
 
-        private void PublishMediaSources()
+        private async Task PublishMediaSources()
         {
             ByteQueue queue = new ByteQueue();
             if (MediaSources != null) queue.Enqueue(MediaSources);
 
-            Publish(nameof(MediaSources), queue);
+            await Publish(nameof(MediaSources), queue);
         }
 
-        protected override void OnPlayStateChanged()
+        protected async override void OnPlayStateChanged()
         {
             base.OnPlayStateChanged();
 
-            PublishPlayState();
+            await PublishPlayState();
         }
 
-        private void PublishPlayState()
+        private async Task PublishPlayState()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(PlayState);
 
-            Publish(nameof(PlayState), queue);
+            await Publish(nameof(PlayState), queue);
         }
 
-        protected override void OnPositionChanged()
+        protected async override void OnPositionChanged()
         {
             base.OnPositionChanged();
 
-            PublishPosition();
+            await PublishPosition();
         }
 
-        private void PublishPosition()
+        private async Task PublishPosition()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(Position);
 
-            Publish(nameof(Position), queue);
+            await Publish(nameof(Position), queue);
         }
 
-        protected override void OnSearchKeyChanged()
+        protected async override void OnSearchKeyChanged()
         {
             base.OnSearchKeyChanged();
 
-            PublishSearchKey();
+            await PublishSearchKey();
         }
 
-        private void PublishSearchKey()
+        private async Task PublishSearchKey()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(SearchKey);
 
-            Publish(nameof(SearchKey), queue);
+            await Publish(nameof(SearchKey), queue);
         }
 
-        protected override void OnServiceVolumeChanged()
+        protected async override void OnServiceVolumeChanged()
         {
             base.OnServiceVolumeChanged();
 
-            PublishServiceVolume();
+            await PublishServiceVolume();
         }
 
-        private void PublishServiceVolume()
+        private async Task PublishServiceVolume()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(Volume);
 
-            Publish(nameof(Volume), queue);
+            await Publish(nameof(Volume), queue);
         }
 
         internal override IPositionWaveProvider ToWaveProvider(IPositionWaveProvider waveProvider)

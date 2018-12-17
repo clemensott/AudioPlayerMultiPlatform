@@ -25,41 +25,6 @@ namespace AudioPlayerFrontend
         public MainPage()
         {
             this.InitializeComponent();
-
-            Application.Current.EnteredBackground += Current_EnteredBackground;
-            Application.Current.LeavingBackground += Current_LeavingBackground;
-        }
-
-        private async void Current_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
-        {
-            try
-            {
-                if (viewModel?.Parent is IMqttAudioClient client && !client.IsOpen) await client.OpenAsync();
-            }
-            catch (Exception exc)
-            {
-                await new MessageDialog(exc.ToString()).ShowAsync();
-
-                builder.WithService(viewModel.Parent);
-
-                Frame.Navigate(typeof(SettingsPage), builder);
-            }
-        }
-
-        private async void Current_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
-        {
-            try
-            {
-                if (viewModel?.Parent is IMqttAudioClient client && client.IsOpen) await client.CloseAsync();
-            }
-            catch (Exception exc)
-            {
-                await new MessageDialog(exc.ToString()).ShowAsync();
-
-                builder.WithService(viewModel.Parent);
-
-                Frame.Navigate(typeof(SettingsPage), builder);
-            }
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -78,6 +43,9 @@ namespace AudioPlayerFrontend
 
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
+            Application.Current.EnteredBackground += Application_EnteredBackground;
+            Application.Current.LeavingBackground += Application_LeavingBackground;
+
             try
             {
                 await buildTask;
@@ -93,7 +61,51 @@ namespace AudioPlayerFrontend
             else tbxSearchKey.IsEnabled = true;
         }
 
-        private void Reload_Click(object sender, RoutedEventArgs e)
+        private async void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            Application.Current.EnteredBackground -= Application_EnteredBackground;
+            Application.Current.LeavingBackground -= Application_LeavingBackground;
+
+            try
+            {
+                if (viewModel != null && viewModel.Parent is IMqttAudio mqttService) await mqttService.CloseAsync();
+            }
+            catch { }
+        }
+
+        private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
+        {
+            try
+            {
+                if (viewModel?.Parent is IMqttAudioClient client && !client.IsOpen) await client.OpenAsync();
+            }
+            catch (Exception exc)
+            {
+                await new MessageDialog(exc.ToString()).ShowAsync();
+
+                builder.WithService(viewModel.Parent);
+
+                Frame.Navigate(typeof(SettingsPage), builder);
+            }
+        }
+
+        private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
+        {
+            try
+            {
+                if (viewModel?.Parent is IMqttAudioClient client && client.IsOpen) await client.CloseAsync();
+            }
+            catch (Exception exc)
+            {
+                await new MessageDialog(exc.ToString()).ShowAsync();
+
+                builder.WithService(viewModel.Parent);
+
+                Frame.Navigate(typeof(SettingsPage), builder);
+            }
+        }
+
+        private void BtnReload_Click(object sender, RoutedEventArgs e)
         {
             viewModel.Reload();
         }

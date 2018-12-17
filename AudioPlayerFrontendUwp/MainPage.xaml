@@ -9,14 +9,14 @@
     xmlns:con="using:StdOttUwp.Converters"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-    Loaded="Page_Loaded">
+    Loaded="Page_Loaded" Unloaded="Page_Unloaded">
 
     <Page.Resources>
         <local:VolumeToolTipConverter x:Key="volTooTipCon"/>
         <local:PositionToolTipConverter x:Key="posToolTipCon"/>
         <con:IsTrueToValueConverter x:Key="viewAdvSetCon" EqualsValue="Visible" NotEqualsValue="Collapsed"/>
         <local:IsIMqttAudioConverter x:Key="viewClientSetCon"
-                                    EqualsValue="Visible" NotEqualsValue="Collapsed"/>
+                                     EqualsValue="Visible" NotEqualsValue="Collapsed"/>
         
         <con:TimeSpanToStringConverter x:Key="timeStringCon"/>
         <local:TimeSpanToSecondsConverter x:Key="timeSecCon"/>
@@ -60,7 +60,7 @@
                     StepFrequency="0.01" Maximum="1" Value="{Binding Volume,Mode=TwoWay}"
                     ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
 
-            <Button Grid.Column="2" Margin="5,3" Content="Reload" Width="100" Click="Reload_Click"/>
+            <Button Grid.Column="2" Margin="5,3" Content="Reload" Width="100" Click="BtnReload_Click"/>
 
             <Grid Grid.Row="1" Grid.ColumnSpan="3" Margin="5,0" VerticalAlignment="Center"
                   DataContext="{Binding Parent}" Visibility="{Binding Converter={StaticResource viewClientSetCon}}">
