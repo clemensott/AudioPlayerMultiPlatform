@@ -11,6 +11,8 @@ namespace AudioPlayerBackend
 {
     public class MqttAudioClient : AudioClient, IMqttAudioClient
     {
+        private static readonly TimeSpan timeout = TimeSpan.FromSeconds(1);
+
         private bool isStreaming;
         private List<string> initProps;
         private readonly List<(string topic, byte[] payload)> receivingTuples;
@@ -256,6 +258,20 @@ namespace AudioPlayerBackend
                 if (!client.IsConnected) await OpenAsync();
 
                 await client.PublishAsync(message);
+
+                Task waitForReply = Utils.WaitAsync(dictPayload);
+                Task waitForTimeOut = Task.Delay(timeout);
+
+                await Task.WhenAny(waitForReply, waitForTimeOut);
+
+                lock (dictPayload)
+                {
+                    if (!waitForReply.IsCompleted)
+                    {
+                        sendingTuples.Remove(topic);
+                        Monitor.PulseAll(dictPayload);
+                    }
+                }
             }
             catch { }
         }
