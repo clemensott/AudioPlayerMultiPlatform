@@ -1,50 +1,24 @@
 ﻿using AudioPlayerBackend.Common;
 using StdOttStandard;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 
 namespace AudioPlayerBackend
 {
     public abstract class AudioClient : IAudioExtended
     {
         private readonly IAudioClientHelper helper;
-        protected TimeSpan position, duration;
         protected PlaybackState playState;
-        protected bool isAllShuffle, isSearchShuffle, isOnlySearch;
-        protected string searchKey;
+        protected IPlaylistExtended currentPlaylist;
         protected string[] mediaSources;
-        protected Song? currentSong;
-        protected Song[] allSongsShuffled;
         protected WaveFormat format;
         protected byte[] audioData;
         protected float serviceVolume;
-
-        public TimeSpan Position
-        {
-            get { return position; }
-            set
-            {
-                if (value == position) return;
-
-                position = value;
-                OnPositionChanged();
-                OnPropertyChanged(nameof(Position));
-            }
-        }
-
-        public TimeSpan Duration
-        {
-            get { return duration; }
-            set
-            {
-                if (value == duration) return;
-
-                duration = value;
-                OnDurationChanged();
-                OnPropertyChanged(nameof(Duration));
-            }
-        }
 
         public PlaybackState PlayState
         {
@@ -59,71 +33,26 @@ namespace AudioPlayerBackend
             }
         }
 
-        public bool IsAllShuffle
+        public IPlaylistExtended FileBasePlaylist { get; private set; }
+
+        public IPlaylistExtended CurrentPlaylist
         {
-            get { return isAllShuffle; }
+            get { return currentPlaylist; }
             set
             {
-                if (value == isAllShuffle) return;
+                if (value == null) value = FileBasePlaylist;
 
-                isAllShuffle = value;
+                if (value == currentPlaylist) return;
 
-                OnIsAllShuffleChanged();
-                OnPropertyChanged(nameof(IsAllShuffle));
-                OnPropertyChanged(nameof(AllSongs));
+                currentPlaylist = value;
+                OnCurrenPlaylistChanged();
+                OnPropertyChanged(nameof(CurrentPlaylist));
             }
         }
 
-        public bool IsSearchShuffle
-        {
-            get { return isSearchShuffle; }
-            set
-            {
-                if (value == isSearchShuffle) return;
+        public ObservableCollection<IPlaylistExtended> AdditionalPlaylists { get; private set; }
 
-                isSearchShuffle = value;
-
-                OnIsSearchShuffleChanged();
-                OnPropertyChanged(nameof(IsSearchShuffle));
-
-                if (IsSearching) OnPropertyChanged(nameof(SearchSongs));
-            }
-        }
-
-        public bool IsOnlySearch
-        {
-            get { return isOnlySearch; }
-            set
-            {
-                if (value == isOnlySearch) return;
-
-                isOnlySearch = value;
-                OnIsOnlySearchChanged();
-                OnPropertyChanged(nameof(IsOnlySearch));
-            }
-        }
-
-        public bool IsSearching { get { return SongsService.GetIsSearching(SearchKey); } }
-
-        public string SearchKey
-        {
-            get { return searchKey; }
-            set
-            {
-                if (value == searchKey) return;
-
-                searchKey = value;
-
-                OnSearchKeyChanged();
-                OnPropertyChanged(nameof(SearchKey));
-                OnPropertyChanged(nameof(IsSearching));
-
-                if (IsSearching) OnPropertyChanged(nameof(SearchSongs));
-                else OnPropertyChanged(nameof(AllSongs));
-            }
-        }
-
-        public string[] MediaSources
+        public string[] FileMediaSources
         {
             get { return mediaSources; }
             set
@@ -132,38 +61,7 @@ namespace AudioPlayerBackend
 
                 mediaSources = value;
                 OnMediaSourcesChanged();
-                OnPropertyChanged(nameof(MediaSources));
-            }
-        }
-
-        public Song? CurrentSong
-        {
-            get { return currentSong; }
-            set
-            {
-                if (value == currentSong) return;
-
-                currentSong = value;
-                OnCurrentSongChanged();
-                OnPropertyChanged(nameof(CurrentSong));
-            }
-        }
-
-        public Song[] AllSongsShuffled
-        {
-            get { return allSongsShuffled; }
-            set
-            {
-                if (value.BothNullOrSequenceEqual(allSongsShuffled)) return;
-
-                allSongsShuffled = value;
-
-                OnAllSongsShuffledChanged();
-
-                OnPropertyChanged(nameof(AllSongsShuffled));
-                OnPropertyChanged(nameof(AllSongs));
-
-                if (IsSearching) OnPropertyChanged(nameof(SearchSongs));
+                OnPropertyChanged(nameof(FileMediaSources));
             }
         }
 
@@ -206,10 +104,6 @@ namespace AudioPlayerBackend
             }
         }
 
-        public IEnumerable<Song> AllSongs { get { return SongsService.GetAllSongs(this); } }
-
-        public IEnumerable<Song> SearchSongs { get { return SongsService.GetSearchSongs(this); } }
-
         public abstract IPlayer Player { get; }
 
         public AudioClient(IAudioClientHelper helper = null)
@@ -218,49 +112,166 @@ namespace AudioPlayerBackend
 
             playState = PlaybackState.Stopped;
             mediaSources = new string[0];
-            allSongsShuffled = new Song[0];
+
+            CurrentPlaylist = FileBasePlaylist = new Playlist() { ID = new Guid() };
+            FileBasePlaylist.PropertyChanged += Playlist_PropertyChanged;
+
+            AdditionalPlaylists = new ObservableCollection<IPlaylistExtended>();
+            AdditionalPlaylists.CollectionChanged += AdditionalPlaylists_CollectionChanged;
         }
 
-        protected abstract void OnPositionChanged();
+        private void AdditionalPlaylists_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            foreach (IPlaylist playlist in (IEnumerable)e.NewItems ?? Enumerable.Empty<IPlaylist>())
+            {
+                playlist.PropertyChanged += Playlist_PropertyChanged;
 
-        protected abstract void OnDurationChanged();
+                OnAddPlaylist(playlist);
+            }
 
-        protected abstract void OnPlayStateChanged();
+            foreach (IPlaylist playlist in (IEnumerable)e.OldItems ?? Enumerable.Empty<IPlaylist>())
+            {
+                playlist.PropertyChanged -= Playlist_PropertyChanged;
 
-        protected abstract void OnIsAllShuffleChanged();
+                if (CurrentPlaylist == playlist) CurrentPlaylist = GetAllPlaylists().ElementAt(e.OldStartingIndex);
 
-        protected abstract void OnIsSearchShuffleChanged();
+                OnRemovePlaylist(playlist);
+            }
+        }
 
-        protected abstract void OnIsOnlySearchChanged();
+        private void Playlist_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            IPlaylist playlist = (IPlaylist)sender;
 
-        protected abstract void OnSearchKeyChanged();
+            switch (e.PropertyName)
+            {
+                case nameof(playlist.CurrentSong):
+                    OnCurrentSongChanged(playlist);
+                    break;
 
-        protected abstract void OnMediaSourcesChanged();
+                case nameof(playlist.Duration):
+                    OnDurationChanged(playlist);
+                    break;
 
-        protected abstract void OnCurrentSongChanged();
+                case nameof(playlist.IsAllShuffle):
+                    OnIsAllShuffleChanged(playlist);
+                    break;
 
-        protected abstract void OnAllSongsShuffledChanged();
+                case nameof(playlist.IsOnlySearch):
+                    OnIsOnlySearchChanged(playlist);
+                    break;
 
-        protected abstract void OnFormatChanged();
+                case nameof(playlist.IsSearchShuffle):
+                    OnIsSearchShuffleChangedAsync(playlist);
+                    break;
 
-        protected abstract void OnAudioDataChanged();
+                case nameof(playlist.Loop):
+                    OnLoopChanged(playlist);
+                    break;
 
-        protected abstract void OnServiceVolumeChanged();
+                case nameof(playlist.Position):
+                    OnPositionChanged(playlist);
+                    break;
+
+                case nameof(playlist.SearchKey):
+                    OnSearchKeyChanged(playlist);
+                    break;
+
+                case nameof(playlist.Songs):
+                    OnSongsChanged(playlist);
+                    break;
+            }
+        }
+
+        protected virtual void OnPlayStateChanged() { }
+
+        protected virtual void OnCurrenPlaylistChanged() { }
+
+        protected virtual void OnMediaSourcesChanged() { }
+
+        protected virtual void OnFormatChanged() { }
+
+        protected virtual void OnAudioDataChanged() { }
+
+        protected virtual void OnServiceVolumeChanged() { }
+
+        protected virtual void OnCurrentSongChanged(IPlaylist playlist) { }
+
+        protected virtual void OnDurationChanged(IPlaylist playlist) { }
+
+        protected virtual void OnIsAllShuffleChanged(IPlaylist playlist) { }
+
+        protected virtual void OnIsOnlySearchChanged(IPlaylist playlist) { }
+
+        protected virtual void OnIsSearchShuffleChangedAsync(IPlaylist playlist) { }
+
+        protected virtual void OnLoopChanged(IPlaylist playlist) { }
+
+        protected virtual void OnPositionChanged(IPlaylist playlist) { }
+
+        protected virtual void OnSearchKeyChanged(IPlaylist playlist) { }
+
+        protected virtual void OnSongsChanged(IPlaylist playlist) { }
+
+        protected virtual void OnAddPlaylist(IPlaylist playlist) { }
+
+        protected virtual void OnRemovePlaylist(IPlaylist playlist) { }
+
+        protected void Continue()
+        {
+            if (CurrentPlaylist.Loop == LoopType.CurrentSong)
+            {
+                CurrentPlaylist.Position = TimeSpan.Zero;
+                return;
+            }
+
+            (Song? newCurrentSong, bool overflow) = SongsService.GetNextSong(CurrentPlaylist);
+
+            if (CurrentPlaylist.Loop == LoopType.CurrentPlaylist || !overflow)
+            {
+                ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
+
+            }
+            else if (CurrentPlaylist.Loop == LoopType.Next)
+            {
+                IPlaylist oldCurrentPlaylist = CurrentPlaylist;
+                CurrentPlaylist = GetAllPlaylists().Next(CurrentPlaylist).next;
+
+                ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
+            }
+            else
+            {
+                PlayState = PlaybackState.Stopped;
+                ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
+            }
+        }
+
+        public IEnumerable<IPlaylistExtended> GetAllPlaylists()
+        {
+            foreach (IPlaylistExtended playlist in AdditionalPlaylists) yield return playlist;
+
+            yield return FileBasePlaylist;
+        }
+
+        public IPlaylistExtended GetPlaylist(Guid id)
+        {
+            return GetAllPlaylists().First(p => p.ID == id);
+        }
 
         public void SetNextSong()
         {
-            ChangeCurrentSongOrRestart(SongsService.GetNextSong(this));
+            ChangeCurrentSongOrRestart(CurrentPlaylist, SongsService.GetNextSong(CurrentPlaylist).song);
         }
 
         public void SetPreviousSong()
         {
-            ChangeCurrentSongOrRestart(SongsService.GetPreviousSong(this));
+            ChangeCurrentSongOrRestart(CurrentPlaylist, SongsService.GetPreviousSong(CurrentPlaylist).song);
         }
 
-        private void ChangeCurrentSongOrRestart(Song? newCurrentSong)
+        private void ChangeCurrentSongOrRestart(IPlaylist playlist, Song? newCurrentSong)
         {
-            if (newCurrentSong != CurrentSong) CurrentSong = newCurrentSong;
-            else Position = TimeSpan.Zero;
+            if (newCurrentSong != playlist.CurrentSong) playlist.CurrentSong = newCurrentSong;
+            else playlist.Position = TimeSpan.Zero;
         }
 
         public abstract void Reload();

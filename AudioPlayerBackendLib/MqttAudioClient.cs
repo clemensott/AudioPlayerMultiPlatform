@@ -11,12 +11,14 @@ namespace AudioPlayerBackend
 {
     public class MqttAudioClient : AudioClient, IMqttAudioClient
     {
-        private static readonly TimeSpan timeout = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan timeout = TimeSpan.FromSeconds(2);
 
         private bool isStreaming;
         private List<string> initProps;
-        private readonly List<(string topic, byte[] payload)> receivingTuples;
-        private readonly Dictionary<string, byte[]> sendingTuples;
+        private readonly Dictionary<string, byte[]> receivingDict = new Dictionary<string, byte[]>(),
+            latestValueDict = new Dictionary<string, byte[]>();
+        private readonly PublishQueue publishQueue = new PublishQueue();
+        private MqttApplicationMessage currentPublish;
         private readonly IMqttClient client;
         private readonly IPlayer player;
         private readonly IMqttAudioClientHelper helper;
@@ -71,9 +73,6 @@ namespace AudioPlayerBackend
             this.player = player;
             this.helper = helper;
 
-            receivingTuples = new List<(string topic, byte[] payload)>();
-            sendingTuples = new Dictionary<string, byte[]>();
-
             client = CreateMqttClient();
             client.ApplicationMessageReceived += Client_ApplicationMessageReceived;
         }
@@ -92,10 +91,16 @@ namespace AudioPlayerBackend
 
         public async Task OpenAsync()
         {
-            initProps = GetTopicFilters().Select(tf => tf.Topic).ToList();
+            IEnumerable<string> serviceTopics = GetTopicFilters().Select(tf => tf.Topic);
+            IEnumerable<string> fileBasePlaylistTopics = GetTopicFilters(FileBasePlaylist).Select(tf => tf.Topic);
+            initProps = serviceTopics.Concat(fileBasePlaylistTopics).ToList();
 
             await client.ConnectAsync(ServerAddress, Port);
+
+            Task.Run(new Action(ConsumerPublish));
+
             await Task.WhenAll(GetTopicFilters().Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
+            await Task.WhenAll(GetTopicFilters(FileBasePlaylist).Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
 
             await Utils.WaitAsync(initProps, () => initProps.Count > 0);
 
@@ -115,104 +120,114 @@ namespace AudioPlayerBackend
         {
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce;
 
-            yield return new TopicFilter(nameof(AllSongsShuffled), qos);
-            yield return new TopicFilter(nameof(CurrentSong), qos);
-            yield return new TopicFilter(nameof(Duration), qos);
-            yield return new TopicFilter(nameof(IsAllShuffle), qos);
-            yield return new TopicFilter(nameof(IsOnlySearch), qos);
-            yield return new TopicFilter(nameof(IsSearchShuffle), qos);
-            yield return new TopicFilter(nameof(MediaSources), qos);
+            yield return new TopicFilter(nameof(AdditionalPlaylists), qos);
+            yield return new TopicFilter(nameof(CurrentPlaylist), qos);
+            yield return new TopicFilter(nameof(FileMediaSources), qos);
             yield return new TopicFilter(nameof(PlayState), qos);
-            yield return new TopicFilter(nameof(Position), qos);
-            yield return new TopicFilter(nameof(SearchKey), qos);
             yield return new TopicFilter(nameof(Volume), qos);
+
+        }
+
+        private IEnumerable<TopicFilter> GetTopicFilters(IPlaylist playlist)
+        {
+            string id = playlist.ID + ".";
+            MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce;
+
+            yield return new TopicFilter(id + nameof(playlist.CurrentSong), qos);
+            yield return new TopicFilter(id + nameof(playlist.Songs), qos);
+            yield return new TopicFilter(id + nameof(playlist.Duration), qos);
+            yield return new TopicFilter(id + nameof(playlist.IsAllShuffle), qos);
+            yield return new TopicFilter(id + nameof(playlist.IsOnlySearch), qos);
+            yield return new TopicFilter(id + nameof(playlist.IsSearchShuffle), qos);
+            yield return new TopicFilter(id + nameof(playlist.Loop), qos);
+            yield return new TopicFilter(id + nameof(playlist.Position), qos);
+            yield return new TopicFilter(id + nameof(playlist.SearchKey), qos);
+        }
+
+        private async void ConsumerPublish()
+        {
+            while (IsOpen)
+            {
+                try
+                {
+                    if (!client.IsConnected)
+                    {
+                        //await OpenAsync();
+                    }
+
+                    System.Diagnostics.Debug.WriteLine("Publish0");
+                    await Task.Delay(100);
+
+                    System.Diagnostics.Debug.WriteLine("Publish1");
+                    currentPublish = publishQueue.Dequeue();
+
+                    System.Diagnostics.Debug.WriteLine("Publish2: " + currentPublish?.Topic);
+                    Task waitForReply = Utils.WaitAsync(currentPublish);
+                    Task waitForTimeOut = Task.Delay(timeout);
+
+                    System.Diagnostics.Debug.WriteLine("Publish3: " + currentPublish?.Topic);
+                    await client.PublishAsync(currentPublish);
+                    System.Diagnostics.Debug.WriteLine("Publish4: " + currentPublish?.Topic);
+                    await Task.WhenAny(waitForReply, waitForTimeOut);
+                    System.Diagnostics.Debug.WriteLine("Publish5: " + currentPublish?.Topic);
+                }
+                catch(Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine(e);
+                }
+
+                MqttApplicationMessage message = currentPublish;
+
+                if (currentPublish == null) continue;
+
+                lock (message)
+                {
+                    System.Diagnostics.Debug.WriteLine("Timeout: " + message?.Topic);
+
+                    currentPublish = null;
+
+                    if (!publishQueue.IsEnqueued(message.Topic)) publishQueue.Enqueue(message);
+                    else Monitor.PulseAll(message);
+                }
+            }
         }
 
         private async void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
         {
-            string topic = e.ApplicationMessage.Topic;
+            string rawTopic = e.ApplicationMessage.Topic;
             byte[] payload = e.ApplicationMessage.Payload;
 
-            if (sendingTuples.TryGetValue(topic, out byte[] dictPayload) && dictPayload.SequenceEqual(payload))
+            if (currentPublish != null && currentPublish.Topic == rawTopic && currentPublish.Payload.SequenceEqual(payload))
             {
-                lock (dictPayload)
+                lock (currentPublish)
                 {
-                    sendingTuples.Remove(topic);
-                    Monitor.PulseAll(dictPayload);
+                    Monitor.PulseAll(currentPublish);
+                    currentPublish = null;
                 }
-
-                return;
             }
 
-            receivingTuples.Add((topic, payload));
-
-            ByteQueue queue = payload;
+            MqttAudioUtils.LockTopic(receivingDict, rawTopic, payload);
 
             try
             {
-                switch (topic)
+                string topic;
+                IPlaylist playlist;
+                if (MqttAudioUtils.ContainsPlaylist(this, rawTopic, out topic, out playlist))
                 {
-                    case nameof(AllSongsShuffled):
-                        AllSongsShuffled = queue.DequeueSongs();
-                        break;
-
-                    case nameof(AudioData):
-                        AudioData = queue;
-                        break;
-
-                    case nameof(CurrentSong):
-                        CurrentSong = queue.DequeueSong();
-                        break;
-
-                    case nameof(Duration):
-                        Duration = queue.DequeueTimeSpan();
-                        break;
-
-                    case nameof(Format):
-                        Format = queue.DequeueWaveFormat();
-                        break;
-
-                    case nameof(IsAllShuffle):
-                        IsAllShuffle = queue.DequeueBool();
-                        break;
-
-                    case nameof(IsOnlySearch):
-                        IsOnlySearch = queue.DequeueBool();
-                        break;
-
-                    case nameof(IsSearchShuffle):
-                        IsSearchShuffle = queue.DequeueBool();
-                        break;
-
-                    case nameof(MediaSources):
-                        MediaSources = queue.DequeueStrings();
-                        break;
-
-                    case nameof(PlayState):
-                        PlayState = queue.DequeuePlayState();
-                        break;
-
-                    case nameof(Position):
-                        Position = queue.DequeueTimeSpan();
-                        break;
-
-                    case nameof(SearchKey):
-                        SearchKey = queue.DequeueString();
-                        break;
-
-                    case nameof(Volume):
-                        Volume = queue.DequeueFloat();
-                        break;
+                    MqttAudioUtils.TryHandleMessage(this, topic, payload, playlist);
                 }
+                else MqttAudioUtils.TryHandleMessage(this, topic, payload);
             }
             catch (Exception exc)
             {
+                System.Diagnostics.Debug.WriteLine(exc);
+
                 try
                 {
                     MqttApplicationMessage message = new MqttApplicationMessage()
                     {
                         Topic = "Debug",
-                        Payload = Encoding.UTF8.GetBytes(Utils.GetTypeMessageAndStack(exc)),
+                        Payload = Encoding.UTF8.GetBytes(exc.ToString()),
                         QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce,
                         Retain = true
                     };
@@ -222,23 +237,29 @@ namespace AudioPlayerBackend
                 catch { }
             }
 
-            if (initProps != null && initProps.Contains(topic))
+            if (initProps != null && initProps.Contains(rawTopic))
             {
                 lock (initProps)
                 {
-                    initProps.Remove(topic);
+                    initProps.Remove(rawTopic);
 
                     Monitor.Pulse(initProps);
                 }
             }
 
-            receivingTuples.Remove((topic, payload));
+            MqttAudioUtils.UnlockTopic(receivingDict, rawTopic);
+        }
+
+        private async Task Publish(IPlaylist playlist, string topic, byte[] payload,
+            MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)
+        {
+            await Publish(playlist.ID + "." + topic, payload, qos, retain);
         }
 
         private async Task Publish(string topic, byte[] payload,
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)
         {
-            if (receivingTuples.Contains((topic, payload))) return;
+            if (!IsOpen || MqttAudioUtils.IsTopicLocked(receivingDict, topic, payload)) return;
 
             MqttApplicationMessage message = new MqttApplicationMessage()
             {
@@ -248,96 +269,216 @@ namespace AudioPlayerBackend
                 Retain = retain
             };
 
-            byte[] dictPayload;
-            while (sendingTuples.TryGetValue(topic, out dictPayload)) await Utils.WaitAsync(dictPayload);
+            publishQueue.Enqueue(message);
 
-            sendingTuples.Add(topic, payload);
+            await Utils.WaitAsync(message);
 
-            try
+            //bool isSearchKey = topic.EndsWith(".SearchKey");
+            //string searchKey = isSearchKey ? Encoding.UTF8.GetString(payload.Skip(4).ToArray()) : string.Empty;
+
+            //if (client == null || MqttAudioUtils.IsTopicLocked(receivingDict, topic, payload)) return;
+
+            //System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Latest (" + searchKey + "): " + latestValueDict.ContainsKey(topic));
+            //if (latestValueDict.ContainsKey(topic))
+            //{
+            //    latestValueDict[topic] = payload;
+            //    return;
+            //}
+            //else latestValueDict.Add(topic, payload);
+
+            //byte[] dictPayload;
+            //while (sendingDict.TryGetValue(topic, out dictPayload))
+            //{
+            //    System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Wait1 (" + searchKey + "): " + dictPayload.GetHashCode());
+            //    await Utils.WaitAsync(dictPayload);
+
+            //    //System.Diagnostics.Debug.WriteLineIf(isSearchKey && searchKey == latestSearchKey,
+            //    //    "Wait2 (" + searchKey + "): " + dictPayload.GetHashCode());
+
+            //    //if (latestSendDict[topic] != payload)
+            //    //{
+            //    //    //System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Skip (" + searchKey + "): " + latestSearchKey);
+            //    //    return;
+            //    //}
+            //}
+
+            ////System.Diagnostics.Debug.WriteLineIf(isSearchKey, "NotSkip: " + searchKey);
+
+            //payload = latestValueDict[topic];
+            //latestValueDict.Remove(topic);
+
+            //searchKey = isSearchKey ? Encoding.UTF8.GetString(payload.Skip(4).ToArray()) : string.Empty;
+
+            //sendingDict.Add(topic, payload);
+            //System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Add (" + searchKey + "): " + payload.GetHashCode());
+
+            //try
+            //{
+            //    Task.Run(Publish);
+            //}
+            //catch { }
+
+            //async Task Publish()
+            //{
+            //    if (!client.IsConnected) await OpenAsync();
+
+            //    await client.PublishAsync(message);
+
+            //    System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Send: " + searchKey);
+            //    Task waitForReply = Utils.WaitAsync(payload);
+            //    Task waitForTimeOut = Task.Delay(timeout);
+
+            //    await Task.WhenAny(waitForReply, waitForTimeOut);
+            //    System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Sent: " + searchKey);
+
+            //    lock (payload)
+            //    {
+            //        if (!waitForReply.IsCompleted)
+            //        {
+            //            System.Diagnostics.Debug.WriteLineIf(isSearchKey, "TimeOut: " + searchKey);
+            //            sendingDict.Remove(topic);
+            //            Monitor.PulseAll(payload);
+            //        }
+            //    }
+            //}
+        }
+
+        protected async override void OnAddPlaylist(IPlaylist playlist)
+        {
+            if (initProps != null)
             {
-                if (!client.IsConnected) await OpenAsync();
+                initProps.AddRange(GetTopicFilters(playlist).Select(tp => playlist.ID + "." + tp.Topic));
+            }
 
-                await client.PublishAsync(message);
+            await Task.WhenAll(GetTopicFilters(playlist).Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
 
-                Task waitForReply = Utils.WaitAsync(dictPayload);
-                Task waitForTimeOut = Task.Delay(timeout);
+            await PublishAdditionalPlaylists();
+        }
 
-                await Task.WhenAny(waitForReply, waitForTimeOut);
-
-                lock (dictPayload)
+        protected async override void OnRemovePlaylist(IPlaylist playlist)
+        {
+            if (initProps != null)
+            {
+                foreach (string topic in GetTopicFilters(playlist).Select(tp => playlist.ID + "." + tp.Topic))
                 {
-                    if (!waitForReply.IsCompleted)
-                    {
-                        sendingTuples.Remove(topic);
-                        Monitor.PulseAll(dictPayload);
-                    }
+                    initProps.Remove(topic);
                 }
             }
-            catch { }
+
+            await Task.WhenAll(GetTopicFilters(playlist).Select(tf => client.UnsubscribeAsync(tf.Topic)));
+
+            await PublishAdditionalPlaylists();
         }
 
-        protected async override void OnCurrentSongChanged()
+        private async Task PublishAdditionalPlaylists()
         {
-            ByteQueue queue = new ByteQueue();
-            if (CurrentSong.HasValue) queue.Enqueue(CurrentSong.Value);
+            if (receivingDict.ContainsKey(nameof(AdditionalPlaylists))) return;
 
-            await Publish(nameof(CurrentSong), queue);
+            ByteQueue queue = new ByteQueue();
+            queue.Enqueue(AdditionalPlaylists);
+
+            await Publish(nameof(AdditionalPlaylists), queue);
         }
 
-        protected async override void OnIsAllShuffleChanged()
+        protected async override void OnCurrenPlaylistChanged()
         {
             ByteQueue queue = new ByteQueue();
-            queue.Enqueue(IsAllShuffle);
+            if (CurrentPlaylist != null) queue.EnqueueRange(CurrentPlaylist.ID.ToByteArray());
 
-            await Publish(nameof(IsAllShuffle), queue);
+            await Publish(nameof(CurrentPlaylist), queue);
         }
 
-        protected async override void OnIsOnlySearchChanged()
+        protected async override void OnCurrentSongChanged(IPlaylist playlist)
         {
             ByteQueue queue = new ByteQueue();
-            queue.Enqueue(IsOnlySearch);
+            if (playlist.CurrentSong.HasValue) queue.Enqueue(playlist.CurrentSong.Value);
 
-            await Publish(nameof(IsOnlySearch), queue);
+            await Publish(playlist, nameof(playlist.CurrentSong), queue);
         }
 
-        protected async override void OnIsSearchShuffleChanged()
+        protected async override void OnDurationChanged(IPlaylist playlist)
         {
             ByteQueue queue = new ByteQueue();
-            queue.Enqueue(IsSearchShuffle);
+            queue.Enqueue(playlist.Duration);
 
-            await Publish(nameof(IsSearchShuffle), queue);
+            await Publish(playlist, nameof(playlist.Duration), queue);
+        }
+
+        protected async override void OnLoopChanged(IPlaylist playlist)
+        {
+            ByteQueue queue = new ByteQueue();
+            queue.Enqueue((int)playlist.Loop);
+
+            await Publish(playlist, nameof(playlist.Loop), queue);
+        }
+
+        protected async override void OnIsAllShuffleChanged(IPlaylist playlist)
+        {
+            ByteQueue queue = new ByteQueue();
+            queue.Enqueue(playlist.IsAllShuffle);
+
+            await Publish(playlist, nameof(playlist.IsAllShuffle), queue);
+        }
+
+        protected async override void OnIsOnlySearchChanged(IPlaylist playlist)
+        {
+            ByteQueue queue = new ByteQueue();
+            queue.Enqueue(playlist.IsOnlySearch);
+
+            await Publish(playlist, nameof(playlist.IsOnlySearch), queue);
+        }
+
+        protected async override void OnIsSearchShuffleChangedAsync(IPlaylist playlist)
+        {
+            ByteQueue queue = new ByteQueue();
+            queue.Enqueue(playlist.IsSearchShuffle);
+
+            await Publish(playlist, nameof(playlist.IsSearchShuffle), queue);
         }
 
         protected async override void OnMediaSourcesChanged()
         {
             ByteQueue queue = new ByteQueue();
-            queue.Enqueue(MediaSources);
+            queue.Enqueue(FileMediaSources);
 
-            await Publish(nameof(MediaSources), queue);
+            await Publish(nameof(FileMediaSources), queue);
         }
 
         protected async override void OnPlayStateChanged()
         {
             ByteQueue queue = new ByteQueue();
-            queue.Enqueue(PlayState);
+            queue.Enqueue((int)PlayState);
 
             await Publish(nameof(PlayState), queue);
         }
 
-        protected async override void OnPositionChanged()
+        protected async override void OnPositionChanged(IPlaylist playlist)
         {
             ByteQueue queue = new ByteQueue();
-            queue.Enqueue(Position);
+            queue.Enqueue(playlist.Position);
 
-            await Publish(nameof(Position), queue);
+            await Publish(playlist, nameof(playlist.Position), queue);
         }
 
-        protected async override void OnSearchKeyChanged()
+        protected async override void OnSearchKeyChanged(IPlaylist playlist)
         {
             ByteQueue queue = new ByteQueue();
-            queue.Enqueue(SearchKey);
+            queue.Enqueue(playlist.SearchKey);
 
-            await Publish(nameof(SearchKey), queue);
+            await Publish(playlist, nameof(playlist.SearchKey), queue);
+        }
+
+        protected async override void OnSongsChanged(IPlaylist playlist)
+        {
+            await PublishSongs(playlist);
+        }
+
+        private async Task PublishSongs(IPlaylist playlist)
+        {
+            ByteQueue queue = new ByteQueue();
+            queue.Enqueue(playlist.Songs);
+
+            await Publish(playlist, nameof(playlist.Songs), queue);
         }
 
         protected override void OnFormatChanged()
@@ -369,12 +510,12 @@ namespace AudioPlayerBackend
             player.PlayState = PlaybackState.Playing;
         }
 
-        protected override void OnServiceVolumeChanged()
+        protected async override void OnServiceVolumeChanged()
         {
-            PublishServiceVolume();
+            await PublishServiceVolume();
         }
 
-        private async void PublishServiceVolume()
+        private async Task PublishServiceVolume()
         {
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(Volume);
@@ -384,15 +525,7 @@ namespace AudioPlayerBackend
 
         public async override void Reload()
         {
-            await Publish(nameof(AllSongsShuffled), new byte[0]);
-        }
-
-        protected override void OnDurationChanged()
-        {
-        }
-
-        protected override void OnAllSongsShuffledChanged()
-        {
+            await Publish(nameof(FileBasePlaylist.Songs), FileBasePlaylist.ID.ToByteArray());
         }
 
         public async override void Dispose()

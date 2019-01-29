@@ -92,6 +92,13 @@ namespace AudioPlayerFrontend
                 .WithMediaSources(mediaSources);
         }
 
+        public void FillServiceBuilderWithMinimum(ServiceBuilder builder)
+        {
+            if (BuildStandalone) builder.WithStandalone();
+            else if (BuildServer) builder.WithServer(serverPort);
+            else if (BuildClient) builder.WithClient(ServerAddress, ClientPort);
+        }
+
         public void ToClient()
         {
             if (BuildClient) return;

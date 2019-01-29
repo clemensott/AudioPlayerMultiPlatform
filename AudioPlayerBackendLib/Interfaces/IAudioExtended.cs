@@ -6,12 +6,6 @@ namespace AudioPlayerBackend
 {
     public interface IAudioExtended : IAudio, IDisposable, INotifyPropertyChanged
     {
-        bool IsSearching { get; }
-
-        IEnumerable<Song> AllSongs { get; }
-
-        IEnumerable<Song> SearchSongs { get; }
-
         IPlayer Player { get; }
 
         void SetNextSong();
@@ -19,5 +13,9 @@ namespace AudioPlayerBackend
         void SetPreviousSong();
 
         void Reload();
+
+        IEnumerable<IPlaylistExtended> GetAllPlaylists();
+
+        IPlaylistExtended GetPlaylist(Guid id);
     }
 }

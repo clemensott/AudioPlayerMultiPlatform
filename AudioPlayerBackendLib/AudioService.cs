@@ -38,7 +38,8 @@ namespace AudioPlayerBackend
 
         private void Player_PlaybackStopped(object sender, StoppedEventArgs e)
         {
-            if (e.Exception == null && (PlayState != PlaybackState.Stopped || Position >= Duration)) SetNextSong();
+            if (e.Exception == null && (PlayState != PlaybackState.Stopped ||
+                CurrentPlaylist.Position >= CurrentPlaylist.Duration)) Continue();
         }
 
         private void Player_MediaEnded(object sender, EventArgs args)
@@ -52,23 +53,24 @@ namespace AudioPlayerBackend
 
             try
             {
-                if (Reader != null) Position = Reader.CurrentTime;
+                if (Reader != null) CurrentPlaylist.Position = Reader.CurrentTime;
             }
             catch { }
 
             isUpdatingPosition = false;
         }
 
-        protected override void OnAllSongsShuffledChanged()
+        protected override void OnCurrenPlaylistChanged()
         {
-            if (!AllSongsShuffled.Any()) CurrentSong = null;
-            else if (!CurrentSong.HasValue || !AllSongsShuffled.Contains(CurrentSong.Value))
-            {
-                CurrentSong = AllSongsShuffled.FirstOrDefault();
-            }
+            UpdateCurrentSong();
         }
 
-        protected override void OnCurrentSongChanged()
+        protected override void OnCurrentSongChanged(IPlaylist playlist)
+        {
+            if (CurrentPlaylist == playlist) UpdateCurrentSong();
+        }
+
+        private void UpdateCurrentSong()
         {
             StopTimer();
 
@@ -97,7 +99,7 @@ namespace AudioPlayerBackend
 
             try
             {
-                if (CurrentSong.HasValue)
+                if (CurrentPlaylist.CurrentSong.HasValue)
                 {
                     player.Play(GetWaveProvider);
                 }
@@ -116,8 +118,8 @@ namespace AudioPlayerBackend
 
         private IPositionWaveProvider GetWaveProvider()
         {
-            Reader = ToWaveProvider(CreateWaveProvider(CurrentSong.Value));
-            Duration = Reader.TotalTime;
+            Reader = ToWaveProvider(CreateWaveProvider(CurrentPlaylist.CurrentSong.Value));
+            CurrentPlaylist.Duration = Reader.TotalTime;
 
             return Reader;
         }
@@ -143,14 +145,14 @@ namespace AudioPlayerBackend
 
             for (int i = 0; i < allSongsShuffled.Length; i++) allSongsShuffled[i].Index = i;
 
-            AllSongsShuffled = allSongsShuffled;
+            FileBasePlaylist.Songs = allSongsShuffled;
         }
 
         private IEnumerable<Song> LoadAllSongs()
         {
             try
             {
-                IEnumerable<string> sourcePaths = MediaSources.ToNotNull();
+                IEnumerable<string> sourcePaths = FileMediaSources.ToNotNull();
                 IEnumerable<string> nonHiddenFiles = sourcePaths.SelectMany(LoadFilePaths);
 
                 return nonHiddenFiles.Select(p => new Song(p));
@@ -171,6 +173,14 @@ namespace AudioPlayerBackend
             return songs.OrderBy(s => ran.Next());
         }
 
+        protected override void OnSongsChanged(IPlaylist playlist)
+        {
+            if (!playlist.CurrentSong.HasValue || (playlist.Songs != null && !playlist.Songs.Contains(playlist.CurrentSong.Value)))
+            {
+                playlist.CurrentSong = playlist.Songs.ElementAtOrDefault(0);
+            }
+        }
+
         protected override void OnPlayStateChanged()
         {
             player.PlayState = PlayState;
@@ -178,63 +188,40 @@ namespace AudioPlayerBackend
             EnableTimer();
         }
 
-        protected override void OnPositionChanged()
+        protected override void OnPositionChanged(IPlaylist playlist)
+        {
+            if (playlist == CurrentPlaylist) OnPositionChanged();
+        }
+
+        private void OnPositionChanged()
         {
             if (!isUpdatingPosition && Reader != null)
             {
-                Reader.CurrentTime = Position;
+                Reader.CurrentTime = CurrentPlaylist.Position;
                 Player.ExecutePlayState();
             }
         }
 
         private void EnableTimer()
         {
-            if (CurrentSong.HasValue && PlayState == PlaybackState.Playing) StartTimer();
+            if (CurrentPlaylist.CurrentSong.HasValue && PlayState == PlaybackState.Playing) StartTimer();
             else StopTimer();
         }
 
         private void StartTimer()
         {
-            timer.Change(updateIntervall, updateIntervall);
+            timer?.Change(updateIntervall, updateIntervall);
         }
 
 
         private void StopTimer()
         {
-            timer.Change(-1, -1);
+            timer?.Change(-1, -1);
         }
 
         protected override void OnServiceVolumeChanged()
         {
             player.Volume = Volume;
-        }
-
-        protected override void OnDurationChanged()
-        {
-        }
-
-        protected override void OnIsAllShuffleChanged()
-        {
-        }
-
-        protected override void OnIsSearchShuffleChanged()
-        {
-        }
-
-        protected override void OnIsOnlySearchChanged()
-        {
-        }
-
-        protected override void OnSearchKeyChanged()
-        {
-        }
-
-        protected override void OnFormatChanged()
-        {
-        }
-
-        protected override void OnAudioDataChanged()
-        {
         }
 
         public override void Dispose()

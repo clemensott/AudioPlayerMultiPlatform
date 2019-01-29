@@ -1,29 +1,20 @@
 ﻿using AudioPlayerBackend.Common;
 using System;
+using System.Collections.ObjectModel;
 
 namespace AudioPlayerBackend
 {
     public interface IAudio
     {
-        Song[] AllSongsShuffled { get; set; }
+        IPlaylistExtended FileBasePlaylist { get; }
 
-        Song? CurrentSong { get; set; }
+        IPlaylistExtended CurrentPlaylist { get; set; }
 
-        TimeSpan Duration { get; set; }
+        ObservableCollection<IPlaylistExtended> AdditionalPlaylists { get; }
 
-        bool IsAllShuffle { get; set; }
-
-        bool IsOnlySearch { get; set; }
-
-        bool IsSearchShuffle { get; set; }
-
-        string[] MediaSources { get; set; }
+        string[] FileMediaSources { get; set; }
 
         PlaybackState PlayState { get; set; }
-
-        TimeSpan Position { get; set; }
-
-        string SearchKey { get; set; }
 
         float Volume { get; set; }
     }

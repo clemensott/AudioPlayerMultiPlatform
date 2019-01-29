@@ -295,11 +295,11 @@ namespace AudioPlayerBackend
 
             Service = service;
 
-            return WithMediaSources(service.MediaSources)
-                .WithIsAllShuffle(service.IsAllShuffle)
-                .WithIsSearchShuffle(service.IsSearchShuffle)
-                .WithIsOnlySearch(service.IsOnlySearch)
-                .WithSearchKey(service.SearchKey)
+            return WithMediaSources(service.FileMediaSources)
+                .WithIsAllShuffle(service.FileBasePlaylist.IsAllShuffle)
+                .WithIsSearchShuffle(service.FileBasePlaylist.IsSearchShuffle)
+                .WithIsOnlySearch(service.FileBasePlaylist.IsOnlySearch)
+                .WithSearchKey(service.FileBasePlaylist.SearchKey)
                 //.WithPlay(service.PlayState == PlaybackState.Playing)
                 .WithReload(false)
                 .WithSetMediaIfNon(false)
@@ -501,26 +501,17 @@ namespace AudioPlayerBackend
             else
             {
                 service = Service == null || Service is IMqttAudio ? CreateAudioService(player) : Service;
-
-                //if (mediaSources == null) mediaSources = new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) };
             }
 
-            bool setMediaSources = mediaSources != null && (!ifNon || !service.MediaSources.ToNotNull().Any());
+            bool setMediaSources = mediaSources != null && (!ifNon || !service.FileMediaSources.ToNotNull().Any());
 
-            if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.MediaSources)) service.MediaSources = mediaSources;
+            if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.FileMediaSources)) service.FileMediaSources = mediaSources;
             else if (reload) service.Reload();
 
-            if (!reload && Service != null && !(service is IMqttAudioClient) &&
-                ContainsSameSongs(Service.AllSongsShuffled, service.AllSongsShuffled))
-            {
-                service.AllSongsShuffled = Service.AllSongsShuffled;
-                service.CurrentSong = Service.CurrentSong;
-            }
-
-            if (IsAllShuffle.HasValue) service.IsAllShuffle = IsAllShuffle.Value;
-            if (IsSearchShuffle.HasValue) service.IsSearchShuffle = IsSearchShuffle.Value;
-            if (IsOnlySearch.HasValue) service.IsOnlySearch = IsOnlySearch.Value;
-            if (SearchKey != null) service.SearchKey = SearchKey;
+            if (IsAllShuffle.HasValue) service.FileBasePlaylist.IsAllShuffle = IsAllShuffle.Value;
+            if (IsSearchShuffle.HasValue) service.FileBasePlaylist.IsSearchShuffle = IsSearchShuffle.Value;
+            if (IsOnlySearch.HasValue) service.FileBasePlaylist.IsOnlySearch = IsOnlySearch.Value;
+            if (SearchKey != null) service.FileBasePlaylist.SearchKey = SearchKey;
             if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (volume.HasValue) service.Volume = volume.Value;
 

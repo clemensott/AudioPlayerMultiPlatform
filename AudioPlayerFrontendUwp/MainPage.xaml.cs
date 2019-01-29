@@ -3,6 +3,7 @@ using AudioPlayerBackend.Common;
 using System;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
+using Windows.Networking.Connectivity;
 using Windows.Storage;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
@@ -18,6 +19,9 @@ namespace AudioPlayerFrontend
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        private static readonly TimeSpan networkConnectionTimeOut = TimeSpan.FromMilliseconds(200),
+            networkConnectionMaxTime = TimeSpan.FromSeconds(5);
+
         private ServiceBuilder builder;
         private Task<IAudioExtended> buildTask;
         private ViewModel viewModel;
@@ -48,6 +52,8 @@ namespace AudioPlayerFrontend
 
             try
             {
+                if (builder.BuildClient) await WaitForNetworkConnection(networkConnectionTimeOut, networkConnectionMaxTime);
+
                 await buildTask;
 
                 DataContext = viewModel = new ViewModel(buildTask.Result);
@@ -68,7 +74,7 @@ namespace AudioPlayerFrontend
 
             try
             {
-                if (viewModel != null && viewModel.Parent is IMqttAudio mqttService) await mqttService.CloseAsync();
+                if (viewModel != null && viewModel.Base is IMqttAudio mqttService) await mqttService.CloseAsync();
             }
             catch { }
         }
@@ -77,13 +83,17 @@ namespace AudioPlayerFrontend
         {
             try
             {
-                if (viewModel?.Parent is IMqttAudioClient client && !client.IsOpen) await client.OpenAsync();
+                if (viewModel?.Base is IMqttAudioClient client && !client.IsOpen)
+                {
+                    await WaitForNetworkConnection(networkConnectionTimeOut, networkConnectionMaxTime);
+                    await client.OpenAsync();
+                }
             }
             catch (Exception exc)
             {
                 await new MessageDialog(exc.ToString()).ShowAsync();
 
-                builder.WithService(viewModel.Parent);
+                builder.WithService(viewModel.Base);
 
                 Frame.Navigate(typeof(SettingsPage), builder);
             }
@@ -93,15 +103,31 @@ namespace AudioPlayerFrontend
         {
             try
             {
-                if (viewModel?.Parent is IMqttAudioClient client && client.IsOpen) await client.CloseAsync();
+                if (viewModel?.Base is IMqttAudioClient client && client.IsOpen) await client.CloseAsync();
             }
             catch (Exception exc)
             {
                 await new MessageDialog(exc.ToString()).ShowAsync();
 
-                builder.WithService(viewModel.Parent);
+                builder.WithService(viewModel.Base);
 
                 Frame.Navigate(typeof(SettingsPage), builder);
+            }
+        }
+
+        private async Task<bool> WaitForNetworkConnection(TimeSpan timeOut, TimeSpan maxTime)
+        {
+            //return true;
+
+            DateTime startTime = DateTime.Now;
+
+            while (true)
+            {
+                ConnectionProfile connectedProfile = NetworkInformation.GetInternetConnectionProfile();
+                if (connectedProfile != null) return true;
+                if (startTime + maxTime >= DateTime.Now) return false;
+
+                await Task.Delay(timeOut);
             }
         }
 
@@ -145,7 +171,7 @@ namespace AudioPlayerFrontend
 
         private void AbbSettings_Click(object sender, RoutedEventArgs e)
         {
-            builder.WithService(viewModel.Parent);
+            builder.WithService(viewModel.Base);
 
             Frame.Navigate(typeof(SettingsPage), builder);
         }

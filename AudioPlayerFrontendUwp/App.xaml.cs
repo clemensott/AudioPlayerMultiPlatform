@@ -27,10 +27,12 @@ namespace AudioPlayerFrontend
         /// </summary>
 
         private ServiceBuilder serviceBuilder;
+        private StorageFile exceptionFile;
 
         public App()
         {
             CreateTime = DateTime.Now;
+
             this.InitializeComponent();
             this.Suspending += OnSuspending;
 
@@ -39,13 +41,9 @@ namespace AudioPlayerFrontend
             UnhandledException += App_UnhandledException;
         }
 
-        private async void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        private void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            //MessageDialog dialog = new MessageDialog(e.Exception.ToString());
-            //dialog.ShowAsync();
-
-            StorageFile file = await GetOrCreateStorageFile("Exception.txt");
-            await FileIO.WriteTextAsync(file, e.Exception.ToString());
+            FileIO.WriteTextAsync(exceptionFile, e.Exception.ToString()).AsTask().Wait();
         }
 
         /// <summary>
@@ -56,6 +54,8 @@ namespace AudioPlayerFrontend
         protected async override void OnLaunched(LaunchActivatedEventArgs e)
         {
             Frame rootFrame = Window.Current.Content as Frame;
+
+            exceptionFile = await GetOrCreateStorageFile("Exception.txt");
 
             // App-Initialisierung nicht wiederholen, wenn das Fenster bereits Inhalte enthält.
             // Nur sicherstellen, dass das Fenster aktiv ist.
@@ -79,10 +79,6 @@ namespace AudioPlayerFrontend
             {
                 if (rootFrame.Content == null)
                 {
-                    // Wenn der Navigationsstapel nicht wiederhergestellt wird, zur ersten Seite navigieren
-                    // und die neue Seite konfigurieren, indem die erforderlichen Informationen als Navigationsparameter
-                    // übergeben werden
-
                     try
                     {
                         //serviceBuilder.WithClient("nas-server", 1884);
@@ -92,7 +88,7 @@ namespace AudioPlayerFrontend
 
                         ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
                         profile.ToClient();
-                        profile.FillServiceBuilder(serviceBuilder);
+                        profile.FillServiceBuilderWithMinimum(serviceBuilder);
                     }
                     catch (Exception exc)
                     {

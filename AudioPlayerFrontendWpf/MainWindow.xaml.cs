@@ -1,7 +1,7 @@
 ﻿using AudioPlayerBackend;
 using AudioPlayerBackend.Common;
 using AudioPlayerFrontend.Join;
-using StdOttStandard;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -30,11 +30,30 @@ namespace AudioPlayerFrontend
 
             var dpd = DependencyPropertyDescriptor.FromProperty(ItemsControl.ItemsSourceProperty, typeof(ListBox));
             dpd.AddValueChanged(lbxSongs, OnItemsSourceChanged);
+
+            SystemEvents.PowerModeChanged += OnPowerChange;
         }
 
         private void OnItemsSourceChanged(object sender, EventArgs e)
         {
             Scroll();
+        }
+
+        private async void OnPowerChange(object s, PowerModeChangedEventArgs e)
+        {
+            if (viewModel?.Base is IMqttAudio audio)
+            {
+                switch (e.Mode)
+                {
+                    case PowerModes.Resume:
+                        await audio.OpenAsync();
+                        break;
+
+                    case PowerModes.Suspend:
+                        await audio.CloseAsync();
+                        break;
+                }
+            }
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -51,7 +70,7 @@ namespace AudioPlayerFrontend
             }
             catch (Exception exc)
             {
-                MessageBox.Show(Utils.GetTypeMessageAndStack(exc), "Building service", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(exc.ToString(), "Building service", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
 
@@ -72,7 +91,7 @@ namespace AudioPlayerFrontend
             }
             catch (Exception exc)
             {
-                MessageBox.Show(Utils.GetTypeMessageAndStack(exc), "Building hotkeys", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(exc.ToString(), "Building hotkeys", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -86,15 +105,15 @@ namespace AudioPlayerFrontend
             switch (e.Key)
             {
                 case Key.Enter:
-                    if (viewModel.ViewSongs.Any())
+                    if (viewModel.CurrentPlaylist.SearchSongs.Any())
                     {
-                        viewModel.CurrentSong = viewModel.ViewSongs.First();
+                        viewModel.CurrentPlaylist.CurrentSong = viewModel.CurrentPlaylist.SearchSongs.First();
                         viewModel.PlayState = PlaybackState.Playing;
                     }
                     break;
 
                 case Key.Escape:
-                    viewModel.SearchKey = string.Empty;
+                    viewModel.CurrentPlaylist.SearchKey = string.Empty;
                     break;
             }
         }
@@ -132,17 +151,17 @@ namespace AudioPlayerFrontend
 
         private void OnRestart(object sender, EventArgs e)
         {
-            viewModel.Position = TimeSpan.Zero;
+            viewModel.CurrentPlaylist.Position = TimeSpan.Zero;
         }
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            SettingsWindow window = new SettingsWindow(viewModel.Parent, hotKeys);
+            SettingsWindow window = new SettingsWindow(viewModel.Base, hotKeys);
             window.ShowDialog();
 
             IAudioExtended service = await window.ServiceBuilder.Build();
 
-            if (service != viewModel.Parent)
+            if (service != viewModel.Base)
             {
                 viewModel.Dispose();
 
@@ -167,7 +186,7 @@ namespace AudioPlayerFrontend
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                viewModel.MediaSources = (string[])e.Data.GetData(DataFormats.FileDrop);
+                viewModel.FileMediaSources = (string[])e.Data.GetData(DataFormats.FileDrop);
             }
         }
 
@@ -176,6 +195,21 @@ namespace AudioPlayerFrontend
             hotKeys?.Dispose();
 
             viewModel.Dispose();
+        }
+
+        private void StackPanel_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            Playlist playlist = new Playlist()
+            {
+                Songs = viewModel.FileBasePlaylist.ViewSongs.Take(3).ToArray(),
+                SearchKey = "Hi",
+                CurrentSong = viewModel.FileBasePlaylist.ViewSongs.ElementAtOrDefault(1),
+                IsAllShuffle = true,
+                Loop = LoopType.Next
+            };
+
+            viewModel.Base.AdditionalPlaylists.Add(playlist);
+            viewModel.CurrentPlaylist = viewModel.AdditionalPlaylists.LastOrDefault();
         }
     }
 }

@@ -115,6 +115,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Converter\PositionToolTipConverter.cs" />
+    <Compile Include="PlaylistViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceProfile.cs" />
     <Compile Include="SettingsPage.xaml.cs">

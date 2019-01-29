@@ -31,6 +31,6 @@
                 ManipulationCompleted="SldPosition_ManipulationCompleted"
                 ValueChanged="SldPosition_ValueChanged"/>
         <TextBlock Grid.Column="2" x:Name="tblDuration" Margin="5,0" VerticalAlignment="Center"
-                Text="{Binding Duration,Converter={StaticResource timeStringCon}}"/>
+                Text="{Binding ElementName=control,Path=Duration,Converter={StaticResource timeStringCon}}"/>
     </Grid>
 </UserControl>

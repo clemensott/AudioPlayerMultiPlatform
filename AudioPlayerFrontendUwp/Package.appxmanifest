@@ -25,12 +25,13 @@
   <Capabilities>
     <Capability Name="internetClient" />
     <Capability Name="internetClientServer" />
+    <Capability Name="privateNetworkClientServer" />
     <uap:Capability Name="musicLibrary" />
     <uap:Capability Name="removableStorage" />
     <uap:Capability Name="videosLibrary" />
     <uap:Capability Name="picturesLibrary" />
     <uap:Capability Name="sharedUserCertificates" />
     <uap:Capability Name="enterpriseAuthentication" />
-    <rescap:Capability Name="broadFileSystemAccess" />
+    <DeviceCapability Name="wiFiControl" />
   </Capabilities>
 </Package>

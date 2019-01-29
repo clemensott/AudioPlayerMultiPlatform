@@ -17,6 +17,18 @@ namespace AudioPlayerFrontend.Join
         {
             this.parent = parent;
             parent.ApplicationMessageReceived += Parent_ApplicationMessageReceived;
+            parent.Connected += Parent_Connected;
+            parent.Disconnected += Parent_Disconnected;
+        }
+
+        private void Parent_Connected(object sender, MqttClientConnectedEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("MqttClientConnected");
+        }
+
+        private void Parent_Disconnected(object sender, MqttClientDisconnectedEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("MqttClientDisconnected");
         }
 
         private void Parent_ApplicationMessageReceived(object sender, MQTTnet.MqttApplicationMessageReceivedEventArgs e)

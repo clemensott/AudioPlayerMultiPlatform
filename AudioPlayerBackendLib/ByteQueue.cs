@@ -21,7 +21,7 @@ namespace AudioPlayerBackend
             this.bytes = new Queue<byte>(bytes);
         }
 
-        private void EnqueueRange(IEnumerable<byte> bytes)
+        public void EnqueueRange(IEnumerable<byte> bytes)
         {
             foreach (byte item in bytes) this.bytes.Enqueue(item);
         }
@@ -60,10 +60,7 @@ namespace AudioPlayerBackend
 
         public void Enqueue(IEnumerable<string> strings)
         {
-            IList<string> list = strings is IList<string> ? (IList<string>)strings : strings.ToArray();
-
-            Enqueue(list.Count);
-            foreach (string song in list) Enqueue(song);
+            Enqueue(strings, Enqueue);
         }
 
         public void Enqueue(Song song)
@@ -76,25 +73,12 @@ namespace AudioPlayerBackend
 
         public void Enqueue(IEnumerable<Song> songs)
         {
-            IList<Song> list = songs is IList<Song> ? (IList<Song>)songs : songs.ToArray();
-
-            Enqueue(list.Count);
-            foreach (Song song in list) Enqueue(song);
+            Enqueue(songs, Enqueue);
         }
 
         public void Enqueue(TimeSpan span)
         {
             EnqueueRange(BitConverter.GetBytes(span.Ticks));
-        }
-
-        public void Enqueue(PlaybackState state)
-        {
-            Enqueue((int)state);
-        }
-
-        public void Enqueue(WaveFormatEncoding encoding)
-        {
-            Enqueue((ushort)encoding);
         }
 
         public void Enqueue(WaveFormat format)
@@ -103,29 +87,51 @@ namespace AudioPlayerBackend
             Enqueue(format.BitsPerSample);
             Enqueue(format.BlockAlign);
             Enqueue(format.Channels);
-            Enqueue(format.Encoding);
+            Enqueue((ushort)format.Encoding);
             Enqueue(format.SampleRate);
         }
 
-        //private void Enqueue(Hashes hashes)
-        //{
-        //    Enqueue(hashes.AllSongsHash);
-        //    Enqueue(hashes.CurrentSongHash);
-        //    Enqueue(hashes.MediaSourcesHash);
-        //    Enqueue(hashes.SearchSongsHash);
-        //}
+        public void Enqueue(Guid guid)
+        {
+            EnqueueRange(guid.ToByteArray());
+        }
 
-        //public void Enqueue(States states)
-        //{
-        //    Enqueue(states.Duration);
-        //    Enqueue(states.Hashes);
-        //    Enqueue(states.IsAllShuffle);
-        //    Enqueue(states.IsOnlySearch);
-        //    Enqueue(states.IsSearchShuffle);
-        //    Enqueue(states.PlayState);
-        //    Enqueue(states.Position);
-        //    Enqueue(states.SearchKey);
-        //}
+        public void Enqueue(IPlaylist playlist)
+        {
+            if (playlist.CurrentSong.HasValue)
+            {
+                Enqueue(true);
+                Enqueue(playlist.CurrentSong.Value);
+            }
+            else Enqueue(false);
+
+            Enqueue(playlist.Duration);
+            Enqueue(playlist.ID);
+            Enqueue(playlist.IsAllShuffle);
+            Enqueue(playlist.IsOnlySearch);
+            Enqueue(playlist.IsSearchShuffle);
+            Enqueue((int)playlist.Loop);
+            Enqueue(playlist.Position);
+            Enqueue(playlist.SearchKey);
+            Enqueue(playlist.Songs);
+        }
+
+        public void Enqueue(IEnumerable<IPlaylist> playlists)
+        {
+            Enqueue(playlists, Enqueue);
+        }
+
+        private void Enqueue<T>(IEnumerable<T> items, Action<T> itemEnqueueAction)
+        {
+            IList<T> list = items as IList<T> ?? items?.ToArray();
+
+            if (list != null)
+            {
+                Enqueue(list.Count);
+                foreach (T item in list) itemEnqueueAction(item);
+            }
+            else Enqueue(-1);
+        }
 
         public byte[] DequeueRange(int count)
         {
@@ -164,12 +170,7 @@ namespace AudioPlayerBackend
 
         public string[] DequeueStrings()
         {
-            int length = DequeueInt();
-            string[] strings = new string[length];
-
-            for (int i = 0; i < length; i++) strings[i] = DequeueString();
-
-            return strings;
+            return DequeueArray(DequeueString);
         }
 
         public Song DequeueSong()
@@ -185,27 +186,12 @@ namespace AudioPlayerBackend
 
         public Song[] DequeueSongs()
         {
-            int length = DequeueInt();
-            Song[] songs = new Song[length];
-
-            for (int i = 0; i < length; i++) songs[i] = DequeueSong();
-
-            return songs;
+            return DequeueArray(DequeueSong);
         }
 
         public TimeSpan DequeueTimeSpan()
         {
             return TimeSpan.FromTicks(BitConverter.ToInt64(DequeueRange(8), 0));
-        }
-
-        public PlaybackState DequeuePlayState()
-        {
-            return (PlaybackState)DequeueInt();
-        }
-
-        public WaveFormatEncoding DequeueWaveFormatEncoding()
-        {
-            return (WaveFormatEncoding)DequeueUShort();
         }
 
         public WaveFormat DequeueWaveFormat()
@@ -214,11 +200,55 @@ namespace AudioPlayerBackend
             int bitsPerSample = DequeueInt();
             int blockAlign = DequeueInt();
             int channels = DequeueInt();
-            WaveFormatEncoding encoding = DequeueWaveFormatEncoding();
+            WaveFormatEncoding encoding = (WaveFormatEncoding)DequeueUShort();
             int sampleRate = DequeueInt();
 
             return new WaveFormat(encoding, sampleRate,
                 channels, averageBytesPerSecond, blockAlign, bitsPerSample);
+        }
+
+        public Guid DequeueGuid()
+        {
+            return new Guid(DequeueRange(16));
+        }
+
+        public IPlaylist DequeuePlaylist()
+        {
+            IPlaylist playlist = new Playlist();
+
+            if (DequeueBool()) playlist.CurrentSong = DequeueSong();
+
+            playlist.Duration = DequeueTimeSpan();
+            playlist.ID = DequeueGuid();
+            playlist.IsAllShuffle = DequeueBool();
+            playlist.IsOnlySearch = DequeueBool();
+            playlist.IsSearchShuffle = DequeueBool();
+            playlist.Loop = (LoopType)DequeueInt();
+            playlist.Position = DequeueTimeSpan();
+            playlist.SearchKey = DequeueString();
+            playlist.Songs = DequeueSongs();
+
+            return playlist;
+        }
+
+        public IPlaylist[] DequeuePlaylists()
+        {
+            return DequeueArray(DequeuePlaylist);
+        }
+
+        private T[] DequeueArray<T>(Func<T> itemDequeueFunc)
+        {
+            int length = DequeueInt();
+            if (length == -1) return null;
+
+            T[] array = new T[length];
+
+            for (int i = 0; i < length; i++)
+            {
+                array[i] = itemDequeueFunc();
+            }
+
+            return array;
         }
 
         public IEnumerator<byte> GetEnumerator()

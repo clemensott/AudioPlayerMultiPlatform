@@ -1,4 +1,4 @@
-﻿using System;
+﻿using StdOttStandard;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,16 +6,14 @@ namespace AudioPlayerBackend
 {
     static class SongsService
     {
-        //public SongsService(IList<Song> allSongsShuffled, bool isAllShuffle, bool isSearchShuffle, string searchKey)
-
         public static bool GetIsSearching(string searchKey)
         {
             return !string.IsNullOrEmpty(searchKey);
         }
 
-        public static IEnumerable<Song> GetAllSongs(IAudio audio)
+        public static IEnumerable<Song> GetAllSongs(IPlaylist playlist)
         {
-            return GetAllSongs(audio.AllSongsShuffled, audio.IsAllShuffle);
+            return GetAllSongs(playlist.Songs, playlist.IsAllShuffle);
         }
 
         public static IEnumerable<Song> GetAllSongs(IEnumerable<Song> allSongsShuffled, bool isAllShuffle)
@@ -23,12 +21,12 @@ namespace AudioPlayerBackend
             return isAllShuffle ? allSongsShuffled : GetOrderedSongs(allSongsShuffled);
         }
 
-        public static IEnumerable<Song> GetSearchSongs(IAudio audio)
+        public static IEnumerable<Song> GetSearchSongs(IPlaylist playlist)
         {
-            return GetSearchSongs(audio.AllSongsShuffled, audio.IsSearchShuffle, audio.SearchKey);
+            return GetSearchSongs(playlist.Songs, playlist.IsSearchShuffle, playlist.SearchKey);
         }
 
-        public static IEnumerable<Song> GetSearchSongs(IList<Song> allSongsShuffled, bool isSearchShuffle, string searchKey)
+        public static IEnumerable<Song> GetSearchSongs(IEnumerable<Song> allSongsShuffled, bool isSearchShuffle, string searchKey)
         {
             if (!isSearchShuffle) return GetFilteredSongs(allSongsShuffled, searchKey);
 
@@ -101,46 +99,16 @@ namespace AudioPlayerBackend
             return allSongs.OrderBy(s => s.Title).ThenBy(s => s.Artist);
         }
 
-        public static Song? GetNextSong(IAudio audio)
+        public static (Song? song, bool overflow) GetNextSong(IPlaylist playlist)
         {
-            Song[] songs = (audio.IsOnlySearch && GetIsSearching(audio.SearchKey) ?
-                GetSearchSongs(audio) : GetAllSongs(audio)).ToArray();
-
-            return GetNextSong(songs, audio.CurrentSong);
+            return (playlist.IsOnlySearch && GetIsSearching(playlist.SearchKey) ? GetSearchSongs(playlist) : GetAllSongs(playlist))
+                   .Cast<Song?>().NextOrDefault(playlist.CurrentSong);
         }
 
-        public static Song? GetNextSong(Song[] songs, Song? currentSong)
+        public static (Song? song, bool underflow) GetPreviousSong(IPlaylist playlist)
         {
-            int index = currentSong.HasValue ? Array.IndexOf(songs, currentSong.Value) : -1;
-
-            if (index == -1 && !songs.Any()) return null;
-
-            index = (index + 1) % songs.Length;
-
-            return songs[index];
-        }
-
-        public static Song? GetPreviousSong(IAudio audio)
-        {
-            Song[] songs = (audio.IsOnlySearch && GetIsSearching(audio.SearchKey) ?
-               GetSearchSongs(audio) : GetAllSongs(audio)).ToArray();
-
-            return GetPreviousSong(songs, audio.CurrentSong);
-        }
-
-        public static Song? GetPreviousSong(Song[] songs, Song? currentSong)
-        {
-            int index = currentSong.HasValue ? Array.IndexOf(songs, currentSong.Value) : -1;
-
-            if (index == -1)
-            {
-                if (!songs.Any()) return null;
-                index = 1;
-            }
-
-            index = (index + songs.Length - 1) % songs.Length;
-
-            return songs[index];
+            return (playlist.IsOnlySearch && GetIsSearching(playlist.SearchKey) ? GetSearchSongs(playlist) : GetAllSongs(playlist))
+                   .Cast<Song?>().PreviousOrDefault(playlist.CurrentSong);
         }
     }
 }

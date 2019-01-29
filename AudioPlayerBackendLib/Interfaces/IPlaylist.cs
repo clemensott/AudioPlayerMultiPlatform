@@ -1,14 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace AudioPlayerBackend
 {
-    public enum LoopType { Next, Stop, This, CurrentSong }
+    public enum LoopType { Next, Stop, CurrentPlaylist, CurrentSong }
 
     public interface IPlaylist : INotifyPropertyChanged
     {
-        Guid ID { get; }
+        Guid ID { get; set; }
 
         bool IsAllShuffle { get; set; }
 
@@ -24,6 +24,8 @@ namespace AudioPlayerBackend
 
         Song? CurrentSong { get; set; }
 
-        IEnumerable<Song> Songs { get; }
+        Song[] Songs { get; set; }
+
+        string SearchKey { get; set; }
     }
 }

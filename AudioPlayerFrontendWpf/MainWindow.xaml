@@ -14,7 +14,8 @@
 
     <Window.Resources>
         <local:PlayStateToIsCheckedConverter x:Key="isPlayingCon"/>
-        <con:TimeSpanToStringConverter x:Key="timeCon"/>
+        <con:TimeSpanToStringConverter x:Key="timeTextCon"/>
+        <local:TimeSpanToSecondsConverter x:Key="timeSecCon"/>
         <local:ToIAudioClientConverter x:Key="toClientCon"/>
         <con:IsValueToTwoValueConverter x:Key="isClientCon" EqualsValue="Collapsed" NotEqualsValue="Visible"/>
     </Window.Resources>
@@ -30,14 +31,14 @@
             <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
                 <TextBlock Text="Search:" Margin="0,0,5,0" VerticalAlignment="Center"/>
                 <TextBox Name="tbxSearch" HorizontalAlignment="Stretch" MinWidth="200"
-                         Text="{Binding SearchKey,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+                         Text="{Binding CurrentPlaylist.SearchKey,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
                          KeyDown="TbxSearch_KeyDown"/>
             </StackPanel>
-            
+
             <CheckBox Margin="5,3" Content="PlayOnlySearch" VerticalAlignment="Center"
-                      IsChecked="{Binding IsOnlySearch,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
+                      IsChecked="{Binding CurrentPlaylist.IsOnlySearch,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
             <CheckBox Margin="5,3" Content="Shuffle" VerticalAlignment="Center"
-                      IsChecked="{Binding IsShuffle,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
+                      IsChecked="{Binding CurrentPlaylist.IsShuffle,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
 
             <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
                 <TextBlock Text="Volume:" VerticalAlignment="Center" Margin="0,-3,5,0"/>
@@ -45,7 +46,7 @@
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center"
-                        DataContext="{Binding Parent,Converter={StaticResource toClientCon}}"
+                        DataContext="{Binding Base,Converter={StaticResource toClientCon}}"
                         Visibility="{Binding Converter={StaticResource isClientCon}}">
                 <CheckBox Content="Stream" VerticalAlignment="Center" HorizontalAlignment="Right"
                           Margin="0,0,5,0" IsChecked="{Binding IsStreaming,Mode=TwoWay}"/>
@@ -57,7 +58,8 @@
         </WrapPanel>
 
         <ListBox Grid.Row="1" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
-                 ItemsSource="{Binding ViewSongs}" SelectedItem="{Binding CurrentViewSong}"
+                 DataContext="{Binding CurrentPlaylist}" ItemsSource="{Binding ViewSongs}"
+                 SelectedIndex="{Binding CurrentViewSongIndex,Mode=TwoWay}"
                  SelectionChanged="LbxSongs_SelectionChanged">
             <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -100,17 +102,18 @@
                             Converter={StaticResource ResourceKey=isPlayingCon}}" />
             <Button Grid.Column="2" Content="Next" Width="75" Click="OnNext"/>
 
-            <StackPanel Grid.Column="3" DataContext="{Binding CurrentSong}">
+            <StackPanel Grid.Column="3" DataContext="{Binding CurrentPlaylist.CurrentSong}" MouseRightButtonUp="StackPanel_MouseRightButtonUp">
                 <TextBlock Name="tblTitle" Text="{Binding Title}" TextWrapping="Wrap" Margin="10,0,0,0"/>
                 <TextBlock Name="tblArtist" Text="{Binding Artist}" TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0"/>
             </StackPanel>
 
             <TextBlock Grid.Column="4" Margin="5,0" VerticalAlignment="Center"
-                       Text="{Binding Position,Converter={StaticResource timeCon}}"/>
-            <Slider Grid.Column="5" x:Name="sldPosition" Minimum="0" Maximum="1" IsMoveToPointEnabled="True"
-                    VerticalAlignment="Center" Value="{Binding PositionFactor,Mode=TwoWay}"/>
+                       Text="{Binding CurrentPlaylist.Position,Converter={StaticResource timeTextCon}}"/>
+            <Slider Grid.Column="5" x:Name="sldPosition" Minimum="0" VerticalAlignment="Center" IsMoveToPointEnabled="True"
+                    Value="{Binding CurrentPlaylist.Position,Mode=TwoWay,Converter={StaticResource timeSecCon}}"
+                    Maximum="{Binding CurrentPlaylist.Duration,Converter={StaticResource timeSecCon}}"/>
             <TextBlock Grid.Column="6" x:Name="tblDuration" Margin="5,0" VerticalAlignment="Center"
-                       Text="{Binding Duration,Converter={StaticResource timeCon}}"/>
+                       Text="{Binding CurrentPlaylist.Duration,Converter={StaticResource timeTextCon}}"/>
         </Grid>
     </Grid>
 </Window>

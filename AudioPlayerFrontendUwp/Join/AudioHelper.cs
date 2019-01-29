@@ -85,7 +85,7 @@ namespace AudioPlayerFrontend.Join
         {
             IPlayer player = service.Player;
             AudioFileReader reader = (AudioFileReader)service.Reader;
-            Song? currentSong = service.CurrentSong;
+            Song? currentSong = service?.CurrentPlaylist?.CurrentSong;
             try
             {
                 if (reader == null)
@@ -95,7 +95,7 @@ namespace AudioPlayerFrontend.Join
                     player.Play(() =>
                     {
                         service.Reader = reader = (AudioFileReader)CreateWaveProvider(currentSong.Value, service);
-                        service.Duration = reader.TotalTime;
+                        service.CurrentPlaylist.Duration = reader.TotalTime;
 
                         return reader;
                     });
@@ -109,7 +109,7 @@ namespace AudioPlayerFrontend.Join
                     oldStream?.Dispose();
                     player.ExecutePlayState();
 
-                    service.Duration = reader.TotalTime;
+                    service.CurrentPlaylist.Duration = reader.TotalTime;
                 }
             }
             catch

@@ -2,198 +2,163 @@
 using AudioPlayerBackend.Common;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Windows;
 
 namespace AudioPlayerFrontend
 {
-    class ViewModel : IAudioExtended
+    class ViewModel : INotifyPropertyChanged
     {
-        public IAudioExtended Parent { get; private set; }
+        private IAudioExtended @base;
+        private PlaylistViewModel fileBasePlaylist;
+        private ObservableCollection<PlaylistViewModel> additionalPlaylists;
 
-        public double PositionFactor
+        public IAudioExtended Base
         {
-            get { return Duration > TimeSpan.Zero ? Position.TotalDays / Duration.TotalDays : 0; }
-            set { if (value != PositionFactor) Position = TimeSpan.FromDays(Duration.TotalDays * value); }
-        }
-
-        public TimeSpan Position
-        {
-            get { return Parent.Position; }
-            set { Parent.Position = value; }
-        }
-
-        public TimeSpan Duration
-        {
-            get { return Parent.Duration; }
-            set { Parent.Duration = value; }
-        }
-
-        public bool IsShuffle
-        {
-            get { return IsSearching ? IsSearchShuffle : IsAllShuffle; }
+            get => @base;
             set
             {
-                if (IsSearching) IsSearchShuffle = value;
-                else IsAllShuffle = value;
+                if (value == @base) return;
+
+                if (@base != null)
+                {
+                    @base.PropertyChanged -= Base_PropertyChanged;
+                    @base.AdditionalPlaylists.CollectionChanged -= AdditionalPlaylists_CollectionChanged;
+                }
+
+                @base = value;
+
+                if (@base != null)
+                {
+                    @base.PropertyChanged += Base_PropertyChanged;
+                    @base.AdditionalPlaylists.CollectionChanged += AdditionalPlaylists_CollectionChanged;
+
+                    FileBasePlaylist = new PlaylistViewModel(@base.FileBasePlaylist);
+
+                    IEnumerable<PlaylistViewModel> playlists = @base.AdditionalPlaylists.Select(p => new PlaylistViewModel(p));
+                    AdditionalPlaylists = new ObservableCollection<PlaylistViewModel>(playlists);
+                }
+                else
+                {
+                    FileBasePlaylist = null;
+                    AdditionalPlaylists = null;
+                }
+
+                OnPropertyChanged(nameof(CurrentPlaylist));
             }
         }
 
-        public bool IsAllShuffle
+        public PlaybackState PlayState { get => Base.PlayState; set => Base.PlayState = value; }
+
+        public string[] FileMediaSources { get => Base.FileMediaSources; set => Base.FileMediaSources = value; }
+
+        public float Volume { get => Base.Volume; set => Base.Volume = value; }
+
+        public IPlayer Player { get => Base.Player; }
+
+        public PlaylistViewModel CurrentPlaylist
         {
-            get { return Parent.IsAllShuffle; }
-            set { Parent.IsAllShuffle = value; }
+            get => GetPlaylistViewModel(Base.CurrentPlaylist);
+            set => Base.CurrentPlaylist = value.Base;
         }
 
-        public bool IsSearchShuffle
+        public PlaylistViewModel FileBasePlaylist
         {
-            get { return Parent.IsSearchShuffle; }
-            set { Parent.IsSearchShuffle = value; }
+            get { return fileBasePlaylist; }
+            private set
+            {
+                if (value == fileBasePlaylist) return;
+
+                fileBasePlaylist = value;
+                OnPropertyChanged(nameof(FileBasePlaylist));
+            }
         }
 
-        public bool IsOnlySearch
+        public ObservableCollection<PlaylistViewModel> AdditionalPlaylists
         {
-            get { return Parent.IsOnlySearch; }
-            set { Parent.IsOnlySearch = value; }
+            get { return additionalPlaylists; }
+            private set
+            {
+                if (value == additionalPlaylists) return;
+
+                additionalPlaylists = value;
+                OnPropertyChanged(nameof(AdditionalPlaylists));
+            }
         }
 
-        public bool IsSearching { get { return !string.IsNullOrEmpty(SearchKey); } }
-
-        public string SearchKey
+        public ViewModel(IAudioExtended @base)
         {
-            get { return Parent.SearchKey; }
-            set { Parent.SearchKey = value; }
+            additionalPlaylists = new ObservableCollection<PlaylistViewModel>();
+
+            Base = @base;
         }
 
-        public PlaybackState PlayState
+        public void SetNextSong() => Base.SetNextSong();
+
+        public void SetPreviousSong() => Base.SetPreviousSong();
+
+        public void Reload() => Base.Reload();
+
+        public void Dispose() => Base.Dispose();
+
+        public IEnumerable<IPlaylistExtended> GetAllPlaylists() => Base.GetAllPlaylists();
+
+        public IPlaylistExtended GetPlaylist(Guid id) => Base.GetPlaylist(id);
+
+        private void AdditionalPlaylists_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            get { return Parent.PlayState; }
-            set { Parent.PlayState = value; }
+            IPlaylistExtended newPlaylist = e.NewItems?.OfType<IPlaylistExtended>().FirstOrDefault();
+            IPlaylistExtended oldPlaylist = e.OldItems?.OfType<IPlaylistExtended>().FirstOrDefault();
+
+            switch (e.Action)
+            {
+                case NotifyCollectionChangedAction.Add:
+                    AdditionalPlaylists.Insert(e.NewStartingIndex, new PlaylistViewModel(newPlaylist));
+                    break;
+
+                case NotifyCollectionChangedAction.Remove:
+                    if (AdditionalPlaylists[e.OldStartingIndex].Base != oldPlaylist) { }
+                    AdditionalPlaylists.RemoveAt(e.OldStartingIndex);
+                    break;
+
+                case NotifyCollectionChangedAction.Replace:
+                    AdditionalPlaylists[e.NewStartingIndex] = new PlaylistViewModel(newPlaylist);
+                    break;
+
+                case NotifyCollectionChangedAction.Move:
+                    AdditionalPlaylists.Move(e.OldStartingIndex, e.NewStartingIndex);
+                    break;
+
+                case NotifyCollectionChangedAction.Reset:
+                    AdditionalPlaylists.Clear();
+
+                    foreach (IPlaylistExtended playlist in Base.AdditionalPlaylists)
+                    {
+                        AdditionalPlaylists.Add(new PlaylistViewModel(playlist));
+                    }
+                    break;
+            }
         }
 
-        public string[] MediaSources
+        private PlaylistViewModel GetPlaylistViewModel(IPlaylistExtended playlist)
         {
-            get { return Parent.MediaSources; }
-            set { Parent.MediaSources = value; }
+            if (FileBasePlaylist.Base == playlist) return FileBasePlaylist;
+
+            return AdditionalPlaylists.First(p => p.Base == playlist);
         }
 
-        public Song? CurrentSong
-        {
-            get { return Parent.CurrentSong; }
-            set { Parent.CurrentSong = value; }
-        }
-
-        public Song? CurrentViewSong
-        {
-            get { return CurrentSong.HasValue && ViewSongs.Contains(CurrentSong.Value) ? CurrentSong : null; }
-            set { if (value.HasValue) CurrentSong = value.Value; }
-        }
-
-        public Song[] AllSongsShuffled
-        {
-            get { return Parent.AllSongsShuffled; }
-            set { Parent.AllSongsShuffled = value; }
-        }
-
-        public IEnumerable<Song> AllSongs { get { return Parent.AllSongs; } }
-
-        public IEnumerable<Song> SearchSongs { get { return Parent.SearchSongs; } }
-
-        public IEnumerable<Song> ViewSongs { get { return Parent.IsSearching ? SearchSongs : AllSongs; } }
-
-        public float Volume
-        {
-            get { return Parent.Volume; }
-            set { Parent.Volume = value; }
-        }
-
-        public IPlayer Player { get { return Parent.Player; } }
-
-        public ViewModel(IAudioExtended parent)
-        {
-            this.Parent = parent;
-            parent.PropertyChanged += Parent_PropertyChanged;
-        }
-
-        public void SetNextSong()
-        {
-            Parent.SetNextSong();
-        }
-
-        public void SetPreviousSong()
-        {
-            Parent.SetPreviousSong();
-        }
-
-        public void Reload()
-        {
-            Parent.Reload();
-        }
-
-        private void Parent_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        private void Base_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             OnPropertyChanged(e.PropertyName);
-
-            switch (e.PropertyName)
-            {
-                case nameof(Position):
-                    OnPropertyChanged(nameof(PositionFactor));
-                    break;
-
-                case nameof(IsAllShuffle):
-                    if (!IsSearching) OnPropertyChanged(nameof(IsShuffle));
-                    break;
-
-                case nameof(IsSearchShuffle):
-                    if (IsSearching) OnPropertyChanged(nameof(IsShuffle));
-                    break;
-
-                case nameof(SearchKey):
-                    OnPropertyChanged(nameof(IsShuffle));
-                    break;
-
-                case nameof(AllSongs):
-                    if (!IsSearching)
-                    {
-                        OnPropertyChanged(nameof(ViewSongs));
-                        OnPropertyChanged(nameof(CurrentViewSong));
-                    }
-                    break;
-
-                case nameof(SearchSongs):
-                    if (IsSearching)
-                    {
-                        OnPropertyChanged(nameof(ViewSongs));
-                        OnPropertyChanged(nameof(CurrentViewSong));
-                    }
-                    break;
-
-                case nameof(CurrentSong):
-                    OnPropertyChanged(nameof(CurrentViewSong));
-                    break;
-            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected void OnPropertyChanged(string propertyName)
+        private void OnPropertyChanged(string name)
         {
-            if (PropertyChanged == null) return;
-
-            try
-            {
-                Application.Current?.Dispatcher?.Invoke(() =>
-                {
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-                });
-            }
-            catch { }
-        }
-
-        public void Dispose()
-        {
-            Parent.Dispose();
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }
