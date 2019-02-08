@@ -13,7 +13,7 @@ namespace AudioPlayerBackend
     {
         private static readonly TimeSpan timeout = TimeSpan.FromSeconds(2);
 
-        private bool isStreaming;
+        private bool isStreaming, isOpenning;
         private List<string> initProps;
         private readonly Dictionary<string, byte[]> receivingDict = new Dictionary<string, byte[]>(),
             latestValueDict = new Dictionary<string, byte[]>();
@@ -64,6 +64,18 @@ namespace AudioPlayerBackend
 
         public int? Port { get; private set; }
 
+        public bool IsOpenning
+        {
+            get { return isOpenning; }
+            private set
+            {
+                if (value == isOpenning) return;
+
+                isOpenning = value;
+                OnPropertyChanged(nameof(IsOpenning));
+            }
+        }
+
         public bool IsOpen { get { return client?.IsConnected ?? false; } }
 
         public override IPlayer Player { get { return player; } }
@@ -91,20 +103,39 @@ namespace AudioPlayerBackend
 
         public async Task OpenAsync()
         {
-            IEnumerable<string> serviceTopics = GetTopicFilters().Select(tf => tf.Topic);
-            IEnumerable<string> fileBasePlaylistTopics = GetTopicFilters(FileBasePlaylist).Select(tf => tf.Topic);
-            initProps = serviceTopics.Concat(fileBasePlaylistTopics).ToList();
+            try
+            {
+                IsOpenning = true;
 
-            await client.ConnectAsync(ServerAddress, Port);
+                IEnumerable<string> serviceTopics = GetTopicFilters().Select(tf => tf.Topic);
+                IEnumerable<string> fileBasePlaylistTopics = GetTopicFilters(FileBasePlaylist).Select(tf => tf.Topic);
+                initProps = serviceTopics.Concat(fileBasePlaylistTopics).ToList();
 
-            Task.Run(new Action(ConsumerPublish));
+                await client.ConnectAsync(ServerAddress, Port);
 
-            await Task.WhenAll(GetTopicFilters().Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
-            await Task.WhenAll(GetTopicFilters(FileBasePlaylist).Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
+                Task.Run(new Action(ConsumerPublish));
 
-            await Utils.WaitAsync(initProps, () => initProps.Count > 0);
+                await Task.WhenAll(GetTopicFilters().Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
+                await Task.WhenAll(GetTopicFilters(FileBasePlaylist).Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
 
-            initProps = null;
+                await Utils.WaitAsync(initProps, () => initProps.Count > 0);
+            }
+            catch
+            {
+                try
+                {
+                    await CloseAsync();
+                }
+                catch { }
+
+                throw;
+            }
+            finally
+            {
+                initProps = null;
+
+                IsOpenning = false;
+            }
         }
 
         public async Task CloseAsync()
@@ -171,7 +202,7 @@ namespace AudioPlayerBackend
                     await Task.WhenAny(waitForReply, waitForTimeOut);
                     System.Diagnostics.Debug.WriteLine("Publish5: " + currentPublish?.Topic);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     System.Diagnostics.Debug.WriteLine(e);
                 }

@@ -11,7 +11,7 @@ using Windows.UI.Core;
 
 namespace AudioPlayerFrontend
 {
-    class ViewModel :INotifyPropertyChanged
+    class ViewModel : INotifyPropertyChanged
     {
         private IAudioExtended @base;
         private bool viewAdvancedSettings;
@@ -65,6 +65,7 @@ namespace AudioPlayerFrontend
             }
         }
 
+        public bool IsOpenning => (Base as IMqttAudio)?.IsOpenning ?? false;
 
         public PlaybackState PlayState { get => Base.PlayState; set => Base.PlayState = value; }
 

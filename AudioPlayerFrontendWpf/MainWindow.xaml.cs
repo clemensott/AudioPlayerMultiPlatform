@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -18,6 +19,12 @@ namespace AudioPlayerFrontend
     /// </summary>
     public partial class MainWindow : Window
     {
+        enum OpenState { Open, TryOpening, IDLE, Settings }
+
+        private OpenState openState;
+        private Exception buildException;
+        private ServiceBuilder serviceBuilder;
+        private HotKeysBuilder hotKeysBuilder;
         private ViewModel viewModel;
         private HotKeys hotKeys;
         private WidthService widthService;
@@ -46,53 +53,62 @@ namespace AudioPlayerFrontend
                 switch (e.Mode)
                 {
                     case PowerModes.Resume:
-                        await audio.OpenAsync();
+                        try
+                        {
+                            SetTryOpeningVisibilities();
+
+                            await OpenAsync(audio);
+                            Subscribe(hotKeys);
+
+                            SetOpenVisibilities();
+                        }
+                        catch
+                        {
+                            if (openState == OpenState.Settings) await UpdateBuildersAndBuild();
+                            else SetWaitVisibilities();
+                        }
                         break;
 
                     case PowerModes.Suspend:
+                        Unsubscribe(hotKeys);
                         await audio.CloseAsync();
                         break;
                 }
             }
         }
 
+        private async Task OpenAsync(IMqttAudio audio)
+        {
+            while (true)
+            {
+                try
+                {
+                    await audio.OpenAsync();
+                    break;
+                }
+                catch (Exception exc)
+                {
+                    await Task.Delay(500);
+
+                    if (openState == OpenState.TryOpening) continue;
+
+                    MessageBox.Show(exc.ToString(), "Open service", MessageBoxButton.OK, MessageBoxImage.Error);
+                    throw;
+                }
+            }
+        }
+
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                IEnumerable<string> args = Environment.GetCommandLineArgs().Skip(1);
-                IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-                ServiceBuilder serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper())
-                    .WithArgs(args)
-                    .WithPlayer(new Join.Player(-1, windowHandle));
+            IEnumerable<string> args = Environment.GetCommandLineArgs().Skip(1);
+            IntPtr windowHandle = new WindowInteropHelper(this).Handle;
 
-                DataContext = viewModel = new ViewModel(await serviceBuilder.Build());
-            }
-            catch (Exception exc)
-            {
-                MessageBox.Show(exc.ToString(), "Building service", MessageBoxButton.OK, MessageBoxImage.Error);
-                throw;
-            }
+            serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper())
+                .WithArgs(args)
+                .WithPlayer(new Join.Player(-1, windowHandle));
+            hotKeysBuilder = new HotKeysBuilder().WithArgs(args);
 
-            try
-            {
-                IEnumerable<string> args = Environment.GetCommandLineArgs().Skip(1);
-
-                hotKeys = new HotKeysBuilder().WithArgs(args).Build();
-
-                hotKeys.Toggle_Pressed += OnTogglePlayPause;
-                hotKeys.Next_Pressed += OnNext;
-                hotKeys.Previous_Pressed += OnPrevious;
-                hotKeys.Play_Pressed += OnPlay;
-                hotKeys.Pause_Pressed += OnPause;
-                hotKeys.Restart_Pressed += OnRestart;
-
-                hotKeys.Register();
-            }
-            catch (Exception exc)
-            {
-                MessageBox.Show(exc.ToString(), "Building hotkeys", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            await Build();
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -156,19 +172,93 @@ namespace AudioPlayerFrontend
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            SettingsWindow window = new SettingsWindow(viewModel.Base, hotKeys);
-            window.ShowDialog();
+            await UpdateBuildersAndBuild();
+        }
 
-            IAudioExtended service = await window.ServiceBuilder.Build();
+        private async Task UpdateBuildersAndBuild()
+        {
+            UpdateBuilders();
 
-            if (service != viewModel.Base)
+            await Build();
+        }
+
+        private async Task Build()
+        {
+            try
             {
-                viewModel.Dispose();
+                SetTryOpeningVisibilities();
 
-                DataContext = viewModel = new ViewModel(service);
+                (IAudioExtended audio, HotKeys hotKeys) = await Build(serviceBuilder, hotKeysBuilder);
+
+                if (audio != viewModel?.Base)
+                {
+                    viewModel?.Dispose();
+
+                    DataContext = viewModel = new ViewModel(audio);
+                }
+
+                if (hotKeys != this.hotKeys)
+                {
+                    Unsubscribe(this.hotKeys);
+                    this.hotKeys = hotKeys;
+                    Subscribe(hotKeys);
+                }
+
+                SetOpenVisibilities();
+            }
+            catch
+            {
+                if (openState == OpenState.Settings) await UpdateBuildersAndBuild();
+                else SetWaitVisibilities();
+            }
+        }
+
+        private void UpdateBuilders()
+        {
+            if (viewModel?.Base != null) serviceBuilder.WithService(viewModel.Base);
+            if (hotKeys != null) hotKeysBuilder.WithHotKeys(hotKeys);
+
+            SettingsWindow window = new SettingsWindow(serviceBuilder, hotKeysBuilder);
+            window.ShowDialog();
+        }
+
+        private async Task<(IAudioExtended audio, HotKeys hotKeys)> Build(ServiceBuilder serviceBuilder, HotKeysBuilder hotKeysBuilder)
+        {
+            IAudioExtended audio;
+            HotKeys hotKeys;
+
+            while (true)
+            {
+                try
+                {
+                    audio = await serviceBuilder.Build();
+                    break;
+                }
+                catch (Exception exc)
+                {
+                    buildException = exc;
+                    btnOpeningException.Visibility = Visibility.Visible;
+
+                    await Task.Delay(500);
+
+                    if (openState == OpenState.TryOpening) continue;
+                    else throw;
+                }
             }
 
-            hotKeys = window.HotKeysBuilder.Build();
+            try
+            {
+                hotKeys = hotKeysBuilder.Build();
+                Subscribe(hotKeys);
+            }
+            catch (Exception exc)
+            {
+                buildException = exc;
+                btnOpeningException.Visibility = Visibility.Visible;
+                throw;
+            }
+
+            return (audio, hotKeys);
         }
 
         private void LbxSongs_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -194,7 +284,7 @@ namespace AudioPlayerFrontend
         {
             hotKeys?.Dispose();
 
-            viewModel.Dispose();
+            viewModel?.Dispose();
         }
 
         private void StackPanel_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
@@ -210,6 +300,92 @@ namespace AudioPlayerFrontend
 
             viewModel.Base.AdditionalPlaylists.Add(playlist);
             viewModel.CurrentPlaylist = viewModel.AdditionalPlaylists.LastOrDefault();
+        }
+
+        private void BtnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            openState = OpenState.IDLE;
+        }
+
+        private void BtnOpeningSettings_Click(object sender, RoutedEventArgs e)
+        {
+            openState = OpenState.Settings;
+        }
+
+        private async void BtnRetry_Click(object sender, RoutedEventArgs e)
+        {
+            await Build();
+        }
+
+        private void BtnException_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(buildException.ToString(), "Building Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        private void SetTryOpeningVisibilities()
+        {
+            openState = OpenState.TryOpening;
+            buildException = null;
+
+            stpOpening.Visibility = Visibility.Visible;
+
+            wrpSettings.Visibility = Visibility.Collapsed;
+            lbxSongs.Visibility = Visibility.Collapsed;
+            grdControl.Visibility = Visibility.Collapsed;
+            stpWaitRetry.Visibility = Visibility.Collapsed;
+        }
+
+        private void SetOpenVisibilities()
+        {
+            openState = OpenState.Open;
+
+            stpOpening.Visibility = Visibility.Collapsed;
+            stpWaitRetry.Visibility = Visibility.Collapsed;
+
+            wrpSettings.Visibility = Visibility.Visible;
+            lbxSongs.Visibility = Visibility.Visible;
+            grdControl.Visibility = Visibility.Visible;
+        }
+
+        private void SetWaitVisibilities()
+        {
+            openState = OpenState.IDLE;
+
+            stpWaitRetry.Visibility = Visibility.Visible;
+            btnWaitException.Visibility = buildException != null ? Visibility.Visible : Visibility.Collapsed;
+
+            wrpSettings.Visibility = Visibility.Collapsed;
+            lbxSongs.Visibility = Visibility.Collapsed;
+            grdControl.Visibility = Visibility.Collapsed;
+            stpOpening.Visibility = Visibility.Collapsed;
+        }
+
+        private void Subscribe(HotKeys hotKeys)
+        {
+            if (hotKeys == null) return;
+
+            hotKeys.Toggle_Pressed += OnTogglePlayPause;
+            hotKeys.Next_Pressed += OnNext;
+            hotKeys.Previous_Pressed += OnPrevious;
+            hotKeys.Play_Pressed += OnPlay;
+            hotKeys.Pause_Pressed += OnPause;
+            hotKeys.Restart_Pressed += OnRestart;
+
+            hotKeys.Register();
+        }
+
+        private void Unsubscribe(HotKeys hotKeys)
+        {
+            if (hotKeys == null) return;
+
+            hotKeys.Unregister();
+
+            hotKeys.Toggle_Pressed -= OnTogglePlayPause;
+            hotKeys.Next_Pressed -= OnNext;
+            hotKeys.Previous_Pressed -= OnPrevious;
+            hotKeys.Play_Pressed -= OnPlay;
+            hotKeys.Pause_Pressed -= OnPause;
+            hotKeys.Restart_Pressed -= OnRestart;
         }
     }
 }

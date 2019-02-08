@@ -3,7 +3,6 @@ using AudioPlayerBackend.Common;
 using System;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
-using Windows.Networking.Connectivity;
 using Windows.Storage;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
@@ -22,6 +21,7 @@ namespace AudioPlayerFrontend
         private static readonly TimeSpan networkConnectionTimeOut = TimeSpan.FromMilliseconds(200),
             networkConnectionMaxTime = TimeSpan.FromSeconds(5);
 
+        private bool isTryOpening;
         private ServiceBuilder builder;
         private Task<IAudioExtended> buildTask;
         private ViewModel viewModel;
@@ -50,18 +50,29 @@ namespace AudioPlayerFrontend
             Application.Current.EnteredBackground += Application_EnteredBackground;
             Application.Current.LeavingBackground += Application_LeavingBackground;
 
-            try
-            {
-                if (builder.BuildClient) await WaitForNetworkConnection(networkConnectionTimeOut, networkConnectionMaxTime);
+            InitTryOpening();
 
-                await buildTask;
-
-                DataContext = viewModel = new ViewModel(buildTask.Result);
-            }
-            catch
+            while (true)
             {
-                DataContext = viewModel = null;
+                try
+                {
+                    //if (builder.BuildClient) await WaitForNetworkConnection(networkConnectionTimeOut, networkConnectionMaxTime);
+
+                    DataContext = viewModel = new ViewModel(await buildTask);
+                    break;
+                }
+                catch
+                {
+                    await Task.Delay(200);
+
+                    if (isTryOpening) continue;
+
+                    DataContext = viewModel = null;
+                    break;
+                }
             }
+
+            EndTryOpening();
 
             if (viewModel == null) Frame.Navigate(typeof(SettingsPage), builder);
             else tbxSearchKey.IsEnabled = true;
@@ -81,22 +92,37 @@ namespace AudioPlayerFrontend
 
         private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            try
+            IMqttAudio audio = viewModel?.Base as IMqttAudio;
+
+            if (audio == null || audio.IsOpen) return;
+
+            InitTryOpening();
+
+            while (true)
             {
-                if (viewModel?.Base is IMqttAudioClient client && !client.IsOpen)
+                try
                 {
-                    await WaitForNetworkConnection(networkConnectionTimeOut, networkConnectionMaxTime);
-                    await client.OpenAsync();
+                    //await WaitForNetworkConnection(networkConnectionTimeOut, networkConnectionMaxTime);
+                    await audio.OpenAsync();
+
+                    break;
+                }
+                catch (Exception exc)
+                {
+                    await Task.Delay(500);
+
+                    if (isTryOpening) continue;
+
+                    await new MessageDialog(exc.ToString()).ShowAsync();
+
+                    builder.WithService(viewModel.Base);
+                    Frame.Navigate(typeof(SettingsPage), builder);
+
+                    break;
                 }
             }
-            catch (Exception exc)
-            {
-                await new MessageDialog(exc.ToString()).ShowAsync();
 
-                builder.WithService(viewModel.Base);
-
-                Frame.Navigate(typeof(SettingsPage), builder);
-            }
+            EndTryOpening();
         }
 
         private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
@@ -115,21 +141,21 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private async Task<bool> WaitForNetworkConnection(TimeSpan timeOut, TimeSpan maxTime)
-        {
-            //return true;
+        //private async Task<bool> WaitForNetworkConnection(TimeSpan timeOut, TimeSpan maxTime)
+        //{
+        //    //return true;
 
-            DateTime startTime = DateTime.Now;
+        //    DateTime startTime = DateTime.Now;
 
-            while (true)
-            {
-                ConnectionProfile connectedProfile = NetworkInformation.GetInternetConnectionProfile();
-                if (connectedProfile != null) return true;
-                if (startTime + maxTime >= DateTime.Now) return false;
+        //    while (true)
+        //    {
+        //        ConnectionProfile connectedProfile = NetworkInformation.GetInternetConnectionProfile();
+        //        if (connectedProfile != null) return true;
+        //        if (startTime + maxTime >= DateTime.Now) return false;
 
-                await Task.Delay(timeOut);
-            }
-        }
+        //        await Task.Delay(timeOut);
+        //    }
+        //}
 
         private void BtnReload_Click(object sender, RoutedEventArgs e)
         {
@@ -174,6 +200,29 @@ namespace AudioPlayerFrontend
             builder.WithService(viewModel.Base);
 
             Frame.Navigate(typeof(SettingsPage), builder);
+        }
+
+        private void BtnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            EndTryOpening();
+        }
+
+        private void InitTryOpening()
+        {
+            isTryOpening = true;
+
+            stpOpening.Visibility = Visibility.Visible;
+            grdMain.Visibility = Visibility.Collapsed;
+            cmdBar.Visibility = Visibility.Collapsed;
+        }
+
+        private void EndTryOpening()
+        {
+            isTryOpening = false;
+
+            stpOpening.Visibility = Visibility.Collapsed;
+            grdMain.Visibility = Visibility.Visible;
+            cmdBar.Visibility = Visibility.Visible;
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)

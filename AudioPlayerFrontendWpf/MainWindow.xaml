@@ -27,7 +27,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <WrapPanel Margin="5,3">
+        <WrapPanel Name="wrpSettings" Margin="5,3">
             <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
                 <TextBlock Text="Search:" Margin="0,0,5,0" VerticalAlignment="Center"/>
                 <TextBox Name="tbxSearch" HorizontalAlignment="Stretch" MinWidth="200"
@@ -85,7 +85,7 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="2" Name="grdControl">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
@@ -102,7 +102,8 @@
                             Converter={StaticResource ResourceKey=isPlayingCon}}" />
             <Button Grid.Column="2" Content="Next" Width="75" Click="OnNext"/>
 
-            <StackPanel Grid.Column="3" DataContext="{Binding CurrentPlaylist.CurrentSong}" MouseRightButtonUp="StackPanel_MouseRightButtonUp">
+            <StackPanel Grid.Column="3" DataContext="{Binding CurrentPlaylist.CurrentSong}" 
+                        MouseRightButtonUp="StackPanel_MouseRightButtonUp">
                 <TextBlock Name="tblTitle" Text="{Binding Title}" TextWrapping="Wrap" Margin="10,0,0,0"/>
                 <TextBlock Name="tblArtist" Text="{Binding Artist}" TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0"/>
             </StackPanel>
@@ -115,5 +116,25 @@
             <TextBlock Grid.Column="6" x:Name="tblDuration" Margin="5,0" VerticalAlignment="Center"
                        Text="{Binding CurrentPlaylist.Duration,Converter={StaticResource timeTextCon}}"/>
         </Grid>
+
+        <StackPanel Grid.RowSpan="3" Name="stpOpening" VerticalAlignment="Center" Visibility="Visible">
+            <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
+            <ProgressBar IsIndeterminate="True" Height="20" Width="300" Margin="5"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="Cancel" Width="100" Margin="5" Click="BtnCancel_Click"/>
+                <Button Content="Settings" Width="100" Margin="5" Click="BtnOpeningSettings_Click"/>
+                <Button Content="Exception" Name="btnOpeningException" Width="100" 
+                        Margin="5" Click="BtnException_Click"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.RowSpan="3" Name="stpWaitRetry" Orientation="Horizontal"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Button Content="Retry" Width="100" Margin="5" Click="BtnRetry_Click"/>
+            <Button Content="Settings" Width="100" Margin="5" Click="BtnSettings_Click"/>
+            <Button Content="Exception" Name="btnWaitException" Width="100" 
+                    Margin="5" Click="BtnException_Click"/>
+        </StackPanel>
     </Grid>
 </Window>

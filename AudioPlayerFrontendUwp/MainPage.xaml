@@ -35,101 +35,109 @@
     </Page.Resources>
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <Grid Margin="3" Visibility="{Binding ViewAdvancedSettings,Converter={StaticResource viewAdvSetCon}}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
+        <Grid x:Name="grdMain">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <TextBlock Text="Volume:" VerticalAlignment="Center" Margin="3,3,5,0"/>
-            <Slider Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,-12" SnapsTo="StepValues"
-                    StepFrequency="0.01" Maximum="1" Value="{Binding Volume,Mode=TwoWay}"
-                    ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
-
-            <Button Grid.Column="2" Margin="5,3" Content="Reload" Width="100" Click="BtnReload_Click"/>
-
-            <Grid Grid.Row="1" Grid.ColumnSpan="3" Margin="5,0" VerticalAlignment="Center"
-                  DataContext="{Binding Base}" Visibility="{Binding Converter={StaticResource viewClientSetCon}}">
+            <Grid Margin="3" Visibility="{Binding ViewAdvancedSettings,Converter={StaticResource viewAdvSetCon}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <CheckBox Content="Stream" VerticalAlignment="Center"
-                          Margin="0,0,-40,0" IsChecked="{Binding IsStreaming,Mode=TwoWay}"/>
-                <Slider Grid.Column="1" Maximum="1" VerticalAlignment="Center" Margin="0,0,0,-8"
-                        SnapsTo="StepValues" StepFrequency="0.01" Value="{Binding ClientVolume}"
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="Volume:" VerticalAlignment="Center" Margin="3,3,5,0"/>
+                <Slider Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,-12" SnapsTo="StepValues"
+                        StepFrequency="0.01" Maximum="1" Value="{Binding Volume,Mode=TwoWay}"
                         ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
+
+                <Button Grid.Column="2" Margin="5,3" Content="Reload" Width="100" Click="BtnReload_Click"/>
+
+                <Grid Grid.Row="1" Grid.ColumnSpan="3" Margin="5,0" VerticalAlignment="Center"
+                      DataContext="{Binding Base}" Visibility="{Binding Converter={StaticResource viewClientSetCon}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <CheckBox Content="Stream" VerticalAlignment="Center"
+                              Margin="0,0,-40,0" IsChecked="{Binding IsStreaming,Mode=TwoWay}"/>
+                    <Slider Grid.Column="1" Maximum="1" VerticalAlignment="Center" Margin="0,0,0,-8"
+                            SnapsTo="StepValues" StepFrequency="0.01" Value="{Binding ClientVolume}"
+                            ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
+                </Grid>
             </Grid>
+
+            <Grid Grid.Row="1" Margin="3" DataContext="{Binding CurrentPlaylist}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBox Name="tbxSearchKey" IsEnabled="False" Margin="3" 
+                         Text="{Binding SearchKey,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+                         GotFocus="TbxSearchKey_GotFocus"/>
+
+                <CheckBox Grid.Column="1" Content="OnlySearch" Margin="3,3,-10,3"
+                          IsChecked="{Binding IsOnlySearch,Mode=TwoWay}"/>
+            </Grid>
+
+            <ListBox Grid.Row="2" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
+                     DataContext="{Binding CurrentPlaylist}" ItemsSource="{Binding ViewSongs}"
+                     SelectedIndex="{Binding CurrentViewSongIndex,Mode=TwoWay}"
+                     SelectionChanged="LbxSongs_SelectionChanged">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,-8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="5"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.RowSpan="2" TextAlignment="Center" Margin="5,0"
+                                       VerticalAlignment="Center" Text="{Binding Index}"/>
+
+                            <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding Title}"/>
+                            <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Row="3" Margin="1" DataContext="{Binding CurrentPlaylist.CurrentSong}">
+                <TextBlock Text="{Binding Title}" Margin="1" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Artist}" FontStyle="Italic" Margin="1" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <local:AudioPositionSlider Grid.Row="4" Position="{Binding CurrentPlaylist.Position,Mode=TwoWay}"
+                                       Duration="{Binding CurrentPlaylist.Duration}"/>
         </Grid>
 
-        <Grid Grid.Row="1" Margin="3" DataContext="{Binding CurrentPlaylist}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <TextBox Name="tbxSearchKey" IsEnabled="False" Margin="3" 
-                     Text="{Binding SearchKey,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
-                     GotFocus="TbxSearchKey_GotFocus"/>
-
-            <CheckBox Grid.Column="1" Content="OnlySearch" Margin="3,3,-10,3"
-                      IsChecked="{Binding IsOnlySearch,Mode=TwoWay}"/>
-        </Grid>
-
-        <ListBox Grid.Row="2" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
-                 DataContext="{Binding CurrentPlaylist}" ItemsSource="{Binding ViewSongs}"
-                 SelectedIndex="{Binding CurrentViewSongIndex,Mode=TwoWay}"
-                 SelectionChanged="LbxSongs_SelectionChanged">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Grid Margin="0,-8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="5"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.RowSpan="2" TextAlignment="Center" Margin="5,0"
-                                   VerticalAlignment="Center" Text="{Binding Index}"/>
-
-                        <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding Title}"/>
-                        <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
-                    </Grid>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-
-        <StackPanel Grid.Row="3" Margin="1" DataContext="{Binding CurrentPlaylist.CurrentSong}">
-            <TextBlock Text="{Binding Title}" Margin="1" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding Artist}" FontStyle="Italic" Margin="1" TextWrapping="Wrap"/>
+        <StackPanel Grid.RowSpan="3" Name="stpOpening" VerticalAlignment="Center">
+            <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
+            <ProgressRing IsActive="True" Height="200" Width="200" Margin="5"/>
+            <Button Content="Cancel" Width="100" Margin="5" HorizontalAlignment="Center" Click="BtnCancel_Click"/>
         </StackPanel>
-
-        <local:AudioPositionSlider Grid.Row="4" Position="{Binding CurrentPlaylist.Position,Mode=TwoWay}"
-                                   Duration="{Binding CurrentPlaylist.Duration}"/>
     </Grid>
 
     <Page.BottomAppBar>
-        <CommandBar>
+        <CommandBar x:Name="cmdBar">
             <CommandBar.PrimaryCommands>
                 <AppBarButton Icon="Previous" Label="Previous" Click="AbbPrevious_Click"/>
                 <AppBarButton Label="{Binding PlayState,Converter={StaticResource isPlayPauseLabelCon}}"

@@ -119,6 +119,8 @@ namespace AudioPlayerBackend
         private IPositionWaveProvider GetWaveProvider()
         {
             Reader = ToWaveProvider(CreateWaveProvider(CurrentPlaylist.CurrentSong.Value));
+
+            CurrentPlaylist.Position = Reader.CurrentTime;
             CurrentPlaylist.Duration = Reader.TotalTime;
 
             return Reader;

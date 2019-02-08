@@ -5,6 +5,8 @@ namespace AudioPlayerBackend
 {
     public interface IMqttAudio : IAudioExtended
     {
+        bool IsOpenning { get; }
+
         bool IsOpen { get; }
 
         WaveFormat Format { get; set; }

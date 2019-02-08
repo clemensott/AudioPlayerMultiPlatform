@@ -50,6 +50,8 @@ namespace AudioPlayerFrontend
             }
         }
 
+        public bool IsOpenning => (Base as IMqttAudio)?.IsOpenning ?? false;
+
         public PlaybackState PlayState { get => Base.PlayState; set => Base.PlayState = value; }
 
         public string[] FileMediaSources { get => Base.FileMediaSources; set => Base.FileMediaSources = value; }

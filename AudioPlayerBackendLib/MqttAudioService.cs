@@ -9,12 +9,25 @@ namespace AudioPlayerBackend
 {
     public class MqttAudioService : AudioService, IMqttAudioService
     {
+        private bool isOpenning;
         private readonly IMqttAudioServiceHelper helper;
         private readonly Dictionary<string, byte[]> interceptingDict = new Dictionary<string, byte[]>();
         private readonly IMqttServer server;
         private ReadEventWaveProvider waveProvider;
 
         public int Port { get; private set; }
+
+        public bool IsOpenning
+        {
+            get { return isOpenning; }
+            private set
+            {
+                if (value == isOpenning) return;
+
+                isOpenning = value;
+                OnPropertyChanged(nameof(IsOpenning));
+            }
+        }
 
         public bool IsOpen { get; private set; }
 
@@ -33,18 +46,36 @@ namespace AudioPlayerBackend
 
         public async Task OpenAsync()
         {
-            IsOpen = true;
+            try
+            {
+                IsOpenning = true;
+                IsOpen = true;
 
-            await server.StartAsync(Port, OnApplicationMessageInterception);
+                await server.StartAsync(Port, OnApplicationMessageInterception);
 
-            await PublishMediaSources();
-            await PublishAdditionalPlaylists();
-            await PublishCurrentPlaylist();
-            await PublishPlayState();
-            await PublishServiceVolume();
-            await PublishAllPlaylistProperties(FileBasePlaylist);
+                await PublishMediaSources();
+                await PublishAdditionalPlaylists();
+                await PublishCurrentPlaylist();
+                await PublishPlayState();
+                await PublishServiceVolume();
+                await PublishAllPlaylistProperties(FileBasePlaylist);
 
-            await PublishCurrentPlaylist();
+                await PublishCurrentPlaylist();
+            }
+            catch
+            {
+                try
+                {
+                    await CloseAsync();
+                }
+                catch { }
+
+                throw;
+            }
+            finally
+            {
+                IsOpenning = false;
+            }
         }
 
         public async Task CloseAsync()

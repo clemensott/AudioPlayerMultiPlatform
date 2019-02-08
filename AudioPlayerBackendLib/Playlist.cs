@@ -148,6 +148,7 @@ namespace AudioPlayerBackend
         {
             ID = Guid.NewGuid();
             Loop = LoopType.CurrentPlaylist;
+            Songs = new Song[0];
         }
 
         public void SetNextSong()
