@@ -186,21 +186,15 @@ namespace AudioPlayerBackend
                         //await OpenAsync();
                     }
 
-                    System.Diagnostics.Debug.WriteLine("Publish0");
                     await Task.Delay(100);
 
-                    System.Diagnostics.Debug.WriteLine("Publish1");
                     currentPublish = publishQueue.Dequeue();
 
-                    System.Diagnostics.Debug.WriteLine("Publish2: " + currentPublish?.Topic);
                     Task waitForReply = Utils.WaitAsync(currentPublish);
                     Task waitForTimeOut = Task.Delay(timeout);
 
-                    System.Diagnostics.Debug.WriteLine("Publish3: " + currentPublish?.Topic);
                     await client.PublishAsync(currentPublish);
-                    System.Diagnostics.Debug.WriteLine("Publish4: " + currentPublish?.Topic);
                     await Task.WhenAny(waitForReply, waitForTimeOut);
-                    System.Diagnostics.Debug.WriteLine("Publish5: " + currentPublish?.Topic);
                 }
                 catch (Exception e)
                 {
@@ -213,8 +207,6 @@ namespace AudioPlayerBackend
 
                 lock (message)
                 {
-                    System.Diagnostics.Debug.WriteLine("Timeout: " + message?.Topic);
-
                     currentPublish = null;
 
                     if (!publishQueue.IsEnqueued(message.Topic)) publishQueue.Enqueue(message);

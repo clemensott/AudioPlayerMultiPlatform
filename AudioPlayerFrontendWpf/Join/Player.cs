@@ -10,6 +10,7 @@ namespace AudioPlayerFrontend.Join
         private readonly Queue<NAudio.Wave.IWaveProvider> playWaveProviders;
         private readonly Queue<IDisposable> disposeObjs;
         private NAudio.Wave.WaveOut waveOut;
+        private int waveProvidersCount;
         private PlaybackState playState;
 
         public PlaybackState PlayState
@@ -30,6 +31,7 @@ namespace AudioPlayerFrontend.Join
 
         public Player(int deviceNumber = -1, IntPtr? windowHandle = null)
         {
+            waveProvidersCount = 0;
             playWaveProviders = new Queue<NAudio.Wave.IWaveProvider>();
             disposeObjs = new Queue<IDisposable>();
 
@@ -43,15 +45,25 @@ namespace AudioPlayerFrontend.Join
         {
             lock (disposeObjs)
             {
-
                 if (disposeObjs.Count == 0 && playWaveProviders.Count == 0)
                 {
                     PlaybackStopped?.Invoke(this, e.ToBackend());
                     return;
                 }
 
-                while (disposeObjs.Count > 0) disposeObjs.Dequeue().Dispose();
-                while (playWaveProviders.Count > 0) waveOut.Init(playWaveProviders.Dequeue());
+                while (disposeObjs.Count > 0)
+                {
+                    waveProvidersCount--;
+                    disposeObjs.Dequeue().Dispose();
+                }
+
+                while (playWaveProviders.Count > 0)
+                {
+                    waveOut.Init(playWaveProviders.Dequeue());
+                    waveProvidersCount++;
+                }
+
+                ExecutePlayState();
             }
         }
 
@@ -65,6 +77,7 @@ namespace AudioPlayerFrontend.Join
                 else
                 {
                     waveOut.Init(wp);
+                    waveProvidersCount++;
                     ExecutePlayState();
                 }
             }
@@ -84,7 +97,11 @@ namespace AudioPlayerFrontend.Join
 
         public void Stop(IDisposable disposeObj)
         {
-            if (waveOut.PlaybackState == NAudio.Wave.PlaybackState.Stopped) disposeObj.Dispose();
+            if (waveOut.PlaybackState == NAudio.Wave.PlaybackState.Stopped)
+            {
+                waveProvidersCount--;
+                disposeObj.Dispose();
+            }
             else
             {
                 disposeObjs.Enqueue(disposeObj);
@@ -94,7 +111,7 @@ namespace AudioPlayerFrontend.Join
 
         public void ExecutePlayState()
         {
-            if (disposeObjs.Count > 0) return;
+            if (disposeObjs.Count > 0 || waveProvidersCount == 0) return;
 
             switch (PlayState)
             {

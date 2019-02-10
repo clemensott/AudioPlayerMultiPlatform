@@ -120,7 +120,13 @@ namespace AudioPlayerBackend
         {
             Reader = ToWaveProvider(CreateWaveProvider(CurrentPlaylist.CurrentSong.Value));
 
-            CurrentPlaylist.Position = Reader.CurrentTime;
+            if (!isUpdatingPosition)
+            {
+                isUpdatingPosition = true;
+                CurrentPlaylist.Position = Reader.CurrentTime;
+                isUpdatingPosition = false;
+            }
+
             CurrentPlaylist.Duration = Reader.TotalTime;
 
             return Reader;

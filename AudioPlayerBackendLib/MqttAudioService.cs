@@ -162,7 +162,6 @@ namespace AudioPlayerBackend
             try
             {
                 await server.PublishAsync(message);
-                System.Diagnostics.Debug.WriteLine(topic);
             }
             catch (Exception e)
             {
