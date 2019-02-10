@@ -101,13 +101,14 @@
     <Compile Include="Join\Players.cs" />
     <Compile Include="Join\ServiceBuilderHelper.cs" />
     <Compile Include="Join\WaveProvider.cs" />
-    <Compile Include="PlaylistViewModel.cs" />
+    <Compile Include="ViewModels\PlaylistViewModel.cs" />
     <Compile Include="SettingsWindow.xaml.cs">
       <DependentUpon>SettingsWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="TimeSpanToSecondsConverter.cs" />
     <Compile Include="ToIAudioClientConverter.cs" />
-    <Compile Include="ViewModel.cs" />
+    <Compile Include="ViewModels\AudioViewModel.cs" />
+    <Compile Include="ViewModels\ViewModel.cs" />
     <Compile Include="WidthService.cs" />
     <Page Include="HotKeyBox.xaml">
       <SubType>Designer</SubType>

@@ -183,9 +183,10 @@ namespace AudioPlayerBackend
 
         protected override void OnSongsChanged(IPlaylist playlist)
         {
-            if (!playlist.CurrentSong.HasValue || (playlist.Songs != null && !playlist.Songs.Contains(playlist.CurrentSong.Value)))
+            if (playlist.Songs == null || playlist.Songs.Length == 0) playlist.CurrentSong = null;
+            else if (!playlist.CurrentSong.HasValue || !playlist.Songs.Contains(playlist.CurrentSong.Value))
             {
-                playlist.CurrentSong = playlist.Songs.ElementAtOrDefault(0);
+                playlist.CurrentSong = playlist.Songs.First();
             }
         }
 

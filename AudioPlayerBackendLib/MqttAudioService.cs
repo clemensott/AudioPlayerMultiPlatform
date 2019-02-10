@@ -149,7 +149,7 @@ namespace AudioPlayerBackend
         private async Task Publish(string topic, byte[] payload,
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)
         {
-            if (MqttAudioUtils.IsTopicLocked(interceptingDict, topic, payload)) return;
+            if (!IsOpen || MqttAudioUtils.IsTopicLocked(interceptingDict, topic, payload)) return;
 
             MqttApplicationMessage message = new MqttApplicationMessage()
             {

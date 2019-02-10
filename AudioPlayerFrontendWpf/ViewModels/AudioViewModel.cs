@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace AudioPlayerFrontend
 {
-    class ViewModel : INotifyPropertyChanged
+    class AudioViewModel : INotifyPropertyChanged
     {
         private IAudioExtended @base;
         private PlaylistViewModel fileBasePlaylist;
@@ -90,7 +90,7 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public ViewModel(IAudioExtended @base)
+        public AudioViewModel(IAudioExtended @base)
         {
             additionalPlaylists = new ObservableCollection<PlaylistViewModel>();
 

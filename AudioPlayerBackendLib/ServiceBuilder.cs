@@ -246,7 +246,8 @@ namespace AudioPlayerBackend
             Option clientVolOpt = Option.GetLongOnly("client-volume",
                 "The volume of client for streaming (value between 0 and 1)", false, 1, 1);
 
-            Options options = new Options(sourcesOpt, ifNonOpt, reloadOpt, clientOpt, serverOpt, playOpt);
+            Options options = new Options(sourcesOpt, ifNonOpt, reloadOpt, clientOpt, serverOpt, playOpt,
+                allShuffleOpt, searchShuffleOpt, onlySearchOpt, searchKeyOpt, serviceVolOpt, streamingOpt, clientVolOpt);
             OptionParseResult result = options.Parse(args);
 
             int port;

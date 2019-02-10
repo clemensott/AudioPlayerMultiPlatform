@@ -2,6 +2,7 @@
 using AudioPlayerBackend.Common;
 using AudioPlayerFrontend.Join;
 using Microsoft.Win32;
+using StdOttStandard.CommendlinePaser;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -19,10 +20,6 @@ namespace AudioPlayerFrontend
     /// </summary>
     public partial class MainWindow : Window
     {
-        enum OpenState { Open, TryOpening, IDLE, Settings }
-
-        private OpenState openState;
-        private Exception buildException;
         private ServiceBuilder serviceBuilder;
         private HotKeysBuilder hotKeysBuilder;
         private ViewModel viewModel;
@@ -33,6 +30,7 @@ namespace AudioPlayerFrontend
         {
             InitializeComponent();
 
+            DataContext = viewModel = new ViewModel();
             widthService = new WidthService(tblTitle, tblArtist, cdSong, sldPosition);
 
             var dpd = DependencyPropertyDescriptor.FromProperty(ItemsControl.ItemsSourceProperty, typeof(ListBox));
@@ -48,24 +46,24 @@ namespace AudioPlayerFrontend
 
         private async void OnPowerChange(object s, PowerModeChangedEventArgs e)
         {
-            if (viewModel?.Base is IMqttAudio audio)
+            if (viewModel.AudioService?.Base is IMqttAudio audio)
             {
                 switch (e.Mode)
                 {
                     case PowerModes.Resume:
                         try
                         {
-                            SetTryOpeningVisibilities();
+                            viewModel.AudioServiceState = OpenState.TryOpening;
 
                             await OpenAsync(audio);
                             Subscribe(hotKeys);
 
-                            SetOpenVisibilities();
+                            viewModel.AudioServiceState = OpenState.Open;
                         }
                         catch
                         {
-                            if (openState == OpenState.Settings) await UpdateBuildersAndBuild();
-                            else SetWaitVisibilities();
+                            if (viewModel.AudioServiceState == OpenState.Settings) await UpdateBuildersAndBuild();
+                            else viewModel.AudioServiceState = OpenState.IDLE;
                         }
                         break;
 
@@ -90,7 +88,7 @@ namespace AudioPlayerFrontend
                 {
                     await Task.Delay(500);
 
-                    if (openState == OpenState.TryOpening) continue;
+                    if (viewModel.AudioServiceState == OpenState.TryOpening) continue;
 
                     MessageBox.Show(exc.ToString(), "Open service", MessageBoxButton.OK, MessageBoxImage.Error);
                     throw;
@@ -108,6 +106,11 @@ namespace AudioPlayerFrontend
                 .WithPlayer(new Join.Player(-1, windowHandle));
             hotKeysBuilder = new HotKeysBuilder().WithArgs(args);
 
+            Option disableUiOpt = Option.GetLongOnly("disable-ui", "Disables UI on startup.", false, 0);
+            OptionParseResult result = new Options(disableUiOpt).Parse(args);
+
+            if (result.TryGetFirstValidOptionParseds(disableUiOpt, out _)) viewModel.IsUiEnabled = false;
+
             await Build();
         }
 
@@ -118,56 +121,64 @@ namespace AudioPlayerFrontend
 
         private void TbxSearch_KeyDown(object sender, KeyEventArgs e)
         {
+            AudioViewModel audio = viewModel.AudioService;
+
+            if (audio == null) return;
+
             switch (e.Key)
             {
                 case Key.Enter:
-                    if (viewModel.CurrentPlaylist.SearchSongs.Any())
+                    if (audio.CurrentPlaylist.SearchSongs.Any())
                     {
-                        viewModel.CurrentPlaylist.CurrentSong = viewModel.CurrentPlaylist.SearchSongs.First();
-                        viewModel.PlayState = PlaybackState.Playing;
+                        audio.CurrentPlaylist.CurrentSong = audio.CurrentPlaylist.SearchSongs.First();
+                        audio.PlayState = PlaybackState.Playing;
                     }
                     break;
 
                 case Key.Escape:
-                    viewModel.CurrentPlaylist.SearchKey = string.Empty;
+                    audio.CurrentPlaylist.SearchKey = string.Empty;
                     break;
             }
         }
 
         private void Reload_Click(object sender, RoutedEventArgs e)
         {
-            viewModel.Reload();
+            viewModel.AudioService?.Reload();
         }
 
         private void OnPrevious(object sender, EventArgs e)
         {
-            viewModel.SetPreviousSong();
+            viewModel.AudioService?.SetPreviousSong();
         }
 
         private void OnTogglePlayPause(object sender, EventArgs e)
         {
-            viewModel.PlayState = viewModel.PlayState == PlaybackState.Playing ?
+            AudioViewModel audio = viewModel.AudioService;
+
+            if (audio == null) return;
+
+            audio.PlayState = audio.PlayState == PlaybackState.Playing ?
                 PlaybackState.Paused : PlaybackState.Playing;
         }
 
         private void OnNext(object sender, EventArgs e)
         {
-            viewModel.SetNextSong();
+            viewModel.AudioService?.SetNextSong();
         }
 
         private void OnPlay(object sender, EventArgs e)
         {
-            viewModel.PlayState = PlaybackState.Playing;
+            if (viewModel.AudioService != null) viewModel.AudioService.PlayState = PlaybackState.Playing;
         }
 
         private void OnPause(object sender, EventArgs e)
         {
-            viewModel.PlayState = PlaybackState.Paused;
+            if (viewModel.AudioService != null) viewModel.AudioService.PlayState = PlaybackState.Paused;
         }
 
         private void OnRestart(object sender, EventArgs e)
         {
-            viewModel.CurrentPlaylist.Position = TimeSpan.Zero;
+            if (viewModel.AudioService != null) viewModel.AudioService.CurrentPlaylist.Position = TimeSpan.Zero;
         }
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)
@@ -186,15 +197,15 @@ namespace AudioPlayerFrontend
         {
             try
             {
-                SetTryOpeningVisibilities();
+                viewModel.AudioServiceState = OpenState.TryOpening;
 
                 (IAudioExtended audio, HotKeys hotKeys) = await Build(serviceBuilder, hotKeysBuilder);
 
-                if (audio != viewModel?.Base)
+                if (audio != viewModel.AudioService?.Base)
                 {
-                    viewModel?.Dispose();
+                    viewModel.AudioService?.Dispose();
 
-                    DataContext = viewModel = new ViewModel(audio);
+                    viewModel.AudioService = new AudioViewModel(audio);
                 }
 
                 if (hotKeys != this.hotKeys)
@@ -204,18 +215,18 @@ namespace AudioPlayerFrontend
                     Subscribe(hotKeys);
                 }
 
-                SetOpenVisibilities();
+                viewModel.AudioServiceState = OpenState.Open;
             }
             catch
             {
-                if (openState == OpenState.Settings) await UpdateBuildersAndBuild();
-                else SetWaitVisibilities();
+                if (viewModel.AudioServiceState == OpenState.Settings) await UpdateBuildersAndBuild();
+                else viewModel.AudioServiceState = OpenState.IDLE;
             }
         }
 
         private void UpdateBuilders()
         {
-            if (viewModel?.Base != null) serviceBuilder.WithService(viewModel.Base);
+            if (viewModel.AudioService?.Base != null) serviceBuilder.WithService(viewModel.AudioService.Base);
             if (hotKeys != null) hotKeysBuilder.WithHotKeys(hotKeys);
 
             SettingsWindow window = new SettingsWindow(serviceBuilder, hotKeysBuilder);
@@ -236,12 +247,12 @@ namespace AudioPlayerFrontend
                 }
                 catch (Exception exc)
                 {
-                    buildException = exc;
+                    viewModel.BuildException = exc;
                     btnOpeningException.Visibility = Visibility.Visible;
 
                     await Task.Delay(500);
 
-                    if (openState == OpenState.TryOpening) continue;
+                    if (viewModel.AudioServiceState == OpenState.TryOpening) continue;
                     else throw;
                 }
             }
@@ -253,7 +264,7 @@ namespace AudioPlayerFrontend
             }
             catch (Exception exc)
             {
-                buildException = exc;
+                viewModel.BuildException = exc;
                 btnOpeningException.Visibility = Visibility.Visible;
                 throw;
             }
@@ -274,9 +285,9 @@ namespace AudioPlayerFrontend
 
         private void Window_Drop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (viewModel.AudioService != null && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                viewModel.FileMediaSources = (string[])e.Data.GetData(DataFormats.FileDrop);
+                viewModel.AudioService.FileMediaSources = (string[])e.Data.GetData(DataFormats.FileDrop);
             }
         }
 
@@ -284,32 +295,21 @@ namespace AudioPlayerFrontend
         {
             hotKeys?.Dispose();
 
-            viewModel?.Dispose();
+            viewModel.AudioService?.Dispose();
         }
 
         private void StackPanel_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            Playlist playlist = new Playlist()
-            {
-                Songs = viewModel.FileBasePlaylist.ViewSongs.Take(3).ToArray(),
-                SearchKey = "Hi",
-                CurrentSong = viewModel.FileBasePlaylist.ViewSongs.ElementAtOrDefault(1),
-                IsAllShuffle = true,
-                Loop = LoopType.Next
-            };
-
-            viewModel.Base.AdditionalPlaylists.Add(playlist);
-            viewModel.CurrentPlaylist = viewModel.AdditionalPlaylists.LastOrDefault();
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
-            openState = OpenState.IDLE;
+            viewModel.AudioServiceState = OpenState.IDLE;
         }
 
         private void BtnOpeningSettings_Click(object sender, RoutedEventArgs e)
         {
-            openState = OpenState.Settings;
+            viewModel.AudioServiceState = OpenState.Settings;
         }
 
         private async void BtnRetry_Click(object sender, RoutedEventArgs e)
@@ -319,45 +319,7 @@ namespace AudioPlayerFrontend
 
         private void BtnException_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show(buildException.ToString(), "Building Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-
-        private void SetTryOpeningVisibilities()
-        {
-            openState = OpenState.TryOpening;
-            buildException = null;
-
-            stpOpening.Visibility = Visibility.Visible;
-
-            wrpSettings.Visibility = Visibility.Collapsed;
-            lbxSongs.Visibility = Visibility.Collapsed;
-            grdControl.Visibility = Visibility.Collapsed;
-            stpWaitRetry.Visibility = Visibility.Collapsed;
-        }
-
-        private void SetOpenVisibilities()
-        {
-            openState = OpenState.Open;
-
-            stpOpening.Visibility = Visibility.Collapsed;
-            stpWaitRetry.Visibility = Visibility.Collapsed;
-
-            wrpSettings.Visibility = Visibility.Visible;
-            lbxSongs.Visibility = Visibility.Visible;
-            grdControl.Visibility = Visibility.Visible;
-        }
-
-        private void SetWaitVisibilities()
-        {
-            openState = OpenState.IDLE;
-
-            stpWaitRetry.Visibility = Visibility.Visible;
-            btnWaitException.Visibility = buildException != null ? Visibility.Visible : Visibility.Collapsed;
-
-            wrpSettings.Visibility = Visibility.Collapsed;
-            lbxSongs.Visibility = Visibility.Collapsed;
-            grdControl.Visibility = Visibility.Collapsed;
-            stpOpening.Visibility = Visibility.Collapsed;
+            MessageBox.Show(viewModel.BuildException.ToString(), "Building Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         private void Subscribe(HotKeys hotKeys)
@@ -386,6 +348,11 @@ namespace AudioPlayerFrontend
             hotKeys.Play_Pressed -= OnPlay;
             hotKeys.Pause_Pressed -= OnPause;
             hotKeys.Restart_Pressed -= OnRestart;
+        }
+
+        private void StpCurrentSong_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            Scroll();
         }
     }
 }
