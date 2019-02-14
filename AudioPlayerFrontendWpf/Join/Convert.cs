@@ -1,13 +1,10 @@
 ﻿using Common = AudioPlayerBackend.Common;
 using MQTTnet;
 using MQTTnet.Protocol;
+using MQTTnet.Client;
 using MQTTnet.Server;
 using NAudio.Wave;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AudioPlayerFrontend.Join
 {
@@ -69,6 +66,16 @@ namespace AudioPlayerFrontend.Join
         public static Common.MqttApplicationMessageInterceptorContext ToBackend(this MqttApplicationMessageInterceptorContext c)
         {
             return new Common.MqttApplicationMessageInterceptorContext(c.ClientId, c.ApplicationMessage.ToBackend(), c.AcceptPublish);
+        }
+
+        public static Common.MqttClientConnectedEventArgs ToBackend(this MQTTnet.Client.MqttClientConnectedEventArgs e)
+        {
+            return new Common.MqttClientConnectedEventArgs(e.IsSessionPresent);
+        }
+
+        public static Common.MqttClientDisconnectedEventArgs ToBackend(this MQTTnet.Client.MqttClientDisconnectedEventArgs e)
+        {
+            return new Common.MqttClientDisconnectedEventArgs(e.ClientWasConnected, e.Exception);
         }
 
         public static WaveFormat ToFrontend(this Common.WaveFormat f)

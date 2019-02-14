@@ -67,6 +67,16 @@ namespace AudioPlayerFrontend.Join
             return new Common.MqttApplicationMessageInterceptorContext(c.ClientId, c.ApplicationMessage.ToBackend(), c.AcceptPublish);
         }
 
+        public static Common.MqttClientConnectedEventArgs ToBackend(this MQTTnet.Client.MqttClientConnectedEventArgs e)
+        {
+            return new Common.MqttClientConnectedEventArgs(e.IsSessionPresent);
+        }
+
+        public static Common.MqttClientDisconnectedEventArgs ToBackend(this MQTTnet.Client.MqttClientDisconnectedEventArgs e)
+        {
+            return new Common.MqttClientDisconnectedEventArgs(e.ClientWasConnected, e.Exception);
+        }
+
         public static WaveFormat ToFrontend(this Common.WaveFormat f)
         {
             return WaveFormat.CreateCustomFormat(f.Encoding.ToFrontend(),

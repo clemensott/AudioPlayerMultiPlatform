@@ -8,6 +8,8 @@ namespace AudioPlayerBackend.Common
         bool IsConnected { get; }
 
         event EventHandler<MqttApplicationMessageReceivedEventArgs> ApplicationMessageReceived;
+        event EventHandler<MqttClientConnectedEventArgs> Connected;
+        event EventHandler<MqttClientDisconnectedEventArgs> Disconnected;
 
         Task SubscribeAsync(string topic, MqttQualityOfServiceLevel qos);
         Task UnsubscribeAsync(string topic);
