@@ -7,7 +7,7 @@
     <ProjectGuid>{4CC97E78-23C0-49B6-909E-CFC8C38A3666}</ProjectGuid>
     <OutputType>AppContainerExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>AudioPlayerFrontendUwp</RootNamespace>
+    <RootNamespace>AudioPlayerFrontend</RootNamespace>
     <AssemblyName>AudioPlayerFrontendUwp</AssemblyName>
     <DefaultLanguage>de-DE</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
@@ -115,14 +115,15 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Converter\PositionToolTipConverter.cs" />
-    <Compile Include="PlaylistViewModel.cs" />
+    <Compile Include="ViewModel\PlaylistViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceProfile.cs" />
     <Compile Include="SettingsPage.xaml.cs">
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Converter\TimeSpanToSecondsConverter.cs" />
-    <Compile Include="ViewModel.cs" />
+    <Compile Include="ViewModel\AudioViewModel.cs" />
+    <Compile Include="ViewModel\ViewModel.cs" />
     <Compile Include="VolumeToolTipConverter.cs" />
   </ItemGroup>
   <ItemGroup>

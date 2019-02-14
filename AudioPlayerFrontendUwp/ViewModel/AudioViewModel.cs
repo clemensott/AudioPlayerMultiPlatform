@@ -11,10 +11,9 @@ using Windows.UI.Core;
 
 namespace AudioPlayerFrontend
 {
-    class ViewModel : INotifyPropertyChanged
+    class AudioViewModel : INotifyPropertyChanged
     {
         private IAudioExtended @base;
-        private bool viewAdvancedSettings;
         private PlaylistViewModel fileBasePlaylist;
         private ObservableCollection<PlaylistViewModel> additionalPlaylists;
 
@@ -50,18 +49,6 @@ namespace AudioPlayerFrontend
                 }
 
                 OnPropertyChanged(nameof(CurrentPlaylist));
-            }
-        }
-
-        public bool ViewAdvancedSettings
-        {
-            get { return viewAdvancedSettings; }
-            set
-            {
-                if (value == viewAdvancedSettings) return;
-
-                viewAdvancedSettings = value;
-                OnPropertyChanged(nameof(ViewAdvancedSettings));
             }
         }
 
@@ -105,7 +92,7 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public ViewModel(IAudioExtended @base)
+        public AudioViewModel(IAudioExtended @base)
         {
             additionalPlaylists = new ObservableCollection<PlaylistViewModel>();
 

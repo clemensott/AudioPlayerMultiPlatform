@@ -2,6 +2,7 @@
 using MQTTnet.Client;
 using System;
 using System.Threading.Tasks;
+using MQTTnet;
 
 namespace AudioPlayerFrontend.Join
 {
@@ -15,7 +16,7 @@ namespace AudioPlayerFrontend.Join
 
         public bool IsConnected { get { return parent.IsConnected; } }
 
-        public MqttClient(MQTTnet.Client.IMqttClient parent)
+        public MqttClient(IMqttClient parent)
         {
             this.parent = parent;
 
@@ -24,17 +25,17 @@ namespace AudioPlayerFrontend.Join
             parent.Disconnected += Parent_Disconnected;
         }
 
-        private void Parent_ApplicationMessageReceived(object sender, MQTTnet.MqttApplicationMessageReceivedEventArgs e)
+        private void Parent_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
         {
             ApplicationMessageReceived?.Invoke(this, e.ToBackend());
         }
 
-        private void Parent_Connected(object sender, MQTTnet.Client.MqttClientConnectedEventArgs e)
+        private void Parent_Connected(object sender, MqttClientConnectedEventArgs e)
         {
             Connected?.Invoke(this, e.ToBackend());
         }
 
-        private void Parent_Disconnected(object sender, MQTTnet.Client.MqttClientDisconnectedEventArgs e)
+        private void Parent_Disconnected(object sender, MqttClientDisconnectedEventArgs e)
         {
             Disconnected?.Invoke(this, e.ToBackend());
         }

@@ -21,7 +21,6 @@ namespace AudioPlayerFrontend
         private static readonly TimeSpan networkConnectionTimeOut = TimeSpan.FromMilliseconds(200),
             networkConnectionMaxTime = TimeSpan.FromSeconds(5);
 
-        private bool isTryOpening;
         private ServiceBuilder builder;
         private Task<IAudioExtended> buildTask;
         private ViewModel viewModel;
@@ -29,6 +28,8 @@ namespace AudioPlayerFrontend
         public MainPage()
         {
             this.InitializeComponent();
+
+            DataContext = viewModel = new ViewModel();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -50,29 +51,27 @@ namespace AudioPlayerFrontend
             Application.Current.EnteredBackground += Application_EnteredBackground;
             Application.Current.LeavingBackground += Application_LeavingBackground;
 
-            InitTryOpening();
+            viewModel.IsTryOpening = true;
 
             while (true)
             {
                 try
                 {
-                    //if (builder.BuildClient) await WaitForNetworkConnection(networkConnectionTimeOut, networkConnectionMaxTime);
-
-                    DataContext = viewModel = new ViewModel(await buildTask);
+                    viewModel.AudioService = new AudioViewModel(await buildTask);
                     break;
                 }
                 catch
                 {
                     await Task.Delay(200);
 
-                    if (isTryOpening) continue;
+                    if (viewModel.IsTryOpening) continue;
 
                     DataContext = viewModel = null;
                     break;
                 }
             }
 
-            EndTryOpening();
+            viewModel.IsTryOpening = false;
 
             if (viewModel == null) Frame.Navigate(typeof(SettingsPage), builder);
             else tbxSearchKey.IsEnabled = true;
@@ -85,24 +84,23 @@ namespace AudioPlayerFrontend
 
             try
             {
-                if (viewModel != null && viewModel.Base is IMqttAudio mqttService) await mqttService.CloseAsync();
+                if (viewModel.AudioService != null && viewModel.AudioService.Base is IMqttAudio mqttService) await mqttService.CloseAsync();
             }
             catch { }
         }
 
         private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            IMqttAudio audio = viewModel?.Base as IMqttAudio;
+            IMqttAudio audio = viewModel.AudioService?.Base as IMqttAudio;
 
             if (audio == null || audio.IsOpen) return;
 
-            InitTryOpening();
+            viewModel.IsTryOpening = true;
 
             while (true)
             {
                 try
                 {
-                    //await WaitForNetworkConnection(networkConnectionTimeOut, networkConnectionMaxTime);
                     await audio.OpenAsync();
 
                     break;
@@ -111,55 +109,42 @@ namespace AudioPlayerFrontend
                 {
                     await Task.Delay(500);
 
-                    if (isTryOpening) continue;
+                    if (viewModel.IsTryOpening) continue;
 
                     await new MessageDialog(exc.ToString(), "LeavingBackground").ShowAsync();
 
-                    builder.WithService(viewModel.Base);
+                    builder.WithService(audio);
                     Frame.Navigate(typeof(SettingsPage), builder);
 
                     break;
                 }
             }
 
-            EndTryOpening();
+            viewModel.IsTryOpening = false;
         }
 
         private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
         {
-            try
+            if (viewModel.AudioService?.Base is IMqttAudioClient client && client.IsOpen)
             {
-                if (viewModel?.Base is IMqttAudioClient client && client.IsOpen) await client.CloseAsync();
-            }
-            catch (Exception exc)
-            {
-                await new MessageDialog(exc.ToString(), "EnteredBackground").ShowAsync();
+                try
+                {
+                    await client.CloseAsync();
+                }
+                catch (Exception exc)
+                {
+                    await new MessageDialog(exc.ToString(), "EnteredBackground").ShowAsync();
 
-                builder.WithService(viewModel.Base);
+                    builder.WithService(client);
 
-                Frame.Navigate(typeof(SettingsPage), builder);
+                    Frame.Navigate(typeof(SettingsPage), builder);
+                }
             }
         }
 
-        //private async Task<bool> WaitForNetworkConnection(TimeSpan timeOut, TimeSpan maxTime)
-        //{
-        //    //return true;
-
-        //    DateTime startTime = DateTime.Now;
-
-        //    while (true)
-        //    {
-        //        ConnectionProfile connectedProfile = NetworkInformation.GetInternetConnectionProfile();
-        //        if (connectedProfile != null) return true;
-        //        if (startTime + maxTime >= DateTime.Now) return false;
-
-        //        await Task.Delay(timeOut);
-        //    }
-        //}
-
         private void BtnReload_Click(object sender, RoutedEventArgs e)
         {
-            viewModel.Reload();
+            viewModel.AudioService?.Reload();
         }
 
         private void TbxSearchKey_GotFocus(object sender, RoutedEventArgs e)
@@ -180,49 +165,33 @@ namespace AudioPlayerFrontend
 
         private void AbbPrevious_Click(object sender, RoutedEventArgs e)
         {
-            viewModel?.SetPreviousSong();
+            viewModel.AudioService?.SetPreviousSong();
         }
 
         private void AbbPlayPause_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel == null) return;
+            AudioViewModel audio = viewModel.AudioService;
 
-            viewModel.PlayState = viewModel.PlayState == PlaybackState.Playing ? PlaybackState.Paused : PlaybackState.Playing;
+            if (audio == null) return;
+
+            audio.PlayState = audio.PlayState == PlaybackState.Playing ? PlaybackState.Paused : PlaybackState.Playing;
         }
 
         private void AbbNext_Click(object sender, RoutedEventArgs e)
         {
-            viewModel?.SetNextSong();
+            viewModel.AudioService?.SetNextSong();
         }
 
         private void AbbSettings_Click(object sender, RoutedEventArgs e)
         {
-            builder.WithService(viewModel.Base);
+            if (viewModel.AudioService != null) builder.WithService(viewModel.AudioService.Base);
 
             Frame.Navigate(typeof(SettingsPage), builder);
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
-            EndTryOpening();
-        }
-
-        private void InitTryOpening()
-        {
-            isTryOpening = true;
-
-            stpOpening.Visibility = Visibility.Visible;
-            grdMain.Visibility = Visibility.Collapsed;
-            cmdBar.Visibility = Visibility.Collapsed;
-        }
-
-        private void EndTryOpening()
-        {
-            isTryOpening = false;
-
-            stpOpening.Visibility = Visibility.Collapsed;
-            grdMain.Visibility = Visibility.Visible;
-            cmdBar.Visibility = Visibility.Visible;
+            viewModel.IsTryOpening = false;
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)
