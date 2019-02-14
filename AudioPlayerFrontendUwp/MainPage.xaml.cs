@@ -113,7 +113,7 @@ namespace AudioPlayerFrontend
 
                     if (isTryOpening) continue;
 
-                    await new MessageDialog(exc.ToString()).ShowAsync();
+                    await new MessageDialog(exc.ToString(), "LeavingBackground").ShowAsync();
 
                     builder.WithService(viewModel.Base);
                     Frame.Navigate(typeof(SettingsPage), builder);
@@ -133,7 +133,7 @@ namespace AudioPlayerFrontend
             }
             catch (Exception exc)
             {
-                await new MessageDialog(exc.ToString()).ShowAsync();
+                await new MessageDialog(exc.ToString(), "EnteredBackground").ShowAsync();
 
                 builder.WithService(viewModel.Base);
 
