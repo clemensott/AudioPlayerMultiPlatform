@@ -83,7 +83,8 @@
                               Margin="0,0,-40,0" IsChecked="{Binding IsStreaming,Mode=TwoWay}"/>
                     <Slider Grid.Column="1" Maximum="1" VerticalAlignment="Center" Margin="0,0,0,-8"
                             SnapsTo="StepValues" StepFrequency="0.01" Value="{Binding ClientVolume}"
-                            ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
+                            ThumbToolTipValueConverter="{StaticResource volTooTipCon}"
+                            IsEnabled="{Binding IsStreaming}"/>
                 </Grid>
             </Grid>
 
@@ -134,8 +135,8 @@
                 <TextBlock Text="{Binding Artist}" FontStyle="Italic" Margin="1" TextWrapping="Wrap"/>
             </StackPanel>
 
-            <local:AudioPositionSlider Grid.Row="4" Position="{Binding CurrentPlaylist.Position,Mode=TwoWay}"
-                                       Duration="{Binding CurrentPlaylist.Duration}"/>
+            <local:AudioPositionSlider Grid.Row="4" Position="{Binding AudioService.CurrentPlaylist.Position,Mode=TwoWay}"
+                                       Duration="{Binding AudioService.CurrentPlaylist.Duration}"/>
         </Grid>
 
         <StackPanel Grid.RowSpan="3" VerticalAlignment="Center" Visibility="{Binding IsTryOpening,Converter={StaticResource visCon}}">
@@ -159,7 +160,7 @@
             </CommandBar.PrimaryCommands>
 
             <CommandBar.SecondaryCommands>
-                <AppBarToggleButton Icon="Shuffle" Label="Shuffle" IsChecked="{Binding CurrentPlaylist.IsShuffle,Mode=TwoWay}"/>
+                <AppBarToggleButton Icon="Shuffle" Label="Shuffle" IsChecked="{Binding AudioService.CurrentPlaylist.IsShuffle,Mode=TwoWay}"/>
                 <AppBarToggleButton Icon="ViewAll" Label="Advanced settings" 
                                     IsChecked="{Binding ViewAdvancedSettings,Mode=TwoWay}"/>
                 <AppBarButton Icon="Setting" Label="All settings" Click="AbbSettings_Click"/>

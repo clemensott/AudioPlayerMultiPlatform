@@ -1,4 +1,6 @@
-﻿namespace AudioPlayerBackend
+﻿using AudioPlayerBackend.Common;
+
+namespace AudioPlayerBackend
 {
     public interface IMqttAudioClient : IMqttAudio
     {
@@ -9,5 +11,7 @@
         bool IsStreaming { get; set; }
 
         float ClientVolume { get; set; }
+
+        IMqttClient MqttClient { get; }
     }
 }

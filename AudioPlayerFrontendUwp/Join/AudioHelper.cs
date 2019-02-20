@@ -24,7 +24,12 @@ namespace AudioPlayerFrontend.Join
                 CoreDispatcher dispatcher = CoreApplication.MainView.CoreWindow.Dispatcher;
 
                 if (dispatcher.HasThreadAccess) action();
-                else await dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => action());
+                else
+                {
+            System.Diagnostics.Debug.WriteLine("DoInvokeDispatcher1");
+                    await dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => action());
+            System.Diagnostics.Debug.WriteLine("DoInvokeDispatcher2");
+                }
             }
             catch { }
         }

@@ -18,6 +18,7 @@ namespace AudioPlayerBackend
         private readonly Dictionary<string, byte[]> receivingDict = new Dictionary<string, byte[]>(),
             latestValueDict = new Dictionary<string, byte[]>();
         private readonly PublishQueue publishQueue = new PublishQueue();
+        private readonly Queue<MqttApplicationMessage> receiveMessages = new Queue<MqttApplicationMessage>();
         private MqttApplicationMessage currentPublish;
         private readonly IMqttClient client;
         private readonly IPlayer player;
@@ -80,6 +81,8 @@ namespace AudioPlayerBackend
 
         public override IPlayer Player { get { return player; } }
 
+        public IMqttClient MqttClient => client;
+
         private MqttAudioClient(IPlayer player, IMqttAudioClientHelper helper) : base(helper)
         {
             this.player = player;
@@ -113,7 +116,8 @@ namespace AudioPlayerBackend
 
                 await client.ConnectAsync(ServerAddress, Port);
 
-                Task.Run(new Action(ConsumerPublish));
+                Task.Run(ProcessPublish);
+                Task.Run(ProcessReceive);
 
                 await Task.WhenAll(GetTopicFilters().Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
                 await Task.WhenAll(GetTopicFilters(FileBasePlaylist).Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
@@ -175,62 +179,131 @@ namespace AudioPlayerBackend
             yield return new TopicFilter(id + nameof(playlist.SearchKey), qos);
         }
 
-        private async void ConsumerPublish()
+        private async Task ProcessPublish()
         {
             while (IsOpen)
             {
                 try
                 {
-                    if (!client.IsConnected)
-                    {
-                        //await OpenAsync();
-                    }
+                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish1");
+                    ////if (!client.IsConnected)  await OpenAsync();
 
-                    await Task.Delay(100);
+                    //DateTime time = DateTime.Now;
+                    //while (time + TimeSpan.FromMilliseconds(100) > DateTime.Now) ;
 
+                    System.Diagnostics.Debug.WriteLine("ConsumerPublish2");
                     currentPublish = publishQueue.Dequeue();
 
+                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish3");
+                    //time = DateTime.Now;
+                    //while (time + TimeSpan.FromMilliseconds(100) > DateTime.Now) ;
+
                     Task waitForReply = Utils.WaitAsync(currentPublish);
-                    Task waitForTimeOut = Task.Delay(timeout);
+                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish4");
+                    //Task waitForTimeOut = Task.Delay(timeout);
+                    System.Diagnostics.Debug.WriteLine("ConsumerPublish5");
 
                     await client.PublishAsync(currentPublish);
-                    await Task.WhenAny(waitForReply, waitForTimeOut);
+                    System.Diagnostics.Debug.WriteLine("ConsumerPublish6");
+
+                    await Task.WhenAny(waitForReply, Task.Delay(timeout));
+                    System.Diagnostics.Debug.WriteLine("ConsumerPublish7");
                 }
                 catch (Exception e)
                 {
-                    System.Diagnostics.Debug.WriteLine(e);
+                    System.Diagnostics.Debug.WriteLine("ConsumerPublishException:\r\n" + e);
                 }
 
+                //System.Diagnostics.Debug.WriteLine("ConsumerPublish8");
                 MqttApplicationMessage message = currentPublish;
+                System.Diagnostics.Debug.WriteLine("ConsumerPublish9: " + (message == null));
 
                 if (currentPublish == null) continue;
 
+                System.Diagnostics.Debug.WriteLine("ConsumerPublish10");
+
                 lock (message)
                 {
+                    System.Diagnostics.Debug.WriteLine("ConsumerPublish11");
                     currentPublish = null;
+                    System.Diagnostics.Debug.WriteLine("ConsumerPublish12");
 
-                    if (!publishQueue.IsEnqueued(message.Topic)) publishQueue.Enqueue(message);
-                    else Monitor.PulseAll(message);
+                    if (!publishQueue.IsEnqueued(message.Topic))
+                    {
+                        System.Diagnostics.Debug.WriteLine("ConsumerPublish13");
+                        publishQueue.Enqueue(message);
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("ConsumerPublish14");
+                        Monitor.PulseAll(message);
+                    }
+
+                    System.Diagnostics.Debug.WriteLine("ConsumerPublish15");
                 }
             }
+
+            System.Diagnostics.Debug.WriteLine("ConsumerPublish16");
         }
 
-        private async void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
+        private void Client_ApplicationMessageReceived(object sender, MqttApplicationMessageReceivedEventArgs e)
         {
             string rawTopic = e.ApplicationMessage.Topic;
             byte[] payload = e.ApplicationMessage.Payload;
 
-            if (currentPublish != null && currentPublish.Topic == rawTopic && currentPublish.Payload.SequenceEqual(payload))
+            if (currentPublish?.Topic == rawTopic && currentPublish.Payload.SequenceEqual(payload))
             {
                 lock (currentPublish)
                 {
                     Monitor.PulseAll(currentPublish);
                     currentPublish = null;
+
+                    System.Diagnostics.Debug.WriteLine("Client_ApplicationMessageReceived1");
+                    return;
                 }
             }
 
-            MqttAudioUtils.LockTopic(receivingDict, rawTopic, payload);
+            System.Diagnostics.Debug.WriteLine("Client_ApplicationMessageReceived2");
 
+            lock (receiveMessages)
+            {
+                receiveMessages.Enqueue(e.ApplicationMessage);
+
+                Monitor.Pulse(receiveMessages);
+            }
+
+            System.Diagnostics.Debug.WriteLine("Client_ApplicationMessageReceived3");
+        }
+
+        private async Task ProcessReceive()
+        {
+            while (IsOpen)
+            {
+                try
+                {
+                    MqttApplicationMessage message;
+
+                    lock (receiveMessages)
+                    {
+                        while (receiveMessages.Count == 0) Monitor.Wait(receiveMessages);
+
+                        message = receiveMessages.Dequeue();
+                    }
+
+                    await ProcessApplicationMessage(message);
+                }
+                catch { }
+            }
+        }
+
+        private async Task ProcessApplicationMessage(MqttApplicationMessage e)
+        {
+            string rawTopic = e.Topic;
+            byte[] payload = e.Payload;
+
+            System.Diagnostics.Debug.WriteLine("ProcessApplicationMessage1");
+            MqttAudioUtils.LockTopic(receivingDict, rawTopic, payload);
+            
             try
             {
                 string topic;
@@ -269,8 +342,9 @@ namespace AudioPlayerBackend
                     Monitor.Pulse(initProps);
                 }
             }
-
+            
             MqttAudioUtils.UnlockTopic(receivingDict, rawTopic);
+            System.Diagnostics.Debug.WriteLine("ProcessApplicationMessage4");
         }
 
         private async Task Publish(IPlaylist playlist, string topic, byte[] payload,
@@ -295,75 +369,6 @@ namespace AudioPlayerBackend
             publishQueue.Enqueue(message);
 
             await Utils.WaitAsync(message);
-
-            //bool isSearchKey = topic.EndsWith(".SearchKey");
-            //string searchKey = isSearchKey ? Encoding.UTF8.GetString(payload.Skip(4).ToArray()) : string.Empty;
-
-            //if (client == null || MqttAudioUtils.IsTopicLocked(receivingDict, topic, payload)) return;
-
-            //System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Latest (" + searchKey + "): " + latestValueDict.ContainsKey(topic));
-            //if (latestValueDict.ContainsKey(topic))
-            //{
-            //    latestValueDict[topic] = payload;
-            //    return;
-            //}
-            //else latestValueDict.Add(topic, payload);
-
-            //byte[] dictPayload;
-            //while (sendingDict.TryGetValue(topic, out dictPayload))
-            //{
-            //    System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Wait1 (" + searchKey + "): " + dictPayload.GetHashCode());
-            //    await Utils.WaitAsync(dictPayload);
-
-            //    //System.Diagnostics.Debug.WriteLineIf(isSearchKey && searchKey == latestSearchKey,
-            //    //    "Wait2 (" + searchKey + "): " + dictPayload.GetHashCode());
-
-            //    //if (latestSendDict[topic] != payload)
-            //    //{
-            //    //    //System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Skip (" + searchKey + "): " + latestSearchKey);
-            //    //    return;
-            //    //}
-            //}
-
-            ////System.Diagnostics.Debug.WriteLineIf(isSearchKey, "NotSkip: " + searchKey);
-
-            //payload = latestValueDict[topic];
-            //latestValueDict.Remove(topic);
-
-            //searchKey = isSearchKey ? Encoding.UTF8.GetString(payload.Skip(4).ToArray()) : string.Empty;
-
-            //sendingDict.Add(topic, payload);
-            //System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Add (" + searchKey + "): " + payload.GetHashCode());
-
-            //try
-            //{
-            //    Task.Run(Publish);
-            //}
-            //catch { }
-
-            //async Task Publish()
-            //{
-            //    if (!client.IsConnected) await OpenAsync();
-
-            //    await client.PublishAsync(message);
-
-            //    System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Send: " + searchKey);
-            //    Task waitForReply = Utils.WaitAsync(payload);
-            //    Task waitForTimeOut = Task.Delay(timeout);
-
-            //    await Task.WhenAny(waitForReply, waitForTimeOut);
-            //    System.Diagnostics.Debug.WriteLineIf(isSearchKey, "Sent: " + searchKey);
-
-            //    lock (payload)
-            //    {
-            //        if (!waitForReply.IsCompleted)
-            //        {
-            //            System.Diagnostics.Debug.WriteLineIf(isSearchKey, "TimeOut: " + searchKey);
-            //            sendingDict.Remove(topic);
-            //            Monitor.PulseAll(payload);
-            //        }
-            //    }
-            //}
         }
 
         protected async override void OnAddPlaylist(IPlaylist playlist)

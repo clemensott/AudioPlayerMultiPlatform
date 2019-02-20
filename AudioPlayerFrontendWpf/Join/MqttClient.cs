@@ -43,6 +43,7 @@ namespace AudioPlayerFrontend.Join
         {
             IMqttClientOptions options = new MqttClientOptionsBuilder()
                 .WithTcpServer(serverAddress, port)
+                .WithCommunicationTimeout(TimeSpan.FromSeconds(1))
                 .Build();
 
             await parent.ConnectAsync(options);
