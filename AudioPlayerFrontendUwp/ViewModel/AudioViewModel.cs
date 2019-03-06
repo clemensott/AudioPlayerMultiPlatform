@@ -1,6 +1,7 @@
 ﻿using AudioPlayerBackend;
 using AudioPlayerBackend.Common;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -28,6 +29,10 @@ namespace AudioPlayerFrontend
                 {
                     @base.PropertyChanged -= Base_PropertyChanged;
                     @base.AdditionalPlaylists.CollectionChanged -= AdditionalPlaylists_CollectionChanged;
+
+                    FileBasePlaylist = null;
+
+                    AdditionalPlaylists.CollectionChanged -= AdditionalPlaylists_CollectionChanged1;
                 }
 
                 @base = value;
@@ -41,6 +46,7 @@ namespace AudioPlayerFrontend
 
                     IEnumerable<PlaylistViewModel> playlists = @base.AdditionalPlaylists.Select(p => new PlaylistViewModel(p));
                     AdditionalPlaylists = new ObservableCollection<PlaylistViewModel>(playlists);
+                    AdditionalPlaylists.CollectionChanged += AdditionalPlaylists_CollectionChanged1;
                 }
                 else
                 {
@@ -49,6 +55,19 @@ namespace AudioPlayerFrontend
                 }
 
                 OnPropertyChanged(nameof(CurrentPlaylist));
+            }
+        }
+
+        private void AdditionalPlaylists_CollectionChanged1(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            foreach (PlaylistViewModel playlist in (IEnumerable)e.OldItems ?? Enumerable.Empty<PlaylistViewModel>())
+            {
+                Base.AdditionalPlaylists.Remove(playlist.Base);
+            }
+
+            foreach (PlaylistViewModel playlist in (IEnumerable)e.NewItems ?? Enumerable.Empty<PlaylistViewModel>())
+            {
+                if (!Base.AdditionalPlaylists.Contains(playlist.Base)) Base.AdditionalPlaylists.Add(playlist.Base);
             }
         }
 

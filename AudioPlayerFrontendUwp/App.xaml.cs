@@ -27,6 +27,7 @@ namespace AudioPlayerFrontend
         /// </summary>
 
         private ServiceBuilder serviceBuilder;
+        private ViewModel viewModel;
         private StorageFile exceptionFile;
 
         public App()
@@ -37,8 +38,14 @@ namespace AudioPlayerFrontend
             this.Suspending += OnSuspending;
 
             serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper());
+            serviceBuilder.WithPlayer(new Join.Player());
+
+            viewModel = new ViewModel(serviceBuilder);
 
             UnhandledException += App_UnhandledException;
+
+            EnteredBackground += Application_EnteredBackground;
+            LeavingBackground += Application_LeavingBackground;
         }
 
         private void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -55,7 +62,8 @@ namespace AudioPlayerFrontend
         {
             Frame rootFrame = Window.Current.Content as Frame;
 
-            exceptionFile = await GetOrCreateStorageFile("Exception.txt");
+            exceptionFile = await ApplicationData.Current.LocalFolder
+                .CreateFileAsync("Exception.txt", CreationCollisionOption.OpenIfExists);
 
             // App-Initialisierung nicht wiederholen, wenn das Fenster bereits Inhalte enthält.
             // Nur sicherstellen, dass das Fenster aktiv ist.
@@ -97,10 +105,12 @@ namespace AudioPlayerFrontend
                         serviceBuilder.WithClient("nas-server", 1884);
                     }
 
-                    rootFrame.Navigate(typeof(MainPage), serviceBuilder);
+                    rootFrame.Navigate(typeof(MainPage), viewModel);
                 }
                 // Sicherstellen, dass das aktuelle Fenster aktiv ist
                 Window.Current.Activate();
+
+                if (!viewModel.IsTryOpening && viewModel.AudioService == null) await viewModel.BuildAsync();
             }
         }
 
@@ -131,7 +141,8 @@ namespace AudioPlayerFrontend
                 StringWriter writer = new StringWriter();
                 serializer.Serialize(writer, profile);
 
-                StorageFile file = await GetOrCreateStorageFile(serviceProfileFilename);
+                StorageFile file = await ApplicationData.Current.LocalFolder
+                    .CreateFileAsync(serviceProfileFilename, CreationCollisionOption.OpenIfExists);
                 await FileIO.WriteTextAsync(file, writer.ToString());
             }
             catch (Exception exc)
@@ -142,15 +153,42 @@ namespace AudioPlayerFrontend
             deferral.Complete();
         }
 
-        private async Task<StorageFile> GetOrCreateStorageFile(string filename)
+        private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
         {
-            try
+            if (viewModel.AudioService?.Base is IMqttAudio mqttAudio && mqttAudio.IsOpen)
             {
-                return await ApplicationData.Current.LocalFolder.GetFileAsync(filename);
+                var deferral = e.GetDeferral();
+
+                try
+                {
+                    //if (mqttAudio is IMqttAudioClient mqtttAudioClient)
+                    //{
+                    //    mqtttAudioClient.MqttClient.Disconnected -= MqttClient_Disconnected;
+                    //}
+
+                    await mqttAudio.CloseAsync();
+                }
+                catch (Exception exc)
+                {
+                    //await new MessageDialog(exc.ToString(), "EnteredBackground").ShowAsync();
+
+                    //builder.WithService(mqttAudio);
+
+                    //Frame.Navigate(typeof(SettingsPage), builder);
+                }
+
+                deferral.Complete();
             }
-            catch
+
+        }
+
+        private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
+        {
+            IMqttAudio mqttAudio = viewModel.AudioService?.Base as IMqttAudio;
+
+            if (await viewModel.OpenAsync(mqttAudio) && mqttAudio is IMqttAudioClient mqtttAudioClient)
             {
-                return await ApplicationData.Current.LocalFolder.CreateFileAsync(filename);
+                //mqtttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
             }
         }
     }

@@ -181,8 +181,6 @@ namespace AudioPlayerBackend
         public bool Equals(Playlist other)
         {
             return other != null &&
-                   EqualityComparer<IEnumerable<Song>>.Default.Equals(AllSongs, other.AllSongs) &&
-                   EqualityComparer<IEnumerable<Song>>.Default.Equals(SearchSongs, other.SearchSongs) &&
                    ID.Equals(other.ID) &&
                    IsAllShuffle == other.IsAllShuffle &&
                    IsSearchShuffle == other.IsSearchShuffle &&

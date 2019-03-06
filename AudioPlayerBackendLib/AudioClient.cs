@@ -113,22 +113,15 @@ namespace AudioPlayerBackend
             playState = PlaybackState.Stopped;
             mediaSources = new string[0];
 
-            CurrentPlaylist = FileBasePlaylist = new Playlist() { ID = new Guid() };
-            FileBasePlaylist.PropertyChanged += Playlist_PropertyChanged;
-
             AdditionalPlaylists = new ObservableCollection<IPlaylistExtended>();
             AdditionalPlaylists.CollectionChanged += AdditionalPlaylists_CollectionChanged;
+
+            CurrentPlaylist = FileBasePlaylist = new Playlist() { ID = new Guid() };
+            FileBasePlaylist.PropertyChanged += Playlist_PropertyChanged;
         }
 
         private void AdditionalPlaylists_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            foreach (IPlaylist playlist in (IEnumerable)e.NewItems ?? Enumerable.Empty<IPlaylist>())
-            {
-                playlist.PropertyChanged += Playlist_PropertyChanged;
-
-                OnAddPlaylist(playlist);
-            }
-
             foreach (IPlaylist playlist in (IEnumerable)e.OldItems ?? Enumerable.Empty<IPlaylist>())
             {
                 playlist.PropertyChanged -= Playlist_PropertyChanged;
@@ -136,6 +129,13 @@ namespace AudioPlayerBackend
                 if (CurrentPlaylist == playlist) CurrentPlaylist = GetAllPlaylists().ElementAt(e.OldStartingIndex);
 
                 OnRemovePlaylist(playlist);
+            }
+
+            foreach (IPlaylist playlist in (IEnumerable)e.NewItems ?? Enumerable.Empty<IPlaylist>())
+            {
+                playlist.PropertyChanged += Playlist_PropertyChanged;
+
+                OnAddPlaylist(playlist);
             }
         }
 
@@ -230,19 +230,18 @@ namespace AudioPlayerBackend
             if (CurrentPlaylist.Loop == LoopType.CurrentPlaylist || !overflow)
             {
                 ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
-
             }
             else if (CurrentPlaylist.Loop == LoopType.Next)
             {
                 IPlaylist oldCurrentPlaylist = CurrentPlaylist;
                 CurrentPlaylist = GetAllPlaylists().Next(CurrentPlaylist).next;
 
-                ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
+                //ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
             }
             else
             {
                 PlayState = PlaybackState.Stopped;
-                ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
+                //ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
             }
         }
 

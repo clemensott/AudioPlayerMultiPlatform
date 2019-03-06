@@ -92,7 +92,8 @@ namespace AudioPlayerBackend
             client.ApplicationMessageReceived += Client_ApplicationMessageReceived;
         }
 
-        public MqttAudioClient(IPlayer player, string server, int? port = null, IMqttAudioClientHelper helper = null) : this(player, helper)
+        public MqttAudioClient(IPlayer player, string server, int? port = null,
+            IMqttAudioClientHelper helper = null) : this(player, helper)
         {
             this.helper = helper;
             ServerAddress = server;
@@ -191,7 +192,7 @@ namespace AudioPlayerBackend
                     //DateTime time = DateTime.Now;
                     //while (time + TimeSpan.FromMilliseconds(100) > DateTime.Now) ;
 
-                    System.Diagnostics.Debug.WriteLine("ConsumerPublish2");
+                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish2");
                     currentPublish = publishQueue.Dequeue();
 
                     //System.Diagnostics.Debug.WriteLine("ConsumerPublish3");
@@ -201,13 +202,13 @@ namespace AudioPlayerBackend
                     Task waitForReply = Utils.WaitAsync(currentPublish);
                     //System.Diagnostics.Debug.WriteLine("ConsumerPublish4");
                     //Task waitForTimeOut = Task.Delay(timeout);
-                    System.Diagnostics.Debug.WriteLine("ConsumerPublish5");
+                    System.Diagnostics.Debug.WriteLine("ConsumerPublish5: " + currentPublish.Topic);
 
                     await client.PublishAsync(currentPublish);
-                    System.Diagnostics.Debug.WriteLine("ConsumerPublish6");
+                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish6");
 
                     await Task.WhenAny(waitForReply, Task.Delay(timeout));
-                    System.Diagnostics.Debug.WriteLine("ConsumerPublish7");
+                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish7");
                 }
                 catch (Exception e)
                 {
@@ -216,7 +217,7 @@ namespace AudioPlayerBackend
 
                 //System.Diagnostics.Debug.WriteLine("ConsumerPublish8");
                 MqttApplicationMessage message = currentPublish;
-                System.Diagnostics.Debug.WriteLine("ConsumerPublish9: " + (message == null));
+                //System.Diagnostics.Debug.WriteLine("ConsumerPublish9: " + (message == null));
 
                 if (currentPublish == null) continue;
 
@@ -258,12 +259,12 @@ namespace AudioPlayerBackend
                     Monitor.PulseAll(currentPublish);
                     currentPublish = null;
 
-                    System.Diagnostics.Debug.WriteLine("Client_ApplicationMessageReceived1");
+                    //System.Diagnostics.Debug.WriteLine("Client_ApplicationMessageReceived1");
                     return;
                 }
             }
 
-            System.Diagnostics.Debug.WriteLine("Client_ApplicationMessageReceived2");
+            //System.Diagnostics.Debug.WriteLine("Client_ApplicationMessageReceived2");
 
             lock (receiveMessages)
             {
@@ -272,7 +273,7 @@ namespace AudioPlayerBackend
                 Monitor.Pulse(receiveMessages);
             }
 
-            System.Diagnostics.Debug.WriteLine("Client_ApplicationMessageReceived3");
+            //System.Diagnostics.Debug.WriteLine("Client_ApplicationMessageReceived3");
         }
 
         private async Task ProcessReceive()
@@ -295,15 +296,16 @@ namespace AudioPlayerBackend
                 catch { }
             }
         }
-
+        private int count = 0;
         private async Task ProcessApplicationMessage(MqttApplicationMessage e)
         {
             string rawTopic = e.Topic;
             byte[] payload = e.Payload;
 
-            System.Diagnostics.Debug.WriteLine("ProcessApplicationMessage1");
+            System.Diagnostics.Debug.WriteLineIf(!rawTopic.EndsWith(".Position"), "ProcessApplicationMessage1: " + rawTopic);
             MqttAudioUtils.LockTopic(receivingDict, rawTopic, payload);
-            
+
+            if (rawTopic == "AdditionalPlaylists" && count++ > 0) { }
             try
             {
                 string topic;
@@ -316,7 +318,7 @@ namespace AudioPlayerBackend
             }
             catch (Exception exc)
             {
-                System.Diagnostics.Debug.WriteLine(exc);
+                System.Diagnostics.Debug.WriteLine("rawTopic: " + rawTopic + "\r\n" + exc);
 
                 try
                 {
@@ -342,9 +344,9 @@ namespace AudioPlayerBackend
                     Monitor.Pulse(initProps);
                 }
             }
-            
+
             MqttAudioUtils.UnlockTopic(receivingDict, rawTopic);
-            System.Diagnostics.Debug.WriteLine("ProcessApplicationMessage4");
+            //System.Diagnostics.Debug.WriteLine("ProcessApplicationMessage4");
         }
 
         private async Task Publish(IPlaylist playlist, string topic, byte[] payload,
@@ -375,12 +377,12 @@ namespace AudioPlayerBackend
         {
             if (initProps != null)
             {
-                initProps.AddRange(GetTopicFilters(playlist).Select(tp => playlist.ID + "." + tp.Topic));
+                initProps.AddRange(GetTopicFilters(playlist).Select(tf => tf.Topic));
             }
 
-            await Task.WhenAll(GetTopicFilters(playlist).Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
-
             await PublishAdditionalPlaylists();
+
+            await Task.WhenAll(GetTopicFilters(playlist).Select(tf => client.SubscribeAsync(tf.Topic, tf.Qos)));
         }
 
         protected async override void OnRemovePlaylist(IPlaylist playlist)
@@ -393,9 +395,9 @@ namespace AudioPlayerBackend
                 }
             }
 
-            await Task.WhenAll(GetTopicFilters(playlist).Select(tf => client.UnsubscribeAsync(tf.Topic)));
-
             await PublishAdditionalPlaylists();
+
+            await Task.WhenAll(GetTopicFilters(playlist).Select(tf => client.UnsubscribeAsync(tf.Topic)));
         }
 
         private async Task PublishAdditionalPlaylists()

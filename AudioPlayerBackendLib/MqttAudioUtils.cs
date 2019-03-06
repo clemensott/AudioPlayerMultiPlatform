@@ -107,14 +107,14 @@ namespace AudioPlayerBackend
                         if (audio.AdditionalPlaylists.TryFirst(out playlist, p => p.ID == playlists[i].ID)) playlists[i] = playlist;
                     }
 
-                    foreach (IPlaylistExtended playlist in audio.AdditionalPlaylists.Except(playlists))
+                    foreach (IPlaylistExtended playlist in audio.AdditionalPlaylists.Except(playlists).ToArray())
                     {
                         audio.AdditionalPlaylists.Remove(playlist);
                     }
 
                     for (int i = 0; i < playlists.Length; i++)
                     {
-                        if (playlists[i].ID != audio.AdditionalPlaylists[i].ID)
+                        if (playlists[i].ID != audio.AdditionalPlaylists.ElementAtOrDefault(i)?.ID)
                         {
                             audio.AdditionalPlaylists.Insert(i, (IPlaylistExtended)playlists[i]);
                         }

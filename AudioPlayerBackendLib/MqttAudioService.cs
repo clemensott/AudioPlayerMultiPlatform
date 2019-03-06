@@ -94,6 +94,8 @@ namespace AudioPlayerBackend
 
             MqttAudioUtils.LockTopic(interceptingDict, rawTopic, payload);
 
+            System.Diagnostics.Debug.WriteLine("rawTopic: " + rawTopic);
+
             try
             {
                 string topic;
@@ -108,6 +110,7 @@ namespace AudioPlayerBackend
             {
                 context.AcceptPublish = false;
 
+                System.Diagnostics.Debug.WriteLine(e.ToString());
                 await PublishDebug(e);
             }
 
@@ -173,6 +176,7 @@ namespace AudioPlayerBackend
         {
             base.OnAddPlaylist(playlist);
 
+            await PublishPlaylist(playlist);
             await PublishAdditionalPlaylists();
         }
 
@@ -188,7 +192,22 @@ namespace AudioPlayerBackend
             ByteQueue queue = new ByteQueue();
             queue.Enqueue(AdditionalPlaylists);
 
+            System.Diagnostics.Debug.WriteLine("PublishAdditionalPlaylists: " + AdditionalPlaylists.Count);
+            await Task.WhenAll(AdditionalPlaylists.Select(p => PublishPlaylist(p)).ToArray());
             await Publish(nameof(AdditionalPlaylists), queue);
+        }
+
+        private async Task PublishPlaylist(IPlaylist playlist)
+        {
+            await PublishIsAllShuffle(playlist);
+            await PublishIsOnlySearch(playlist);
+            await PublishIsSearchShuffle(playlist);
+            await PublishLoop(playlist);
+            await PublishPosition(playlist);
+            await PublishDuration(playlist);
+            await PublishSongs(playlist);
+            await PublishCurrentSong(playlist);
+            await PublishSearchKey(playlist);
         }
 
         protected async override void OnCurrenPlaylistChanged()

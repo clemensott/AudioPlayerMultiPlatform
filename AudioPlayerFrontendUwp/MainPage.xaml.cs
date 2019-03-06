@@ -1,12 +1,16 @@
 ﻿using AudioPlayerBackend;
 using AudioPlayerBackend.Common;
+using StdOttStandard;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.Storage;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x407 dokumentiert.
@@ -21,169 +25,48 @@ namespace AudioPlayerFrontend
         private static readonly TimeSpan networkConnectionTimeOut = TimeSpan.FromMilliseconds(200),
             networkConnectionMaxTime = TimeSpan.FromSeconds(5);
 
-        private ServiceBuilder builder;
         private Task<IAudioExtended> buildTask;
         private ViewModel viewModel;
 
         public MainPage()
         {
             this.InitializeComponent();
-
-            DataContext = viewModel = new ViewModel();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            tbxSearchKey.IsEnabled = false;
-
-            if (e.Parameter is ServiceBuilder)
+            if (e.Parameter is ViewModel)
             {
-                builder = e.Parameter as ServiceBuilder;
-
-                if (builder.Player == null) builder.WithPlayer(new Join.Player());
-
-                buildTask = builder.Build();
+                DataContext = viewModel = e.Parameter as ViewModel;
             }
         }
 
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            Application.Current.EnteredBackground += Application_EnteredBackground;
-            Application.Current.LeavingBackground += Application_LeavingBackground;
-
-            if (await BuildAsync(builder, buildTask))
+            if (viewModel.AudioService != null || viewModel.IsTryOpening)
             {
-                if (viewModel.AudioService is IMqttAudioClient mqttAudioClient) mqttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
-
-                tbxSearchKey.IsEnabled = true;
+                if (viewModel.AudioService == null && !viewModel.IsTryOpening) await viewModel.BuildAsync();
+                //if (viewModel.AudioService is IMqttAudioClient mqttAudioClient)
+                //{
+                //    mqttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
+                //}
             }
-            else Frame.Navigate(typeof(SettingsPage), builder);
-        }
-
-        private async void Page_Unloaded(object sender, RoutedEventArgs e)
-        {
-            Application.Current.EnteredBackground -= Application_EnteredBackground;
-            Application.Current.LeavingBackground -= Application_LeavingBackground;
-
-            try
-            {
-                if (viewModel.AudioService?.Base is IMqttAudio mqttAudio)
-                {
-                    if (mqttAudio is IMqttAudioClient mqtttAudioClient) mqtttAudioClient.MqttClient.Disconnected -= MqttClient_Disconnected;
-
-                    await mqttAudio.CloseAsync();
-                }
-            }
-            catch { }
-        }
-
-        private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
-        {
-            IMqttAudio mqttAudio = viewModel.AudioService?.Base as IMqttAudio;
-
-            if (await OpenAsync(mqttAudio) && mqttAudio is IMqttAudioClient mqtttAudioClient)
-            {
-                mqtttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
-            }
-        }
-
-        private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
-        {
-            if (viewModel.AudioService?.Base is IMqttAudio mqttAudio && mqttAudio.IsOpen)
-            {
-                try
-                {
-                    if (mqttAudio is IMqttAudioClient mqtttAudioClient) mqtttAudioClient.MqttClient.Disconnected -= MqttClient_Disconnected;
-
-                    await mqttAudio.CloseAsync();
-                }
-                catch (Exception exc)
-                {
-                    await new MessageDialog(exc.ToString(), "EnteredBackground").ShowAsync();
-
-                    builder.WithService(mqttAudio);
-
-                    Frame.Navigate(typeof(SettingsPage), builder);
-                }
-            }
+            else Frame.Navigate(typeof(SettingsPage), viewModel.Builder);
         }
 
         private async void MqttClient_Disconnected(object sender, MqttClientDisconnectedEventArgs e)
         {
             await Window.Current.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
             {
-                string message = string.Format("Was connected: {0}\r\nException: {1}", e.ClientWasConnected, e.Exception?.ToString() ?? "null");
+                string message = string.Format("Was connected: {0}\r\nException: {1}",
+                    e.ClientWasConnected, e.Exception?.ToString() ?? "null");
                 await new MessageDialog(message, "MqttClient_Disconnected").ShowAsync();
 
                 IMqttAudioClient mqtttAudioClient = viewModel.AudioService?.Base as IMqttAudioClient;
                 mqtttAudioClient.MqttClient.Disconnected -= MqttClient_Disconnected;
 
-                if (await OpenAsync(mqtttAudioClient)) mqtttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
+                if (await viewModel.OpenAsync(mqtttAudioClient)) mqtttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
             });
-        }
-
-        private async Task<bool> BuildAsync(ServiceBuilder builder, Task<IAudioExtended> buildTask)
-        {
-            viewModel.IsTryOpening = true;
-
-            while (true)
-            {
-                try
-                {
-                    viewModel.AudioService = new AudioViewModel(await buildTask);
-                    break;
-                }
-                catch
-                {
-                    await Task.Delay(200);
-
-                    if (viewModel.IsTryOpening)
-                    {
-                        buildTask = builder.Build();
-                        continue;
-                    }
-
-                    viewModel.AudioService = null;
-                    break;
-                }
-            }
-
-            viewModel.IsTryOpening = false;
-
-            return viewModel.AudioService != null;
-        }
-
-        private async Task<bool> OpenAsync(IMqttAudio mqttAudio)
-        {
-            if (mqttAudio == null || mqttAudio.IsOpen) return true;
-
-            viewModel.IsTryOpening = true;
-
-            while (true)
-            {
-                try
-                {
-                    await mqttAudio.OpenAsync();
-                    break;
-                }
-                catch (Exception exc)
-                {
-                    await Task.Delay(500);
-
-                    if (viewModel.IsTryOpening) continue;
-
-                    await new MessageDialog(exc.ToString(), "LeavingBackground").ShowAsync();
-
-                    builder.WithService(mqttAudio);
-                    Frame.Navigate(typeof(SettingsPage), builder);
-
-                    break;
-                }
-            }
-
-            viewModel.IsTryOpening = false;
-
-            return mqttAudio.IsOpen;
         }
 
         private void BtnReload_Click(object sender, RoutedEventArgs e)
@@ -191,9 +74,9 @@ namespace AudioPlayerFrontend
             viewModel.AudioService?.Reload();
         }
 
-        private void TbxSearchKey_GotFocus(object sender, RoutedEventArgs e)
+        private void BtnSearch_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel != null) viewModel.ViewAdvancedSettings = false;
+            if (viewModel.AudioService != null) Frame.Navigate(typeof(SearchPage), viewModel);
         }
 
         private void LbxSongs_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -226,11 +109,20 @@ namespace AudioPlayerFrontend
             viewModel.AudioService?.SetNextSong();
         }
 
-        private void AbbSettings_Click(object sender, RoutedEventArgs e)
+        private async void AbbSettings_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.AudioService != null) builder.WithService(viewModel.AudioService.Base);
+            if (viewModel.AudioService != null)
+            {
+                viewModel.Builder.WithService(viewModel.AudioService.Base);
 
-            Frame.Navigate(typeof(SettingsPage), builder);
+                try
+                {
+                    if (viewModel.AudioService is IMqttAudio mqtttAudio) await mqtttAudio.CloseAsync();
+                }
+                catch { }
+            }
+
+            Frame.Navigate(typeof(SettingsPage), viewModel.Builder);
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
@@ -238,11 +130,84 @@ namespace AudioPlayerFrontend
             viewModel.IsTryOpening = false;
         }
 
+        private object MulDoRemove_Convert(object input0, object input1)
+        {
+            return !ReferenceEquals(input0, input1);
+        }
+
+        private object MulViewSongs_Convert(object input0, object input1, object input2, object input3)
+        {
+            IPlaylistExtended fileBasePlaylist = (IPlaylistExtended)input0;
+            IEnumerable<Song> fileBasePlaylistViewSongs = (IEnumerable<Song>)input1;
+            IPlaylistExtended currentPlaylist = (IPlaylistExtended)input2;
+            IEnumerable<Song> currentPlaylistViewSongs = (IEnumerable<Song>)input3;
+
+            return fileBasePlaylist?.IsSearching == true && fileBasePlaylist != currentPlaylist ?
+                fileBasePlaylistViewSongs?.Except(currentPlaylistViewSongs.ToNotNull()) : currentPlaylistViewSongs;
+        }
+
+        private void SyiRemove_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            IPlaylistExtended playlist;
+            Song song = (Song)((FrameworkElement)sender).DataContext;
+            AudioViewModel service = viewModel.AudioService;
+
+            if (service == null) return;
+
+            if ((bool?)mulDoRemove.Output == true)
+            {
+                if (!service.Base.AdditionalPlaylists.TryFirst(out playlist))
+                {
+                    playlist = new Playlist
+                    {
+                        Loop = LoopType.Next,
+                        Songs = new Song[] { song },
+                        CurrentSong = song
+                    };
+
+                    service.Base.AdditionalPlaylists.Add(playlist);
+                }
+                else playlist.Songs = playlist.Songs.Concat(song).ToArray();
+
+                service.Base.CurrentPlaylist = playlist;
+            }
+            else if (service.AdditionalPlaylists.TryFirst(out playlist))
+            {
+                playlist.Songs = playlist.Songs.Where(s => s != song).ToArray();
+
+                if (playlist.Songs.Length == 0)
+                {
+                    service.Base.AdditionalPlaylists.Remove(playlist);
+                    service.Base.CurrentPlaylist = service.GetAllPlaylists().First();
+                }
+            }
+        }
+
+        private void BtnLoopType_Click(object sender, RoutedEventArgs e)
+        {
+            switch (viewModel.AudioService?.CurrentPlaylist.Loop)
+            {
+                case LoopType.Next:
+                    viewModel.AudioService.CurrentPlaylist.Loop = LoopType.Stop;
+                    break;
+
+                case LoopType.Stop:
+                    viewModel.AudioService.CurrentPlaylist.Loop = LoopType.CurrentPlaylist;
+                    break;
+
+                case LoopType.CurrentPlaylist:
+                    viewModel.AudioService.CurrentPlaylist.Loop = LoopType.CurrentSong;
+                    break;
+
+                case LoopType.CurrentSong:
+                    viewModel.AudioService.CurrentPlaylist.Loop = LoopType.Next;
+                    break;
+            }
+        }
+
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)
         {
             await new MessageDialog("CreateTime: " + App.CreateTime).ShowAsync();
-            //await new MessageDialog("Type: " + (viewModel.AudioService?.Base.GetType().ToString() ?? "null")).ShowAsync();
-            await new MessageDialog("IsOpen: " + ((viewModel.AudioService?.Base as IMqttAudio)?.IsOpen.ToString() ?? "null")).ShowAsync();
 
             string exceptionText;
 

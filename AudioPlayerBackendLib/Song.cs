@@ -52,7 +52,6 @@ namespace AudioPlayerBackend
 
         public bool Equals(Song other)
         {
-            if (FullPath == other.FullPath) { }
             return Title == other.Title &&
                    Artist == other.Artist &&
                    FullPath == other.FullPath;
