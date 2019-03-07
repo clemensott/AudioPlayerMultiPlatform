@@ -94,7 +94,7 @@
                                   Converter={StaticResource loopIcoCon}}"/>
                 </Button>
 
-                <ToggleButton Grid.Column="3" Margin="3" IsChecked="{Binding IsShuffle,Mode=TwoWay}">
+                <ToggleButton Grid.Column="3" Margin="3" IsChecked="{Binding AudioService.CurrentPlaylist.IsShuffle,Mode=TwoWay}">
                     <SymbolIcon Symbol="Shuffle"/>
                 </ToggleButton>
 
