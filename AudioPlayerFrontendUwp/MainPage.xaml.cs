@@ -25,7 +25,6 @@ namespace AudioPlayerFrontend
         private static readonly TimeSpan networkConnectionTimeOut = TimeSpan.FromMilliseconds(200),
             networkConnectionMaxTime = TimeSpan.FromSeconds(5);
 
-        private Task<IAudioExtended> buildTask;
         private ViewModel viewModel;
 
         public MainPage()
@@ -43,15 +42,16 @@ namespace AudioPlayerFrontend
 
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            if (viewModel.AudioService != null || viewModel.IsTryOpening)
-            {
-                if (viewModel.AudioService == null && !viewModel.IsTryOpening) await viewModel.BuildAsync();
-                //if (viewModel.AudioService is IMqttAudioClient mqttAudioClient)
-                //{
-                //    mqttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
-                //}
-            }
-            else Frame.Navigate(typeof(SettingsPage), viewModel.Builder);
+            if (viewModel.IsTryOpening) await viewModel.BuildOrOpenTask;
+            else if (viewModel.AudioService == null) await viewModel.BuildAsync();
+
+            if (viewModel.AudioService == null) Frame.Navigate(typeof(SettingsPage), viewModel.Builder);
+            //else if (viewModel.AudioService is IMqttAudioClient mqttAudioClient)
+            //{
+            //    mqttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
+            //}
+
+            Scroll();
         }
 
         private async void MqttClient_Disconnected(object sender, MqttClientDisconnectedEventArgs e)
@@ -86,6 +86,7 @@ namespace AudioPlayerFrontend
 
         private void Scroll()
         {
+            System.Diagnostics.Debug.WriteLine("Scroll: " + lbxSongs.SelectedItem);
             if (lbxSongs.SelectedItem != null) lbxSongs.ScrollIntoView(lbxSongs.SelectedItem);
             else if (lbxSongs.Items.Count > 0) lbxSongs.ScrollIntoView(lbxSongs.Items[0]);
         }
@@ -127,7 +128,7 @@ namespace AudioPlayerFrontend
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
-            viewModel.IsTryOpening = false;
+            viewModel.CancelBuildOrOpen();
         }
 
         private object MulDoRemove_Convert(object input0, object input1)
@@ -148,39 +149,14 @@ namespace AudioPlayerFrontend
 
         private void SyiRemove_Tapped(object sender, TappedRoutedEventArgs e)
         {
-            IPlaylistExtended playlist;
             Song song = (Song)((FrameworkElement)sender).DataContext;
             AudioViewModel service = viewModel.AudioService;
 
-            if (service == null) return;
-
-            if ((bool?)mulDoRemove.Output == true)
+            if (service.CurrentPlaylist.Songs.All(s => s == song))
             {
-                if (!service.Base.AdditionalPlaylists.TryFirst(out playlist))
-                {
-                    playlist = new Playlist
-                    {
-                        Loop = LoopType.Next,
-                        Songs = new Song[] { song },
-                        CurrentSong = song
-                    };
-
-                    service.Base.AdditionalPlaylists.Add(playlist);
-                }
-                else playlist.Songs = playlist.Songs.Concat(song).ToArray();
-
-                service.Base.CurrentPlaylist = playlist;
+                service.AdditionalPlaylists.Remove(service.CurrentPlaylist);
             }
-            else if (service.AdditionalPlaylists.TryFirst(out playlist))
-            {
-                playlist.Songs = playlist.Songs.Where(s => s != song).ToArray();
-
-                if (playlist.Songs.Length == 0)
-                {
-                    service.Base.AdditionalPlaylists.Remove(playlist);
-                    service.Base.CurrentPlaylist = service.GetAllPlaylists().First();
-                }
-            }
+            else service.CurrentPlaylist.Songs = service.CurrentPlaylist.Songs.Where(s => s != song).ToArray();
         }
 
         private void BtnLoopType_Click(object sender, RoutedEventArgs e)
@@ -203,6 +179,11 @@ namespace AudioPlayerFrontend
                     viewModel.AudioService.CurrentPlaylist.Loop = LoopType.Next;
                     break;
             }
+        }
+
+        private void SplCurrentSong_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            Scroll();
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)

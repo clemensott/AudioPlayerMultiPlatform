@@ -64,10 +64,14 @@ namespace AudioPlayerBackend
         {
             UpdateCurrentSong();
 
-            //if (CurrentPlaylist == FileBasePlaylist)
-            //{
-            //    while (AdditionalPlaylists.Count > 0) AdditionalPlaylists.RemoveAt(0);
-            //}
+            if (CurrentPlaylist == FileBasePlaylist)
+            {
+                try
+                {
+                    while (AdditionalPlaylists.Count > 0) AdditionalPlaylists.RemoveAt(0);
+                }
+                catch { }
+            }
         }
 
         protected override void OnCurrentSongChanged(IPlaylist playlist)
@@ -125,14 +129,21 @@ namespace AudioPlayerBackend
         {
             Reader = ToWaveProvider(CreateWaveProvider(CurrentPlaylist.CurrentSong.Value));
 
-            if (!isUpdatingPosition)
+            if (Reader.TotalTime == CurrentPlaylist.Duration && Reader.TotalTime > CurrentPlaylist.Position)
             {
-                isUpdatingPosition = true;
-                CurrentPlaylist.Position = Reader.CurrentTime;
-                isUpdatingPosition = false;
+                Reader.CurrentTime = CurrentPlaylist.Position;
             }
+            else
+            {
+                if (!isUpdatingPosition)
+                {
+                    isUpdatingPosition = true;
+                    CurrentPlaylist.Position = Reader.CurrentTime;
+                    isUpdatingPosition = false;
+                }
 
-            CurrentPlaylist.Duration = Reader.TotalTime;
+                CurrentPlaylist.Duration = Reader.TotalTime;
+            }
 
             return Reader;
         }

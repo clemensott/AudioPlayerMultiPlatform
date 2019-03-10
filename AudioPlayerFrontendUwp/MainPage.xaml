@@ -48,7 +48,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid Margin="3" Visibility="{Binding ViewAdvancedSettings,Converter={StaticResource visCon}}">
+            <Grid Margin="3" Visibility="{Binding ElementName=atbAdvSettings,Path=IsChecked,Converter={StaticResource visCon}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -123,7 +123,6 @@
                         <Grid Margin="0,-8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="5"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
@@ -133,13 +132,14 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.RowSpan="2" TextAlignment="Center" Margin="5,0"
-                                       VerticalAlignment="Center" Text="{Binding Index}"/>
+                            <TextBlock Grid.RowSpan="2" TextAlignment="Center" Margin="5,0,10,0"
+                                       VerticalAlignment="Center" Text="{Binding Index}"
+                                       Visibility="{Binding ElementName=atbViewIndex,Path=IsChecked,Converter={StaticResource visCon}}"/>
 
-                            <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding Title}"/>
-                            <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
+                            <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}"/>
+                            <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
 
-                            <SymbolIcon Grid.Column="3" Grid.RowSpan="2" 
+                            <SymbolIcon Grid.Column="2" Grid.RowSpan="2" 
                                         Visibility="{Binding ElementName=mulDoRemove,Path=Output,Converter={StaticResource visCon}}"
                                         Symbol="Remove" Tapped="SyiRemove_Tapped"/>
                         </Grid>
@@ -153,7 +153,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel DataContext="{Binding CurrentSong}">
+                <StackPanel DataContext="{Binding CurrentSong}" Tapped="SplCurrentSong_Tapped">
                     <TextBlock Text="{Binding Title}" Margin="1" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding Artist}" FontStyle="Italic" Margin="1" TextWrapping="Wrap"/>
                 </StackPanel>
@@ -184,7 +184,8 @@
             </CommandBar.PrimaryCommands>
 
             <CommandBar.SecondaryCommands>
-                <AppBarToggleButton Icon="More" Label="Advanced settings" IsChecked="{Binding ViewAdvancedSettings,Mode=TwoWay}"/>
+                <AppBarToggleButton x:Name="atbViewIndex" Icon="List" Label="Index"/>
+                <AppBarToggleButton x:Name="atbAdvSettings" Icon="More" Label="Advanced settings"/>
                 <AppBarButton Icon="Setting" Label="All settings" Click="AbbSettings_Click"/>
                 <AppBarButton Icon="Admin" Label="Debug" Click="AbbDebug_Click"/>
             </CommandBar.SecondaryCommands>

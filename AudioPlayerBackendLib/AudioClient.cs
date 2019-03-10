@@ -226,22 +226,19 @@ namespace AudioPlayerBackend
             }
 
             (Song? newCurrentSong, bool overflow) = SongsService.GetNextSong(CurrentPlaylist);
-
+            
             if (CurrentPlaylist.Loop == LoopType.CurrentPlaylist || !overflow)
             {
                 ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
             }
             else if (CurrentPlaylist.Loop == LoopType.Next)
-            {
-                IPlaylist oldCurrentPlaylist = CurrentPlaylist;
+            {            
                 CurrentPlaylist = GetAllPlaylists().Next(CurrentPlaylist).next;
-
-                //ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
             }
-            else
+            else if (CurrentPlaylist.Loop == LoopType.Stop)
             {
+                CurrentPlaylist = GetAllPlaylists().Next(CurrentPlaylist).next;
                 PlayState = PlaybackState.Stopped;
-                //ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
             }
         }
 

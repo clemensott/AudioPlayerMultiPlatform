@@ -1,5 +1,4 @@
 ﻿using AudioPlayerBackend;
-using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
 
@@ -7,30 +6,34 @@ namespace AudioPlayerFrontend
 {
     class ViewModel : INotifyPropertyChanged
     {
-        private bool isTryOpening, viewAdvancedSettings;
+        private bool canceled;
+        private Task<bool> buildOrOpenTask;
         private AudioViewModel audioService;
 
-        public bool IsTryOpening
+        public bool Canceled
         {
-            get { return isTryOpening; }
-            set
+            get { return canceled; }
+            private set
             {
-                if (value == isTryOpening) return;
+                if (value == canceled) return;
 
-                isTryOpening = value;
-                OnPropertyChanged(nameof(IsTryOpening));
+                canceled = value;
+                OnPropertyChanged(nameof(Canceled));
             }
         }
 
-        public bool ViewAdvancedSettings
-        {
-            get { return viewAdvancedSettings; }
-            set
-            {
-                if (value == viewAdvancedSettings) return;
+        public bool IsTryOpening => BuildOrOpenTask != null;
 
-                viewAdvancedSettings = value;
-                OnPropertyChanged(nameof(ViewAdvancedSettings));
+        public Task<bool> BuildOrOpenTask
+        {
+            get { return buildOrOpenTask; }
+            private set
+            {
+                if (value == buildOrOpenTask) return;
+
+                buildOrOpenTask = value;
+                OnPropertyChanged(nameof(BuildOrOpenTask));
+                OnPropertyChanged(nameof(IsTryOpening));
             }
         }
 
@@ -55,8 +58,20 @@ namespace AudioPlayerFrontend
 
         public async Task<bool> BuildAsync()
         {
-            IsTryOpening = true;
+            Canceled = false;
 
+            Task<bool> task = Build();
+            BuildOrOpenTask = task;
+
+            bool built = await task;
+
+            if (task == BuildOrOpenTask) BuildOrOpenTask = null;
+
+            return built;
+        }
+
+        private async Task<bool> Build()
+        {
             while (true)
             {
                 try
@@ -68,23 +83,33 @@ namespace AudioPlayerFrontend
                 {
                     await Task.Delay(200);
 
-                    if (IsTryOpening) continue;
+                    if (!Canceled) continue;
 
                     AudioService = null;
                     break;
                 }
             }
 
-            IsTryOpening = false;
-
             return AudioService != null;
         }
 
         public async Task<bool> OpenAsync(IMqttAudio mqttAudio)
         {
-            if (mqttAudio == null || mqttAudio.IsOpen) return true;
+            Canceled = false;
 
-            IsTryOpening = true;
+            Task<bool> task = Open(mqttAudio);
+            BuildOrOpenTask = task;
+
+            bool built = await task;
+
+            if (task == BuildOrOpenTask) BuildOrOpenTask = null;
+
+            return built;
+        }
+
+        public async Task<bool> Open(IMqttAudio mqttAudio)
+        {
+            if (mqttAudio == null || mqttAudio.IsOpen) return true;
 
             while (true)
             {
@@ -97,16 +122,16 @@ namespace AudioPlayerFrontend
                 {
                     await Task.Delay(200);
 
-                    if (IsTryOpening) continue;
+                    if (!Canceled) continue;
 
                     break;
                 }
             }
 
-            IsTryOpening = false;
-
             return mqttAudio.IsOpen;
         }
+
+        public void CancelBuildOrOpen() => Canceled = true;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
