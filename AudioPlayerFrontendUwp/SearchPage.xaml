@@ -31,18 +31,22 @@
                  Text="{Binding AudioService.FileBasePlaylist.SearchKey,
                    Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
 
-        <Button Grid.Column="2" Margin="3" Click="BtnSelectAll_Click">
+        <ToggleButton Grid.Column="2" Margin="3" IsChecked="{Binding AudioService.FileBasePlaylist.IsSearchShuffle,Mode=TwoWay}">
+            <SymbolIcon Symbol="Shuffle"/>
+        </ToggleButton>
+
+        <Button Grid.Column="3" Margin="3" Click="BtnSelectAll_Click">
             <SymbolIcon Symbol="SelectAll"/>
         </Button>
 
-        <con:MultipleInputs2Converter x:Name="micPlaylist" Input0="{Binding AudioService.AdditionalPlaylists}"
+        <!--<con:MultipleInputs2Converter x:Name="micPlaylist" Input0="{Binding AudioService.AdditionalPlaylists}"
                                       Input1="{Binding AudioService.AdditionalPlaylists.Count}" Convert="MicPlaylist_Convert"/>
 
         <con:SingleValueConverter x:Name="svcSongsCount" Input="{Binding ElementName=micPlaylist,Path=Output.Songs}"
                                   Convert="SvcSongsCount_Convert"/>
 
         <Button Grid.Column="3" Margin="3" MinWidth="40" VerticalAlignment="Stretch"
-                Content="{Binding ElementName=micSongsCount,Path=Output}" Click="BtnClear_Click"/>
+                Content="{Binding ElementName=svcSongsCount,Path=Output}" Click="BtnClear_Click"/>-->
 
         <con:MultipleInputs2Converter x:Name="micSongs" Input0="{Binding AudioService.FileBasePlaylist.ViewSongs}"
                                       Input1="{Binding AudioService.CurrentPlaylist.ViewSongs}"

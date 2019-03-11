@@ -46,7 +46,9 @@ namespace AudioPlayerFrontend
 
                 if (playlist == viewModel.AudioService.CurrentPlaylist)
                 {
-                    playlist.Songs = songArray.Concat(playlist.Songs).ToArray();
+                    int index = playlist.CurrentViewSongIndex;
+
+                    playlist.Songs = playlist.Songs.Take(index).Concat(songArray).Concat(playlist.Songs.Skip(index)).ToArray();
                     playlist.CurrentSong = song;
                 }
                 else
