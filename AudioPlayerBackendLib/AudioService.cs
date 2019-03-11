@@ -64,14 +64,14 @@ namespace AudioPlayerBackend
         {
             UpdateCurrentSong();
 
-            if (CurrentPlaylist == FileBasePlaylist)
-            {
-                try
-                {
-                    while (AdditionalPlaylists.Count > 0) AdditionalPlaylists.RemoveAt(0);
-                }
-                catch { }
-            }
+            //if (CurrentPlaylist == FileBasePlaylist)
+            //{
+            //    try
+            //    {
+            //        while (AdditionalPlaylists.Count > 0) AdditionalPlaylists.RemoveAt(0);
+            //    }
+            //    catch { }
+            //}
         }
 
         protected override void OnCurrentSongChanged(IPlaylist playlist)

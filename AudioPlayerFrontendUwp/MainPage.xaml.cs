@@ -86,7 +86,6 @@ namespace AudioPlayerFrontend
 
         private void Scroll()
         {
-            System.Diagnostics.Debug.WriteLine("Scroll: " + lbxSongs.SelectedItem);
             if (lbxSongs.SelectedItem != null) lbxSongs.ScrollIntoView(lbxSongs.SelectedItem);
             else if (lbxSongs.Items.Count > 0) lbxSongs.ScrollIntoView(lbxSongs.Items[0]);
         }

@@ -68,6 +68,7 @@ namespace AudioPlayerFrontend
             set
             {
                 if (value != -1) Base.CurrentSong = ViewSongs.ElementAt(value);
+                else OnPropertyChanged(nameof(CurrentViewSongIndex));
             }
         }
 

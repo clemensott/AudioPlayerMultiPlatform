@@ -1,5 +1,6 @@
 ﻿using AudioPlayerBackend;
 using StdOttStandard;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -41,9 +42,19 @@ namespace AudioPlayerFrontend
             if (viewModel.AudioService.AdditionalPlaylists.Count > 0)
             {
                 PlaylistViewModel playlist = viewModel.AudioService.AdditionalPlaylists[0];
+                Song[] songArray = new Song[] { song };
 
-                playlist.Songs = new Song[] { song }.Concat(playlist.Songs).Distinct().ToArray();
-                playlist.CurrentSong = song;
+                if (playlist == viewModel.AudioService.CurrentPlaylist)
+                {
+                    playlist.Songs = songArray.Concat(playlist.Songs).ToArray();
+                    playlist.CurrentSong = song;
+                }
+                else
+                {
+                    playlist.Songs = songArray;
+                    playlist.CurrentSong = song;
+                    viewModel.AudioService.CurrentPlaylist = playlist;
+                }
 
                 viewModel.AudioService.CurrentPlaylist = playlist;
             }
@@ -72,7 +83,16 @@ namespace AudioPlayerFrontend
             {
                 PlaylistViewModel playlist = viewModel.AudioService.AdditionalPlaylists[0];
 
-                playlist.Songs = playlist.Songs.Concat(song).Distinct().ToArray();
+                if (playlist == viewModel.AudioService.CurrentPlaylist)
+                {
+                    playlist.Songs = playlist.Songs.Concat(song).ToArray();
+                }
+                else
+                {
+                    playlist.Songs = new Song[] { song };
+                    viewModel.AudioService.CurrentPlaylist = playlist;
+                }
+
                 viewModel.AudioService.CurrentPlaylist = playlist;
             }
             else
@@ -103,7 +123,16 @@ namespace AudioPlayerFrontend
             {
                 PlaylistViewModel playlist = viewModel.AudioService.AdditionalPlaylists[0];
 
-                playlist.Songs = playlist.Songs.Concat(songs).ToArray();
+                if (playlist == viewModel.AudioService.CurrentPlaylist)
+                {
+                    playlist.Songs = playlist.Songs.Concat(songs).ToArray();
+                }
+                else
+                {
+                    playlist.Songs = songs.ToArray();
+                    viewModel.AudioService.CurrentPlaylist = playlist;
+                }
+
                 viewModel.AudioService.CurrentPlaylist = playlist;
             }
             else
@@ -112,12 +141,20 @@ namespace AudioPlayerFrontend
                 {
                     Loop = LoopType.Next,
                     IsAllShuffle = true,
-                    Songs = songs.Distinct().ToArray(),
+                    Songs = songs.ToArray(),
                     CurrentSong = songs.Any() ? (Song?)songs.First() : null
                 };
 
                 viewModel.AudioService.Base.AdditionalPlaylists.Add(newPlaylist);
                 viewModel.AudioService.Base.CurrentPlaylist = newPlaylist;
+            }
+        }
+
+        private void BtnClear_Click(object sender, RoutedEventArgs e)
+        {
+            if (viewModel.AudioService.AdditionalPlaylists.Count > 0)
+            {
+                viewModel.AudioService.AdditionalPlaylists[0].Songs = new Song[0];
             }
         }
 
@@ -144,6 +181,16 @@ namespace AudioPlayerFrontend
             if (audio.CurrentPlaylist == audio.FileBasePlaylist) return audio.FileBasePlaylist.ViewSongs;
 
             return audio.FileBasePlaylist.ViewSongs.Except(audio.CurrentPlaylist.Songs);
+        }
+
+        private object MicPlaylist_Convert(object input0, object input1)
+        {
+            return ((IEnumerable<IPlaylist>)input0)?.FirstOrDefault();
+        }
+
+        private object SvcSongsCount_Convert(object input)
+        {
+            return ((Array)input)?.Length ?? -1;
         }
     }
 }

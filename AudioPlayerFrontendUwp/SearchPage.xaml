@@ -15,6 +15,7 @@
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
@@ -25,19 +26,29 @@
         <Button Grid.Column="0" Margin="3" Click="BtnBack_Click">
             <SymbolIcon Symbol="Back"/>
         </Button>
-        
+
         <TextBox Grid.Column="1" Name="tbxSearchKey" Margin="3" 
-                 Text="{Binding AudioService.FileBasePlaylist.SearchKey,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
-        
+                 Text="{Binding AudioService.FileBasePlaylist.SearchKey,
+                   Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
+
         <Button Grid.Column="2" Margin="3" Click="BtnSelectAll_Click">
             <SymbolIcon Symbol="SelectAll"/>
         </Button>
+
+        <con:MultipleInputs2Converter x:Name="micPlaylist" Input0="{Binding AudioService.AdditionalPlaylists}"
+                                      Input1="{Binding AudioService.AdditionalPlaylists.Count}" Convert="MicPlaylist_Convert"/>
+
+        <con:SingleValueConverter x:Name="svcSongsCount" Input="{Binding ElementName=micPlaylist,Path=Output.Songs}"
+                                  Convert="SvcSongsCount_Convert"/>
+
+        <Button Grid.Column="3" Margin="3" MinWidth="40" VerticalAlignment="Stretch"
+                Content="{Binding ElementName=micSongsCount,Path=Output}" Click="BtnClear_Click"/>
 
         <con:MultipleInputs2Converter x:Name="micSongs" Input0="{Binding AudioService.FileBasePlaylist.ViewSongs}"
                                       Input1="{Binding AudioService.CurrentPlaylist.ViewSongs}"
                                       Convert="MicSongs_Convert"/>
 
-        <ListBox Grid.Row="2" Grid.ColumnSpan="3" Margin="0,5" HorizontalAlignment="Stretch"
+        <ListBox Grid.Row="2" Grid.ColumnSpan="4" Margin="0,5" HorizontalAlignment="Stretch"
                  ItemsSource="{Binding ElementName=micSongs,Path=Output}"
                  SelectionChanged="ListBox_SelectionChanged">
             <ListBox.ItemContainerStyle>
@@ -67,8 +78,8 @@
                         <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
 
                         <StackPanel Grid.Column="3" Grid.RowSpan="2" Orientation="Horizontal">
-                            <SymbolIcon Symbol="Play" Margin="5" Tapped="SyiPlay_Tapped"/>
-                            <SymbolIcon Symbol="Add" Margin="5" Tapped="SyiAdd_Tapped"/>
+                            <SymbolIcon Symbol="Play" Margin="10,5" Tapped="SyiPlay_Tapped"/>
+                            <SymbolIcon Symbol="Add" Margin="10,5" Tapped="SyiAdd_Tapped"/>
                         </StackPanel>
                     </Grid>
                 </DataTemplate>
