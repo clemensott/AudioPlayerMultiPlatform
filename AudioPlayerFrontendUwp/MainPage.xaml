@@ -5,9 +5,10 @@
     xmlns:local="using:AudioPlayerFrontend"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:com="using:AudioPlayerBackend.Common"
+    xmlns:com="using:AudioPlayerBackend.Player"
     xmlns:con="using:StdOttUwp.Converters"
     xmlns:spi="using:StdOttUwp.Converters.Specialized"
+    xmlns:sys="using:System"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     Loaded="Page_Loaded">
@@ -32,10 +33,12 @@
                                     EqualsValue="Pause"
                                     NotEqualsValue="Play"/>
 
-        <spi:VisableCollapsedConverter x:Key="visCon" />
-        <spi:CollapsedVisableConverter x:Key="hidCon" />
+        <spi:VisibleCollapsedConverter x:Key="visCon" />
+        <spi:CollapsedVisibleConverter x:Key="hidCon" />
 
         <local:LoopIconConverter x:Key="loopIcoCon" />
+
+        <x:Int32 x:Key="negativeOne">-1</x:Int32>
     </Page.Resources>
 
     <Grid>
@@ -55,22 +58,22 @@
                 </Grid.ColumnDefinitions>
 
                 <Grid Margin="5,0" VerticalAlignment="Center"
-                      DataContext="{Binding AudioService.Base}" Visibility="{Binding Converter={StaticResource viewClientSetCon}}">
+                      Visibility="{Binding ServicePlayer,Converter={StaticResource viewClientSetCon}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
                     <CheckBox Content="Stream" VerticalAlignment="Center"
-                              Margin="0,0,-40,0" IsChecked="{Binding IsStreaming,Mode=TwoWay}"/>
+                              Margin="0,0,-40,0" IsChecked="{Binding Communicator.IsStreaming,Mode=TwoWay}"/>
                     <Slider Grid.Column="1" Maximum="1" VerticalAlignment="Center" Margin="0,0,0,-8"
-                            SnapsTo="StepValues" StepFrequency="0.01" Value="{Binding ClientVolume}"
+                            SnapsTo="StepValues" StepFrequency="0.01" Value="{Binding ServicePlayer.Player.Volume}"
                             ThumbToolTipValueConverter="{StaticResource volTooTipCon}"
                             IsEnabled="{Binding IsStreaming}"/>
 
                 </Grid>
 
-                <Button Grid.Column="2" Margin="3" Click="BtnReload_Click">
+                <Button Grid.Column="1" Margin="3" Click="BtnReload_Click">
                     <SymbolIcon Symbol="Refresh"/>
                 </Button>
             </Grid>
@@ -94,7 +97,7 @@
                                   Converter={StaticResource loopIcoCon}}"/>
                 </Button>
 
-                <ToggleButton Grid.Column="3" Margin="3" IsChecked="{Binding AudioService.CurrentPlaylist.IsShuffle,Mode=TwoWay}">
+                <ToggleButton Grid.Column="3" Margin="3" IsChecked="{Binding AudioService.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}">
                     <SymbolIcon Symbol="Shuffle"/>
                 </ToggleButton>
 
@@ -103,15 +106,21 @@
                 </Button>
             </Grid>
 
+            <con:MultipleInputs3Converter x:Name="micCurrentSongIndex" 
+                                          Input0="{Binding AudioService.CurrentPlaylist,Mode=TwoWay}" 
+                                          Input1="{Binding AudioService.CurrentPlaylist.CurrentSong,Mode=TwoWay}" 
+                                          Input2="{StaticResource negativeOne}"
+                                          ConvertRef="MicCurrentSongIndex_ConvertRef"/>
+
             <con:MultipleInputs2Converter x:Name="mulDoRemove" 
-                                          Input0="{Binding AudioService.FileBasePlaylist}"
+                                          Input0="{Binding AudioService.SourcePlaylist}"
                                           Input1="{Binding AudioService.CurrentPlaylist}"
                                           Convert="MulDoRemove_Convert"/>
 
             <ListBox Grid.Row="2" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
                      DataContext="{Binding AudioService.CurrentPlaylist}"
-                     ItemsSource="{Binding ViewSongs}"
-                     SelectedIndex="{Binding CurrentViewSongIndex,Mode=TwoWay}"
+                     ItemsSource="{Binding AllSongs}"
+                     SelectedIndex="{Binding ElementName=micCurrentSongIndex,Path=Input2,Mode=TwoWay}"
                      SelectionChanged="LbxSongs_SelectionChanged">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
@@ -139,7 +148,7 @@
                             <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}"/>
                             <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
 
-                            <SymbolIcon Grid.Column="2" Grid.RowSpan="2" 
+                            <SymbolIcon Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" 
                                         Visibility="{Binding ElementName=mulDoRemove,Path=Output,Converter={StaticResource visCon}}"
                                         Symbol="Remove" Tapped="SyiRemove_Tapped"/>
                         </Grid>
@@ -164,7 +173,7 @@
         </Grid>
 
         <StackPanel Grid.RowSpan="3" VerticalAlignment="Center" Visibility="{Binding IsTryOpening,Converter={StaticResource visCon}}">
-            <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
+            <TextBlock Text="Opening AudioService..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
             <ProgressRing IsActive="True" Height="100" Width="100" Margin="10"/>
             <Button Content="Cancel" Width="100" Margin="5" HorizontalAlignment="Center" Click="BtnCancel_Click"/>
         </StackPanel>

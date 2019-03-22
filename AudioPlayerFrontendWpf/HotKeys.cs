@@ -9,7 +9,7 @@ namespace AudioPlayerFrontend
 
         public HotKey Toggle
         {
-            get { return toggle; }
+            get => toggle;
             set
             {
                 if (value == toggle) return;
@@ -32,7 +32,7 @@ namespace AudioPlayerFrontend
 
         public HotKey Next
         {
-            get { return next; }
+            get => next;
             set
             {
                 if (value == next) return;
@@ -55,7 +55,7 @@ namespace AudioPlayerFrontend
 
         public HotKey Previous
         {
-            get { return previous; }
+            get => previous;
             set
             {
                 if (value == previous) return;
@@ -78,7 +78,7 @@ namespace AudioPlayerFrontend
 
         public HotKey Play
         {
-            get { return play; }
+            get => play;
             set
             {
                 if (value == play) return;
@@ -101,7 +101,7 @@ namespace AudioPlayerFrontend
 
         public HotKey Pause
         {
-            get { return pause; }
+            get => pause;
             set
             {
                 if (value == pause) return;
@@ -124,7 +124,7 @@ namespace AudioPlayerFrontend
 
         public HotKey Restart
         {
-            get { return restart; }
+            get => restart;
             set
             {
                 if (value == restart) return;

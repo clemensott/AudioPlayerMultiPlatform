@@ -1,9 +1,9 @@
 ﻿using System;
-using AudioPlayerBackend.Common;
 using NAudio.MediaFoundation;
 using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.Storage.Streams;
+using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend.Join
 {
@@ -13,11 +13,11 @@ namespace AudioPlayerFrontend.Join
 
         public MediaFoundationReaderUniversalSettings settings;
 
-        WaveFormat AudioPlayerBackend.Common.IWaveProvider.WaveFormat { get { return format; } }
+        WaveFormat AudioPlayerBackend.Player.IWaveProvider.WaveFormat => format;
 
         public IRandomAccessStream Stream
         {
-            get { return settings.Stream; }
+            get => settings.Stream;
             set
             {
                 settings.Stream = value;

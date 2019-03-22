@@ -103,12 +103,12 @@
     <Compile Include="Converter\IsIMqttAudioConverter.cs" />
     <Compile Include="Converter\LoopIconConverter.cs" />
     <Compile Include="Join\AudioFileReader.cs" />
+    <Compile Include="Join\AudioServiceHelper.cs" />
     <Compile Include="Join\BufferedWaveProvider.cs" />
     <Compile Include="Join\Convert.cs" />
     <Compile Include="Join\IWaveProvider.cs" />
-    <Compile Include="Join\AudioHelper.cs" />
-    <Compile Include="Join\MqttClient.cs" />
-    <Compile Include="Join\MqttServer.cs" />
+    <Compile Include="Join\NotifyPropertyChangedHelper.cs" />
+    <Compile Include="Join\PlayerHelper.cs" />
     <Compile Include="Join\Player.cs" />
     <Compile Include="Join\ServiceBuilderHelper.cs" />
     <Compile Include="Join\WaveProvider.cs" />
@@ -119,14 +119,12 @@
     <Compile Include="SearchPage.xaml.cs">
       <DependentUpon>SearchPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ViewModel\PlaylistViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceProfile.cs" />
     <Compile Include="SettingsPage.xaml.cs">
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Converter\TimeSpanToSecondsConverter.cs" />
-    <Compile Include="ViewModel\AudioViewModel.cs" />
     <Compile Include="ViewModel\ViewModel.cs" />
     <Compile Include="VolumeToolTipConverter.cs" />
   </ItemGroup>
@@ -209,10 +207,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
-      <Version>6.1.9</Version>
-    </PackageReference>
-    <PackageReference Include="MQTTnet">
-      <Version>2.8.5</Version>
+      <Version>6.2.8</Version>
     </PackageReference>
     <PackageReference Include="NAudio">
       <Version>1.8.5</Version>

@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend;
+using AudioPlayerBackend.Audio;
 using AudioPlayerFrontend.Join;
 using StdOttFramework.Converters;
 using System.Windows;
@@ -19,12 +20,12 @@ namespace AudioPlayerFrontend
 
         public HotKeysBuilder HotKeysBuilder { get; private set; }
 
-        public SettingsWindow() : this(new ServiceBuilder(new ServiceBuilderHelper()), new HotKeysBuilder())
+        public SettingsWindow() : this(new ServiceBuilder(ServiceBuilderHelper.Current), new HotKeysBuilder())
         {
         }
 
-        public SettingsWindow(IAudioExtended service, HotKeys hotKeys)
-            : this(new ServiceBuilder(new ServiceBuilderHelper()).WithService(service), new HotKeysBuilder().WithHotKeys(hotKeys))
+        public SettingsWindow(IAudioService service, HotKeys hotKeys)
+            : this(new ServiceBuilder(ServiceBuilderHelper.Current).WithService(service), new HotKeysBuilder().WithHotKeys(hotKeys))
         {
         }
 
@@ -85,11 +86,6 @@ namespace AudioPlayerFrontend
         private void CbxStreaming_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             ServiceBuilder.IsStreaming = null;
-        }
-
-        private void SldClientVolume_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            ServiceBuilder.ClientVolume = null;
         }
 
         private void CbxAllShuffle_MouseRightButtonUp(object sender, MouseButtonEventArgs e)

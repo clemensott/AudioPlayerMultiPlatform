@@ -3,7 +3,7 @@
   <Identity Name="9a6f7fc2-03ce-4a4b-b733-f2ced5d5bc4e" Publisher="CN=Clemens" Version="1.0.0.0" />
   <mp:PhoneIdentity PhoneProductId="9a6f7fc2-03ce-4a4b-b733-f2ced5d5bc4e" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
-    <DisplayName>AudioPlayerFrontendUwp</DisplayName>
+    <DisplayName>AudioServicePlayerFrontendUwp</DisplayName>
     <PublisherDisplayName>Clemens</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -14,8 +14,8 @@
     <Resource Language="x-generate" />
   </Resources>
   <Applications>
-    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="AudioPlayerFrontendUwp.App">
-      <uap:VisualElements DisplayName="Remote Audio Player" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" Description="Controls an audio player remotly" BackgroundColor="transparent">
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="AudioServicePlayerFrontendUwp.App">
+      <uap:VisualElements DisplayName="Remote Audio ServicePlayer" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" Description="Controls an audio player remotly" BackgroundColor="transparent">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square310x310Logo="Assets\LargeTile.png" Square71x71Logo="Assets\SmallTile.png">
         </uap:DefaultTile>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />

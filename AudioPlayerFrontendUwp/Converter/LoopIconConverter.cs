@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackend;
+﻿using AudioPlayerBackend.Audio;
 using System;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Data;

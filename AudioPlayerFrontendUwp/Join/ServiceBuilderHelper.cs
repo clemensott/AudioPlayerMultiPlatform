@@ -1,22 +1,52 @@
-﻿using AudioPlayerBackend;
+﻿using System;
+using AudioPlayerBackend;
+using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Communication.MQTT;
+using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend.Join
 {
-    class ServiceBuilderHelper : IServiceBuilderHelper
+    class ServiceBuilderHelper : NotifyPropertyChangedHelper, IServiceBuilderHelper
     {
-        public IMqttAudioClient CreateAudioClient(IPlayer player, string serverAddress, int? port, ServiceBuilder builder)
+        private static ServiceBuilderHelper instance;
+
+        public static ServiceBuilderHelper Current
         {
-            return new MqttAudioClient(player, serverAddress, port, new AudioHelper());
+            get
+            {
+                if (instance == null) instance = new ServiceBuilderHelper();
+
+                return instance;
+            }
         }
 
-        public IMqttAudioService CreateAudioServer(IPlayer player, int port, ServiceBuilder builder)
+        public Func<IAudioService> CreateAudioService => DoCreateAudioService;
+
+        private ServiceBuilderHelper() { }
+
+        private IAudioService DoCreateAudioService()
         {
-            return new MqttAudioService(player, port, new AudioHelper());
+            return new AudioService(AudioServiceHelper.Current);
         }
 
-        public IAudioExtended CreateAudioService(IPlayer player, ServiceBuilder builder)
+        public AudioServicePlayer CreateAudioServicePlayer(IWaveProviderPlayer player, IAudioService service)
         {
-            return new AudioService(player, new AudioHelper());
+            return new AudioServicePlayer(service, player, PlayerHelper.Current);
+        }
+
+        public AudioStreamPlayer CreateAudioStreamPlayer(IWaveProviderPlayer player, IAudioService service)
+        {
+            return new AudioStreamPlayer(service, player, PlayerHelper.Current);
+        }
+
+        public MqttClientCommunicator CreateMqttClientCommunicator(IAudioService service, string serverAddress, int? port)
+        {
+            return new MqttClientCommunicator(service, serverAddress, port);
+        }
+
+        public MqttServerCommunicator CreateMqttServerCommunicator(IAudioService service, int port)
+        {
+            return new MqttServerCommunicator(service, port);
         }
     }
 }

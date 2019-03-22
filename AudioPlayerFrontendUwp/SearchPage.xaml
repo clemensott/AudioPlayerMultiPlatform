@@ -28,24 +28,24 @@
         </Button>
 
         <TextBox Grid.Column="1" Name="tbxSearchKey" Margin="3" 
-                 Text="{Binding AudioService.FileBasePlaylist.SearchKey,
+                 Text="{Binding AudioService.SourcePlaylist.SearchKey,
                    Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
 
         <Button Grid.Column="2" Margin="3" Click="BtnSelectAll_Click">
             <SymbolIcon Symbol="SelectAll"/>
         </Button>
 
-        <con:MultipleInputs2Converter x:Name="micPlaylist" Input0="{Binding AudioService.AdditionalPlaylists}"
-                                      Input1="{Binding AudioService.AdditionalPlaylists.Count}" Convert="MicPlaylist_Convert"/>
+        <con:SingleInputConverter x:Name="sicPlaylist" Input="{Binding AudioService.Playlists}"
+                                  Convert="SicPlaylist_Convert"/>
 
-        <con:SingleValueConverter x:Name="svcSongsCount" Input="{Binding ElementName=micPlaylist,Path=Output.Songs}"
-                                  Convert="SvcSongsCount_Convert"/>
+        <con:SingleInputConverter x:Name="sicSongsCount" Input="{Binding ElementName=micPlaylist,Path=Output.Songs}"
+                                  Convert="SicSongsCount_Convert"/>
 
         <Button Grid.Column="3" Margin="3" MinWidth="40" VerticalAlignment="Stretch"
-                Content="{Binding ElementName=micSongsCount,Path=Output}" Click="BtnClear_Click"/>
+                Content="{Binding ElementName=sicSongsCount,Path=Output}" Click="BtnClear_Click"/>
 
-        <con:MultipleInputs2Converter x:Name="micSongs" Input0="{Binding AudioService.FileBasePlaylist.ViewSongs}"
-                                      Input1="{Binding AudioService.CurrentPlaylist.ViewSongs}"
+        <con:MultipleInputs2Converter x:Name="micSongs" Input0="{Binding AudioService.SourcePlaylist.SearchSongs}"
+                                      Input1="{Binding AudioService.CurrentPlaylist.AllSongs}"
                                       Convert="MicSongs_Convert"/>
 
         <ListBox Grid.Row="2" Grid.ColumnSpan="4" Margin="0,5" HorizontalAlignment="Stretch"

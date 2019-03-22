@@ -1,7 +1,9 @@
-﻿using AudioPlayerBackend.Common;
+﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Communication;
+using AudioPlayerBackend.Communication.MQTT;
+using AudioPlayerBackend.Player;
 using StdOttStandard;
 using StdOttStandard.CommendlinePaser;
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -11,16 +13,18 @@ namespace AudioPlayerBackend
 {
     public class ServiceBuilder : INotifyPropertyChanged
     {
-        private IServiceBuilderHelper helper;
+        private readonly IServiceBuilderHelper helper;
         private bool ifNon, reload;
         private bool? isAllShuffle, isSearchShuffle, isOnlySearch, play, isStreaming;
         private int serverPort;
         private int? clientPort;
         private string searchKey, serverAddress;
-        private float? volume, clientVolume;
+        private float? volume;
         private string[] mediaSources;
-        private IAudioExtended service;
-        private IPlayer player;
+        private IAudioService service;
+        private ICommunicator communicator;
+        private IServicePlayer servicePlayer;
+        private IWaveProviderPlayer player;
 
         public bool BuildStandalone { get; private set; }
 
@@ -30,7 +34,7 @@ namespace AudioPlayerBackend
 
         public bool IfNon
         {
-            get { return ifNon; }
+            get => ifNon;
             set
             {
                 if (value == ifNon) return;
@@ -42,7 +46,7 @@ namespace AudioPlayerBackend
 
         public bool Reload
         {
-            get { return reload; }
+            get => reload;
             set
             {
                 if (value == reload) return;
@@ -54,7 +58,7 @@ namespace AudioPlayerBackend
 
         public bool? IsAllShuffle
         {
-            get { return isAllShuffle; }
+            get => isAllShuffle;
             set
             {
                 if (value == isAllShuffle) return;
@@ -66,7 +70,7 @@ namespace AudioPlayerBackend
 
         public bool? IsSearchShuffle
         {
-            get { return isSearchShuffle; }
+            get => isSearchShuffle;
             set
             {
                 if (value == isSearchShuffle) return;
@@ -78,7 +82,7 @@ namespace AudioPlayerBackend
 
         public bool? IsOnlySearch
         {
-            get { return isOnlySearch; }
+            get => isOnlySearch;
             set
             {
                 if (value == isOnlySearch) return;
@@ -90,7 +94,7 @@ namespace AudioPlayerBackend
 
         public string SearchKey
         {
-            get { return searchKey; }
+            get => searchKey;
             set
             {
                 if (value == searchKey) return;
@@ -102,7 +106,7 @@ namespace AudioPlayerBackend
 
         public bool? Play
         {
-            get { return play; }
+            get => play;
             set
             {
                 if (value == play) return;
@@ -114,7 +118,7 @@ namespace AudioPlayerBackend
 
         public bool? IsStreaming
         {
-            get { return isStreaming; }
+            get => isStreaming;
             set
             {
                 if (value == isStreaming) return;
@@ -126,7 +130,7 @@ namespace AudioPlayerBackend
 
         public int ServerPort
         {
-            get { return serverPort; }
+            get => serverPort;
             set
             {
                 if (value == serverPort) return;
@@ -138,7 +142,7 @@ namespace AudioPlayerBackend
 
         public int? ClientPort
         {
-            get { return clientPort; }
+            get => clientPort;
             set
             {
                 if (value == clientPort) return;
@@ -150,7 +154,7 @@ namespace AudioPlayerBackend
 
         public string ServerAddress
         {
-            get { return serverAddress; }
+            get => serverAddress;
             set
             {
                 if (value == serverAddress) return;
@@ -162,7 +166,7 @@ namespace AudioPlayerBackend
 
         public float? Volume
         {
-            get { return volume; }
+            get => volume;
             set
             {
                 if (value == volume) return;
@@ -172,21 +176,9 @@ namespace AudioPlayerBackend
             }
         }
 
-        public float? ClientVolume
-        {
-            get { return clientVolume; }
-            set
-            {
-                if (value == clientVolume) return;
-
-                clientVolume = value;
-                OnPropertyChanged(nameof(ClientVolume));
-            }
-        }
-
         public string[] MediaSources
         {
-            get { return mediaSources; }
+            get => mediaSources;
             set
             {
                 if (value.BothNullOrSequenceEqual(mediaSources)) return;
@@ -196,9 +188,33 @@ namespace AudioPlayerBackend
             }
         }
 
-        public IPlayer Player
+        public IAudioService Service
         {
-            get { return player; }
+            get => service;
+            set
+            {
+                if (value == service) return;
+
+                service = value;
+                OnPropertyChanged(nameof(Service));
+            }
+        }
+
+        public ICommunicator Communicator
+        {
+            get => communicator;
+            set
+            {
+                if (value == communicator) return;
+
+                communicator = value;
+                OnPropertyChanged(nameof(Communicator));
+            }
+        }
+
+        public IWaveProviderPlayer Player
+        {
+            get => player;
             set
             {
                 if (value == player) return;
@@ -208,15 +224,15 @@ namespace AudioPlayerBackend
             }
         }
 
-        public IAudioExtended Service
+        public IServicePlayer ServicePlayer
         {
-            get { return service; }
+            get => servicePlayer;
             set
             {
-                if (value == service) return;
+                if (value == servicePlayer) return;
 
-                service = value;
-                OnPropertyChanged(nameof(Service));
+                servicePlayer = value;
+                OnPropertyChanged(nameof(ServicePlayer));
             }
         }
 
@@ -229,12 +245,10 @@ namespace AudioPlayerBackend
 
         public ServiceBuilder WithArgs(IEnumerable<string> args)
         {
-            Option clientOpt = new Option("c", "client",
-                "Starts the app as client with the following server adresse and port", false, 2, 1);
+            Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 2, 1);
             Option serverOpt = new Option("s", "server", "Starts the app as server with the following port", false, 1, 1);
-            Option sourcesOpt = new Option("m", "media-sources", "Files and diretories to play", false, -1, 0);
-            Option ifNonOpt = new Option("i", "if-non",
-                "If given the Media sources are only used if there are non", false, 0, 0);
+            Option sourcesOpt = new Option("m", "media-sources", "Files and directories to play", false, -1, 0);
+            Option ifNonOpt = new Option("i", "if-non", "If given the Media sources are only used if there are non", false, 0, 0);
             Option reloadOpt = new Option("r", "reload", "Forces to reload", false, 0, 0);
             Option allShuffleOpt = Option.GetLongOnly("all-shuffle", "Shuffles all songs.", false, 0, 0);
             Option searchShuffleOpt = Option.GetLongOnly("search-shuffle", "Shuffles all songs.", false, 0, 0);
@@ -243,11 +257,9 @@ namespace AudioPlayerBackend
             Option playOpt = new Option("p", "play", "Starts playback on startup", false, 0, 0);
             Option serviceVolOpt = new Option("v", "volume", "The volume of service (value between 0 and 1)", false, 1, 1);
             Option streamingOpt = Option.GetLongOnly("stream", "If given the audio is streamed to the client", false, 0, 0);
-            Option clientVolOpt = Option.GetLongOnly("client-volume",
-                "The volume of client for streaming (value between 0 and 1)", false, 1, 1);
 
             Options options = new Options(sourcesOpt, ifNonOpt, reloadOpt, clientOpt, serverOpt, playOpt,
-                allShuffleOpt, searchShuffleOpt, onlySearchOpt, searchKeyOpt, serviceVolOpt, streamingOpt, clientVolOpt);
+                allShuffleOpt, searchShuffleOpt, onlySearchOpt, searchKeyOpt, serviceVolOpt, streamingOpt);
             OptionParseResult result = options.Parse(args);
 
             int port;
@@ -283,41 +295,21 @@ namespace AudioPlayerBackend
 
             if (result.HasValidOptionParseds(streamingOpt)) WithIsStreaming();
 
-            if (result.TryGetFirstValidOptionParseds(clientVolOpt, out parsed) &&
-                float.TryParse(parsed.Values[0], out volume)) WithClientVolume(volume);
-
             return this;
         }
 
-        public ServiceBuilder WithService(IAudioExtended service)
+        public ServiceBuilder WithService(IAudioService service)
         {
-            if (service is IMqttAudioService) WithService(service as IMqttAudioService);
-            else if (service is IMqttAudioClient) WithService(service as IMqttAudioClient);
-
             Service = service;
 
-            return WithMediaSources(service.FileMediaSources)
-                .WithIsAllShuffle(service.FileBasePlaylist.IsAllShuffle)
-                .WithIsSearchShuffle(service.FileBasePlaylist.IsSearchShuffle)
-                .WithIsOnlySearch(service.FileBasePlaylist.IsOnlySearch)
-                .WithSearchKey(service.FileBasePlaylist.SearchKey)
+            return WithMediaSources(service.SourcePlaylist.FileMediaSources)
+                .WithIsAllShuffle(service.SourcePlaylist.IsAllShuffle)
+                .WithIsSearchShuffle(service.SourcePlaylist.IsSearchShuffle)
+                .WithSearchKey(service.SourcePlaylist.SearchKey)
                 //.WithPlay(service.PlayState == PlaybackState.Playing)
                 .WithReload(false)
                 .WithSetMediaIfNon(false)
-                .WithVolume(service.Volume)
-                .WithPlayer(service.Player);
-        }
-
-        private ServiceBuilder WithService(IMqttAudioClient client)
-        {
-            return WithClient(client.ServerAddress, client.Port)
-               .WithIsStreaming(client.IsStreaming)
-               .WithClientVolume(client.ClientVolume);
-        }
-
-        private ServiceBuilder WithService(IMqttAudioService server)
-        {
-            return WithServer(server.Port);
+                .WithVolume(service.Volume);
         }
 
         public ServiceBuilder WithStandalone()
@@ -438,29 +430,38 @@ namespace AudioPlayerBackend
             return this;
         }
 
-        public ServiceBuilder WithClientVolume(float? volume)
+        public ServiceBuilder WithCommunicator(ICommunicator communicator)
         {
-            ClientVolume = volume;
+            Communicator = communicator;
 
             return this;
         }
 
-        public ServiceBuilder WithPlayer(IPlayer player)
+        public ServiceBuilder WithPlayer(IWaveProviderPlayer player)
         {
-            this.player = player;
+            Player = player;
 
             return this;
         }
 
-        public async Task<IAudioExtended> Build()
+        public ServiceBuilder WithPlayerService(IServicePlayer servicePlayer)
         {
-            IAudioExtended service;
+            ServicePlayer = servicePlayer;
+
+            return this;
+        }
+
+        public async Task<ServiceBuildResult> Build()
+        {
+            IAudioService service = Service ?? CreateAudioService();
+            MqttCommunicator communicator;
+            IServicePlayer servicePlayer;
 
             if (BuildServer)
             {
-                IMqttAudioService server = Service as IMqttAudioService;
+                MqttServerCommunicator server = Communicator as MqttServerCommunicator;
 
-                if (server != null && (ServerPort != server.Port || player != server.Player))
+                if (server != null && (ServerPort != server.Port || Service != server.Service))
                 {
                     if (server.IsOpen) await server.CloseAsync();
 
@@ -469,19 +470,19 @@ namespace AudioPlayerBackend
 
                 if (server == null)
                 {
-                    server = CreateAudioServer(player, ServerPort);
+                    server = CreateMqttServerCommunicator(service, ServerPort);
                 }
 
                 if (!server.IsOpen) await server.OpenAsync();
 
-                service = server;
+                communicator = server;
+                servicePlayer = ServicePlayer as AudioServicePlayer ?? CreateAudioServicePlayer(Player, service);
             }
             else if (BuildClient)
             {
-                IMqttAudioClient client = Service as IMqttAudioClient;
+                MqttClientCommunicator client = Communicator as MqttClientCommunicator;
 
-                if (client != null && (ServerAddress != client.ServerAddress ||
-                    ClientPort != client.Port || player != client.Player))
+                if (client != null && (ServerAddress != client.ServerAddress || ClientPort != client.Port))
                 {
                     await client.CloseAsync();
                     client = null;
@@ -489,49 +490,63 @@ namespace AudioPlayerBackend
 
                 if (client == null)
                 {
-                    client = CreateAudioClient(player, serverAddress, clientPort);
+                    client = CreateMqttClientCommunicator(service, serverAddress, clientPort);
                 }
 
                 if (!client.IsOpen) await client.OpenAsync();
 
                 if (isStreaming.HasValue) client.IsStreaming = isStreaming.Value;
-                if (clientVolume.HasValue) client.ClientVolume = clientVolume.Value;
 
-                service = client;
+                communicator = client;
+                servicePlayer = ServicePlayer as AudioStreamPlayer ?? CreateAudioStreamPlayer(Player, service);
             }
             else
             {
-                service = Service == null || Service is IMqttAudio ? CreateAudioService(player) : Service;
+                communicator = null;
+                servicePlayer = ServicePlayer as AudioServicePlayer ?? CreateAudioServicePlayer(Player, service);
             }
 
-            bool setMediaSources = mediaSources != null && (!ifNon || !service.FileMediaSources.ToNotNull().Any());
+            bool setMediaSources = mediaSources != null && (!ifNon || !service.SourcePlaylist.FileMediaSources.ToNotNull().Any());
+            if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.SourcePlaylist.FileMediaSources))
+            {
+                service.SourcePlaylist.FileMediaSources = mediaSources;
+            }
+            else if (reload) service.SourcePlaylist.Reload();
 
-            if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.FileMediaSources)) service.FileMediaSources = mediaSources;
-            else if (reload) service.Reload();
-
-            if (IsAllShuffle.HasValue) service.FileBasePlaylist.IsAllShuffle = IsAllShuffle.Value;
-            if (IsSearchShuffle.HasValue) service.FileBasePlaylist.IsSearchShuffle = IsSearchShuffle.Value;
-            if (IsOnlySearch.HasValue) service.FileBasePlaylist.IsOnlySearch = IsOnlySearch.Value;
-            if (SearchKey != null) service.FileBasePlaylist.SearchKey = SearchKey;
+            if (IsAllShuffle.HasValue) service.SourcePlaylist.IsAllShuffle = IsAllShuffle.Value;
+            if (IsSearchShuffle.HasValue) service.SourcePlaylist.IsSearchShuffle = IsSearchShuffle.Value;
+            if (SearchKey != null) service.SourcePlaylist.SearchKey = SearchKey;
             if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (volume.HasValue) service.Volume = volume.Value;
 
-            return service;
+            return new ServiceBuildResult(service, communicator, servicePlayer);
         }
 
-        protected virtual IAudioExtended CreateAudioService(IPlayer player)
+        protected virtual IAudioService CreateAudioService()
         {
-            return helper.CreateAudioService(player, this);
+            if (helper.CreateAudioService != null) return helper.CreateAudioService();
+
+            return new AudioService();
         }
 
-        protected virtual IMqttAudioClient CreateAudioClient(IPlayer player, string serverAddress, int? port)
+        protected virtual MqttClientCommunicator CreateMqttClientCommunicator(IAudioService service, string serverAddress, int? port)
         {
-            return helper.CreateAudioClient(player, serverAddress, port, this);
+            return helper.CreateMqttClientCommunicator(service, serverAddress, port);
         }
 
-        protected virtual IMqttAudioService CreateAudioServer(IPlayer player, int port)
+        protected virtual MqttServerCommunicator CreateMqttServerCommunicator(IAudioService service, int port)
         {
-            return helper.CreateAudioServer(player, port, this);
+            return helper.CreateMqttServerCommunicator(service, port);
+        }
+
+        protected virtual AudioStreamPlayer CreateAudioStreamPlayer(IWaveProviderPlayer player, IAudioService service)
+        {
+            return helper.CreateAudioStreamPlayer(player, service);
+        }
+
+        protected virtual AudioServicePlayer CreateAudioServicePlayer(IWaveProviderPlayer player, IAudioService service)
+        {
+            return helper.CreateAudioServicePlayer(player, service);
         }
 
         private bool ContainsSameSongs(IEnumerable<Song> enum1, IEnumerable<Song> enum2)
@@ -539,14 +554,19 @@ namespace AudioPlayerBackend
             if (enum1 == enum2) return true;
             if (enum1 == null || enum2 == null) return false;
 
-            return enum1.All(s => enum2.Contains(s));
+            return enum1.All(enum2.Contains);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged(string name)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            if (PropertyChanged == null) return;
+
+            if (helper?.InvokeDispatcher != null) helper.InvokeDispatcher(raise);
+            else raise();
+
+            void raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

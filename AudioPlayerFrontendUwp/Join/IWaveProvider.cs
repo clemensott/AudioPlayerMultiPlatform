@@ -1,8 +1,6 @@
-﻿using AudioPlayerBackend.Common;
-
-namespace AudioPlayerFrontend.Join
+﻿namespace AudioPlayerFrontend.Join
 {
-    interface IWaveProvider : NAudio.Wave.IWaveProvider, AudioPlayerBackend.Common.IWaveProvider
+    interface IWaveProvider : NAudio.Wave.IWaveProvider, AudioPlayerBackend.Player.IWaveProvider
     {
     }
 }

@@ -4,13 +4,13 @@
     {
         private readonly NAudio.Wave.WaveFormat format;
 
-        public AudioPlayerBackend.Common.IWaveProvider Parent { get; private set; }
+        public AudioPlayerBackend.Player.IWaveProvider Parent { get; private set; }
 
-        public NAudio.Wave.WaveFormat WaveFormat { get { return format; } }
+        public NAudio.Wave.WaveFormat WaveFormat => format;
 
-        AudioPlayerBackend.Common.WaveFormat AudioPlayerBackend.Common.IWaveProvider.WaveFormat { get { return Parent.WaveFormat; } }
+        AudioPlayerBackend.Player.WaveFormat AudioPlayerBackend.Player.IWaveProvider.WaveFormat => Parent.WaveFormat;
 
-        public WaveProvider(AudioPlayerBackend.Common.IWaveProvider parent)
+        public WaveProvider(AudioPlayerBackend.Player.IWaveProvider parent)
         {
             Parent = parent;
             format = parent.WaveFormat.ToFrontend();

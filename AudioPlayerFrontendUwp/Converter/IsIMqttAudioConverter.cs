@@ -1,10 +1,10 @@
-﻿using AudioPlayerBackend;
-using StdOttUwp.Converters;
+﻿using StdOttUwp.Converters;
 using Windows.UI.Xaml;
+using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend
 {
-    class IsIMqttAudioConverter : IsTypeToValueConverter<IMqttAudio>
+    class IsIMqttAudioConverter : IsTypeToValueConverter<AudioStreamPlayer>
     {
         public IsIMqttAudioConverter()
         {

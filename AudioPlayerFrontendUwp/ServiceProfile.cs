@@ -67,7 +67,6 @@ namespace AudioPlayerFrontend
             SearchKey = sb.SearchKey;
             ServerAddress = sb.ServerAddress;
             Volume = sb.Volume;
-            ClientVolume = sb.ClientVolume;
             MediaSources = sb.MediaSources;
         }
 
@@ -88,7 +87,6 @@ namespace AudioPlayerFrontend
                 .WithSearchKey(SearchKey)
                 .WithServerAddress(ServerAddress)
                 .WithVolume(Volume)
-                .WithClientVolume(clientVolume)
                 .WithMediaSources(mediaSources);
         }
 

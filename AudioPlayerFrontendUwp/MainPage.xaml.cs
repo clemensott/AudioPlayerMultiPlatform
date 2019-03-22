@@ -1,11 +1,9 @@
-﻿using AudioPlayerBackend;
-using AudioPlayerBackend.Common;
+﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Player;
 using StdOttStandard;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Windows.ApplicationModel;
 using Windows.Storage;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
@@ -13,18 +11,10 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 
-// Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x407 dokumentiert.
-
 namespace AudioPlayerFrontend
 {
-    /// <summary>
-    /// Eine leere Seite, die eigenständig verwendet oder zu der innerhalb eines Rahmens navigiert werden kann.
-    /// </summary>
     public sealed partial class MainPage : Page
     {
-        private static readonly TimeSpan networkConnectionTimeOut = TimeSpan.FromMilliseconds(200),
-            networkConnectionMaxTime = TimeSpan.FromSeconds(5);
-
         private ViewModel viewModel;
 
         public MainPage()
@@ -54,24 +44,24 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
-        private async void MqttClient_Disconnected(object sender, MqttClientDisconnectedEventArgs e)
-        {
-            await Window.Current.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
-            {
-                string message = string.Format("Was connected: {0}\r\nException: {1}",
-                    e.ClientWasConnected, e.Exception?.ToString() ?? "null");
-                await new MessageDialog(message, "MqttClient_Disconnected").ShowAsync();
+        //private async void MqttClient_Disconnected(object sender, MqttClientDisconnectedEventArgs e)
+        //{
+        //    await Window.Current.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
+        //    {
+        //        string message = string.Format("Was connected: {0}\r\nException: {1}",
+        //            e.ClientWasConnected, e.Exception?.ToString() ?? "null");
+        //        await new MessageDialog(message, "MqttClient_Disconnected").ShowAsync();
 
-                IMqttAudioClient mqtttAudioClient = viewModel.AudioService?.Base as IMqttAudioClient;
-                mqtttAudioClient.MqttClient.Disconnected -= MqttClient_Disconnected;
+        //        IMqttAudioClient mqttAudioClient = viewModel.AudioService?.Base as IMqttAudioClient;
+        //        mqttAudioClient.MqttClient.Disconnected -= MqttClient_Disconnected;
 
-                if (await viewModel.OpenAsync(mqtttAudioClient)) mqtttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
-            });
-        }
+        //        if (await viewModel.OpenAsync(mqttAudioClient)) mqttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
+        //    });
+        //}
 
         private void BtnReload_Click(object sender, RoutedEventArgs e)
         {
-            viewModel.AudioService?.Reload();
+            viewModel.AudioService?.SourcePlaylist.Reload();
         }
 
         private void BtnSearch_Click(object sender, RoutedEventArgs e)
@@ -97,11 +87,11 @@ namespace AudioPlayerFrontend
 
         private void AbbPlayPause_Click(object sender, RoutedEventArgs e)
         {
-            AudioViewModel audio = viewModel.AudioService;
+            IAudioService service = viewModel.AudioService;
 
-            if (audio == null) return;
+            if (service == null) return;
 
-            audio.PlayState = audio.PlayState == PlaybackState.Playing ? PlaybackState.Paused : PlaybackState.Playing;
+            service.PlayState = service.PlayState == PlaybackState.Playing ? PlaybackState.Paused : PlaybackState.Playing;
         }
 
         private void AbbNext_Click(object sender, RoutedEventArgs e)
@@ -113,11 +103,11 @@ namespace AudioPlayerFrontend
         {
             if (viewModel.AudioService != null)
             {
-                viewModel.Builder.WithService(viewModel.AudioService.Base);
+                viewModel.Builder.WithService(viewModel.AudioService);
 
                 try
                 {
-                    if (viewModel.AudioService is IMqttAudio mqtttAudio) await mqtttAudio.CloseAsync();
+                    if (viewModel.Communicator != null) await viewModel.Communicator.CloseAsync();
                 }
                 catch { }
             }
@@ -130,30 +120,30 @@ namespace AudioPlayerFrontend
             viewModel.CancelBuildOrOpen();
         }
 
-        private object MulDoRemove_Convert(object input0, object input1)
+        private object MulDoRemove_Convert(object input0, object input1, int changedIndex)
         {
             return !ReferenceEquals(input0, input1);
         }
 
         private object MulViewSongs_Convert(object input0, object input1, object input2, object input3)
         {
-            IPlaylistExtended fileBasePlaylist = (IPlaylistExtended)input0;
+            ISourcePlaylist sourcePlaylist = (ISourcePlaylist)input0;
             IEnumerable<Song> fileBasePlaylistViewSongs = (IEnumerable<Song>)input1;
-            IPlaylistExtended currentPlaylist = (IPlaylistExtended)input2;
+            IPlaylist currentPlaylist = (IPlaylist)input2;
             IEnumerable<Song> currentPlaylistViewSongs = (IEnumerable<Song>)input3;
 
-            return fileBasePlaylist?.IsSearching == true && fileBasePlaylist != currentPlaylist ?
+            return sourcePlaylist?.IsSearching == true && sourcePlaylist != currentPlaylist ?
                 fileBasePlaylistViewSongs?.Except(currentPlaylistViewSongs.ToNotNull()) : currentPlaylistViewSongs;
         }
 
         private void SyiRemove_Tapped(object sender, TappedRoutedEventArgs e)
         {
             Song song = (Song)((FrameworkElement)sender).DataContext;
-            AudioViewModel service = viewModel.AudioService;
+            IAudioService service = viewModel.AudioService;
 
             if (service.CurrentPlaylist.Songs.All(s => s == song))
             {
-                service.AdditionalPlaylists.Remove(service.CurrentPlaylist);
+                service.Playlists.Remove(service.CurrentPlaylist);
             }
             else service.CurrentPlaylist.Songs = service.CurrentPlaylist.Songs.Where(s => s != song).ToArray();
         }
@@ -183,6 +173,25 @@ namespace AudioPlayerFrontend
         private void SplCurrentSong_Tapped(object sender, TappedRoutedEventArgs e)
         {
             Scroll();
+        }
+
+        private object MicCurrentSongIndex_ConvertRef(ref object input0, ref object input1, ref object input2, int changedInput)
+        {
+            System.Diagnostics.Debug.WriteLine("MicCurrentSongIndex_ConvertRef1: " + changedInput);
+            if (input0 == null) return null;
+
+            IPlaylist playlist = (IPlaylist)input0;
+            Song? currentSong = (Song?)input1;
+            int index = (int)input2;
+
+            if (changedInput == 2 && index != -1) input1 = playlist.AllSongs.ElementAt(index);
+            else if (currentSong.HasValue && playlist.AllSongs.Contains(currentSong.Value))
+            {
+                input2 = playlist.AllSongs.IndexOf(currentSong.Value);
+            }
+
+            System.Diagnostics.Debug.WriteLine("MicCurrentSongIndex_ConvertRef2");
+            return null;
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)

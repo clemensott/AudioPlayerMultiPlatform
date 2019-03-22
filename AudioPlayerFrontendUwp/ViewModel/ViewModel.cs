@@ -1,6 +1,11 @@
-﻿using AudioPlayerBackend;
+﻿using System;
+using AudioPlayerBackend;
+using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Communication;
+using AudioPlayerBackend.Communication.MQTT;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend
 {
@@ -8,11 +13,13 @@ namespace AudioPlayerFrontend
     {
         private bool canceled;
         private Task<bool> buildOrOpenTask;
-        private AudioViewModel audioService;
+        private IAudioService audioService;
+        private ICommunicator communicator;
+        private IServicePlayer servicePlayer;
 
         public bool Canceled
         {
-            get { return canceled; }
+            get => canceled;
             private set
             {
                 if (value == canceled) return;
@@ -26,7 +33,7 @@ namespace AudioPlayerFrontend
 
         public Task<bool> BuildOrOpenTask
         {
-            get { return buildOrOpenTask; }
+            get => buildOrOpenTask;
             private set
             {
                 if (value == buildOrOpenTask) return;
@@ -37,9 +44,9 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public AudioViewModel AudioService
+        public IAudioService AudioService
         {
-            get { return audioService; }
+            get => audioService;
             set
             {
                 if (value == audioService) return;
@@ -49,10 +56,35 @@ namespace AudioPlayerFrontend
             }
         }
 
+        public ICommunicator Communicator
+        {
+            get => communicator;
+            set
+            {
+                if (value == communicator) return;
+
+                communicator = value;
+                OnPropertyChanged(nameof(Communicator));
+            }
+        }
+
+        public IServicePlayer ServicePlayer
+        {
+            get => servicePlayer;
+            set
+            {
+                if (value == servicePlayer) return;
+
+                servicePlayer = value;
+                OnPropertyChanged(nameof(ServicePlayer));
+            }
+        }
+
         public ServiceBuilder Builder { get; private set; }
 
         public ViewModel(ServiceBuilder builder)
         {
+            System.Diagnostics.Debug.WriteLine("ViewModelCtor");
             Builder = builder;
         }
 
@@ -76,11 +108,16 @@ namespace AudioPlayerFrontend
             {
                 try
                 {
-                    AudioService = new AudioViewModel(await Builder.Build());
+                    ServiceBuildResult result = await Builder.Build();
+
+                    AudioService =result.AudioService;
+                    Communicator = result.Communicator;
+                    ServicePlayer = result.ServicePlayer;
                     break;
                 }
-                catch
+                catch(Exception e)
                 {
+                    System.Diagnostics.Debug.WriteLine(e);
                     await Task.Delay(200);
 
                     if (!Canceled) continue;
@@ -93,11 +130,11 @@ namespace AudioPlayerFrontend
             return AudioService != null;
         }
 
-        public async Task<bool> OpenAsync(IMqttAudio mqttAudio)
+        public async Task<bool> OpenAsync(ICommunicator communicator)
         {
             Canceled = false;
 
-            Task<bool> task = Open(mqttAudio);
+            Task<bool> task = Open(communicator);
             BuildOrOpenTask = task;
 
             bool built = await task;
@@ -107,15 +144,15 @@ namespace AudioPlayerFrontend
             return built;
         }
 
-        public async Task<bool> Open(IMqttAudio mqttAudio)
+        public async Task<bool> Open(ICommunicator communicator)
         {
-            if (mqttAudio == null || mqttAudio.IsOpen) return true;
+            if (communicator == null || communicator.IsOpen) return true;
 
             while (true)
             {
                 try
                 {
-                    await mqttAudio.OpenAsync();
+                    await communicator.OpenAsync();
                     break;
                 }
                 catch
@@ -128,7 +165,7 @@ namespace AudioPlayerFrontend
                 }
             }
 
-            return mqttAudio.IsOpen;
+            return communicator.IsOpen;
         }
 
         public void CancelBuildOrOpen() => Canceled = true;

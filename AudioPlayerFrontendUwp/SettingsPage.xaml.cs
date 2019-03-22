@@ -20,7 +20,7 @@ namespace AudioPlayerFrontend
 
         public ServiceBuilder ServiceBuilder
         {
-            get { return serviceBuilder; }
+            get => serviceBuilder;
             set
             {
                 serviceBuilder = null;
@@ -112,11 +112,6 @@ namespace AudioPlayerFrontend
         private void CbxStreaming_RightTapped(object sender, RightTappedRoutedEventArgs e)
         {
             if (ServiceBuilder != null) ServiceBuilder.IsStreaming = null;
-        }
-
-        private void SldClientVolume_RightTapped(object sender, RightTappedRoutedEventArgs e)
-        {
-            if (ServiceBuilder != null) ServiceBuilder.ClientVolume = null;
         }
 
         private void AbbGoBack_Click(object sender, RoutedEventArgs e)

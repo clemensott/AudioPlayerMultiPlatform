@@ -37,7 +37,7 @@ namespace AudioPlayerFrontend
             this.InitializeComponent();
             this.Suspending += OnSuspending;
 
-            serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper());
+            serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
             serviceBuilder.WithPlayer(new Join.Player());
 
             viewModel = new ViewModel(serviceBuilder);
@@ -155,7 +155,7 @@ namespace AudioPlayerFrontend
 
         private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
         {
-            if (viewModel.AudioService?.Base is IMqttAudio mqttAudio && mqttAudio.IsOpen)
+            if (viewModel.Communicator?.IsOpen == true)
             {
                 var deferral = e.GetDeferral();
 
@@ -166,7 +166,7 @@ namespace AudioPlayerFrontend
                     //    mqtttAudioClient.MqttClient.Disconnected -= MqttClient_Disconnected;
                     //}
 
-                    await mqttAudio.CloseAsync();
+                    await viewModel.Communicator.CloseAsync();
                 }
                 catch (Exception exc)
                 {
@@ -184,12 +184,7 @@ namespace AudioPlayerFrontend
 
         private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            IMqttAudio mqttAudio = viewModel.AudioService?.Base as IMqttAudio;
-
-            if (await viewModel.OpenAsync(mqttAudio) && mqttAudio is IMqttAudioClient mqtttAudioClient)
-            {
-                //mqtttAudioClient.MqttClient.Disconnected += MqttClient_Disconnected;
-            }
+            if (viewModel.Communicator != null) await viewModel.OpenAsync(viewModel.Communicator);
         }
     }
 }

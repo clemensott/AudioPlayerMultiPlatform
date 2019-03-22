@@ -1,6 +1,10 @@
-﻿using System;
+﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Communication;
+using AudioPlayerBackend.Player;
+using System;
 using System.ComponentModel;
 using System.Windows;
+using AudioPlayerBackend;
 
 namespace AudioPlayerFrontend
 {
@@ -8,16 +12,30 @@ namespace AudioPlayerFrontend
 
     class ViewModel : INotifyPropertyChanged
     {
+        private bool isUiEnabled;
         private OpenState audioServiceState;
         private Visibility openVisibility, tryOpeningVisibility, idleVisibility;
         private Exception buildException;
-        private AudioViewModel audioService;
-        private bool isUiEnabled;
+        private ServiceBuildResult service;
 
+        public bool IsUiEnabled
+        {
+            get => isUiEnabled;
+            set
+            {
+                if (value == isUiEnabled) return;
+
+                isUiEnabled = value;
+                OnPropertyChanged(nameof(IsUiEnabled));
+                OnPropertyChanged(nameof(AudioServiceUI));
+                OnPropertyChanged(nameof(CommunicatorUI));
+                OnPropertyChanged(nameof(ServicePlayerUI));
+            }
+        }
 
         public OpenState AudioServiceState
         {
-            get { return audioServiceState; }
+            get => audioServiceState;
             set
             {
                 if (value == audioServiceState) return;
@@ -51,7 +69,7 @@ namespace AudioPlayerFrontend
 
         public Visibility OpenVisibility
         {
-            get { return openVisibility; }
+            get => openVisibility;
             set
             {
                 if (value == openVisibility) return;
@@ -63,7 +81,7 @@ namespace AudioPlayerFrontend
 
         public Visibility TryOpeningVisibility
         {
-            get { return tryOpeningVisibility; }
+            get => tryOpeningVisibility;
             set
             {
                 if (value == tryOpeningVisibility) return;
@@ -75,7 +93,7 @@ namespace AudioPlayerFrontend
 
         public Visibility IdleVisibility
         {
-            get { return idleVisibility; }
+            get => idleVisibility;
             set
             {
                 if (value == idleVisibility) return;
@@ -87,7 +105,7 @@ namespace AudioPlayerFrontend
 
         public Exception BuildException
         {
-            get { return buildException; }
+            get => buildException;
             set
             {
                 if (value == buildException) return;
@@ -97,36 +115,40 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public AudioViewModel AudioService
+        public ServiceBuildResult Service
         {
-            get { return audioService ; }
+            get => service;
             set
             {
-                if (value == audioService) return;
+                if (value == service) return;
 
-                audioService = value;
-                OnPropertyChanged(nameof(AudioService));
+                ServiceBuildResult oldService = Service;
+
+                service = value;
+                OnPropertyChanged(nameof(Service));
                 OnPropertyChanged(nameof(AudioServiceUI));
+                OnPropertyChanged(nameof(CommunicatorUI));
+                OnPropertyChanged(nameof(ServicePlayerUI));
+
+                if (oldService?.ServicePlayer != Service?.ServicePlayer)
+                {
+                    oldService?.ServicePlayer?.Dispose();
+
+                    if (oldService?.ServicePlayer?.Player != Service?.ServicePlayer?.Player)
+                    {
+                        oldService?.ServicePlayer?.Player?.Dispose();
+                    }
+                }
+
+                if (oldService?.Communicator != Service?.Communicator) oldService?.Communicator?.Dispose();
             }
         }
 
-        public AudioViewModel AudioServiceUI
-        {
-            get { return isUiEnabled ? AudioService : null; }
-        }
+        public IAudioService AudioServiceUI => IsUiEnabled ? Service?.AudioService : null;
 
-        public bool IsUiEnabled
-        {
-            get { return isUiEnabled; }
-            set
-            {
-                if (value == isUiEnabled) return;
+        public ICommunicator CommunicatorUI => IsUiEnabled ? Service?.Communicator : null;
 
-                isUiEnabled = value;
-                OnPropertyChanged(nameof(IsUiEnabled));
-                OnPropertyChanged(nameof(AudioServiceUI));
-            }
-        }
+        public IServicePlayer ServicePlayerUI => IsUiEnabled ? Service?.ServicePlayer : null;
 
         public ViewModel()
         {

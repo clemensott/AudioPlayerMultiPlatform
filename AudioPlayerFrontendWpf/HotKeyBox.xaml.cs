@@ -31,8 +31,8 @@ namespace AudioPlayerFrontend
 
         public HotKey HotKey
         {
-            get { return (HotKey)GetValue(HotKeyProperty); }
-            set { SetValue(HotKeyProperty, value); }
+            get => (HotKey)GetValue(HotKeyProperty);
+            set => SetValue(HotKeyProperty, value);
         }
 
         public HotKeyBox()

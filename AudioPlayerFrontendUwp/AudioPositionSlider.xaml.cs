@@ -45,14 +45,14 @@ namespace AudioPlayerFrontend
 
         public TimeSpan Position
         {
-            get { return (TimeSpan)GetValue(PositionProperty); }
-            set { SetValue(PositionProperty, value); }
+            get => (TimeSpan)GetValue(PositionProperty);
+            set => SetValue(PositionProperty, value);
         }
 
         public TimeSpan Duration
         {
-            get { return (TimeSpan)GetValue(DurationProperty); }
-            set { SetValue(DurationProperty, value); }
+            get => (TimeSpan)GetValue(DurationProperty);
+            set => SetValue(DurationProperty, value);
         }
 
         public AudioPositionSlider()

@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackend.Common;
+﻿using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend.Join
 {
@@ -6,7 +6,7 @@ namespace AudioPlayerFrontend.Join
     {
         private readonly WaveFormat format;
 
-        WaveFormat AudioPlayerBackend.Common.IWaveProvider.WaveFormat { get { return format; } }
+        WaveFormat AudioPlayerBackend.Player.IWaveProvider.WaveFormat => format;
 
         public AudioFileReader(string path) : base(path)
         {

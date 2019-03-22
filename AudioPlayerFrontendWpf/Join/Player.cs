@@ -1,89 +1,82 @@
-﻿using AudioPlayerBackend;
-using AudioPlayerBackend.Common;
+﻿using AudioPlayerBackend.Player;
 using System;
-using System.Collections.Generic;
 
 namespace AudioPlayerFrontend.Join
 {
-    class Player : IPlayer
+    class Player : IWaveProviderPlayer
     {
-        private readonly Queue<NAudio.Wave.IWaveProvider> playWaveProviders;
-        private readonly Queue<IDisposable> disposeObjs;
-        private NAudio.Wave.WaveOut waveOut;
-        private int waveProvidersCount;
+        private bool stop, stopped;
+        private NAudio.Wave.IWaveProvider waveProvider, nextWaveProvider;
+        private readonly NAudio.Wave.WaveOut waveOut;
         private PlaybackState playState;
 
         public PlaybackState PlayState
         {
-            get { return playState; }
+            get => playState;
             set
             {
-                if (value == playState) return;
-
                 playState = value;
                 ExecutePlayState();
             }
         }
 
-        public float Volume { get { return waveOut.Volume; } set { waveOut.Volume = value; } }
+        public float Volume { get => waveOut.Volume; set => waveOut.Volume = value; }
 
         public event EventHandler<StoppedEventArgs> PlaybackStopped;
 
         public Player(int deviceNumber = -1, IntPtr? windowHandle = null)
         {
-            waveProvidersCount = 0;
-            playWaveProviders = new Queue<NAudio.Wave.IWaveProvider>();
-            disposeObjs = new Queue<IDisposable>();
+            stop = false;
+            stopped = true;
 
             waveOut = windowHandle.HasValue ? new NAudio.Wave.WaveOut(windowHandle.Value) : new NAudio.Wave.WaveOut();
-
             waveOut.DeviceNumber = deviceNumber;
             waveOut.PlaybackStopped += WaveOut_PlaybackStopped;
         }
 
         private void WaveOut_PlaybackStopped(object sender, NAudio.Wave.StoppedEventArgs e)
         {
-            lock (disposeObjs)
+            stopped = true;
+
+            if (nextWaveProvider != null)
             {
-                if (disposeObjs.Count == 0 && playWaveProviders.Count == 0)
-                {
-                    PlaybackStopped?.Invoke(this, e.ToBackend());
-                    return;
-                }
+                if (waveProvider is IDisposable disposable) disposable.Dispose();
 
-                while (disposeObjs.Count > 0)
-                {
-                    waveProvidersCount--;
-                    disposeObjs.Dequeue().Dispose();
-                }
+                waveProvider = nextWaveProvider;
+                nextWaveProvider = null;
 
-                while (playWaveProviders.Count > 0)
-                {
-                    waveOut.Init(playWaveProviders.Dequeue());
-                    waveProvidersCount++;
-                }
-
+                waveOut.Init(waveProvider);
                 ExecutePlayState();
             }
+            else if (stop)
+            {
+                if (waveProvider is IDisposable disposable) disposable.Dispose();
+
+                ExecutePlayState();
+
+                stop = false;
+            }
+            else PlaybackStopped?.Invoke(this, e.ToBackend());
         }
 
-        public void Play(Func<AudioPlayerBackend.Common.IWaveProvider> waveProviderFunc)
+        public void Play(Func<AudioPlayerBackend.Player.IWaveProvider> waveProviderFunc)
         {
             NAudio.Wave.IWaveProvider wp = GetInternalWaveProvider(waveProviderFunc());
 
-            lock (disposeObjs)
+            if (stopped)
             {
-                if (disposeObjs.Count > 0) playWaveProviders.Enqueue(wp);
-                else
-                {
-                    waveOut.Init(wp);
-                    waveProvidersCount++;
-                    ExecutePlayState();
-                }
+                waveProvider = wp;
+                waveOut.Init(wp);
+                ExecutePlayState();
+            }
+            else
+            {
+                nextWaveProvider = wp;
+                waveOut.Stop();
             }
         }
 
-        private NAudio.Wave.IWaveProvider GetInternalWaveProvider(AudioPlayerBackend.Common.IWaveProvider baseWP)
+        private static NAudio.Wave.IWaveProvider GetInternalWaveProvider(AudioPlayerBackend.Player.IWaveProvider baseWP)
         {
             switch (baseWP)
             {
@@ -95,23 +88,19 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        public void Stop(IDisposable disposeObj)
+        public void Stop()
         {
-            if (waveOut.PlaybackState == NAudio.Wave.PlaybackState.Stopped)
+            if (!stopped)
             {
-                waveProvidersCount--;
-                disposeObj.Dispose();
-            }
-            else
-            {
-                disposeObjs.Enqueue(disposeObj);
+                stop = true;
                 waveOut.Stop();
             }
+            else if (waveProvider is IDisposable disposable) disposable.Dispose();
         }
 
         public void ExecutePlayState()
         {
-            if (disposeObjs.Count > 0 || waveProvidersCount == 0) return;
+            if (stop || waveProvider == null) return;
 
             switch (PlayState)
             {
@@ -120,13 +109,22 @@ namespace AudioPlayerFrontend.Join
                     break;
 
                 case PlaybackState.Playing:
+                    stopped = false;
                     waveOut.Play();
                     break;
 
                 case PlaybackState.Paused:
+                    stopped = false;
                     waveOut.Pause();
                     break;
             }
+        }
+
+        public void Dispose()
+        {
+            if (waveProvider is IDisposable disposable) disposable.Dispose();
+
+            waveOut.Dispose();
         }
     }
 }
