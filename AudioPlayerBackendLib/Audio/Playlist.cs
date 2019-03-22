@@ -156,7 +156,7 @@ namespace AudioPlayerBackend.Audio
             get => allSongs;
             private set
             {
-                if (value == allSongs) return;
+                if (ReferenceEquals(value, allSongs)) return;
 
                 allSongs = value;
                 OnAllSongsChanged();
@@ -194,7 +194,7 @@ namespace AudioPlayerBackend.Audio
         {
             OnPropertyChanged(nameof(IsAllShuffle));
 
-            AllSongs = SongsService.GetAllSongs(this);
+            AllSongs = SongsService.GetAllSongs(this).ToBuffer();
         }
 
         protected virtual void OnLoopChanged()
@@ -221,7 +221,7 @@ namespace AudioPlayerBackend.Audio
         {
             OnPropertyChanged(nameof(Songs));
 
-            AllSongs = SongsService.GetAllSongs(this);
+            AllSongs = SongsService.GetAllSongs(this).ToBuffer();
         }
 
         protected virtual void OnAllSongsChanged()
@@ -235,10 +235,10 @@ namespace AudioPlayerBackend.Audio
         {
             if (PropertyChanged == null) return;
 
-            if (helper?.InvokeDispatcher != null) helper.InvokeDispatcher(raise);
-            else raise();
+            if (helper?.InvokeDispatcher != null) helper.InvokeDispatcher(Raise);
+            else Raise();
 
-            void raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
         public override bool Equals(object obj)

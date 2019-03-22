@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using StdOttStandard;
 
 namespace AudioPlayerBackend.Audio
 {
@@ -10,7 +10,7 @@ namespace AudioPlayerBackend.Audio
         {
             Playlist playlist;
 
-            if (Playlist.TryGetInstance(Guid.Empty, out playlist)) return (SourcePlaylist)playlist;
+            if (TryGetInstance(Guid.Empty, out playlist)) return (SourcePlaylist)playlist;
 
             return new SourcePlaylist(helper);
         }
@@ -19,7 +19,7 @@ namespace AudioPlayerBackend.Audio
         private bool isSearchShuffle, isSearching;
         private string searchKey;
         private string[] fileMediaSources;
-        private Song[] shuffledSongs;
+        private IEnumerable<Song> shuffledSongs;
         private IEnumerable<Song> searchSongs;
 
         public event EventHandler<ValueChangedEventArgs<bool>> IsSearchShuffleChanged;
@@ -39,7 +39,8 @@ namespace AudioPlayerBackend.Audio
 
                 OnPropertyChanged(nameof(IsSearchShuffle));
 
-                if (IsSearchShuffle) ShuffledSongs = SongsService.GetShuffledSongs(Songs).ToArray();
+                if (IsSearchShuffle) ShuffledSongs = SongsService.GetShuffledSongs(Songs).ToBuffer();
+                else SearchSongs = SongsService.GetSearchSongs(this).ToBuffer();
             }
         }
 
@@ -57,7 +58,7 @@ namespace AudioPlayerBackend.Audio
                 OnPropertyChanged(nameof(SearchKey));
 
                 IsSearching = SongsService.GetIsSearching(SearchKey);
-                SearchSongs = SongsService.GetSearchSongs(this);
+                SearchSongs = SongsService.GetSearchSongs(this).ToBuffer();
             }
         }
 
@@ -88,12 +89,12 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        public Song[] ShuffledSongs
+        public IEnumerable<Song> ShuffledSongs
         {
             get => shuffledSongs;
             set
             {
-                if (value == shuffledSongs) return;
+                if (ReferenceEquals(value, shuffledSongs)) return;
 
                 shuffledSongs = value;
                 OnPropertyChanged(nameof(ShuffledSongs));
@@ -109,7 +110,7 @@ namespace AudioPlayerBackend.Audio
             {
                 if (ReferenceEquals(value, searchSongs)) return;
 
-                searchSongs = value;
+                searchSongs = value.ToBuffer();
                 OnPropertyChanged(nameof(SearchSongs));
             }
         }
@@ -123,7 +124,7 @@ namespace AudioPlayerBackend.Audio
         {
             base.OnSongsChanged();
 
-            ShuffledSongs = SongsService.GetShuffledSongs(Songs).ToArray();
+            ShuffledSongs = SongsService.GetShuffledSongs(Songs).ToBuffer();
         }
 
         public virtual void Reload()

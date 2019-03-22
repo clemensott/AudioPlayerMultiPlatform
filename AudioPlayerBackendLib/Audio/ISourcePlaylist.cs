@@ -6,7 +6,7 @@ namespace AudioPlayerBackend.Audio
     {
         bool IsSearching { get; }
 
-        Song[] ShuffledSongs { get; }
+        IEnumerable<Song> ShuffledSongs { get; }
 
         IEnumerable<Song> SearchSongs { get; }
 
