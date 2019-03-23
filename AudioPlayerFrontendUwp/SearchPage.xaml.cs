@@ -22,7 +22,6 @@ namespace AudioPlayerFrontend
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             DataContext = viewModel = (ViewModel)e.Parameter;
-            //playlist = viewModel.AudioService?.AdditionalPlaylists.FirstOrDefault();
 
             base.OnNavigatedTo(e);
         }
