@@ -16,6 +16,7 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
@@ -45,14 +46,14 @@
         <con:SingleInputConverter x:Name="sicSongsCount" Input="{Binding ElementName=micPlaylist,Path=Output.Songs}"
                                   Convert="SicSongsCount_Convert"/>
 
-        <Button Grid.Column="3" Margin="3" MinWidth="40" VerticalAlignment="Stretch"
+        <Button Grid.Column="4" Margin="3" MinWidth="40" VerticalAlignment="Stretch"
                 Content="{Binding ElementName=sicSongsCount,Path=Output}" Click="BtnClear_Click"/>
 
         <con:MultipleInputs2Converter x:Name="micSongs" Input0="{Binding AudioService.SourcePlaylist.SearchSongs}"
                                       Input1="{Binding AudioService.CurrentPlaylist.AllSongs}"
                                       Convert="MicSongs_Convert"/>
 
-        <ListBox Grid.Row="2" Grid.ColumnSpan="4" Margin="0,5" HorizontalAlignment="Stretch"
+        <ListBox Grid.Row="2" Grid.ColumnSpan="5" Margin="0,5" HorizontalAlignment="Stretch"
                  ItemsSource="{Binding ElementName=micSongs,Path=Output}"
                  SelectionChanged="ListBox_SelectionChanged">
             <ListBox.ItemContainerStyle>
