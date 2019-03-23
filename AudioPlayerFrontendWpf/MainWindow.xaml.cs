@@ -364,9 +364,11 @@ namespace AudioPlayerFrontend
         private object MicCurrentSongIndex_ConvertRef(ref object input0, ref object input1, ref object input2,
             ref object input3, ref object input4, ref object input5, ref object input6, int changedInput)
         {
-            System.Diagnostics.Debug.WriteLine("MicCurrentSongIndex_ConvertRef1: {0}, {1}, {2}, {3}, {4}",
-                input0, input1, input2, input3, changedInput);
-            if (input0 == null || input1 == null || input3 == null || input4 == null || input6 == null) return null;
+            if (input0 == null || input1 == null || input3 == null || input4 == null || input6 == null)
+            {
+                input5 = null;
+                return null;
+            }
 
             IPlaylist currentPlaylist = (IPlaylist)input0;
             Song[] allSongs = ((IEnumerable<Song>)input1).ToArray();
@@ -384,7 +386,7 @@ namespace AudioPlayerFrontend
                 input6 = songs.IndexOf(currentSong.Value);
             }
 
-            return isSearching|| currentPlaylist.ID == Guid.Empty;
+            return isSearching || currentPlaylist.ID == Guid.Empty;
         }
 
         private object MicShuffle_ConvertRef(ref object input0, ref object input1, ref object input2, ref object input3, int changedInput)
