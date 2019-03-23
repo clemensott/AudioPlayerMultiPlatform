@@ -150,7 +150,7 @@
 
         <StackPanel Grid.RowSpan="3" VerticalAlignment="Center" 
                     Visibility="{Binding TryOpeningVisibility}">
-            <TextBlock Text="Opening AudioService..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
+            <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
             <ProgressBar IsIndeterminate="True" Height="20" Width="300" Margin="5"/>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
