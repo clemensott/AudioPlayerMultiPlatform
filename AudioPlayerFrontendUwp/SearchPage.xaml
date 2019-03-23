@@ -31,7 +31,11 @@
                  Text="{Binding AudioService.SourcePlaylist.SearchKey,
                    Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
 
-        <Button Grid.Column="2" Margin="3" Click="BtnSelectAll_Click">
+        <ToggleButton Grid.Column="2" Margin="3" IsChecked="{Binding AudioService.FileBasePlaylist.IsSearchShuffle,Mode=TwoWay}">
+            <SymbolIcon Symbol="Shuffle"/>
+        </ToggleButton>
+
+        <Button Grid.Column="3" Margin="3" Click="BtnSelectAll_Click">
             <SymbolIcon Symbol="SelectAll"/>
         </Button>
 
