@@ -175,22 +175,22 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
-        private object MicCurrentSongIndex_ConvertRef(ref object input0, ref object input1, ref object input2, int changedInput)
+        private object MicCurrentSongIndex_ConvertRef(ref object input0, ref object input1, ref object input2, ref object input3, int changedInput)
         {
-            System.Diagnostics.Debug.WriteLine("MicCurrentSongIndex_ConvertRef1: " + changedInput);
             if (input0 == null) return null;
 
-            IPlaylist playlist = (IPlaylist)input0;
+            IEnumerable<Song> allSongs = (IEnumerable<Song>)input0;
             Song? currentSong = (Song?)input1;
-            int index = (int)input2;
+            int index = (int)input3;
 
-            if (changedInput == 2 && index != -1) input1 = playlist.AllSongs.ElementAt(index);
-            else if (currentSong.HasValue && playlist.AllSongs.Contains(currentSong.Value))
+            input2 = allSongs;
+
+            if (changedInput == 3 && index != -1) input1 = allSongs.ElementAt(index);
+            else if (currentSong.HasValue && allSongs.Contains(currentSong.Value))
             {
-                input2 = playlist.AllSongs.IndexOf(currentSong.Value);
+                input3 = allSongs.IndexOf(currentSong.Value);
             }
 
-            System.Diagnostics.Debug.WriteLine("MicCurrentSongIndex_ConvertRef2");
             return null;
         }
 

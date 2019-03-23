@@ -106,10 +106,10 @@
                 </Button>
             </Grid>
 
-            <con:MultipleInputs3Converter x:Name="micCurrentSongIndex" 
-                                          Input0="{Binding AudioService.CurrentPlaylist,Mode=TwoWay}" 
+            <con:MultipleInputs4Converter x:Name="micSongs" 
+                                          Input0="{Binding AudioService.CurrentPlaylist.AllSongs}" 
                                           Input1="{Binding AudioService.CurrentPlaylist.CurrentSong,Mode=TwoWay}" 
-                                          Input2="{StaticResource negativeOne}"
+                                          Input3="{StaticResource negativeOne}"
                                           ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
             <con:MultipleInputs2Converter x:Name="mulDoRemove" 
@@ -118,9 +118,8 @@
                                           Convert="MulDoRemove_Convert"/>
 
             <ListBox Grid.Row="2" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
-                     DataContext="{Binding AudioService.CurrentPlaylist}"
-                     ItemsSource="{Binding AllSongs}"
-                     SelectedIndex="{Binding ElementName=micCurrentSongIndex,Path=Input2,Mode=TwoWay}"
+                     ItemsSource="{Binding ElementName=micSongs,Path=Input2}"
+                     SelectedIndex="{Binding ElementName=micSongs,Path=Input3,Mode=TwoWay}"
                      SelectionChanged="LbxSongs_SelectionChanged">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
