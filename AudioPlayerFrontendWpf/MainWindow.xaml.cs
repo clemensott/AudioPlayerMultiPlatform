@@ -411,5 +411,27 @@ namespace AudioPlayerFrontend
 
             return null;
         }
+
+        private void BtnLoop_Click(object sender, RoutedEventArgs e)
+        {
+            switch (viewModel.AudioServiceUI?.CurrentPlaylist.Loop)
+            {
+                case LoopType.Next:
+                    viewModel.AudioServiceUI.CurrentPlaylist.Loop = LoopType.Stop;
+                    break;
+
+                case LoopType.Stop:
+                    viewModel.AudioServiceUI.CurrentPlaylist.Loop = LoopType.CurrentPlaylist;
+                    break;
+
+                case LoopType.CurrentPlaylist:
+                    viewModel.AudioServiceUI.CurrentPlaylist.Loop = LoopType.CurrentSong;
+                    break;
+
+                case LoopType.CurrentSong:
+                    viewModel.AudioServiceUI.CurrentPlaylist.Loop = LoopType.Next;
+                    break;
+            }
+        }
     }
 }

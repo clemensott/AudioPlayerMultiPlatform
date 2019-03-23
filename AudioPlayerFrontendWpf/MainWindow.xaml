@@ -57,6 +57,9 @@
                 <Button Margin="5,3" Content="Reload" Width="100" Click="Reload_Click"/>
                 <Button Margin="5,3" Content="Settings" Width="100" Click="BtnSettings_Click"/>
 
+                <Button Margin="5,3" Width="100" Content="{Binding AudioServiceUI.CurrentPlaylist.Loop}"
+                        Click="BtnLoop_Click"/>
+
                 <con:MultipleInputs4Converter x:Name="micShuffle"
                                               Input0="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
                                               Input1="{Binding AudioServiceUI.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}"
