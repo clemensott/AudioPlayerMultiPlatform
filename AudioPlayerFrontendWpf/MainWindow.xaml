@@ -19,7 +19,7 @@
         <con:TimeSpanToStringConverter x:Key="timeTextCon"/>
         <local:TimeSpanToSecondsConverter x:Key="timeSecCon"/>
         <local:IsAudioStreamPlayerConverter x:Key="isClientCon"/>
-        <spi:HiddenVisibleConverter x:Key="hidCon" CompareValue="{x:Null}"/>
+        <spi:CollapsedVisibleConverter x:Key="colCon" CompareValue="{x:Null}"/>
 
         <sys:Int32 x:Key="negativeOne">-1</sys:Int32>
     </Window.Resources>
@@ -157,7 +157,7 @@
                 <Button Content="Cancel" Width="100" Margin="5" Click="BtnCancel_Click"/>
                 <Button Content="Settings" Width="100" Margin="5" Click="BtnOpeningSettings_Click"/>
                 <Button Content="Exception" Width="100" Margin="5" DataContext="{Binding BuildException}"
-                        Visibility="{Binding Converter={StaticResource hidCon}}" Click="BtnException_Click"/>
+                        Visibility="{Binding Converter={StaticResource colCon}}" Click="BtnException_Click"/>
             </StackPanel>
         </StackPanel>
 
@@ -167,7 +167,7 @@
             <Button Content="Retry" Width="100" Margin="5" Click="BtnRetry_Click"/>
             <Button Content="Settings" Width="100" Margin="5" Click="BtnSettings_Click"/>
             <Button Content="Exception" Width="100" Margin="5" DataContext="{Binding BuildException}"
-                    Visibility="{Binding Converter={StaticResource hidCon}}" Click="BtnException_Click"/>
+                    Visibility="{Binding Converter={StaticResource colCon}}" Click="BtnException_Click"/>
         </StackPanel>
     </Grid>
 </Window>
