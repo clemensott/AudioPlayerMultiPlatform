@@ -31,9 +31,14 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             Subscribe(service);
 
+            InitPlaylists();
+        }
+
+        private async void InitPlaylists()
+        {
             foreach (IPlaylistBase playlist in Service.Playlists)
             {
-                playlists.Add(playlist.ID, playlist);
+                await AddPlaylist(playlist);
             }
         }
 
@@ -99,9 +104,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             playlist.SongsChanged -= Playlist_SongsChanged;
         }
 
-        protected abstract Task SubscribeOrPublishAsync(IPlaylistBase playlist);
-
-        protected abstract Task UnsubscribeOrUnpublishAsync(IPlaylistBase playlist);
+        protected abstract Task SubscribeAsync(IPlaylistBase playlist);
 
         private async void Service_AudioDataChanged(object sender, ValueChangedEventArgs<byte[]> e)
         {
@@ -136,31 +139,22 @@ namespace AudioPlayerBackend.Communication.MQTT
             ByteQueue data = new ByteQueue();
             data.Enqueue(Service.CurrentPlaylist.ID);
 
-            await Task.WhenAll(PublishAsync(nameof(Service.CurrentPlaylist), data),
-                PublishPlaylist(Service.CurrentPlaylist));
+            await Task.WhenAll(PublishAsync(nameof(Service.CurrentPlaylist), data), AddPlaylist(Service.CurrentPlaylist));
         }
 
         private async void Service_PlaylistsChanged(object sender, ValueChangedEventArgs<IPlaylistBase[]> e)
         {
-            List<Task> tasks = new List<Task>();
-
             foreach (IPlaylistBase playlist in e.NewValue.Except(e.OldValue))
             {
-                if (!playlists.ContainsKey(playlist.ID)) playlists.Add(playlist.ID, playlist);
-
                 Subscribe(playlist);
-                tasks.Add(SubscribeOrPublishAsync(playlist));
             }
 
             foreach (IPlaylistBase playlist in e.OldValue.Except(e.NewValue))
             {
                 Unsubscribe(playlist);
-                tasks.Add(UnsubscribeOrUnpublishAsync(playlist));
             }
 
-            tasks.Add(PublishPlaylists());
-
-            await Task.WhenAll(tasks);
+            await PublishPlaylists();
         }
 
         protected async Task PublishPlaylists()
@@ -170,8 +164,11 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             if (IsTopicLocked(nameof(Service.Playlists), data)) return;
 
-            await PublishAsync(nameof(Service.Playlists), data);
-            await Task.WhenAll(Service.Playlists.Select(PublishPlaylist));
+            List<Task> tasks = new List<Task>();
+            tasks.Add(PublishAsync(nameof(Service.Playlists), data));
+            tasks.AddRange(Service.Playlists.Select(AddPlaylist));
+
+            await Task.WhenAll(tasks);
         }
 
         protected async Task PublishPlaylist(IPlaylistBase playlist)
@@ -505,7 +502,6 @@ namespace AudioPlayerBackend.Communication.MQTT
             if (!playlists.TryGetValue(id, out playlist))
             {
                 playlist = new Playlist(id, helper);
-                playlists.Add(id, playlist);
 
                 InitPlaylist(playlist);
             }
@@ -523,7 +519,6 @@ namespace AudioPlayerBackend.Communication.MQTT
             if (playlists.TryGetValue(id, out playlist)) return playlist;
 
             playlist = new Playlist(id);
-            playlists.Add(id, playlist);
 
             await InitPlaylist(playlist);
 
@@ -533,6 +528,7 @@ namespace AudioPlayerBackend.Communication.MQTT
         private async Task InitPlaylist(IPlaylistBase playlist)
         {
             System.Diagnostics.Debug.WriteLine("InitPlaylist1: " + playlist.ID);
+            await AddPlaylist(playlist, false);
 
             InitList<string> initPlaylistList = new InitList<string>(GetTopics(playlist));
             initPlaylistLists.Add(playlist.ID, initPlaylistList);
@@ -554,6 +550,21 @@ namespace AudioPlayerBackend.Communication.MQTT
             yield return id + nameof(playlist.IsAllShuffle);
             yield return id + nameof(playlist.Loop);
             yield return id + nameof(playlist.Position);
+        }
+
+        private async Task AddPlaylist(IPlaylistBase playlist)
+        {
+            await AddPlaylist(playlist, true);
+        }
+
+        private async Task AddPlaylist(IPlaylistBase playlist, bool publish)
+        {
+            if (playlist.ID == Guid.Empty || playlists.ContainsKey(playlist.ID)) return;
+
+            playlists.Add(playlist.ID, playlist);
+
+            await SubscribeAsync(playlist);
+            if (publish) await PublishPlaylist(playlist);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

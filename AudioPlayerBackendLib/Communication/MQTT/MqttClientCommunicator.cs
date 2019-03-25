@@ -264,7 +264,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                 try
                 {
                     await Utils.WaitAsync(receiveMessages, () => receiveMessages.Count == 0);
-                    await ProcessApplicationMessage(receiveMessages.Dequeue());
+                    ProcessApplicationMessage(receiveMessages.Dequeue());
                 }
                 catch (Exception e)
                 {
@@ -300,25 +300,13 @@ namespace AudioPlayerBackend.Communication.MQTT
             UnlockTopic(rawTopic);
         }
 
-        protected override async Task SubscribeOrPublishAsync(IPlaylistBase playlist)
+        protected override async Task SubscribeAsync(IPlaylistBase playlist)
         {
             System.Diagnostics.Debug.WriteLine("SubscribeOrPublishAsync: " + playlist.ID);
 
             initProps?.AddRange(GetTopicFilters(playlist).Select(tf => tf.Topic));
 
             await MqttClient.SubscribeAsync(GetTopicFilters(playlist));
-        }
-
-        protected override async Task UnsubscribeOrUnpublishAsync(IPlaylistBase playlist)
-        {
-            System.Diagnostics.Debug.WriteLine("UnsubscribeOrUnpublishAsync: " + playlist.ID);
-
-            foreach (string topic in GetTopicFilters(playlist).Select(tf => tf.Topic))
-            {
-                initProps?.Remove(topic);
-            }
-
-            await MqttClient.UnsubscribeAsync(GetTopicFilters(playlist).Select(t => t.Topic));
         }
 
         protected override async Task PublishAsync(MqttApplicationMessage message)

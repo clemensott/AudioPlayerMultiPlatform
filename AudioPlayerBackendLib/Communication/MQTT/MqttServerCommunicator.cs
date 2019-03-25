@@ -2,7 +2,6 @@
 using MQTTnet;
 using MQTTnet.Server;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -114,16 +113,11 @@ namespace AudioPlayerBackend.Communication.MQTT
             UnlockTopic(rawTopic);
         }
 
-        protected override async Task SubscribeOrPublishAsync(IPlaylistBase playlist)
+        protected override Task SubscribeAsync(IPlaylistBase playlist)
         {
             System.Diagnostics.Debug.WriteLine("SubscribeOrPublishAsync: " + playlist.ID);
-            await Task.WhenAll(Service.Playlists.Select(PublishPlaylist).ToArray());
-        }
-
-        protected override Task UnsubscribeOrUnpublishAsync(IPlaylistBase playlist)
-        {
-            System.Diagnostics.Debug.WriteLine("UnsubscribeOrUnpublishAsync: " + playlist.ID);
             return Task.CompletedTask;
+            //await Task.WhenAll(Service.Playlists.Select(PublishPlaylist).ToArray());
         }
 
         protected override async Task PublishAsync(MqttApplicationMessage message)
