@@ -240,6 +240,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             string rawTopic = e.ApplicationMessage.Topic;
             byte[] payload = e.ApplicationMessage.Payload;
 
+            System.Diagnostics.Debug.WriteLine("Receive: " + rawTopic);
             if (currentPublish?.Topic == rawTopic && currentPublish.Payload.SequenceEqual(payload))
             {
                 lock (currentPublish)
@@ -276,6 +277,7 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             string rawTopic = e.Topic;
             byte[] payload = e.Payload;
+            System.Diagnostics.Debug.WriteLine("Process: " + rawTopic);
 
             LockTopic(rawTopic, payload);
 

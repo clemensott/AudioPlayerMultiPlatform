@@ -212,6 +212,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected async Task PublishIsSearchShuffle(ISourcePlaylistBase playlist)
         {
+            return;
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.IsSearchShuffle);
 
@@ -225,6 +226,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected async Task PublishSearchKey(ISourcePlaylistBase playlist)
         {
+            return;
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.SearchKey);
 
