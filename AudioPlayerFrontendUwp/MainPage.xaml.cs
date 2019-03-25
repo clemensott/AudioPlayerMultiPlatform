@@ -186,10 +186,8 @@ namespace AudioPlayerFrontend
             input2 = allSongs;
 
             if (changedInput == 3 && index != -1) input1 = allSongs.ElementAt(index);
-            else if (currentSong.HasValue && allSongs.Contains(currentSong.Value))
-            {
-                input3 = allSongs.IndexOf(currentSong.Value);
-            }
+            else if (!currentSong.HasValue) input3 = -1;
+            else input3 = allSongs.IndexOf(currentSong.Value);
 
             return null;
         }

@@ -10,7 +10,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 {
     class ByteQueue : IEnumerable<byte>
     {
-        private Queue<byte> bytes;
+        private readonly Queue<byte> bytes;
 
         public ByteQueue()
         {
@@ -22,9 +22,9 @@ namespace AudioPlayerBackend.Communication.MQTT
             this.bytes = new Queue<byte>(bytes);
         }
 
-        public void EnqueueRange(IEnumerable<byte> bytes)
+        public void EnqueueRange(IEnumerable<byte> enqueueBytes)
         {
-            foreach (byte item in bytes) this.bytes.Enqueue(item);
+            foreach (byte item in enqueueBytes) bytes.Enqueue(item);
         }
 
         public void Enqueue(bool value)
@@ -52,10 +52,10 @@ namespace AudioPlayerBackend.Communication.MQTT
             if (value == null) Enqueue(-1);
             else
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(value);
+                byte[] valueBytes = Encoding.UTF8.GetBytes(value);
 
-                Enqueue(bytes.Length);
-                EnqueueRange(bytes);
+                Enqueue(valueBytes.Length);
+                EnqueueRange(valueBytes);
             }
         }
 
@@ -97,27 +97,9 @@ namespace AudioPlayerBackend.Communication.MQTT
             EnqueueRange(guid.ToByteArray());
         }
 
-        public void Enqueue(IPlaylistBase playlist)
+        public void Enqueue(IEnumerable<Guid> guids)
         {
-            Enqueue(playlist.ID);
-
-            if (playlist.CurrentSong.HasValue)
-            {
-                Enqueue(true);
-                Enqueue(playlist.CurrentSong.Value);
-            }
-            else Enqueue(false);
-
-            Enqueue(playlist.Duration);
-            Enqueue(playlist.IsAllShuffle);
-            Enqueue((int)playlist.Loop);
-            Enqueue(playlist.Position);
-            Enqueue(playlist.Songs);
-        }
-
-        public void Enqueue(IEnumerable<IPlaylistBase> playlists)
-        {
-            Enqueue(playlists, Enqueue);
+            Enqueue(guids, Enqueue);
         }
 
         private void Enqueue<T>(IEnumerable<T> items, Action<T> itemEnqueueAction)
@@ -134,11 +116,11 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         public byte[] DequeueRange(int count)
         {
-            List<byte> bytes = new List<byte>();
+            byte[] dequeueBytes = new byte[count];
 
-            for (int i = 0; i < count; i++) bytes.Add(this.bytes.Dequeue());
+            for (int i = 0; i < count; i++) dequeueBytes[i] = bytes.Dequeue();
 
-            return bytes.ToArray();
+            return dequeueBytes;
         }
 
         public bool DequeueBool()
@@ -211,25 +193,9 @@ namespace AudioPlayerBackend.Communication.MQTT
             return new Guid(DequeueRange(16));
         }
 
-        public Playlist DequeuePlaylist(INotifyPropertyChangedHelper helper = null)
+        public Guid[] DequeueGuids()
         {
-            Guid id = DequeueGuid();
-            Playlist playlist = Playlist.GetInstance(id, helper);
-
-            if (DequeueBool()) playlist.CurrentSong = DequeueSong();
-
-            playlist.Duration = DequeueTimeSpan();
-            playlist.IsAllShuffle = DequeueBool();
-            playlist.Loop = (LoopType)DequeueInt();
-            playlist.Position = DequeueTimeSpan();
-            playlist.Songs = DequeueSongs();
-
-            return playlist;
-        }
-
-        public IPlaylistBase[] DequeuePlaylists(INotifyPropertyChangedHelper helper)
-        {
-            return DequeueArray(() => DequeuePlaylist(helper));
+            return DequeueArray(DequeueGuid);
         }
 
         private T[] DequeueArray<T>(Func<T> itemDequeueFunc)

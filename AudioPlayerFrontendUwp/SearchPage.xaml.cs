@@ -7,6 +7,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
+using AudioPlayerFrontend.Join;
 
 namespace AudioPlayerFrontend
 {
@@ -32,7 +33,7 @@ namespace AudioPlayerFrontend
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            viewModel.AudioService.AddSongsToFirstPlaylist(new Song[] { song });
+            viewModel.AudioService.AddSongsToFirstPlaylist(new Song[] { song }, true, AudioServiceHelper.Current);
 
             viewModel.AudioService.CurrentPlaylist.CurrentSong = song;
         }
@@ -43,7 +44,7 @@ namespace AudioPlayerFrontend
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            viewModel.AudioService.AddSongsToFirstPlaylist(new Song[] {song});
+            viewModel.AudioService.AddSongsToFirstPlaylist(new Song[] { song }, AudioServiceHelper.Current);
         }
 
         private void BtnSelectAll_Click(object sender, RoutedEventArgs e)
@@ -52,7 +53,7 @@ namespace AudioPlayerFrontend
 
             IEnumerable<Song> songs = (IEnumerable<Song>)micSongs.Output;
 
-           viewModel.AudioService.AddSongsToFirstPlaylist(songs);
+            viewModel.AudioService.AddSongsToFirstPlaylist(songs, AudioServiceHelper.Current);
         }
 
         private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

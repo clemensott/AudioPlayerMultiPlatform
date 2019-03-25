@@ -7,43 +7,6 @@ namespace AudioPlayerBackend.Audio
 {
     public class Playlist : IPlaylist, IEquatable<Playlist>
     {
-        private static readonly Dictionary<Guid, Playlist> playlists = new Dictionary<Guid, Playlist>();
-
-        public static bool TryGetInstance(Guid id,out Playlist playlist)
-        {
-            lock (playlists)
-            {
-                return playlists.TryGetValue(id, out playlist);
-            }
-        }
-
-        public static Playlist GetInstance(Guid id, INotifyPropertyChangedHelper helper = null)
-        {
-            lock (playlists)
-            {
-                Playlist playlist;
-
-                if (playlists.TryGetValue(id, out playlist)) return playlist;
-
-                return new Playlist(id, helper);
-            }
-        }
-
-        public static Playlist GetNew(INotifyPropertyChangedHelper helper = null)
-        {
-            lock (playlists)
-            {
-                Guid id;
-                do
-                {
-                    id = Guid.NewGuid();
-                }
-                while (playlists.ContainsKey(id));
-
-                return new Playlist(id, helper);
-            }
-        }
-
         private bool isAllShuffle;
         private TimeSpan position, duration;
         private LoopType loop;
@@ -163,11 +126,13 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        protected Playlist(Guid id, INotifyPropertyChangedHelper helper = null)
+        public Playlist(INotifyPropertyChangedHelper helper = null) : this(Guid.NewGuid(), helper)
+        {
+        }
+
+        public Playlist(Guid id, INotifyPropertyChangedHelper helper = null)
         {
             this.helper = helper;
-
-            lock (playlists) playlists.Add(id, this);
 
             ID = id;
             Loop = LoopType.CurrentPlaylist;

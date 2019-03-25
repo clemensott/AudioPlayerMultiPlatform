@@ -6,15 +6,6 @@ namespace AudioPlayerBackend.Audio
 {
     class SourcePlaylist : Playlist, ISourcePlaylist
     {
-        public static SourcePlaylist GetInstance(IAudioServiceHelper helper = null)
-        {
-            Playlist playlist;
-
-            if (TryGetInstance(Guid.Empty, out playlist)) return (SourcePlaylist)playlist;
-
-            return new SourcePlaylist(helper);
-        }
-
         private readonly IAudioServiceHelper helper;
         private bool isSearchShuffle, isSearching;
         private string searchKey;
@@ -115,7 +106,7 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        private SourcePlaylist(IAudioServiceHelper helper = null) : base(Guid.Empty)
+        public SourcePlaylist(IAudioServiceHelper helper = null) : base(Guid.Empty)
         {
             this.helper = helper;
         }

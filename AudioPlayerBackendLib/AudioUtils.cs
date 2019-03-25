@@ -7,7 +7,24 @@ namespace AudioPlayerBackend
 {
     public static class AudioUtils
     {
-        public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs, bool prepend = false)
+        public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs)
+        {
+            AddSongsToFirstPlaylist(service, songs, false, null);
+        }
+
+        public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs, bool prepend)
+        {
+            AddSongsToFirstPlaylist(service, songs, prepend, null);
+        }
+
+        public static void AddSongsToFirstPlaylist(this IAudioService service, 
+            IEnumerable<Song> songs, INotifyPropertyChangedHelper helper)
+        {
+            AddSongsToFirstPlaylist(service, songs, false, helper);
+        }
+
+        public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs,
+            bool prepend, INotifyPropertyChangedHelper helper)
         {
             songs = songs as Song[] ?? songs.ToArray();
 
@@ -17,7 +34,7 @@ namespace AudioPlayerBackend
             {
                 IPlaylist playlist = service.Playlists[0];
 
-                if (playlist == service.CurrentPlaylist)
+                if (playlist.ID == service.CurrentPlaylist.ID)
                 {
                     if (prepend) playlist.Songs = songs.Concat(playlist.Songs).ToArray();
                     else playlist.Songs = playlist.Songs.Concat(songs).ToArray();
@@ -32,7 +49,7 @@ namespace AudioPlayerBackend
             }
             else
             {
-                IPlaylist newPlaylist = Playlist.GetNew();
+                IPlaylist newPlaylist = new Playlist(helper);
                 newPlaylist.Loop = LoopType.Next;
                 newPlaylist.IsAllShuffle = true;
                 newPlaylist.Songs = songs.ToArray();

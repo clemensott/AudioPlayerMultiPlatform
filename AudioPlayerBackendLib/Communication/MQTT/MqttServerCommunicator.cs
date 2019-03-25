@@ -95,7 +95,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             LockTopic(rawTopic, payload);
 
-            System.Diagnostics.Debug.WriteLine("rawTopic: " + rawTopic);
+            System.Diagnostics.Debug.WriteLine("rawTopic1: " + rawTopic);
 
             try
             {
@@ -108,6 +108,8 @@ namespace AudioPlayerBackend.Communication.MQTT
                 System.Diagnostics.Debug.WriteLine(e.ToString());
                 await PublishDebug(e);
             }
+
+            System.Diagnostics.Debug.WriteLine("rawTopic2: " + rawTopic);
 
             UnlockTopic(rawTopic);
         }

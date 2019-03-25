@@ -15,8 +15,8 @@ namespace AudioPlayerBackend.Communication.MQTT
     {
         private static readonly TimeSpan timeout = TimeSpan.FromSeconds(2);
 
-        private bool isStreaming, isOpening;
-        private List<string> initProps;
+        private bool isStreaming, isOpening, isReceiveProcessorRunning;
+        private InitList<string> initProps;
         private readonly PublishQueue publishQueue = new PublishQueue();
         private readonly Queue<MqttApplicationMessage> receiveMessages = new Queue<MqttApplicationMessage>();
         private MqttApplicationMessage currentPublish;
@@ -84,7 +84,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                 IsOpening = true;
 
                 TopicFilter[] serviceTopics = GetTopicFilters().Concat(GetTopicFilters(Service.SourcePlaylist)).ToArray();
-                initProps = serviceTopics.Select(t => t.Topic).ToList();
+                initProps = new InitList<string>(serviceTopics.Select(t => t.Topic));
 
                 IMqttClientOptions options = new MqttClientOptionsBuilder()
                     .WithTcpServer(ServerAddress, Port)
@@ -97,7 +97,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                 ProcessReceive();
 
                 await MqttClient.SubscribeAsync(serviceTopics);
-                await Utils.WaitAsync(initProps, () => initProps.Count > 0);
+                await initProps.Task;
             }
             catch
             {
@@ -139,7 +139,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             yield return new TopicFilter(nameof(Service.Volume), qos);
         }
 
-        private IEnumerable<TopicFilter> GetTopicFilters(ISourcePlaylistBase playlist)
+        private static IEnumerable<TopicFilter> GetTopicFilters(ISourcePlaylistBase playlist)
         {
             string id = playlist.ID + ".";
             const MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce;
@@ -149,23 +149,17 @@ namespace AudioPlayerBackend.Communication.MQTT
             yield return new TopicFilter(id + nameof(playlist.Duration), qos);
             yield return new TopicFilter(id + nameof(playlist.FileMediaSources), qos);
             yield return new TopicFilter(id + nameof(playlist.IsAllShuffle), qos);
-            yield return new TopicFilter(id + nameof(playlist.IsSearchShuffle), qos);
+            //yield return new TopicFilter(id + nameof(playlist.IsSearchShuffle), qos);
             yield return new TopicFilter(id + nameof(playlist.Loop), qos);
             yield return new TopicFilter(id + nameof(playlist.Position), qos);
-            yield return new TopicFilter(id + nameof(playlist.SearchKey), qos);
+            //yield return new TopicFilter(id + nameof(playlist.SearchKey), qos);
         }
 
-        private IEnumerable<TopicFilter> GetTopicFilters(IPlaylistBase playlist)
+        private static IEnumerable<TopicFilter> GetTopicFilters(IPlaylistBase playlist)
         {
-            string id = playlist.ID + ".";
             const MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce;
 
-            yield return new TopicFilter(id + nameof(playlist.CurrentSong), qos);
-            yield return new TopicFilter(id + nameof(playlist.Songs), qos);
-            yield return new TopicFilter(id + nameof(playlist.Duration), qos);
-            yield return new TopicFilter(id + nameof(playlist.IsAllShuffle), qos);
-            yield return new TopicFilter(id + nameof(playlist.Loop), qos);
-            yield return new TopicFilter(id + nameof(playlist.Position), qos);
+            return GetTopics(playlist).Select(t => new TopicFilter(t, qos));
         }
 
         private async Task ProcessPublish()
@@ -262,6 +256,9 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         private async Task ProcessReceive()
         {
+            if (isReceiveProcessorRunning) return;
+            isReceiveProcessorRunning = true;
+
             while (IsOpen)
             {
                 try
@@ -269,8 +266,13 @@ namespace AudioPlayerBackend.Communication.MQTT
                     await Utils.WaitAsync(receiveMessages, () => receiveMessages.Count == 0);
                     await ProcessApplicationMessage(receiveMessages.Dequeue());
                 }
-                catch { }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine("ProcessReceiveCatch: " + e);
+                }
             }
+
+            isReceiveProcessorRunning = false;
         }
 
         private async Task ProcessApplicationMessage(MqttApplicationMessage e)
@@ -283,7 +285,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             try
             {
-                HandleMessage(rawTopic, payload);
+                await HandleMessage(rawTopic, payload);
             }
             catch (Exception exc)
             {
@@ -293,15 +295,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                 await PublishDebug(text);
             }
 
-            if (initProps != null && initProps.Contains(rawTopic))
-            {
-                lock (initProps)
-                {
-                    initProps.Remove(rawTopic);
-
-                    Monitor.Pulse(initProps);
-                }
-            }
+            initProps?.Remove(rawTopic);
 
             UnlockTopic(rawTopic);
         }
@@ -309,17 +303,31 @@ namespace AudioPlayerBackend.Communication.MQTT
         protected override async Task SubscribeOrPublishAsync(IPlaylistBase playlist)
         {
             System.Diagnostics.Debug.WriteLine("SubscribeOrPublishAsync: " + playlist.ID);
+
+            initProps?.AddRange(GetTopicFilters(playlist).Select(tf => tf.Topic));
+
             await MqttClient.SubscribeAsync(GetTopicFilters(playlist));
         }
 
         protected override async Task UnsubscribeOrUnpublishAsync(IPlaylistBase playlist)
         {
             System.Diagnostics.Debug.WriteLine("UnsubscribeOrUnpublishAsync: " + playlist.ID);
+
+            foreach (string topic in GetTopicFilters(playlist).Select(tf => tf.Topic))
+            {
+                initProps?.Remove(topic);
+            }
+
             await MqttClient.UnsubscribeAsync(GetTopicFilters(playlist).Select(t => t.Topic));
         }
 
         protected override async Task PublishAsync(MqttApplicationMessage message)
         {
+            if (IsOpening)
+            {
+                System.Diagnostics.Debug.WriteLine("PublishOnOpening: " + message.Topic);
+                return;
+            }
             if (!IsOpen || IsTopicLocked(message.Topic, message.Payload)) return;
 
             publishQueue.Enqueue(message);

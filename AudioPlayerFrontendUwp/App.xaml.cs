@@ -133,6 +133,7 @@ namespace AudioPlayerFrontend
         /// <param name="e">Details zur Anhalteanforderung.</param>
         private async void OnSuspending(object sender, SuspendingEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine("Suspend: " + viewModel.Communicator?.IsOpen);
             var deferral = e.SuspendingOperation.GetDeferral();
 
             try
@@ -155,6 +156,7 @@ namespace AudioPlayerFrontend
 
         private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine("EnterBackground: " + viewModel.Communicator?.IsOpen);
             if (viewModel.Communicator?.IsOpen == true)
             {
                 var deferral = e.GetDeferral();
@@ -184,7 +186,9 @@ namespace AudioPlayerFrontend
 
         private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine("LeaveBackground1: " + viewModel.Communicator?.IsOpen);
             if (viewModel.Communicator != null) await viewModel.OpenAsync(viewModel.Communicator);
+            System.Diagnostics.Debug.WriteLine("LeaveBackground2: " + viewModel.Communicator?.IsOpen);
         }
     }
 }

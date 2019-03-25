@@ -135,7 +135,7 @@ namespace AudioPlayerBackend.Audio
             playState = PlaybackState.Stopped;
 
             Playlists = new IPlaylist[0];
-            CurrentPlaylist = SourcePlaylist = Audio.SourcePlaylist.GetInstance(helper);
+            CurrentPlaylist = SourcePlaylist = new SourcePlaylist(helper);
         }
 
         protected virtual void OnPlayStateChanged() { }

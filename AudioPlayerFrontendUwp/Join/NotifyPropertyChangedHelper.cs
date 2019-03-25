@@ -9,6 +9,10 @@ namespace AudioPlayerFrontend.Join
     {
         public Action<Action> InvokeDispatcher => DoInvokeDispatcher;
 
+        protected NotifyPropertyChangedHelper()
+        {
+        }
+
         private static async void DoInvokeDispatcher(Action action)
         {
             try

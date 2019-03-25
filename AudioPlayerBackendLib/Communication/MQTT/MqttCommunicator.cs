@@ -17,10 +17,12 @@ namespace AudioPlayerBackend.Communication.MQTT
     {
         protected readonly INotifyPropertyChangedHelper helper;
         protected readonly Dictionary<string, byte[]> receivingDict = new Dictionary<string, byte[]>();
+        protected readonly Dictionary<Guid, IPlaylistBase> playlists = new Dictionary<Guid, IPlaylistBase>();
+        private readonly Dictionary<Guid, InitList<string>> initPlaylistLists = new Dictionary<Guid, InitList<string>>();
 
         public abstract bool IsOpen { get; }
 
-        public IAudioServiceBase Service { get; private set; }
+        public IAudioServiceBase Service { get; }
 
         protected MqttCommunicator(IAudioServiceBase service, INotifyPropertyChangedHelper helper = null)
         {
@@ -28,6 +30,11 @@ namespace AudioPlayerBackend.Communication.MQTT
             Service = service;
 
             Subscribe(service);
+
+            foreach (IPlaylistBase playlist in Service.Playlists)
+            {
+                playlists.Add(playlist.ID, playlist);
+            }
         }
 
         private void Subscribe(IAudioServiceBase service)
@@ -127,37 +134,44 @@ namespace AudioPlayerBackend.Communication.MQTT
         protected async Task PublishCurrentPlaylist()
         {
             ByteQueue data = new ByteQueue();
-            data.Enqueue(Service.CurrentPlaylist);
+            data.Enqueue(Service.CurrentPlaylist.ID);
 
-            //if (IsTopicLocked(nameof(AudioService.CurrentPlaylist), data)) return;
-
-            await PublishAsync(nameof(Service.CurrentPlaylist), data);
-            //await PublishPlaylist(AudioService.CurrentPlaylist);
+            await Task.WhenAll(PublishAsync(nameof(Service.CurrentPlaylist), data),
+                PublishPlaylist(Service.CurrentPlaylist));
         }
 
         private async void Service_PlaylistsChanged(object sender, ValueChangedEventArgs<IPlaylistBase[]> e)
         {
-            await PublishPlaylists();
+            List<Task> tasks = new List<Task>();
 
             foreach (IPlaylistBase playlist in e.NewValue.Except(e.OldValue))
             {
+                if (!playlists.ContainsKey(playlist.ID)) playlists.Add(playlist.ID, playlist);
+
                 Subscribe(playlist);
-                await SubscribeOrPublishAsync(playlist);
+                tasks.Add(SubscribeOrPublishAsync(playlist));
             }
 
             foreach (IPlaylistBase playlist in e.OldValue.Except(e.NewValue))
             {
                 Unsubscribe(playlist);
-                await UnsubscribeOrUnpublishAsync(playlist);
+                tasks.Add(UnsubscribeOrUnpublishAsync(playlist));
             }
+
+            tasks.Add(PublishPlaylists());
+
+            await Task.WhenAll(tasks);
         }
 
         protected async Task PublishPlaylists()
         {
             ByteQueue data = new ByteQueue();
-            data.Enqueue(Service.Playlists);
+            data.Enqueue(Service.Playlists.Select(p => p.ID));
+
+            if (IsTopicLocked(nameof(Service.Playlists), data)) return;
 
             await PublishAsync(nameof(Service.Playlists), data);
+            await Task.WhenAll(Service.Playlists.Select(PublishPlaylist));
         }
 
         protected async Task PublishPlaylist(IPlaylistBase playlist)
@@ -364,19 +378,31 @@ namespace AudioPlayerBackend.Communication.MQTT
             catch { }
         }
 
-        protected bool HandleMessage(string rawTopic, byte[] payload)
+        protected async Task<bool> HandleMessage(string rawTopic, byte[] payload)
         {
             string topic;
-            IPlaylistBase playlist;
+            Guid id;
 
             ByteQueue data = payload;
 
-            if (ContainsPlaylist(rawTopic, out topic, out playlist)) return HandleMessage(playlist, topic, data);
+            if (ContainsPlaylist(rawTopic, out topic, out id))
+            {
+                bool handled = HandleMessage(id, topic, data);
+
+                InitList<string> initPlaylistList;
+                if (initPlaylistLists.TryGetValue(id, out initPlaylistList)) initPlaylistList?.Remove(rawTopic);
+
+                return handled;
+            }
 
             switch (topic)
             {
                 case nameof(Service.Playlists):
-                    Service.Playlists = data.DequeuePlaylists(helper);
+                    Task<IPlaylistBase>[] tasks = data.DequeueGuids().Select(guid => GetInitPlaylist(guid)).ToArray();
+
+                    await Task.WhenAll(tasks);
+
+                    Service.Playlists = tasks.Select(t => t.Result).ToArray();
                     break;
 
                 case nameof(Service.AudioData):
@@ -384,15 +410,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                     break;
 
                 case nameof(Service.CurrentPlaylist):
-                    Playlist currentPlaylist;
-                    Guid id = data.DequeueGuid();
-
-                    if (!Playlist.TryGetInstance(id, out currentPlaylist))
-                    {
-                        currentPlaylist = new ByteQueue(payload).DequeuePlaylist(helper);
-                    }
-
-                    Service.CurrentPlaylist = currentPlaylist;
+                    Service.CurrentPlaylist = await GetInitPlaylist(data.DequeueGuid());
                     break;
 
                 case nameof(Service.AudioFormat):
@@ -414,8 +432,9 @@ namespace AudioPlayerBackend.Communication.MQTT
             return true;
         }
 
-        private bool HandleMessage(IPlaylistBase playlist, string topic, ByteQueue data)
+        private bool HandleMessage(Guid id, string topic, ByteQueue data)
         {
+            IPlaylistBase playlist = GetPlaylist(id);
             ISourcePlaylistBase source = playlist as ISourcePlaylistBase;
 
             switch (topic)
@@ -463,22 +482,78 @@ namespace AudioPlayerBackend.Communication.MQTT
             return true;
         }
 
-        public static bool ContainsPlaylist(string rawTopic, out string topic, out IPlaylistBase playlist)
+        public bool ContainsPlaylist(string rawTopic, out string topic, out Guid id)
         {
             if (!rawTopic.Contains('.'))
             {
                 topic = rawTopic;
-                playlist = null;
+                id = Guid.Empty;
                 return false;
             }
 
-            string playlistId = rawTopic.Remove(36);
-            Guid id = Guid.Parse(playlistId);
-
-            playlist = Playlist.GetInstance(id);
+            id = Guid.Parse(rawTopic.Remove(36));
             topic = rawTopic.Substring(37);
 
             return true;
+        }
+
+        private IPlaylistBase GetPlaylist(Guid id)
+        {
+            if (id == Guid.Empty) return Service.SourcePlaylist;
+
+            IPlaylistBase playlist;
+            if (!playlists.TryGetValue(id, out playlist))
+            {
+                playlist = new Playlist(id, helper);
+                playlists.Add(id, playlist);
+
+                InitPlaylist(playlist);
+            }
+
+            return playlist;
+        }
+
+        private async Task<IPlaylistBase> GetInitPlaylist(Guid id)
+        {
+            InitList<string> initPlaylistList;
+            IPlaylistBase playlist;
+
+            if (id == Guid.Empty) return Service.SourcePlaylist;
+            if (initPlaylistLists.TryGetValue(id, out initPlaylistList)) await initPlaylistList.Task;
+            if (playlists.TryGetValue(id, out playlist)) return playlist;
+
+            playlist = new Playlist(id);
+            playlists.Add(id, playlist);
+
+            await InitPlaylist(playlist);
+
+            return playlist;
+        }
+
+        private async Task InitPlaylist(IPlaylistBase playlist)
+        {
+            System.Diagnostics.Debug.WriteLine("InitPlaylist1: " + playlist.ID);
+
+            InitList<string> initPlaylistList = new InitList<string>(GetTopics(playlist));
+            initPlaylistLists.Add(playlist.ID, initPlaylistList);
+
+            await initPlaylistList.Task;
+
+            initPlaylistLists.Remove(playlist.ID);
+
+            System.Diagnostics.Debug.WriteLine("InitPlaylist2: " + playlist.ID);
+        }
+
+        protected static IEnumerable<string> GetTopics(IPlaylistBase playlist)
+        {
+            string id = playlist.ID + ".";
+
+            yield return id + nameof(playlist.CurrentSong);
+            yield return id + nameof(playlist.Songs);
+            yield return id + nameof(playlist.Duration);
+            yield return id + nameof(playlist.IsAllShuffle);
+            yield return id + nameof(playlist.Loop);
+            yield return id + nameof(playlist.Position);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
