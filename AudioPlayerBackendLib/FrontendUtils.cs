@@ -5,7 +5,7 @@ using AudioPlayerBackend.Audio;
 
 namespace AudioPlayerBackend
 {
-    public static class AudioUtils
+    public static class FrontendUtils
     {
         public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs)
         {
