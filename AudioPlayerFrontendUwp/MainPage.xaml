@@ -15,11 +15,7 @@
 
     <Page.Resources>
         <local:VolumeToolTipConverter x:Key="volTooTipCon"/>
-        <local:PositionToolTipConverter x:Key="posToolTipCon"/>
         <local:IsIMqttAudioConverter x:Key="viewClientSetCon" />
-
-        <con:TimeSpanToStringConverter x:Key="timeStringCon"/>
-        <local:TimeSpanToSecondsConverter x:Key="timeSecCon"/>
 
         <com:PlaybackState x:Key="playingState">Playing</com:PlaybackState>
         <Symbol x:Key="playSym">Play</Symbol>
@@ -42,7 +38,7 @@
     </Page.Resources>
 
     <Grid>
-        <Grid Visibility="{Binding IsTryOpening,Converter={StaticResource hidCon}}">
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -112,10 +108,10 @@
                                           Input3="{StaticResource negativeOne}"
                                           ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
-            <con:MultipleInputs2Converter x:Name="mulDoRemove" 
+            <con:MultipleInputs2Converter x:Name="micDoRemove" 
                                           Input0="{Binding AudioService.SourcePlaylist}"
                                           Input1="{Binding AudioService.CurrentPlaylist}"
-                                          Convert="MulDoRemove_Convert"/>
+                                          Convert="MicDoRemove_Convert"/>
 
             <ListBox Grid.Row="2" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
                      ItemsSource="{Binding ElementName=micSongs,Path=Input2}"
@@ -148,7 +144,7 @@
                             <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
 
                             <SymbolIcon Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" 
-                                        Visibility="{Binding ElementName=mulDoRemove,Path=Output,Converter={StaticResource visCon}}"
+                                        Visibility="{Binding ElementName=micDoRemove,Path=Output,Converter={StaticResource visCon}}"
                                         Symbol="Remove" Tapped="SyiRemove_Tapped"/>
                         </Grid>
                     </DataTemplate>
@@ -170,16 +166,10 @@
             <local:AudioPositionSlider Grid.Row="4" Position="{Binding AudioService.CurrentPlaylist.Position,Mode=TwoWay}"
                                        Duration="{Binding AudioService.CurrentPlaylist.Duration}"/>
         </Grid>
-
-        <StackPanel Grid.RowSpan="3" VerticalAlignment="Center" Visibility="{Binding IsTryOpening,Converter={StaticResource visCon}}">
-            <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
-            <ProgressRing IsActive="True" Height="100" Width="100" Margin="10"/>
-            <Button Content="Cancel" Width="100" Margin="5" HorizontalAlignment="Center" Click="BtnCancel_Click"/>
-        </StackPanel>
     </Grid>
 
     <Page.BottomAppBar>
-        <CommandBar Visibility="{Binding IsTryOpening,Converter={StaticResource hidCon}}">
+        <CommandBar>
             <CommandBar.PrimaryCommands>
                 <AppBarButton Icon="Previous" Label="Previous" Click="AbbPrevious_Click"/>
                 <AppBarButton Label="{Binding AudioService.PlayState,Converter={StaticResource isPlayPauseLabelCon}}"

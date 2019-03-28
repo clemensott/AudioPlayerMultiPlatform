@@ -2,7 +2,6 @@
 using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
-using AudioPlayerBackend.Communication.MQTT;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Player;
@@ -11,35 +10,22 @@ namespace AudioPlayerFrontend
 {
     class ViewModel : INotifyPropertyChanged
     {
-        private bool canceled;
-        private Task<bool> buildOrOpenTask;
+        private BuildStatusToken buildOpenStatusToken;
         private IAudioService audioService;
         private ICommunicator communicator;
         private IServicePlayer servicePlayer;
 
-        public bool Canceled
+        public bool IsTryOpening => BuildOpenStatusToken?.Task.IsCompleted == false;
+
+        public BuildStatusToken BuildOpenStatusToken
         {
-            get => canceled;
-            private set
+            get => buildOpenStatusToken;
+            set
             {
-                if (value == canceled) return;
+                if (value == buildOpenStatusToken) return;
 
-                canceled = value;
-                OnPropertyChanged(nameof(Canceled));
-            }
-        }
-
-        public bool IsTryOpening => BuildOrOpenTask != null;
-
-        public Task<bool> BuildOrOpenTask
-        {
-            get => buildOrOpenTask;
-            private set
-            {
-                if (value == buildOrOpenTask) return;
-
-                buildOrOpenTask = value;
-                OnPropertyChanged(nameof(BuildOrOpenTask));
+                buildOpenStatusToken = value;
+                OnPropertyChanged(nameof(BuildOpenStatusToken));
                 OnPropertyChanged(nameof(IsTryOpening));
             }
         }
@@ -80,95 +66,33 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public ServiceBuilder Builder { get; private set; }
+        public ServiceBuilder Builder { get; }
 
         public ViewModel(ServiceBuilder builder)
         {
-            System.Diagnostics.Debug.WriteLine("ViewModelCtor");
             Builder = builder;
         }
 
-        public async Task<bool> BuildAsync()
+        public async Task<BuildEndedType> BuildAsync()
         {
-            Canceled = false;
+            BuildOpenStatusToken = new BuildStatusToken();
+            ServiceBuildResult result = await Builder.BuildWhileAsync(BuildOpenStatusToken, TimeSpan.FromMilliseconds(200));
 
-            Task<bool> task = Build();
-            BuildOrOpenTask = task;
+            AudioService = result?.AudioService;
+            Communicator = result?.Communicator;
+            ServicePlayer = result?.ServicePlayer;
 
-            bool built = await task;
-
-            if (task == BuildOrOpenTask) BuildOrOpenTask = null;
-
-            return built;
+            return BuildOpenStatusToken.IsEnded ?? BuildEndedType.Successful;
         }
 
-        private async Task<bool> Build()
+        public async Task<BuildEndedType> OpenAsync()
         {
-            while (true)
-            {
-                try
-                {
-                    ServiceBuildResult result = await Builder.Build();
+            BuildOpenStatusToken = new BuildStatusToken();
 
-                    AudioService =result.AudioService;
-                    Communicator = result.Communicator;
-                    ServicePlayer = result.ServicePlayer;
-                    break;
-                }
-                catch(Exception e)
-                {
-                    System.Diagnostics.Debug.WriteLine(e);
-                    await Task.Delay(200);
+            await ServiceBuilder.OpenWhileAsync(communicator, BuildOpenStatusToken, TimeSpan.FromMilliseconds(200));
 
-                    if (!Canceled) continue;
-
-                    AudioService = null;
-                    break;
-                }
-            }
-
-            return AudioService != null;
+            return BuildOpenStatusToken.IsEnded ?? BuildEndedType.Successful;
         }
-
-        public async Task<bool> OpenAsync(ICommunicator communicator)
-        {
-            Canceled = false;
-
-            Task<bool> task = Open(communicator);
-            BuildOrOpenTask = task;
-
-            bool built = await task;
-
-            if (task == BuildOrOpenTask) BuildOrOpenTask = null;
-
-            return built;
-        }
-
-        public async Task<bool> Open(ICommunicator communicator)
-        {
-            if (communicator == null || communicator.IsOpen) return true;
-
-            while (true)
-            {
-                try
-                {
-                    await communicator.OpenAsync();
-                    break;
-                }
-                catch
-                {
-                    await Task.Delay(200);
-
-                    if (!Canceled) continue;
-
-                    break;
-                }
-            }
-
-            return communicator.IsOpen;
-        }
-
-        public void CancelBuildOrOpen() => Canceled = true;
 
         public event PropertyChangedEventHandler PropertyChanged;
 

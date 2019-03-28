@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
+using Windows.Foundation;
 using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -26,8 +27,8 @@ namespace AudioPlayerFrontend
         /// und daher das logische Äquivalent von main() bzw. WinMain().
         /// </summary>
 
-        private ServiceBuilder serviceBuilder;
-        private ViewModel viewModel;
+        private readonly ServiceBuilder serviceBuilder;
+        private readonly ViewModel viewModel;
         private StorageFile exceptionFile;
 
         public App()
@@ -38,7 +39,7 @@ namespace AudioPlayerFrontend
             this.Suspending += OnSuspending;
 
             serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
-            serviceBuilder.WithPlayer(new Join.Player());
+            serviceBuilder.WithPlayer(new Player());
 
             viewModel = new ViewModel(serviceBuilder);
 
@@ -109,8 +110,6 @@ namespace AudioPlayerFrontend
                 }
                 // Sicherstellen, dass das aktuelle Fenster aktiv ist
                 Window.Current.Activate();
-
-                if (!viewModel.IsTryOpening && viewModel.AudioService == null) await viewModel.BuildAsync();
             }
         }
 
@@ -157,38 +156,28 @@ namespace AudioPlayerFrontend
         private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
         {
             System.Diagnostics.Debug.WriteLine("EnterBackground: " + viewModel.Communicator?.IsOpen);
-            if (viewModel.Communicator?.IsOpen == true)
+
+            if (viewModel.Communicator?.IsOpen != true) return;
+
+            Deferral deferral = e.GetDeferral();
+
+            try
             {
-                var deferral = e.GetDeferral();
-
-                try
-                {
-                    //if (mqttAudio is IMqttAudioClient mqtttAudioClient)
-                    //{
-                    //    mqtttAudioClient.MqttClient.Disconnected -= MqttClient_Disconnected;
-                    //}
-
-                    await viewModel.Communicator.CloseAsync();
-                }
-                catch (Exception exc)
-                {
-                    //await new MessageDialog(exc.ToString(), "EnteredBackground").ShowAsync();
-
-                    //builder.WithService(mqttAudio);
-
-                    //Frame.Navigate(typeof(SettingsPage), builder);
-                }
-
-                deferral.Complete();
+                await viewModel.Communicator.CloseAsync();
             }
+            catch { }
 
+            deferral.Complete();
         }
 
-        private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
+        private void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
             System.Diagnostics.Debug.WriteLine("LeaveBackground1: " + viewModel.Communicator?.IsOpen);
-            if (viewModel.Communicator != null) await viewModel.OpenAsync(viewModel.Communicator);
-            System.Diagnostics.Debug.WriteLine("LeaveBackground2: " + viewModel.Communicator?.IsOpen);
+
+            if (viewModel.Communicator == null) return;
+
+            Task task = viewModel.OpenAsync();
+            (Window.Current.Content as Frame)?.Navigate(typeof(BuildOpenPage), viewModel.BuildOpenStatusToken);
         }
     }
 }
