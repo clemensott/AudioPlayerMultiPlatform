@@ -324,7 +324,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         public abstract Task CloseAsync();
 
-        public abstract Task OpenAsync();
+        public abstract Task OpenAsync(BuildStatusToken statusToken);
 
         private async Task PublishAsync(IPlaylistBase playlist, string topic, byte[] payload,
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)

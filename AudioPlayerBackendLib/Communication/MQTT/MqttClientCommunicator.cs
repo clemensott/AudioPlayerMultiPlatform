@@ -77,13 +77,14 @@ namespace AudioPlayerBackend.Communication.MQTT
             Port = port;
         }
 
-        public override async Task OpenAsync()
+        public override async Task OpenAsync(BuildStatusToken statusToken)
         {
             try
             {
                 IsOpening = true;
 
-                TopicFilter[] serviceTopics = GetTopicFilters().Concat(GetTopicFilters(Service.SourcePlaylist)).ToArray();
+                TopicFilter[] serviceTopics = GetTopicFilters().Concat(GetTopicFilters(Service.SourcePlaylist))
+                    .Concat(GetTopicFilters(playlists.Values)).ToArray();
                 initProps = new InitList<string>(serviceTopics.Select(t => t.Topic));
 
                 IMqttClientOptions options = new MqttClientOptionsBuilder()
@@ -91,12 +92,16 @@ namespace AudioPlayerBackend.Communication.MQTT
                     .WithCommunicationTimeout(TimeSpan.FromSeconds(1))
                     .Build();
 
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await MqttClient.ConnectAsync(options);
+                if (statusToken?.IsEnded.HasValue == true) return;
 
                 Task.Run(ProcessPublish);
                 ProcessReceive();
 
                 await MqttClient.SubscribeAsync(serviceTopics);
+                if (statusToken?.IsEnded.HasValue == true) return;
+
                 await initProps.Task;
             }
             catch
@@ -111,8 +116,13 @@ namespace AudioPlayerBackend.Communication.MQTT
             }
             finally
             {
-                initProps = null;
+                try
+                {
+                    if (statusToken?.IsEnded.HasValue == true) await CloseAsync();
+                }
+                catch { }
 
+                initProps = null;
                 IsOpening = false;
             }
         }
@@ -124,7 +134,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             await Task.WhenAll(GetTopicFilters().Select(tf => MqttClient.UnsubscribeAsync(tf.Topic)));
             await Task.WhenAll(GetTopicFilters(Service.SourcePlaylist).Select(tf => MqttClient.UnsubscribeAsync(tf.Topic)));
-            await Task.WhenAll(Service.Playlists.SelectMany(GetTopicFilters).Select(tf => MqttClient.UnsubscribeAsync(tf.Topic)));
+            await Task.WhenAll(GetTopicFilters(playlists.Values).Select(tf => MqttClient.UnsubscribeAsync(tf.Topic)));
 
             await MqttClient.DisconnectAsync();
         }
@@ -153,6 +163,11 @@ namespace AudioPlayerBackend.Communication.MQTT
             yield return new TopicFilter(id + nameof(playlist.Loop), qos);
             yield return new TopicFilter(id + nameof(playlist.Position), qos);
             //yield return new TopicFilter(id + nameof(playlist.SearchKey), qos);
+        }
+
+        private static IEnumerable<TopicFilter> GetTopicFilters(IEnumerable<IPlaylistBase> playlists)
+        {
+            return playlists.SelectMany(GetTopicFilters);
         }
 
         private static IEnumerable<TopicFilter> GetTopicFilters(IPlaylistBase playlist)

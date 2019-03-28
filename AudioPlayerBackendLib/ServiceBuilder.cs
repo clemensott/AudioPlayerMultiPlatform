@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using System;
+using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.MQTT;
 using AudioPlayerBackend.Player;
@@ -451,8 +452,10 @@ namespace AudioPlayerBackend
             return this;
         }
 
-        public async Task<ServiceBuildResult> Build()
+        public async Task<ServiceBuildResult> Build(BuildStatusToken statusToken = null)
         {
+            if (statusToken?.IsEnded.HasValue == true) return null;
+
             IAudioService service = Service ?? CreateAudioService();
             MqttCommunicator communicator;
             IServicePlayer servicePlayer;
@@ -463,7 +466,12 @@ namespace AudioPlayerBackend
 
                 if (server != null && (ServerPort != server.Port || Service != server.Service))
                 {
-                    if (server.IsOpen) await server.CloseAsync();
+                    if (server.IsOpen)
+                    {
+                        await server.CloseAsync();
+
+                        if (statusToken?.IsEnded.HasValue == true) return null;
+                    }
 
                     server = null;
                 }
@@ -473,7 +481,12 @@ namespace AudioPlayerBackend
                     server = CreateMqttServerCommunicator(service, ServerPort);
                 }
 
-                if (!server.IsOpen) await server.OpenAsync();
+                if (!server.IsOpen)
+                {
+                    await server.OpenAsync(statusToken);
+
+                    if (statusToken?.IsEnded.HasValue == true) return null;
+                }
 
                 communicator = server;
                 servicePlayer = ServicePlayer as AudioServicePlayer ?? CreateAudioServicePlayer(Player, service);
@@ -484,7 +497,13 @@ namespace AudioPlayerBackend
 
                 if (client != null && (ServerAddress != client.ServerAddress || ClientPort != client.Port))
                 {
-                    await client.CloseAsync();
+                    if (client.IsOpen)
+                    {
+                        await client.CloseAsync();
+
+                        if (statusToken?.IsEnded.HasValue == true) return null;
+                    }
+
                     client = null;
                 }
 
@@ -493,7 +512,12 @@ namespace AudioPlayerBackend
                     client = CreateMqttClientCommunicator(service, serverAddress, clientPort);
                 }
 
-                if (!client.IsOpen) await client.OpenAsync();
+                if (!client.IsOpen)
+                {
+                    await client.OpenAsync(statusToken);
+
+                    if (statusToken?.IsEnded.HasValue == true) return null;
+                }
 
                 if (isStreaming.HasValue) client.IsStreaming = isStreaming.Value;
 
@@ -518,6 +542,8 @@ namespace AudioPlayerBackend
             if (SearchKey != null) service.SourcePlaylist.SearchKey = SearchKey;
             if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (volume.HasValue) service.Volume = volume.Value;
+
+            statusToken?.End(BuildEndedType.Successful);
 
             return new ServiceBuildResult(service, communicator, servicePlayer);
         }
@@ -549,24 +575,16 @@ namespace AudioPlayerBackend
             return helper.CreateAudioServicePlayer(player, service);
         }
 
-        private bool ContainsSameSongs(IEnumerable<Song> enum1, IEnumerable<Song> enum2)
-        {
-            if (enum1 == enum2) return true;
-            if (enum1 == null || enum2 == null) return false;
-
-            return enum1.All(enum2.Contains);
-        }
-
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged(string name)
         {
             if (PropertyChanged == null) return;
 
-            if (helper?.InvokeDispatcher != null) helper.InvokeDispatcher(raise);
-            else raise();
+            if (helper?.InvokeDispatcher != null) helper.InvokeDispatcher(Raise);
+            else Raise();
 
-            void raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

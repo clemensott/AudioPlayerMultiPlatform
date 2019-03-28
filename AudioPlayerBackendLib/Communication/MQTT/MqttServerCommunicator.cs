@@ -35,7 +35,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             Port = port;
         }
 
-        public override async Task OpenAsync()
+        public override async Task OpenAsync(BuildStatusToken statusToken)
         {
             try
             {
@@ -47,19 +47,31 @@ namespace AudioPlayerBackend.Communication.MQTT
                     .WithApplicationMessageInterceptor(OnApplicationMessageInterception)
                     .Build();
 
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await server.StartAsync(options);
 
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishCurrentPlaylist();
-                await Task.WhenAll(Service.Playlists.Select(PublishPlaylist).ToArray());
+                if (statusToken?.IsEnded.HasValue == true) return;
+                await Task.WhenAll(Service.Playlists.Select(PublishPlaylist));
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishPlaylists();
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishPlayState();
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishVolume();
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishFormat();
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishAudioData();
 
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishPlaylist(Service.SourcePlaylist);
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishIsSearchShuffle(Service.SourcePlaylist);
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishSearchKey(Service.SourcePlaylist);
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishMediaSources(Service.SourcePlaylist);
             }
             catch
