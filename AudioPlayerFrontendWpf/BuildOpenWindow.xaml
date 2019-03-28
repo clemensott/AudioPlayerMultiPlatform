@@ -1,0 +1,45 @@
+﻿<Window x:Class="AudioPlayerFrontend.BuildOpenWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AudioPlayerFrontend"
+        xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
+        xmlns:spi="clr-namespace:StdOttFramework.Converters.Specialized;assembly=StdOttFrameworkLib"
+        xmlns:back="clr-namespace:AudioPlayerBackend;assembly=AudioPlayerBackendLib"
+        mc:Ignorable="d"
+        Title="Open Service - Hotkey Music" Height="150" Width="400" ResizeMode="NoResize">
+
+    <Window.Resources>
+        <back:BuildEndedType x:Key="canceled">Canceled</back:BuildEndedType>
+        <spi:VisableCollapsedConverter x:Key="idleVisCon" CompareValue="{StaticResource canceled}"/>
+        <spi:VisableCollapsedConverter x:Key="openVisCon" CompareValue="{x:Null}"/>
+        <spi:CollapsedVisibleConverter x:Key="excCon" CompareValue="{x:Null}"/>
+    </Window.Resources>
+
+    <Grid>
+        <StackPanel Grid.RowSpan="3" VerticalAlignment="Center" 
+                    Visibility="{Binding IsEnded,Converter={StaticResource openVisCon}}">
+            <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
+            <ProgressBar IsIndeterminate="True" Height="20" Margin="30,5"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="Cancel" Width="100" Margin="5" Click="BtnCancel_Click"/>
+                <Button Content="Settings" Width="100" Margin="5" Click="BtnOpeningSettings_Click"/>
+                <Button Content="Exception" Width="100" Margin="5"
+                        Visibility="{Binding Exception,Converter={StaticResource excCon}}"
+                        Click="BtnException_Click"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.RowSpan="3" Orientation="Horizontal"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="{Binding IsEnded,Converter={StaticResource idleVisCon}}">
+            <Button Content="Retry" Width="100" Margin="5" Click="BtnRetry_Click"/>
+            <Button Content="Settings" Width="100" Margin="5" Click="BtnSettings_Click"/>
+            <Button Content="Exception" Width="100" Margin="5" 
+                    Visibility="{Binding Exception,Converter={StaticResource excCon}}"
+                    Click="BtnException_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,21 +1,17 @@
 ﻿using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Player;
-using System;
 using System.ComponentModel;
-using System.Windows;
 using AudioPlayerBackend;
 
 namespace AudioPlayerFrontend
 {
     enum OpenState { Open, TryOpening, IDLE, Settings }
 
-    class ViewModel : INotifyPropertyChanged
+    public class ViewModel : INotifyPropertyChanged
     {
         private bool isUiEnabled;
-        private OpenState audioServiceState;
-        private Visibility openVisibility, tryOpeningVisibility, idleVisibility;
-        private Exception buildException;
+        private BuildStatusToken buildOpenStatusToken;
         private ServiceBuildResult service;
 
         public bool IsUiEnabled
@@ -33,85 +29,15 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public OpenState AudioServiceState
+        public BuildStatusToken BuildOpenStatusToken
         {
-            get => audioServiceState;
+            get => buildOpenStatusToken;
             set
             {
-                if (value == audioServiceState) return;
+                if (value == buildOpenStatusToken) return;
 
-                audioServiceState = value;
-                OnPropertyChanged(nameof(AudioServiceState));
-
-                switch (value)
-                {
-                    case OpenState.Open:
-                        OpenVisibility = Visibility.Visible;
-                        TryOpeningVisibility = Visibility.Collapsed;
-                        IdleVisibility = Visibility.Collapsed;
-                        break;
-
-                    case OpenState.TryOpening:
-                        BuildException = null;
-                        TryOpeningVisibility = Visibility.Visible;
-                        IdleVisibility = Visibility.Collapsed;
-                        OpenVisibility = Visibility.Hidden;
-                        break;
-
-                    case OpenState.IDLE:
-                        IdleVisibility = Visibility.Visible;
-                        TryOpeningVisibility = Visibility.Collapsed;
-                        OpenVisibility = Visibility.Hidden;
-                        break;
-                }
-            }
-        }
-
-        public Visibility OpenVisibility
-        {
-            get => openVisibility;
-            set
-            {
-                if (value == openVisibility) return;
-
-                openVisibility = value;
-                OnPropertyChanged(nameof(OpenVisibility));
-            }
-        }
-
-        public Visibility TryOpeningVisibility
-        {
-            get => tryOpeningVisibility;
-            set
-            {
-                if (value == tryOpeningVisibility) return;
-
-                tryOpeningVisibility = value;
-                OnPropertyChanged(nameof(TryOpeningVisibility));
-            }
-        }
-
-        public Visibility IdleVisibility
-        {
-            get => idleVisibility;
-            set
-            {
-                if (value == idleVisibility) return;
-
-                idleVisibility = value;
-                OnPropertyChanged(nameof(IdleVisibility));
-            }
-        }
-
-        public Exception BuildException
-        {
-            get => buildException;
-            set
-            {
-                if (value == buildException) return;
-
-                buildException = value;
-                OnPropertyChanged(nameof(BuildException));
+                buildOpenStatusToken = value;
+                OnPropertyChanged(nameof(BuildOpenStatusToken));
             }
         }
 
@@ -152,7 +78,6 @@ namespace AudioPlayerFrontend
 
         public ViewModel()
         {
-            AudioServiceState = OpenState.TryOpening;
             IsUiEnabled = true;
         }
 

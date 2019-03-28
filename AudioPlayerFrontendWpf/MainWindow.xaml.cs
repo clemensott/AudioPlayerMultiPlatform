@@ -1,6 +1,5 @@
 ﻿using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Player;
 using AudioPlayerFrontend.Join;
 using Microsoft.Win32;
@@ -53,24 +52,12 @@ namespace AudioPlayerFrontend
             switch (e.Mode)
             {
                 case PowerModes.Resume:
-                    try
+                    if (viewModel.CommunicatorUI != null)
                     {
-                        if (viewModel.CommunicatorUI != null)
-                        {
-                            viewModel.AudioServiceState = OpenState.TryOpening;
-
-                            await OpenAsync(viewModel.CommunicatorUI);
-
-                            viewModel.AudioServiceState = OpenState.Open;
-                        }
-
-                        Subscribe(hotKeys);
+                        await OpenAudioServiceAsync();
                     }
-                    catch
-                    {
-                        if (viewModel.AudioServiceState == OpenState.Settings) await UpdateBuildersAndBuild();
-                        else viewModel.AudioServiceState = OpenState.IDLE;
-                    }
+
+                    Subscribe(hotKeys);
                     break;
 
                 case PowerModes.Suspend:
@@ -78,30 +65,13 @@ namespace AudioPlayerFrontend
 
                     if (viewModel.CommunicatorUI != null)
                     {
-                        await viewModel.CommunicatorUI.CloseAsync();
+                        try
+                        {
+                            await viewModel.CommunicatorUI.CloseAsync();
+                        }
+                        catch { }
                     }
                     break;
-            }
-        }
-
-        private async Task OpenAsync(ICommunicator audio)
-        {
-            while (true)
-            {
-                try
-                {
-                    await audio.OpenAsync();
-                    break;
-                }
-                catch (Exception exc)
-                {
-                    await Task.Delay(500);
-
-                    if (viewModel.AudioServiceState == OpenState.TryOpening) continue;
-
-                    MessageBox.Show(exc.ToString(), "Open service", MessageBoxButton.OK, MessageBoxImage.Error);
-                    throw;
-                }
             }
         }
 
@@ -118,7 +88,100 @@ namespace AudioPlayerFrontend
 
             if (result.TryGetFirstValidOptionParseds(disableUiOpt, out _)) viewModel.IsUiEnabled = false;
 
-            await Build();
+            await BuildAudioServiceAsync();
+
+            BuildHotKeys();
+        }
+
+        public async Task BuildAudioServiceAsync()
+        {
+            Hide();
+
+            while (true)
+            {
+                BuildStatusToken statusToken = new BuildStatusToken();
+                Task<ServiceBuildResult> task = serviceBuilder.BuildWhileAsync(statusToken, TimeSpan.FromMilliseconds(500));
+
+                if (ShowBuildOpenWindow(statusToken) == false)
+                {
+                    statusToken.End(BuildEndedType.Canceled);
+                    Close();
+                    return;
+                }
+
+                viewModel.Service = await task;
+
+                if (statusToken.IsEnded is BuildEndedType.Successful) break;
+                if (statusToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
+            }
+
+            Show();
+        }
+
+        public async Task OpenAudioServiceAsync()
+        {
+            Hide();
+
+            while (true)
+            {
+                BuildStatusToken statusToken = new BuildStatusToken();
+                Task task = viewModel.CommunicatorUI.OpenWhileAsync(statusToken, TimeSpan.FromMilliseconds(500));
+
+                if (ShowBuildOpenWindow(statusToken) == false)
+                {
+                    statusToken.End(BuildEndedType.Canceled);
+                    Close();
+                    return;
+                }
+
+                await task;
+
+                if (statusToken.IsEnded is BuildEndedType.Successful) break;
+                if (statusToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
+            }
+
+            Show();
+        }
+
+        private static bool? ShowBuildOpenWindow(BuildStatusToken statusToken)
+        {
+            BuildOpenWindow window = BuildOpenWindow.Current;
+
+            //BuildOpenWindow window = new BuildOpenWindow(statusToken);
+            window.StatusToken = statusToken;
+
+            return window.ShowDialog();
+        }
+
+        private void UpdateBuilders()
+        {
+            if (viewModel?.Service?.AudioService != null) serviceBuilder.WithService(viewModel.Service.AudioService);
+            if (viewModel?.Service?.Communicator != null) serviceBuilder.WithCommunicator(viewModel.Service.Communicator);
+            if (viewModel?.Service?.ServicePlayer != null) serviceBuilder.WithPlayerService(viewModel.Service.ServicePlayer);
+            if (hotKeys != null) hotKeysBuilder.WithHotKeys(hotKeys);
+
+            SettingsWindow window = new SettingsWindow(serviceBuilder, hotKeysBuilder);
+            window.ShowDialog();
+        }
+
+        private void BuildHotKeys()
+        {
+            try
+            {
+                HotKeys hotKeys = hotKeysBuilder.Build();
+
+                if (hotKeys != this.hotKeys)
+                {
+                    Unsubscribe(this.hotKeys);
+                    this.hotKeys = hotKeys;
+                    Subscribe(hotKeys);
+                }
+            }
+            catch (Exception exc)
+            {
+                MessageBox.Show(exc.ToString(),
+                    "Building hotkeys error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -190,90 +253,11 @@ namespace AudioPlayerFrontend
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            await UpdateBuildersAndBuild();
-        }
-
-        private async Task UpdateBuildersAndBuild()
-        {
             UpdateBuilders();
 
-            await Build();
-        }
+            await BuildAudioServiceAsync();
 
-        private async Task Build()
-        {
-            try
-            {
-                viewModel.AudioServiceState = OpenState.TryOpening;
-
-                ServiceBuildResult serviceResult = await BuildService(serviceBuilder);
-                HotKeys hotKeys = BuildHotKeys(hotKeysBuilder);
-
-                viewModel.Service = serviceResult;
-
-                if (hotKeys != this.hotKeys)
-                {
-                    Unsubscribe(this.hotKeys);
-                    this.hotKeys = hotKeys;
-                    Subscribe(hotKeys);
-                }
-
-                viewModel.AudioServiceState = OpenState.Open;
-            }
-            catch
-            {
-                if (viewModel.AudioServiceState == OpenState.Settings) await UpdateBuildersAndBuild();
-                else viewModel.AudioServiceState = OpenState.IDLE;
-            }
-        }
-
-        private void UpdateBuilders()
-        {
-            if (viewModel.Service.AudioService != null) serviceBuilder.WithService(viewModel.Service.AudioService);
-            if (viewModel.Service.Communicator != null) serviceBuilder.WithCommunicator(viewModel.Service.Communicator);
-            if (viewModel.Service.ServicePlayer != null) serviceBuilder.WithPlayerService(viewModel.Service.ServicePlayer);
-            if (hotKeys != null) hotKeysBuilder.WithHotKeys(hotKeys);
-
-            SettingsWindow window = new SettingsWindow(serviceBuilder, hotKeysBuilder);
-            window.ShowDialog();
-        }
-
-        private async Task<ServiceBuildResult> BuildService(ServiceBuilder serviceBuilder)
-        {
-            while (true)
-            {
-                try
-                {
-                    return await serviceBuilder.Build();
-                }
-                catch (Exception exc)
-                {
-                    viewModel.BuildException = exc;
-
-                    await Task.Delay(5000);
-
-                    if (viewModel.AudioServiceState == OpenState.TryOpening) continue;
-                    throw;
-                }
-            }
-        }
-
-        private HotKeys BuildHotKeys(HotKeysBuilder hotKeysBuilder)
-        {
-            HotKeys hotKeys;
-
-            try
-            {
-                hotKeys = hotKeysBuilder.Build();
-                Subscribe(hotKeys);
-
-                return hotKeys;
-            }
-            catch (Exception exc)
-            {
-                viewModel.BuildException = exc;
-                throw;
-            }
+            BuildHotKeys();
         }
 
         private void LbxSongs_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -305,27 +289,6 @@ namespace AudioPlayerFrontend
 
         private void StackPanel_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-        }
-
-        private void BtnCancel_Click(object sender, RoutedEventArgs e)
-        {
-            viewModel.AudioServiceState = OpenState.IDLE;
-        }
-
-        private void BtnOpeningSettings_Click(object sender, RoutedEventArgs e)
-        {
-            viewModel.AudioServiceState = OpenState.Settings;
-        }
-
-        private async void BtnRetry_Click(object sender, RoutedEventArgs e)
-        {
-            await Build();
-        }
-
-        private void BtnException_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show(viewModel.BuildException.ToString(),
-                "Building Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         private void Subscribe(HotKeys hotKeys)

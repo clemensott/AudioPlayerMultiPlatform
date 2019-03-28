@@ -84,6 +84,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="BuildOpenWindow.xaml.cs">
+      <DependentUpon>BuildOpenWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="FilePathsToSingleStringConverter.cs" />
     <Compile Include="FloatNullableToFloatConverter.cs" />
     <Compile Include="HotKeyBox.xaml.cs">
@@ -107,6 +110,10 @@
     <Compile Include="IsAudioStreamPlayerConverter.cs" />
     <Compile Include="ViewModels\ViewModel.cs" />
     <Compile Include="WidthService.cs" />
+    <Page Include="BuildOpenWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="HotKeyBox.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

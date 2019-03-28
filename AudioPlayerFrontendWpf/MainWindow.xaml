@@ -19,158 +19,133 @@
         <con:TimeSpanToStringConverter x:Key="timeTextCon"/>
         <local:TimeSpanToSecondsConverter x:Key="timeSecCon"/>
         <local:IsAudioStreamPlayerConverter x:Key="isClientCon"/>
-        <spi:CollapsedVisibleConverter x:Key="colCon" CompareValue="{x:Null}"/>
 
         <sys:Int32 x:Key="negativeOne">-1</sys:Int32>
     </Window.Resources>
 
-    <Grid>
-        <Grid Margin="5" Visibility="{Binding OpenVisibility}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-            <WrapPanel Margin="5,3">
-                <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
-                    <TextBlock Text="Search:" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                    <TextBox Name="tbxSearch" HorizontalAlignment="Stretch" MinWidth="200"
-                             Text="{Binding AudioServiceUI.SourcePlaylist.SearchKey,
-                               Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
-                             KeyDown="TbxSearch_KeyDown"/>
-                </StackPanel>
+        <WrapPanel Margin="5,3">
+            <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
+                <TextBlock Text="Search:" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                <TextBox Name="tbxSearch" HorizontalAlignment="Stretch" MinWidth="200"
+                         Text="{Binding AudioServiceUI.SourcePlaylist.SearchKey,
+                           Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+                         KeyDown="TbxSearch_KeyDown"/>
+            </StackPanel>
 
-                <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
-                    <TextBlock Text="Volume:" VerticalAlignment="Center" Margin="0,-3,5,0"/>
-                    <Slider Maximum="1" Value="{Binding AudioServiceUI.Volume}" 
-                            Width="100" VerticalAlignment="Center"/>
-                </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
+                <TextBlock Text="Volume:" VerticalAlignment="Center" Margin="0,-3,5,0"/>
+                <Slider Maximum="1" Value="{Binding AudioServiceUI.Volume}" 
+                        Width="100" VerticalAlignment="Center"/>
+            </StackPanel>
 
-                <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center"
-                            Visibility="{Binding ServicePlayerUI,Converter={StaticResource isClientCon}}">
-                    <CheckBox Content="Stream" VerticalAlignment="Center" HorizontalAlignment="Right"
-                              Margin="0,0,5,0" IsChecked="{Binding CommunicatorUI.IsStreaming,Mode=TwoWay}"/>
-                    <Slider Maximum="1" Value="{Binding ServicePlayerUI.Player.Volume}" Width="100" VerticalAlignment="Center"/>
-                </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center"
+                        Visibility="{Binding ServicePlayerUI,Converter={StaticResource isClientCon}}">
+                <CheckBox Content="Stream" VerticalAlignment="Center" HorizontalAlignment="Right"
+                          Margin="0,0,5,0" IsChecked="{Binding CommunicatorUI.IsStreaming,Mode=TwoWay}"/>
+                <Slider Maximum="1" Value="{Binding ServicePlayerUI.Player.Volume}" Width="100" VerticalAlignment="Center"/>
+            </StackPanel>
 
-                <Button Margin="5,3" Content="Reload" Width="100" Click="Reload_Click"/>
-                <Button Margin="5,3" Content="Settings" Width="100" Click="BtnSettings_Click"/>
+            <Button Margin="5,3" Content="Reload" Width="100" Click="Reload_Click"/>
+            <Button Margin="5,3" Content="Settings" Width="100" Click="BtnSettings_Click"/>
 
-                <Button Margin="5,3" Width="100" Content="{Binding AudioServiceUI.CurrentPlaylist.Loop}"
-                        Click="BtnLoop_Click"/>
+            <Button Margin="5,3" Width="100" Content="{Binding AudioServiceUI.CurrentPlaylist.Loop}"
+                    Click="BtnLoop_Click"/>
 
-                <con:MultipleInputs4Converter x:Name="micShuffle"
-                                              Input0="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
-                                              Input1="{Binding AudioServiceUI.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}"
-                                              Input2="{Binding AudioServiceUI.SourcePlaylist.IsSearchShuffle,Mode=TwoWay}"
-                                              ConvertRef="MicShuffle_ConvertRef"/>
+            <con:MultipleInputs4Converter x:Name="micShuffle"
+                                          Input0="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
+                                          Input1="{Binding AudioServiceUI.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}"
+                                          Input2="{Binding AudioServiceUI.SourcePlaylist.IsSearchShuffle,Mode=TwoWay}"
+                                          ConvertRef="MicShuffle_ConvertRef"/>
 
-                <CheckBox Margin="5,3" Content="Shuffle" VerticalAlignment="Center"
-                          IsChecked="{Binding ElementName=micShuffle,Path=Input3,
-                            Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Margin="5,3" Content="Shuffle" VerticalAlignment="Center"
+                      IsChecked="{Binding ElementName=micShuffle,Path=Input3,
+                        Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
 
-                <CheckBox Margin="5,3" Content="EnableUI" VerticalAlignment="Center" 
-                          HorizontalAlignment="Right" IsChecked="{Binding IsUiEnabled,Mode=TwoWay}"/>
-            </WrapPanel>
+            <CheckBox Margin="5,3" Content="EnableUI" VerticalAlignment="Center" 
+                      HorizontalAlignment="Right" IsChecked="{Binding IsUiEnabled,Mode=TwoWay}"/>
+        </WrapPanel>
 
-            <con:MultipleInputs7Converter x:Name="micSongs" 
-                                          Input0="{Binding AudioServiceUI.CurrentPlaylist}"
-                                          Input1="{Binding AudioServiceUI.CurrentPlaylist.AllSongs}"
-                                          Input2="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong,Mode=TwoWay}" 
-                                          Input3="{Binding AudioServiceUI.SourcePlaylist.SearchSongs}"
-                                          Input4="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
-                                          Input6="{StaticResource negativeOne}"
-                                          ConvertRef="MicCurrentSongIndex_ConvertRef"/>
+        <con:MultipleInputs7Converter x:Name="micSongs" 
+                                      Input0="{Binding AudioServiceUI.CurrentPlaylist}"
+                                      Input1="{Binding AudioServiceUI.CurrentPlaylist.AllSongs}"
+                                      Input2="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong,Mode=TwoWay}" 
+                                      Input3="{Binding AudioServiceUI.SourcePlaylist.SearchSongs}"
+                                      Input4="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
+                                      Input6="{StaticResource negativeOne}"
+                                      ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
-            <ListBox Grid.Row="1" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
-                     ItemsSource="{Binding ElementName=micSongs,Path=Input5}"
-                     SelectedIndex="{Binding ElementName=micSongs,Path=Input6,Mode=TwoWay}"
-                     SelectionChanged="LbxSongs_SelectionChanged">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="3">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="5"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+        <ListBox Grid.Row="1" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
+                 ItemsSource="{Binding ElementName=micSongs,Path=Input5}"
+                 SelectedIndex="{Binding ElementName=micSongs,Path=Input6,Mode=TwoWay}"
+                 SelectionChanged="LbxSongs_SelectionChanged">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="5"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                            <TextBlock Grid.RowSpan="2" TextAlignment="Center" VerticalAlignment="Center"
-                                       Text="{Binding Index}" Margin="5,0"/>
+                        <TextBlock Grid.RowSpan="2" TextAlignment="Center" VerticalAlignment="Center"
+                                   Text="{Binding Index}" Margin="5,0"/>
 
-                            <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding Title}"/>
-                            <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
-                        </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+                        <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding Title}"/>
+                        <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
 
-            <Grid Grid.Row="2">
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto" Name="cdSong"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" Content="Previous" Width="75" Click="OnPrevious"/>
+            <ToggleButton Grid.Column="1" Content="Play/Pause" Margin="5,0" Width="75"
+                          IsChecked="{Binding Service.AudioService.PlayState,Mode=TwoWay,
+                            Converter={StaticResource ResourceKey=isPlayingCon}}" />
+            <Button Grid.Column="2" Content="Next" Width="75" Click="OnNext"/>
+
+            <StackPanel Grid.Column="3" DataContext="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
+                        MouseLeftButtonDown="StpCurrentSong_MouseLeftButtonDown"
+                        MouseRightButtonUp="StackPanel_MouseRightButtonUp">
+                <TextBlock Name="tblTitle" Text="{Binding Title}" TextWrapping="Wrap" Margin="10,0,0,0"/>
+                <TextBlock Name="tblArtist" Text="{Binding Artist}" TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0"/>
+            </StackPanel>
+
+            <Grid Grid.Column="4" DataContext="{Binding AudioServiceUI.CurrentPlaylist}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto" Name="cdSong"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" Content="Previous" Width="75" Click="OnPrevious"/>
-                <ToggleButton Grid.Column="1" Content="Play/Pause" Margin="5,0" Width="75"
-                              IsChecked="{Binding Service.AudioService.PlayState,Mode=TwoWay,
-                                Converter={StaticResource ResourceKey=isPlayingCon}}" />
-                <Button Grid.Column="2" Content="Next" Width="75" Click="OnNext"/>
-
-                <StackPanel Grid.Column="3" DataContext="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
-                            MouseLeftButtonDown="StpCurrentSong_MouseLeftButtonDown"
-                            MouseRightButtonUp="StackPanel_MouseRightButtonUp">
-                    <TextBlock Name="tblTitle" Text="{Binding Title}" TextWrapping="Wrap" Margin="10,0,0,0"/>
-                    <TextBlock Name="tblArtist" Text="{Binding Artist}" TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0"/>
-                </StackPanel>
-
-                <Grid Grid.Column="4" DataContext="{Binding AudioServiceUI.CurrentPlaylist}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Margin="5,0" VerticalAlignment="Center"
-                               Text="{Binding Position,Converter={StaticResource timeTextCon}}"/>
-                    <Slider Grid.Column="1" x:Name="sldPosition" Minimum="0" VerticalAlignment="Center" IsMoveToPointEnabled="True"
-                            Value="{Binding Position,Mode=TwoWay,Converter={StaticResource timeSecCon}}"
-                            Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"/>
-                    <TextBlock Grid.Column="2" x:Name="tblDuration" Margin="5,0" VerticalAlignment="Center"
-                               Text="{Binding Duration,Converter={StaticResource timeTextCon}}"/>
-                </Grid>
+                <TextBlock Grid.Column="0" Margin="5,0" VerticalAlignment="Center"
+                           Text="{Binding Position,Converter={StaticResource timeTextCon}}"/>
+                <Slider Grid.Column="1" x:Name="sldPosition" Minimum="0" VerticalAlignment="Center" IsMoveToPointEnabled="True"
+                        Value="{Binding Position,Mode=TwoWay,Converter={StaticResource timeSecCon}}"
+                        Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"/>
+                <TextBlock Grid.Column="2" x:Name="tblDuration" Margin="5,0" VerticalAlignment="Center"
+                           Text="{Binding Duration,Converter={StaticResource timeTextCon}}"/>
             </Grid>
         </Grid>
-
-        <StackPanel Grid.RowSpan="3" VerticalAlignment="Center" 
-                    Visibility="{Binding TryOpeningVisibility}">
-            <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
-            <ProgressBar IsIndeterminate="True" Height="20" Width="300" Margin="5"/>
-
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Content="Cancel" Width="100" Margin="5" Click="BtnCancel_Click"/>
-                <Button Content="Settings" Width="100" Margin="5" Click="BtnOpeningSettings_Click"/>
-                <Button Content="Exception" Width="100" Margin="5" DataContext="{Binding BuildException}"
-                        Visibility="{Binding Converter={StaticResource colCon}}" Click="BtnException_Click"/>
-            </StackPanel>
-        </StackPanel>
-
-        <StackPanel Grid.RowSpan="3" Orientation="Horizontal"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding IdleVisibility}">
-            <Button Content="Retry" Width="100" Margin="5" Click="BtnRetry_Click"/>
-            <Button Content="Settings" Width="100" Margin="5" Click="BtnSettings_Click"/>
-            <Button Content="Exception" Width="100" Margin="5" DataContext="{Binding BuildException}"
-                    Visibility="{Binding Converter={StaticResource colCon}}" Click="BtnException_Click"/>
-        </StackPanel>
     </Grid>
 </Window>
