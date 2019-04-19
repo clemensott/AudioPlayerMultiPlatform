@@ -34,12 +34,12 @@ namespace AudioPlayerFrontend
         public BuildOpenWindow()
         {
             InitializeComponent();
+
+            Loaded += OnLoaded;
         }
 
-        public BuildOpenWindow(BuildStatusToken statusToken)
+        public BuildOpenWindow(BuildStatusToken statusToken) : this()
         {
-            InitializeComponent();
-
             StatusToken = statusToken;
         }
 
@@ -47,6 +47,18 @@ namespace AudioPlayerFrontend
         {
             base.OnActivated(e);
 
+            if (IsLoaded) await AwaitBuildOrOpen();
+        }
+
+        private async void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            Loaded -= OnLoaded;
+
+            await AwaitBuildOrOpen();
+        }
+
+        private async Task AwaitBuildOrOpen()
+        {
             await Task.Delay(100);
             BuildEndedType result = await StatusToken.Task;
 
