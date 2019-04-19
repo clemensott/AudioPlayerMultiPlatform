@@ -12,8 +12,8 @@
 
     <Window.Resources>
         <back:BuildEndedType x:Key="canceled">Canceled</back:BuildEndedType>
-        <spi:VisableCollapsedConverter x:Key="idleVisCon" CompareValue="{StaticResource canceled}"/>
-        <spi:VisableCollapsedConverter x:Key="openVisCon" CompareValue="{x:Null}"/>
+        <spi:VisibleCollapsedConverter x:Key="idleVisCon" CompareValue="{StaticResource canceled}"/>
+        <spi:VisibleCollapsedConverter x:Key="openVisCon" CompareValue="{x:Null}"/>
         <spi:CollapsedVisibleConverter x:Key="excCon" CompareValue="{x:Null}"/>
     </Window.Resources>
 
