@@ -19,6 +19,8 @@ namespace AudioPlayerFrontend
 {
     public partial class MainWindow : Window
     {
+        private static readonly TimeSpan buildOpenDelay = TimeSpan.FromMilliseconds(300);
+
         private readonly ServiceBuilder serviceBuilder;
         private readonly HotKeysBuilder hotKeysBuilder;
         private readonly ViewModel viewModel;
@@ -95,14 +97,12 @@ namespace AudioPlayerFrontend
 
         public async Task BuildAudioServiceAsync()
         {
-            Hide();
-
             while (true)
             {
                 BuildStatusToken statusToken = new BuildStatusToken();
                 Task<ServiceBuildResult> task = serviceBuilder.BuildWhileAsync(statusToken, TimeSpan.FromMilliseconds(500));
 
-                if (ShowBuildOpenWindow(statusToken) == false)
+                if (await AwaitTaskOrDelay(task, buildOpenDelay) && ShowBuildOpenWindow(statusToken) == false)
                 {
                     statusToken.End(BuildEndedType.Canceled);
                     Close();
@@ -115,7 +115,7 @@ namespace AudioPlayerFrontend
                 if (statusToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
             }
 
-            Show();
+            if (Visibility != Visibility.Visible) Show();
         }
 
         public async Task OpenAudioServiceAsync()
@@ -127,7 +127,9 @@ namespace AudioPlayerFrontend
                 BuildStatusToken statusToken = new BuildStatusToken();
                 Task task = viewModel.CommunicatorUI.OpenWhileAsync(statusToken, TimeSpan.FromMilliseconds(500));
 
-                if (ShowBuildOpenWindow(statusToken) == false)
+                await AwaitTaskOrDelay(task, TimeSpan.FromMilliseconds(300));
+
+                if (await AwaitTaskOrDelay(task, buildOpenDelay) && ShowBuildOpenWindow(statusToken) == false)
                 {
                     statusToken.End(BuildEndedType.Canceled);
                     Close();
@@ -143,13 +145,23 @@ namespace AudioPlayerFrontend
             Show();
         }
 
-        private static bool? ShowBuildOpenWindow(BuildStatusToken statusToken)
+        private async Task<bool> AwaitTaskOrDelay(Task task, TimeSpan delay)
+        {
+            if (Visibility != Visibility.Visible) return false;
+
+            Task finishedTask = await Task.WhenAny(task, Task.Delay(delay));
+
+            return task != finishedTask;
+        }
+
+        private bool? ShowBuildOpenWindow(BuildStatusToken statusToken)
         {
             BuildOpenWindow window = BuildOpenWindow.Current;
 
             //BuildOpenWindow window = new BuildOpenWindow(statusToken);
             window.StatusToken = statusToken;
 
+            Hide();
             return window.ShowDialog();
         }
 
@@ -289,6 +301,49 @@ namespace AudioPlayerFrontend
 
         private void StackPanel_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
+            if (viewModel.Service.ServicePlayer.Player is Player player)
+            {
+                string message = string.Format("ServiceState: {0}\r\nWaveOutPlayState: {1}\r\ncurrentWaveProvider {2}\r\n" +
+                    "nextWaveProvider {3}\r\nStop: {4}\r\nStopped: {5}\r\n\r\nPlay WaveOut? (Yes)\r\nPlay Service? (No)",
+                    viewModel?.Service?.AudioService?.PlayState, player.waveOut.PlaybackState, GetFileName(player.waveProvider),
+                    GetFileName(player.nextWaveProvider), player.stop, player.stopped);
+                MessageBoxResult result = MessageBox.Show(message, "State", MessageBoxButton.YesNoCancel);
+
+                try
+                {
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        player.waveOut.Play();
+                    }
+                    else if (result == MessageBoxResult.No)
+                    {
+                        viewModel.Service.AudioService.PlayState = PlaybackState.Playing;
+                    }
+                }
+                catch (Exception exc)
+                {
+                    MessageBox.Show(exc.ToString(), "Exception");
+                }
+            }
+        }
+
+        private static string GetFileName(NAudio.Wave.IWaveProvider iwp)
+        {
+            if (iwp == null) return "null";
+
+            if (iwp is WaveProvider wp)
+            {
+                if (wp.Parent is ReadEventWaveProvider rewp)
+                {
+                    if (rewp.Parent is AudioFileReader afr)
+                    {
+                        return afr.FileName;
+                    }
+                    else return "not AudiFileReader: " + rewp.GetType();
+                }
+                else return "not ReadEventWaveProvider: " + wp.GetType();
+            }
+            else return "not WaveProvider: " + iwp.GetType();
         }
 
         private void Subscribe(HotKeys hotKeys)

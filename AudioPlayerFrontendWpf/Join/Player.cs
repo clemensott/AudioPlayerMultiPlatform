@@ -5,9 +5,9 @@ namespace AudioPlayerFrontend.Join
 {
     class Player : IWaveProviderPlayer
     {
-        private bool stop, stopped;
-        private NAudio.Wave.IWaveProvider waveProvider, nextWaveProvider;
-        private readonly NAudio.Wave.WaveOut waveOut;
+        public bool stop, stopped;
+        public NAudio.Wave.IWaveProvider waveProvider, nextWaveProvider;
+        public readonly NAudio.Wave.WaveOut waveOut;
         private PlaybackState playState;
 
         public PlaybackState PlayState
@@ -40,7 +40,7 @@ namespace AudioPlayerFrontend.Join
 
             if (nextWaveProvider != null)
             {
-                if (waveProvider is IDisposable disposable) disposable.Dispose();
+                DisposeWaveProvider();
 
                 waveProvider = nextWaveProvider;
                 nextWaveProvider = null;
@@ -50,7 +50,7 @@ namespace AudioPlayerFrontend.Join
             }
             else if (stop)
             {
-                if (waveProvider is IDisposable disposable) disposable.Dispose();
+                DisposeWaveProvider();
 
                 ExecutePlayState();
 
@@ -71,6 +71,8 @@ namespace AudioPlayerFrontend.Join
             }
             else
             {
+                DisposeWaveProvider();
+
                 nextWaveProvider = wp;
                 waveOut.Stop();
             }
@@ -95,7 +97,7 @@ namespace AudioPlayerFrontend.Join
                 stop = true;
                 waveOut.Stop();
             }
-            else if (waveProvider is IDisposable disposable) disposable.Dispose();
+            else DisposeWaveProvider();
         }
 
         public void ExecutePlayState()
@@ -120,9 +122,16 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
+        private void DisposeWaveProvider()
+        {
+            IDisposable disposable = waveProvider as IDisposable;
+            waveProvider = null;
+            disposable?.Dispose();
+        }
+
         public void Dispose()
         {
-            if (waveProvider is IDisposable disposable) disposable.Dispose();
+            DisposeWaveProvider();
 
             waveOut.Dispose();
         }
