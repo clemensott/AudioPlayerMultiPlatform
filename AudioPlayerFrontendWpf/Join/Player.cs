@@ -5,6 +5,7 @@ namespace AudioPlayerFrontend.Join
 {
     class Player : IWaveProviderPlayer
     {
+        public string debug;
         public bool stop, stopped;
         public NAudio.Wave.IWaveProvider waveProvider, nextWaveProvider;
         public readonly NAudio.Wave.WaveOut waveOut;
@@ -111,13 +112,15 @@ namespace AudioPlayerFrontend.Join
                     break;
 
                 case PlaybackState.Playing:
-                    stopped = false;
                     waveOut.Play();
+                    stopped = false;
+                    debug = "ExecutePlayState: Play, " + waveOut.PlaybackState;
                     break;
 
                 case PlaybackState.Paused:
-                    stopped = false;
                     waveOut.Pause();
+                    stopped = waveOut.PlaybackState == NAudio.Wave.PlaybackState.Stopped;
+                    debug = "ExecutePlayState: Pause, " + waveOut.PlaybackState;
                     break;
             }
         }

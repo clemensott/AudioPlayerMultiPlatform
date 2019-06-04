@@ -142,7 +142,7 @@ namespace AudioPlayerFrontend
             Show();
         }
 
-        private static bool? ShowBuildOpenWindow(ServiceBuild build)
+        private bool? ShowBuildOpenWindow(ServiceBuild build)
         {
             BuildOpenWindow window = BuildOpenWindow.Current;
 
@@ -292,9 +292,9 @@ namespace AudioPlayerFrontend
             if (viewModel.Service.ServicePlayer.Player is Player player)
             {
                 string message = string.Format("ServiceState: {0}\r\nWaveOutPlayState: {1}\r\ncurrentWaveProvider {2}\r\n" +
-                    "nextWaveProvider {3}\r\nStop: {4}\r\nStopped: {5}\r\n\r\nPlay WaveOut? (Yes)\r\nPlay Service? (No)",
-                    viewModel?.Service?.AudioService?.PlayState, player.waveOut.PlaybackState, GetFileName(player.waveProvider),
-                    GetFileName(player.nextWaveProvider), player.stop, player.stopped);
+                     "nextWaveProvider {3}\r\nStop: {4}\r\nStopped: {5}\r\nDebug: {6}\r\n\r\nPlay WaveOut? (Yes)\r\nPlay Service? (No)",
+                     viewModel?.Service?.AudioService?.PlayState, player.waveOut.PlaybackState, GetFileName(player.waveProvider),
+                     GetFileName(player.nextWaveProvider), player.stop, player.stopped, player.debug);
                 MessageBoxResult result = MessageBox.Show(message, "State", MessageBoxButton.YesNoCancel);
 
                 try
