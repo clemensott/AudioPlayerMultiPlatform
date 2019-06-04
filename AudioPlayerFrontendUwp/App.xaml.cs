@@ -19,17 +19,14 @@ namespace AudioPlayerFrontend
     /// </summary>
     sealed partial class App : Application
     {
-        public static DateTime CreateTime = DateTime.MinValue;
         private const string serviceProfileFilename = "serviceProfile.xml";
+
+        public static DateTime CreateTime = DateTime.MinValue;
+        public static StorageFile ExceptionFile;
         private static readonly XmlSerializer serializer = new XmlSerializer(typeof(ServiceProfile));
-        /// <summary>
-        /// Initialisiert das Singletonanwendungsobjekt. Dies ist die erste Zeile von erstelltem Code
-        /// und daher das logische Äquivalent von main() bzw. WinMain().
-        /// </summary>
 
         private readonly ServiceBuilder serviceBuilder;
         private readonly ViewModel viewModel;
-        private StorageFile exceptionFile;
 
         public App()
         {
@@ -51,7 +48,7 @@ namespace AudioPlayerFrontend
 
         private void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            FileIO.WriteTextAsync(exceptionFile, e.Exception.ToString()).AsTask().Wait();
+            FileIO.WriteTextAsync(ExceptionFile, e.Exception.ToString()).AsTask().Wait();
         }
 
         /// <summary>
@@ -63,8 +60,7 @@ namespace AudioPlayerFrontend
         {
             Frame rootFrame = Window.Current.Content as Frame;
 
-            exceptionFile = await ApplicationData.Current.LocalFolder
-                .CreateFileAsync("Exception.txt", CreationCollisionOption.OpenIfExists);
+            LoadExceptionFile();
 
             // App-Initialisierung nicht wiederholen, wenn das Fenster bereits Inhalte enthält.
             // Nur sicherstellen, dass das Fenster aktiv ist.
@@ -111,6 +107,12 @@ namespace AudioPlayerFrontend
                 // Sicherstellen, dass das aktuelle Fenster aktiv ist
                 Window.Current.Activate();
             }
+        }
+
+        private async void LoadExceptionFile()
+        {
+            ExceptionFile = await ApplicationData.Current.LocalFolder
+                .CreateFileAsync("Exception.txt", CreationCollisionOption.OpenIfExists);
         }
 
         /// <summary>
