@@ -1,4 +1,5 @@
-﻿using StdOttStandard;
+﻿using System;
+using StdOttStandard;
 using System.Collections.Generic;
 using System.Linq;
 using AudioPlayerBackend.Audio;
@@ -36,13 +37,13 @@ namespace AudioPlayerBackend
 
                 if (playlist.ID == service.CurrentPlaylist.ID)
                 {
-                    if (prepend) playlist.Songs = songs.Concat(playlist.Songs).ToArray();
-                    else playlist.Songs = playlist.Songs.Concat(songs).ToArray();
+                    if (prepend) playlist.Songs = songs.Concat(playlist.Songs).Distinct().ToArray();
+                    else playlist.Songs = playlist.Songs.Concat(songs).Distinct().ToArray();
                 }
                 else
                 {
                     playlist.Songs = songs.ToArray();
-                    service.CurrentPlaylist = playlist;
+                    playlist.Position = TimeSpan.Zero;
                 }
 
                 service.CurrentPlaylist = playlist;
@@ -55,7 +56,7 @@ namespace AudioPlayerBackend
                 newPlaylist.Songs = songs.ToArray();
                 newPlaylist.CurrentSong = songs.First();
 
-                service.Playlists = service.Playlists.Concat(newPlaylist).ToArray();
+                service.Playlists = service.Playlists.Concat(newPlaylist).Distinct().ToArray();
                 service.CurrentPlaylist = newPlaylist;
             }
         }
