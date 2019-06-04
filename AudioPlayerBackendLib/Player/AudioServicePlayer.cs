@@ -12,7 +12,7 @@ namespace AudioPlayerBackend.Player
         private const int updateInterval = 100;
         private static readonly Random ran = new Random();
 
-        private bool isUpdatingPosition;
+        private bool isUpdatingPosition, isSetCurrentSong;
         private readonly IAudioServicePlayerHelper helper;
         private readonly Timer timer;
         private readonly object readerLockObj = new object();
@@ -149,6 +149,8 @@ namespace AudioPlayerBackend.Player
         {
             StopTimer();
 
+            isSetCurrentSong = true;
+
             Task.Factory.StartNew(SetCurrentSong);
         }
 
@@ -157,6 +159,7 @@ namespace AudioPlayerBackend.Player
             lock (readerLockObj)
             {
                 SetCurrentSongThreadSafe();
+                isSetCurrentSong = false;
             }
 
             EnableTimer();
@@ -243,7 +246,7 @@ namespace AudioPlayerBackend.Player
 
         private void EnableTimer()
         {
-            if (Service.CurrentPlaylist.CurrentSong.HasValue &&
+            if (!isSetCurrentSong && Service.CurrentPlaylist.CurrentSong.HasValue &&
                 Service.PlayState == PlaybackState.Playing) StartTimer();
             else StopTimer();
         }

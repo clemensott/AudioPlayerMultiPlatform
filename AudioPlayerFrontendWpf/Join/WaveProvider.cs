@@ -2,18 +2,16 @@
 {
     class WaveProvider : IWaveProvider
     {
-        private readonly NAudio.Wave.WaveFormat format;
-
         public AudioPlayerBackend.Player.IWaveProvider Parent { get; private set; }
 
-        public NAudio.Wave.WaveFormat WaveFormat => format;
+        public NAudio.Wave.WaveFormat WaveFormat { get; }
 
         AudioPlayerBackend.Player.WaveFormat AudioPlayerBackend.Player.IWaveProvider.WaveFormat => Parent.WaveFormat;
 
         public WaveProvider(AudioPlayerBackend.Player.IWaveProvider parent)
         {
             Parent = parent;
-            format = parent.WaveFormat.ToFrontend();
+            WaveFormat = parent.WaveFormat.ToFrontend();
         }
 
         public void Dispose()
