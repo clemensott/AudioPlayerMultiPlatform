@@ -36,8 +36,6 @@ namespace AudioPlayerFrontend
         public BuildOpenWindow()
         {
             InitializeComponent();
-
-            Loaded += OnLoaded;
         }
 
         public BuildOpenWindow(ServiceBuild build)
