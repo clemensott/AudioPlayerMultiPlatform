@@ -24,10 +24,7 @@ namespace AudioPlayerFrontend.Join
 
         private IEnumerable<string> LoadFilePaths(string path, IAudioService service)
         {
-            Task<IEnumerable<string>> task = Task.Run(() =>
-            {
-                return LoadFilePathsAsync(path);
-            });
+            Task<IEnumerable<string>> task = Task.Run(() => LoadFilePathsAsync(path));
 
             task.Wait();
 

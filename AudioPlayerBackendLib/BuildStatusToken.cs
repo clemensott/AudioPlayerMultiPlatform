@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Threading;
 using System.Threading.Tasks;
 using StdOttStandard;
 
@@ -10,55 +9,39 @@ namespace AudioPlayerBackend
 
     public class BuildStatusToken : INotifyPropertyChanged
     {
-        private readonly object lockObj = new object();
+        protected readonly object lockObj = new object();
         private BuildEndedType? ended;
-        private Exception exception;
 
         public event EventHandler<BuildEndedType> Ended;
 
         public BuildEndedType? IsEnded
         {
             get => ended;
-            private set
+            protected set
             {
                 if (value == ended) return;
 
                 ended = value;
-                Ended?.Invoke(this, IsEnded ?? BuildEndedType.Successful);
 
                 OnPropertyChanged(nameof(IsEnded));
-
-                lock (lockObj) Monitor.Pulse(lockObj);
             }
         }
 
-        public Exception Exception
-        {
-            get => exception;
-            set
-            {
-                if (value == exception) return;
-
-                exception = value;
-                OnPropertyChanged(nameof(Exception));
-            }
-        }
-
-        public Task<BuildEndedType> Task { get; }
+        public Task<BuildEndedType> EndTask { get; }
 
         public BuildStatusToken()
         {
-            Task = Utils.WaitAsync(lockObj).ContinueWith(t => IsEnded ?? BuildEndedType.Successful);
+            EndTask = Utils.WaitAsync(lockObj).ContinueWith(t => IsEnded ?? BuildEndedType.Successful);
         }
 
-        public void End(BuildEndedType type)
+        protected void RaiseEnded(BuildEndedType type)
         {
-            IsEnded = type;
+            Ended?.Invoke(this, type);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private void OnPropertyChanged(string name)
+        protected void OnPropertyChanged(string name)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }

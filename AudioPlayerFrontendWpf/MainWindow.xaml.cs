@@ -99,20 +99,19 @@ namespace AudioPlayerFrontend
 
             while (true)
             {
-                BuildStatusToken statusToken = new BuildStatusToken();
-                Task<ServiceBuildResult> task = serviceBuilder.BuildWhileAsync(statusToken, TimeSpan.FromMilliseconds(500));
+                ServiceBuild build = ServiceBuild.Build(serviceBuilder, TimeSpan.FromMilliseconds(500), AudioServiceHelper.Current);
 
-                if (ShowBuildOpenWindow(statusToken) == false)
+                if (ShowBuildOpenWindow(build) == false)
                 {
-                    statusToken.End(BuildEndedType.Canceled);
+                    build.Cancel();
                     Close();
                     return;
                 }
 
-                viewModel.Service = await task;
+                viewModel.Service = await build.CompleteToken.ResultTask;
 
-                if (statusToken.IsEnded is BuildEndedType.Successful) break;
-                if (statusToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
+                if (build.CompleteToken.IsEnded is BuildEndedType.Successful) break;
+                if (build.CompleteToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
             }
 
             Show();
@@ -124,31 +123,31 @@ namespace AudioPlayerFrontend
 
             while (true)
             {
-                BuildStatusToken statusToken = new BuildStatusToken();
-                Task task = viewModel.CommunicatorUI.OpenWhileAsync(statusToken, TimeSpan.FromMilliseconds(500));
+                ServiceBuild build = ServiceBuild.Open(viewModel.Service.Communicator, viewModel.Service.AudioService,
+                    viewModel.Service.ServicePlayer, TimeSpan.FromMilliseconds(500));
 
-                if (ShowBuildOpenWindow(statusToken) == false)
+                if (ShowBuildOpenWindow(build) == false)
                 {
-                    statusToken.End(BuildEndedType.Canceled);
+                    build.Cancel();
                     Close();
                     return;
                 }
 
-                await task;
+                await build.CompleteToken.ResultTask;
 
-                if (statusToken.IsEnded is BuildEndedType.Successful) break;
-                if (statusToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
+                if (build.CompleteToken.IsEnded is BuildEndedType.Successful) break;
+                if (build.CompleteToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
             }
 
             Show();
         }
 
-        private static bool? ShowBuildOpenWindow(BuildStatusToken statusToken)
+        private static bool? ShowBuildOpenWindow(ServiceBuild build)
         {
             BuildOpenWindow window = BuildOpenWindow.Current;
 
-            //BuildOpenWindow window = new BuildOpenWindow(statusToken);
-            window.StatusToken = statusToken;
+            //BuildOpenWindow window = new BuildOpenWindow(build);
+            window.Build = build;
 
             return window.ShowDialog();
         }
@@ -156,8 +155,8 @@ namespace AudioPlayerFrontend
         private void UpdateBuilders()
         {
             if (viewModel?.Service?.AudioService != null) serviceBuilder.WithService(viewModel.Service.AudioService);
-            if (viewModel?.Service?.Communicator != null) serviceBuilder.WithCommunicator(viewModel.Service.Communicator);
-            if (viewModel?.Service?.ServicePlayer != null) serviceBuilder.WithPlayerService(viewModel.Service.ServicePlayer);
+            //if (viewModel?.Service?.Communicator != null) serviceBuilder.WithCommunicator(viewModel.Service.Communicator);
+            //if (viewModel?.Service?.ServicePlayer != null) serviceBuilder.WithPlayerService(viewModel.Service.ServicePlayer);
             if (hotKeys != null) hotKeysBuilder.WithHotKeys(hotKeys);
 
             SettingsWindow window = new SettingsWindow(serviceBuilder, hotKeysBuilder);

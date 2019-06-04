@@ -15,6 +15,9 @@ namespace AudioPlayerBackend.Communication.MQTT
 {
     public abstract class MqttCommunicator : ICommunicator, INotifyPropertyChanged
     {
+        private const string cmdString = "Command";
+
+        private bool isSyncing;
         protected readonly INotifyPropertyChangedHelper helper;
         protected readonly Dictionary<string, byte[]> receivingDict = new Dictionary<string, byte[]>();
         protected readonly Dictionary<Guid, IPlaylistBase> playlists = new Dictionary<Guid, IPlaylistBase>();
@@ -22,27 +25,38 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         public abstract bool IsOpen { get; }
 
-        public IAudioServiceBase Service { get; }
-
-        protected MqttCommunicator(IAudioServiceBase service, INotifyPropertyChangedHelper helper = null)
+        public bool IsSyncing
         {
-            this.helper = helper;
-            Service = service;
+            get => isSyncing;
+            protected set
+            {
+                if (value == isSyncing) return;
 
-            Subscribe(service);
-
-            InitPlaylists();
+                isSyncing = value;
+                OnPropertyChanged(nameof(IsSyncing));
+            }
         }
 
-        private async void InitPlaylists()
+        public IAudioServiceBase Service { get; protected set; }
+
+        protected MqttCommunicator(INotifyPropertyChangedHelper helper = null)
         {
-            foreach (IPlaylistBase playlist in Service.Playlists)
+            this.helper = helper;
+        }
+
+        protected async void InitPlaylists()
+        {
+            foreach (IPlaylistBase playlist in (Service?.Playlists).ToNotNull())
             {
                 await AddPlaylist(playlist);
             }
         }
 
-        private void Subscribe(IAudioServiceBase service)
+        public abstract Task SetService(IAudioServiceBase service, BuildStatusToken statusToken);
+
+        public abstract Task SyncService(BuildStatusToken statusToken);
+
+        protected void Subscribe(IAudioServiceBase service)
         {
             if (service == null) return;
 
@@ -57,6 +71,21 @@ namespace AudioPlayerBackend.Communication.MQTT
             Subscribe(service.Playlists);
         }
 
+        protected void Unsubscribe(IAudioServiceBase service)
+        {
+            if (service == null) return;
+
+            service.AudioDataChanged -= Service_AudioDataChanged;
+            service.AudioFormatChanged -= Service_AudioFormatChanged;
+            service.CurrentPlaylistChanged -= Service_CurrentPlaylistChanged;
+            service.PlaylistsChanged -= Service_PlaylistsChanged;
+            service.PlayStateChanged -= Service_PlayStateChanged;
+            service.VolumeChanged -= Service_VolumeChanged;
+
+            Unsubscribe(service.SourcePlaylist);
+            Unsubscribe(service.Playlists);
+        }
+
         private void Subscribe(ISourcePlaylistBase playlist)
         {
             if (playlist == null) return;
@@ -66,6 +95,17 @@ namespace AudioPlayerBackend.Communication.MQTT
             playlist.FileMediaSourcesChanged += Playlist_FileMediaSourcesChanged;
             playlist.IsSearchShuffleChanged += Playlist_IsSearchShuffleChanged;
             playlist.SearchKeyChanged += Playlist_SearchKeyChanged;
+        }
+
+        private void Unsubscribe(ISourcePlaylistBase playlist)
+        {
+            if (playlist == null) return;
+
+            Unsubscribe((IPlaylistBase)playlist);
+
+            playlist.FileMediaSourcesChanged -= Playlist_FileMediaSourcesChanged;
+            playlist.IsSearchShuffleChanged -= Playlist_IsSearchShuffleChanged;
+            playlist.SearchKeyChanged -= Playlist_SearchKeyChanged;
         }
 
         private void Subscribe(IEnumerable<IPlaylistBase> playlists)
@@ -326,6 +366,13 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         public abstract Task OpenAsync(BuildStatusToken statusToken);
 
+        public async Task SendCommand(string cmd)
+        {
+            byte[] payload = Encoding.UTF8.GetBytes(cmd);
+
+            await PublishAsync(cmdString, payload, MqttQualityOfServiceLevel.AtMostOnce, false);
+        }
+
         private async Task PublishAsync(IPlaylistBase playlist, string topic, byte[] payload,
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)
         {
@@ -372,7 +419,10 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 await PublishAsync(message);
             }
-            catch { }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine(e);
+            }
         }
 
         protected async Task<bool> HandleMessage(string rawTopic, byte[] payload)
@@ -420,6 +470,35 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 case nameof(Service.Volume):
                     Service.Volume = data.DequeueFloat();
+                    break;
+
+                case cmdString:
+                    IAudioService service;
+                    string cmd = Encoding.UTF8.GetString(data);
+
+                    switch (cmd.ToLower())
+                    {
+                        case "play":
+                            Service.PlayState = PlaybackState.Playing;
+                            break;
+
+                        case "pause":
+                            Service.PlayState = PlaybackState.Paused;
+                            break;
+
+                        case "next":
+                            service = Service as IAudioService;
+                            if (service != null) service.SetNextSong();
+                            break;
+
+                        case "previous":
+                            service = Service as IAudioService;
+                            if (service != null) service.SetPreviousSong();
+                            break;
+
+                        default:
+                            return false;
+                    }
                     break;
 
                 default:

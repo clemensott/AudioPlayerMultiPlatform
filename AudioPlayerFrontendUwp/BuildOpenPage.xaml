@@ -10,8 +10,20 @@
     Loaded="BuildOpenPage_Loaded">
 
     <StackPanel VerticalAlignment="Center">
+        <TextBlock Name="tblFrameStack"/>
         <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
         <ProgressRing IsActive="True" Height="100" Width="100" Margin="10"/>
         <Button Content="Cancel" Width="100" Margin="5" HorizontalAlignment="Center" Click="BtnCancel_Click"/>
     </StackPanel>
+
+    <Page.BottomAppBar>
+        <CommandBar Name="cbrBottom">
+            <CommandBar.PrimaryCommands>
+                <AppBarButton Label="Previous" Icon="Previous" Click="AbbPrevious_Click"/>
+                <AppBarButton Label="Play" Icon="Play" Click="AbbPlay_Click"/>
+                <AppBarButton Label="Pause" Icon="Pause" Click="AbbPause_Click"/>
+                <AppBarButton Label="Next" Icon="next" Click="AbbNext_Click"/>
+            </CommandBar.PrimaryCommands>
+        </CommandBar>
+    </Page.BottomAppBar>
 </Page>

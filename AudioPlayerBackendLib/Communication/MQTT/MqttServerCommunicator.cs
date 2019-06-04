@@ -9,26 +9,14 @@ namespace AudioPlayerBackend.Communication.MQTT
 {
     public class MqttServerCommunicator : MqttCommunicator
     {
-        private bool isOpen, isOpening;
+        private bool isOpen;
         private readonly IMqttServer server;
 
-        public int Port { get; private set; }
-
-        public bool IsOpening
-        {
-            get => isOpening;
-            private set
-            {
-                if (value == isOpening) return;
-
-                isOpening = value;
-                OnPropertyChanged(nameof(IsOpening));
-            }
-        }
+        public int Port { get; }
 
         public override bool IsOpen => isOpen;
 
-        public MqttServerCommunicator(IAudioServiceBase service, int port) : base(service)
+        public MqttServerCommunicator(int port, INotifyPropertyChangedHelper helper = null) : base(helper)
         {
             server = new MqttFactory().CreateMqttServer();
 
@@ -39,8 +27,7 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             try
             {
-                IsOpening = true;
-                isOpen = true;
+                IsSyncing = true;
 
                 IMqttServerOptions options = new MqttServerOptionsBuilder()
                     .WithDefaultEndpointPort(Port)
@@ -48,7 +35,57 @@ namespace AudioPlayerBackend.Communication.MQTT
                     .Build();
 
                 if (statusToken?.IsEnded.HasValue == true) return;
+
+                isOpen = true;
                 await server.StartAsync(options);
+            }
+            catch
+            {
+                try
+                {
+                    await CloseAsync();
+                }
+                catch { }
+
+                throw;
+            }
+            finally
+            {
+                IsSyncing = false;
+            }
+        }
+
+        public override async Task SetService(IAudioServiceBase service, BuildStatusToken statusToken)
+        {
+            try
+            {
+                IsSyncing = true;
+
+                Unsubscribe(Service);
+                Service = service;
+                InitPlaylists();
+
+                await SyncService(statusToken, false);
+            }
+            finally
+            {
+                IsSyncing = false;
+            }
+        }
+
+        public override async Task SyncService(BuildStatusToken statusToken)
+        {
+            await SyncService(statusToken, true);
+        }
+
+        private async Task SyncService(BuildStatusToken statusToken, bool unsubscribe)
+        {
+            try
+            {
+                IsSyncing = true;
+
+                if (unsubscribe) Unsubscribe(Service);
+                Subscribe(Service);
 
                 if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishCurrentPlaylist();
@@ -74,19 +111,9 @@ namespace AudioPlayerBackend.Communication.MQTT
                 if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishMediaSources(Service.SourcePlaylist);
             }
-            catch
-            {
-                try
-                {
-                    await CloseAsync();
-                }
-                catch { }
-
-                throw;
-            }
             finally
             {
-                IsOpening = false;
+                IsSyncing = false;
             }
         }
 
@@ -110,7 +137,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             try
             {
-                HandleMessage(rawTopic, payload);
+                await HandleMessage(rawTopic, payload);
             }
             catch (Exception e)
             {

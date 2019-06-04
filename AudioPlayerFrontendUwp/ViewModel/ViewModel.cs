@@ -5,28 +5,28 @@ using AudioPlayerBackend.Communication;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Player;
+using AudioPlayerFrontend.Join;
 
 namespace AudioPlayerFrontend
 {
     class ViewModel : INotifyPropertyChanged
     {
-        private BuildStatusToken buildOpenStatusToken;
+        private ServiceBuild serviceOpenBuild;
         private IAudioService audioService;
         private ICommunicator communicator;
         private IServicePlayer servicePlayer;
 
-        public bool IsTryOpening => BuildOpenStatusToken?.Task.IsCompleted == false;
-
-        public BuildStatusToken BuildOpenStatusToken
+        public ServiceBuild ServiceOpenBuild
         {
-            get => buildOpenStatusToken;
+            get => serviceOpenBuild;
             set
             {
-                if (value == buildOpenStatusToken) return;
+                if (value == serviceOpenBuild) return;
 
-                buildOpenStatusToken = value;
-                OnPropertyChanged(nameof(BuildOpenStatusToken));
-                OnPropertyChanged(nameof(IsTryOpening));
+                serviceOpenBuild = value;
+                OnPropertyChanged(nameof(ServiceOpenBuild));
+
+                SetBuildResult(serviceOpenBuild);
             }
         }
 
@@ -73,25 +73,27 @@ namespace AudioPlayerFrontend
             Builder = builder;
         }
 
-        public async Task<BuildEndedType> BuildAsync()
+        public ServiceBuild Build()
         {
-            BuildOpenStatusToken = new BuildStatusToken();
-            ServiceBuildResult result = await Builder.BuildWhileAsync(BuildOpenStatusToken, TimeSpan.FromMilliseconds(200));
+            return ServiceOpenBuild = ServiceBuild.Build(Builder, TimeSpan.FromMilliseconds(200), AudioServiceHelper.Current);
+        }
+
+        public ServiceBuild Open()
+        {
+            return ServiceOpenBuild = ServiceBuild.Open(Communicator, AudioService, ServicePlayer, TimeSpan.FromMilliseconds(200));
+        }
+
+        private async void SetBuildResult(ServiceBuild build)
+        {
+            if (build == null) return;
+
+            ServiceBuildResult result = await build.CompleteToken.ResultTask;
+
+            if (build != ServiceOpenBuild) return;
 
             AudioService = result?.AudioService;
             Communicator = result?.Communicator;
             ServicePlayer = result?.ServicePlayer;
-
-            return BuildOpenStatusToken.IsEnded ?? BuildEndedType.Successful;
-        }
-
-        public async Task<BuildEndedType> OpenAsync()
-        {
-            BuildOpenStatusToken = new BuildStatusToken();
-
-            await ServiceBuilder.OpenWhileAsync(communicator, BuildOpenStatusToken, TimeSpan.FromMilliseconds(200));
-
-            return BuildOpenStatusToken.IsEnded ?? BuildEndedType.Successful;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

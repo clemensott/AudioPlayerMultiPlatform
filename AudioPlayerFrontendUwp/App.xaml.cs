@@ -170,14 +170,36 @@ namespace AudioPlayerFrontend
             deferral.Complete();
         }
 
-        private void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
+        private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
             System.Diagnostics.Debug.WriteLine("LeaveBackground1: " + viewModel.Communicator?.IsOpen);
 
+            Frame frame = Window.Current.Content as Frame;
+
             if (viewModel.Communicator == null) return;
 
-            Task task = viewModel.OpenAsync();
-            (Window.Current.Content as Frame)?.Navigate(typeof(BuildOpenPage), viewModel.BuildOpenStatusToken);
+            try
+            {
+                if (frame == null || frame.CurrentSourcePageType == typeof(BuildOpenPage))
+                {
+                    string pageType = frame?.CurrentSourcePageType.ToString() ?? "Page==null";
+                    string comState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "CommunicatorState==null";
+                    string syncState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "SyncState==null";
+                    string playerState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "PlayerState==null";
+                    string copState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "CompleteState==null";
+                    string content = string.Join("\r\n", pageType, comState, syncState, playerState, copState);
+                    await new Windows.UI.Popups.MessageDialog(content, "App_LeaveBackground").ShowAsync();
+                    return;
+                }
+            }
+            catch (Exception exc)
+            {
+                await new Windows.UI.Popups.MessageDialog(exc.ToString(), "App_LeaveBackgroundFail").ShowAsync();
+                return;
+            }
+
+            ServiceBuild build = viewModel.Open();
+            frame.Navigate(typeof(BuildOpenPage), build);
         }
     }
 }

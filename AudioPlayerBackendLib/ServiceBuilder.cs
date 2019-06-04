@@ -201,18 +201,6 @@ namespace AudioPlayerBackend
             }
         }
 
-        public ICommunicator Communicator
-        {
-            get => communicator;
-            set
-            {
-                if (value == communicator) return;
-
-                communicator = value;
-                OnPropertyChanged(nameof(Communicator));
-            }
-        }
-
         public IWaveProviderPlayer Player
         {
             get => player;
@@ -222,18 +210,6 @@ namespace AudioPlayerBackend
 
                 player = value;
                 OnPropertyChanged(nameof(Player));
-            }
-        }
-
-        public IServicePlayer ServicePlayer
-        {
-            get => servicePlayer;
-            set
-            {
-                if (value == servicePlayer) return;
-
-                servicePlayer = value;
-                OnPropertyChanged(nameof(ServicePlayer));
             }
         }
 
@@ -431,13 +407,6 @@ namespace AudioPlayerBackend
             return this;
         }
 
-        public ServiceBuilder WithCommunicator(ICommunicator communicator)
-        {
-            Communicator = communicator;
-
-            return this;
-        }
-
         public ServiceBuilder WithPlayer(IWaveProviderPlayer player)
         {
             Player = player;
@@ -445,91 +414,22 @@ namespace AudioPlayerBackend
             return this;
         }
 
-        public ServiceBuilder WithPlayerService(IServicePlayer servicePlayer)
+        public ICommunicator CreateCommunicator()
         {
-            ServicePlayer = servicePlayer;
+            if (BuildServer) return CreateMqttServerCommunicator(ServerPort);
+            if (BuildClient) return CreateMqttClientCommunicator(serverAddress, clientPort);
 
-            return this;
+            return null;
         }
 
-        public async Task<ServiceBuildResult> Build(BuildStatusToken statusToken = null)
+        public IServicePlayer CreateServicePlayer(IAudioService service)
         {
-            if (statusToken?.IsEnded.HasValue == true) return null;
+            if (BuildClient) return CreateAudioStreamPlayer(Player, service);
+            return CreateAudioServicePlayer(Player, service);
+        }
 
-            IAudioService service = Service ?? CreateAudioService();
-            MqttCommunicator communicator;
-            IServicePlayer servicePlayer;
-
-            if (BuildServer)
-            {
-                MqttServerCommunicator server = Communicator as MqttServerCommunicator;
-
-                if (server != null && (ServerPort != server.Port || Service != server.Service))
-                {
-                    if (server.IsOpen)
-                    {
-                        await server.CloseAsync();
-
-                        if (statusToken?.IsEnded.HasValue == true) return null;
-                    }
-
-                    server = null;
-                }
-
-                if (server == null)
-                {
-                    server = CreateMqttServerCommunicator(service, ServerPort);
-                }
-
-                if (!server.IsOpen)
-                {
-                    await server.OpenAsync(statusToken);
-
-                    if (statusToken?.IsEnded.HasValue == true) return null;
-                }
-
-                communicator = server;
-                servicePlayer = ServicePlayer as AudioServicePlayer ?? CreateAudioServicePlayer(Player, service);
-            }
-            else if (BuildClient)
-            {
-                MqttClientCommunicator client = Communicator as MqttClientCommunicator;
-
-                if (client != null && (ServerAddress != client.ServerAddress || ClientPort != client.Port))
-                {
-                    if (client.IsOpen)
-                    {
-                        await client.CloseAsync();
-
-                        if (statusToken?.IsEnded.HasValue == true) return null;
-                    }
-
-                    client = null;
-                }
-
-                if (client == null)
-                {
-                    client = CreateMqttClientCommunicator(service, serverAddress, clientPort);
-                }
-
-                if (!client.IsOpen)
-                {
-                    await client.OpenAsync(statusToken);
-
-                    if (statusToken?.IsEnded.HasValue == true) return null;
-                }
-
-                if (isStreaming.HasValue) client.IsStreaming = isStreaming.Value;
-
-                communicator = client;
-                servicePlayer = ServicePlayer as AudioStreamPlayer ?? CreateAudioStreamPlayer(Player, service);
-            }
-            else
-            {
-                communicator = null;
-                servicePlayer = ServicePlayer as AudioServicePlayer ?? CreateAudioServicePlayer(Player, service);
-            }
-
+        public void CompleteService(IAudioService service)
+        {
             bool setMediaSources = mediaSources != null && (!ifNon || !service.SourcePlaylist.FileMediaSources.ToNotNull().Any());
             if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.SourcePlaylist.FileMediaSources))
             {
@@ -542,27 +442,16 @@ namespace AudioPlayerBackend
             if (SearchKey != null) service.SourcePlaylist.SearchKey = SearchKey;
             if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (volume.HasValue) service.Volume = volume.Value;
-
-            statusToken?.End(BuildEndedType.Successful);
-
-            return new ServiceBuildResult(service, communicator, servicePlayer);
         }
 
-        protected virtual IAudioService CreateAudioService()
+        protected virtual MqttClientCommunicator CreateMqttClientCommunicator(string serverAddress, int? port)
         {
-            if (helper.CreateAudioService != null) return helper.CreateAudioService();
-
-            return new AudioService();
+            return new MqttClientCommunicator(serverAddress, port, helper);
         }
 
-        protected virtual MqttClientCommunicator CreateMqttClientCommunicator(IAudioService service, string serverAddress, int? port)
+        protected virtual MqttServerCommunicator CreateMqttServerCommunicator(int port)
         {
-            return helper.CreateMqttClientCommunicator(service, serverAddress, port);
-        }
-
-        protected virtual MqttServerCommunicator CreateMqttServerCommunicator(IAudioService service, int port)
-        {
-            return helper.CreateMqttServerCommunicator(service, port);
+            return new MqttServerCommunicator(port, helper);
         }
 
         protected virtual AudioStreamPlayer CreateAudioStreamPlayer(IWaveProviderPlayer player, IAudioService service)

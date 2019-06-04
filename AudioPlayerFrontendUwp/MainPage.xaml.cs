@@ -4,7 +4,6 @@ using StdOttStandard;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
@@ -34,14 +33,16 @@ namespace AudioPlayerFrontend
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            if (viewModel.BuildOpenStatusToken == null)
+            ServiceBuild build = viewModel.ServiceOpenBuild;
+
+            if (build == null)
             {
-                Task task = viewModel.BuildAsync();
-                Frame.Navigate(typeof(BuildOpenPage), viewModel.BuildOpenStatusToken);
+                build = viewModel.Build();
+                Frame.Navigate(typeof(BuildOpenPage), build);
                 return;
             }
 
-            switch (viewModel.BuildOpenStatusToken?.IsEnded)
+            switch (build.CompleteToken?.IsEnded)
             {
                 case BuildEndedType.Canceled:
                 case BuildEndedType.Settings:
@@ -49,7 +50,7 @@ namespace AudioPlayerFrontend
                     break;
 
                 case null:
-                    Frame.Navigate(typeof(BuildOpenPage), viewModel.BuildOpenStatusToken);
+                    Frame.Navigate(typeof(BuildOpenPage), viewModel.ServiceOpenBuild);
                     break;
             }
         }
@@ -111,7 +112,7 @@ namespace AudioPlayerFrontend
         }
         private void NavigateToSettingsPage()
         {
-            viewModel.BuildOpenStatusToken = null;
+            viewModel.ServiceOpenBuild = null;
             Frame.Navigate(typeof(SettingsPage), viewModel.Builder);
         }
 

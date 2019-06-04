@@ -1,7 +1,6 @@
 ﻿using System;
 using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Communication.MQTT;
 using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend.Join
@@ -39,16 +38,6 @@ namespace AudioPlayerFrontend.Join
         public AudioStreamPlayer CreateAudioStreamPlayer(IWaveProviderPlayer player, IAudioService service)
         {
             return new AudioStreamPlayer(service, player, PlayerHelper.Current);
-        }
-
-        public MqttClientCommunicator CreateMqttClientCommunicator(IAudioService service, string serverAddress, int? port)
-        {
-            return new MqttClientCommunicator(service, serverAddress, port);
-        }
-
-        public MqttServerCommunicator CreateMqttServerCommunicator(IAudioService service, int port)
-        {
-            return new MqttServerCommunicator(service, port);
         }
     }
 }

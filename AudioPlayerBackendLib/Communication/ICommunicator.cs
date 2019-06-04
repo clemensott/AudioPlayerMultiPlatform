@@ -12,6 +12,12 @@ namespace AudioPlayerBackend.Communication
 
         Task OpenAsync(BuildStatusToken statusToken);
 
+        Task SendCommand(string cmd);
+
+        Task SetService(IAudioServiceBase service, BuildStatusToken statusToken);
+
+        Task SyncService(BuildStatusToken statusToken);
+
         Task CloseAsync();
     }
 }

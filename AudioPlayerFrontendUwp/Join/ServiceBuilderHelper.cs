@@ -38,15 +38,5 @@ namespace AudioPlayerFrontend.Join
         {
             return new AudioStreamPlayer(service, player, PlayerHelper.Current);
         }
-
-        public MqttClientCommunicator CreateMqttClientCommunicator(IAudioService service, string serverAddress, int? port)
-        {
-            return new MqttClientCommunicator(service, serverAddress, port);
-        }
-
-        public MqttServerCommunicator CreateMqttServerCommunicator(IAudioService service, int port)
-        {
-            return new MqttServerCommunicator(service, port);
-        }
     }
 }

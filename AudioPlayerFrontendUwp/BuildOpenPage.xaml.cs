@@ -1,18 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
+﻿using System.Linq;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend;
+using AudioPlayerBackend.Communication;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
 
@@ -23,7 +14,8 @@ namespace AudioPlayerFrontend
     /// </summary>
     public sealed partial class BuildOpenPage : Page
     {
-        private BuildStatusToken statusToken;
+        private ServiceBuild build;
+        private ICommunicator communicator;
 
         public BuildOpenPage()
         {
@@ -32,21 +24,47 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            statusToken = (BuildStatusToken) e.Parameter;
+            build = (ServiceBuild)e.Parameter;
+            cbrBottom.Visibility = Visibility.Collapsed;
 
             base.OnNavigatedTo(e);
+
+            tblFrameStack.Text = string.Join("\r\n", Frame.BackStack.Select(s => s.SourcePageType.FullName));
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
-            statusToken.End(BuildEndedType.Canceled);
+            build.Cancel();
         }
 
         private async void BuildOpenPage_Loaded(object sender, RoutedEventArgs e)
         {
-            await statusToken.Task;
+            communicator = await build.CommunicatorToken.ResultTask;
+            cbrBottom.Visibility = Visibility.Visible;
+
+            await build.CompleteToken.EndTask;
 
             Frame.GoBack();
+        }
+
+        private async void AbbPrevious_Click(object sender, RoutedEventArgs e)
+        {
+            await communicator.PreviousSong();
+        }
+
+        private async void AbbPlay_Click(object sender, RoutedEventArgs e)
+        {
+            await communicator.PlaySong();
+        }
+
+        private async void AbbPause_Click(object sender, RoutedEventArgs e)
+        {
+            await communicator.PauseSong();
+        }
+
+        private async void AbbNext_Click(object sender, RoutedEventArgs e)
+        {
+            await communicator.NextSong();
         }
     }
 }
