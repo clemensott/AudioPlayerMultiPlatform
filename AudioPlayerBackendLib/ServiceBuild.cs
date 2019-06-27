@@ -88,7 +88,11 @@ namespace AudioPlayerBackend
                 try
                 {
                     communicator = serviceBuilder.CreateCommunicator();
-                    await await Task.WhenAny(communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
+
+                    if (communicator != null)
+                    {
+                        await await Task.WhenAny(communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
+                    }
 
                     if (CommunicatorToken.IsEnded.HasValue) return;
 
@@ -112,7 +116,11 @@ namespace AudioPlayerBackend
                 try
                 {
                     service = serviceBuilder.Service ?? new AudioService(serviceHelper);
-                    await await Task.WhenAny(communicator.SetService(service, SyncToken), SyncToken.EndTask);
+
+                    if (communicator != null)
+                    {
+                        await await Task.WhenAny(communicator.SetService(service, SyncToken), SyncToken.EndTask);
+                    }
 
                     if (SyncToken.IsEnded.HasValue) return;
 
@@ -198,7 +206,10 @@ namespace AudioPlayerBackend
             {
                 try
                 {
-                    await Task.WhenAny(communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
+                    if (communicator != null)
+                    {
+                        await Task.WhenAny(communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
+                    }
 
                     if (CommunicatorToken.IsEnded.HasValue) return;
 
@@ -221,7 +232,10 @@ namespace AudioPlayerBackend
             {
                 try
                 {
-                    await Task.WhenAny(communicator.SyncService(SyncToken), SyncToken.EndTask);
+                    if (communicator != null)
+                    {
+                        await Task.WhenAny(communicator.SyncService(SyncToken), SyncToken.EndTask);
+                    }
 
                     if (SyncToken.IsEnded.HasValue) return;
 
@@ -254,6 +268,8 @@ namespace AudioPlayerBackend
         private async Task SendCommands(ICommunicator communicator)
         {
             sendCommandsDirect = true;
+
+            if (communicator == null) return;
 
             while (SongOffset < 0)
             {
