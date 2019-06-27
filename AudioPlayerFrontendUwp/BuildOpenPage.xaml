@@ -5,23 +5,57 @@
     xmlns:local="using:AudioPlayerFrontend"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pla="using:AudioPlayerBackend.Player"
+    xmlns:con="using:StdOttUwp.Converters"
+    xmlns:spi="using:StdOttUwp.Converters.Specialized"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     Loaded="BuildOpenPage_Loaded">
 
-    <StackPanel VerticalAlignment="Center">
-        <TextBlock Name="tblFrameStack"/>
-        <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
-        <ProgressRing IsActive="True" Height="100" Width="100" Margin="10"/>
-        <Button Content="Cancel" Width="100" Margin="5" HorizontalAlignment="Center" Click="BtnCancel_Click"/>
-    </StackPanel>
+    <Page.Resources>
+        <spi:VisibleCollapsedConverter x:Key="visCon" CompareValue="{x:Null}"/>
+
+        <con:IsFalseToValueConverter x:Key="playCon">
+            <con:IsFalseToValueConverter.CompareValue>
+                <pla:PlaybackState>Playing</pla:PlaybackState>
+            </con:IsFalseToValueConverter.CompareValue>
+        </con:IsFalseToValueConverter>
+        <con:IsFalseToValueConverter x:Key="pauseCon">
+            <con:IsFalseToValueConverter.CompareValue>
+                <pla:PlaybackState>Paused</pla:PlaybackState>
+            </con:IsFalseToValueConverter.CompareValue>
+        </con:IsFalseToValueConverter>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel VerticalAlignment="Center">
+            <TextBlock Name="tblFrameStack"/>
+            <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
+            <ProgressRing IsActive="True" Height="100" Width="100" Margin="10"/>
+            <Button Content="Cancel" Width="100" Margin="5" HorizontalAlignment="Center" Click="BtnCancel_Click"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10"
+                    Visibility="{Binding CommunicatorToken.Result,Converter={StaticResource visCon}}">
+            <TextBlock Text="SongOffset: "/>
+            <TextBlock Text="{Binding SongOffset}"/>
+        </StackPanel>
+    </Grid>
 
     <Page.BottomAppBar>
-        <CommandBar Name="cbrBottom">
+        <CommandBar>
             <CommandBar.PrimaryCommands>
                 <AppBarButton Label="Previous" Icon="Previous" Click="AbbPrevious_Click"/>
-                <AppBarButton Label="Play" Icon="Play" Click="AbbPlay_Click"/>
-                <AppBarButton Label="Pause" Icon="Pause" Click="AbbPause_Click"/>
+                <AppBarButton Label="Play" Icon="Play" Click="AbbPlay_Click"
+                              IsEnabled="{Binding SendPlayState,Converter={StaticResource playCon}}"/>
+                <AppBarButton Label="Pause" Icon="Pause" Click="AbbPause_Click"
+                              IsEnabled="{Binding SendPlayState,Converter={StaticResource pauseCon}}"/>
                 <AppBarButton Label="Next" Icon="next" Click="AbbNext_Click"/>
             </CommandBar.PrimaryCommands>
         </CommandBar>

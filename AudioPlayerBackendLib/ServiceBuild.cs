@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
@@ -6,8 +7,36 @@ using AudioPlayerBackend.Player;
 
 namespace AudioPlayerBackend
 {
-    public class ServiceBuild
+    public class ServiceBuild : INotifyPropertyChanged
     {
+        private bool sendCommandsDirect;
+        private int songOffset;
+        private PlaybackState? sendPlayState;
+
+        public int SongOffset
+        {
+            get => songOffset;
+            private set
+            {
+                if (value == songOffset) return;
+
+                songOffset = value;
+                OnPropertyChanged(nameof(SongOffset));
+            }
+        }
+
+        public PlaybackState? SendPlayState
+        {
+            get => sendPlayState;
+            private set
+            {
+                if (value == sendPlayState) return;
+
+                sendPlayState = value;
+                OnPropertyChanged(nameof(SendPlayState));
+            }
+        }
+
         public BuildStatusToken<ICommunicator> CommunicatorToken { get; }
 
         public BuildStatusToken<IAudioService> SyncToken { get; }
@@ -76,6 +105,8 @@ namespace AudioPlayerBackend
                 }
             }
 
+            Task sendCmdTask = SendCommands(communicator);
+
             while (true)
             {
                 try
@@ -96,6 +127,15 @@ namespace AudioPlayerBackend
 
                     await Task.Delay(delayTime);
                 }
+            }
+
+            try
+            {
+                await sendCmdTask;
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine(e);
             }
 
             while (true)
@@ -175,6 +215,8 @@ namespace AudioPlayerBackend
                 }
             }
 
+            Task sendCmdTask = SendCommands(communicator);
+
             while (true)
             {
                 try
@@ -196,8 +238,87 @@ namespace AudioPlayerBackend
                 }
             }
 
+            try
+            {
+                await sendCmdTask;
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine(e);
+            }
+
             PlayerToken.Successful(player);
             CompleteToken.Successful(new ServiceBuildResult(service, communicator, player));
+        }
+
+        private async Task SendCommands(ICommunicator communicator)
+        {
+            sendCommandsDirect = true;
+
+            while (SongOffset < 0)
+            {
+                SongOffset++;
+                await communicator.PreviousSong();
+            }
+
+            while (SongOffset > 0)
+            {
+                SongOffset--;
+                await communicator.NextSong();
+            }
+
+            if (SendPlayState == PlaybackState.Playing) await communicator.PlaySong();
+            else if (SendPlayState == PlaybackState.Paused) await communicator.PauseSong();
+            else if (SendPlayState == PlaybackState.Stopped) await communicator.StopSong();
+        }
+
+        public async Task SetNextSong(int offset = 1)
+        {
+            if (sendCommandsDirect)
+            {
+                ICommunicator communicator = await CommunicatorToken.ResultTask;
+
+                for (int i = 0; i < offset; i++)
+                {
+                    await communicator.NextSong();
+                }
+            }
+            else SongOffset += offset;
+        }
+
+        public async Task SetPreviousSong(int offset = 1)
+        {
+            if (sendCommandsDirect)
+            {
+                ICommunicator communicator = await CommunicatorToken.ResultTask;
+
+                for (int i = 0; i < offset; i++)
+                {
+                    await communicator.PreviousSong();
+                }
+            }
+            else SongOffset -= offset;
+        }
+
+        public async Task SetPlayState(PlaybackState? state)
+        {
+            SendPlayState = state;
+
+            if (sendCommandsDirect)
+            {
+                ICommunicator communicator = await CommunicatorToken.ResultTask;
+
+                if (state == PlaybackState.Playing) await communicator.PlaySong();
+                else if (state == PlaybackState.Paused) await communicator.PauseSong();
+                else if (state == PlaybackState.Stopped) await communicator.StopSong();
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private void OnPropertyChanged(string name)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

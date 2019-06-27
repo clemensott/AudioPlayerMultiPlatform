@@ -15,7 +15,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 {
     public abstract class MqttCommunicator : ICommunicator, INotifyPropertyChanged
     {
-        private const string cmdString = "Command";
+        protected const string cmdString = "Command";
 
         private bool isSyncing;
         protected readonly INotifyPropertyChangedHelper helper;
