@@ -56,7 +56,7 @@ namespace AudioPlayerBackend
                 newPlaylist.Songs = songs.ToArray();
                 newPlaylist.CurrentSong = songs.First();
 
-                service.Playlists = service.Playlists.Concat(newPlaylist).Distinct().ToArray();
+                service.Playlists = service.Playlists.ConcatParams(newPlaylist).Distinct().ToArray();
                 service.CurrentPlaylist = newPlaylist;
             }
         }
