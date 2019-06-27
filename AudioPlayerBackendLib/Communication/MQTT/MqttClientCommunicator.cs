@@ -110,7 +110,6 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 Unsubscribe(Service);
                 Service = service;
-                InitPlaylists();
 
                 await SyncService(statusToken, false);
             }
