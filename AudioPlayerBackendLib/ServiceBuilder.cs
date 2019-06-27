@@ -1,5 +1,4 @@
-﻿using System;
-using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.MQTT;
 using AudioPlayerBackend.Player;
@@ -8,7 +7,6 @@ using StdOttStandard.CommendlinePaser;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace AudioPlayerBackend
 {
@@ -417,7 +415,7 @@ namespace AudioPlayerBackend
         public ICommunicator CreateCommunicator()
         {
             if (BuildServer) return CreateMqttServerCommunicator(ServerPort);
-            if (BuildClient) return CreateMqttClientCommunicator(serverAddress, clientPort);
+            if (BuildClient) return CreateMqttClientCommunicator(ServerAddress, ClientPort);
 
             return null;
         }
