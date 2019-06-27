@@ -5,7 +5,6 @@
     xmlns:local="using:AudioPlayerFrontend"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:pla="using:AudioPlayerBackend.Player"
     xmlns:con="using:StdOttUwp.Converters"
     xmlns:spi="using:StdOttUwp.Converters.Specialized"
     mc:Ignorable="d"
@@ -15,16 +14,12 @@
     <Page.Resources>
         <spi:VisibleCollapsedConverter x:Key="visCon" CompareValue="{x:Null}"/>
 
-        <con:IsFalseToValueConverter x:Key="playCon">
-            <con:IsFalseToValueConverter.CompareValue>
-                <pla:PlaybackState>Playing</pla:PlaybackState>
-            </con:IsFalseToValueConverter.CompareValue>
-        </con:IsFalseToValueConverter>
-        <con:IsFalseToValueConverter x:Key="pauseCon">
-            <con:IsFalseToValueConverter.CompareValue>
-                <pla:PlaybackState>Paused</pla:PlaybackState>
-            </con:IsFalseToValueConverter.CompareValue>
-        </con:IsFalseToValueConverter>
+        <x:Boolean x:Key="true">True</x:Boolean>
+        <x:Boolean x:Key="false">False</x:Boolean>
+        <con:IsEnumToValueConverter x:Key="playCon" CompareValue="Playing" EqualsValue="{StaticResource false}"
+                                    NotEqualsValue="{StaticResource true}"/>
+        <con:IsEnumToValueConverter x:Key="pauseCon" CompareValue="Paused" EqualsValue="{StaticResource false}"
+                                    NotEqualsValue="{StaticResource true}"/>
     </Page.Resources>
 
     <Grid>
