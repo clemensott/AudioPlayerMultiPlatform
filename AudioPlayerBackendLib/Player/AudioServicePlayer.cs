@@ -39,6 +39,8 @@ namespace AudioPlayerBackend.Player
 
             Subscribe(Service);
             CheckCurrentSong(Service.CurrentPlaylist);
+
+            if (Reader == null ^ Service.CurrentPlaylist.CurrentSong == null) UpdateCurrentSong();
         }
 
         private void Player_PlaybackStopped(object sender, StoppedEventArgs e)
@@ -71,6 +73,18 @@ namespace AudioPlayerBackend.Player
             service.SourcePlaylist.FileMediaSourcesChanged += SourcePlaylist_FileMediaSourcesChanged;
 
             Subscribe(service.CurrentPlaylist);
+        }
+
+        private void Unsubscribe(IAudioServiceBase service)
+        {
+            if (service == null) return;
+
+            service.CurrentPlaylistChanged -= Service_CurrentPlaylistChanged;
+            service.PlayStateChanged -= Service_PlayStateChanged;
+            service.VolumeChanged -= Service_VolumeChanged;
+            service.SourcePlaylist.FileMediaSourcesChanged -= SourcePlaylist_FileMediaSourcesChanged;
+
+            Unsubscribe(service.CurrentPlaylist);
         }
 
         private void Subscribe(IPlaylistBase playlist)
@@ -271,6 +285,8 @@ namespace AudioPlayerBackend.Player
                 Player.Stop();
                 Reader = null;
             }
+
+            Unsubscribe(Service);
         }
     }
 }

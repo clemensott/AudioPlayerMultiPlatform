@@ -110,7 +110,6 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 Unsubscribe(Service);
                 Service = service;
-                InitPlaylists();
 
                 await SyncService(statusToken, false);
             }
@@ -379,11 +378,12 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected override async Task PublishAsync(MqttApplicationMessage message)
         {
-            if (IsSyncing)
+            if (IsSyncing && message.Topic != cmdString)
             {
                 System.Diagnostics.Debug.WriteLine("PublishOnOpening: " + message.Topic);
                 return;
             }
+
             if (!IsOpen || IsTopicLocked(message.Topic, message.Payload)) return;
 
             if (message.QualityOfServiceLevel != MqttQualityOfServiceLevel.AtMostOnce)

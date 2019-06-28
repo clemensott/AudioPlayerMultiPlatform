@@ -3,7 +3,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend;
-using AudioPlayerBackend.Communication;
+using AudioPlayerBackend.Player;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
 
@@ -15,7 +15,6 @@ namespace AudioPlayerFrontend
     public sealed partial class BuildOpenPage : Page
     {
         private ServiceBuild build;
-        private ICommunicator communicator;
 
         public BuildOpenPage()
         {
@@ -24,8 +23,7 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            build = (ServiceBuild)e.Parameter;
-            cbrBottom.Visibility = Visibility.Collapsed;
+            DataContext = build = (ServiceBuild)e.Parameter;
 
             base.OnNavigatedTo(e);
 
@@ -39,8 +37,7 @@ namespace AudioPlayerFrontend
 
         private async void BuildOpenPage_Loaded(object sender, RoutedEventArgs e)
         {
-            communicator = await build.CommunicatorToken.ResultTask;
-            cbrBottom.Visibility = Visibility.Visible;
+            await build.CommunicatorToken.ResultTask;
 
             await build.CompleteToken.EndTask;
 
@@ -49,22 +46,22 @@ namespace AudioPlayerFrontend
 
         private async void AbbPrevious_Click(object sender, RoutedEventArgs e)
         {
-            await communicator.PreviousSong();
+            await build.SetPreviousSong();
         }
 
         private async void AbbPlay_Click(object sender, RoutedEventArgs e)
         {
-            await communicator.PlaySong();
+            await build.SetPlayState(PlaybackState.Playing);
         }
 
         private async void AbbPause_Click(object sender, RoutedEventArgs e)
         {
-            await communicator.PauseSong();
+            await build.SetPlayState(PlaybackState.Paused);
         }
 
         private async void AbbNext_Click(object sender, RoutedEventArgs e)
         {
-            await communicator.NextSong();
+            await build.SetNextSong();
         }
     }
 }

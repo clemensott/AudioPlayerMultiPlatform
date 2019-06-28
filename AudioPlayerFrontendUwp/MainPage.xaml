@@ -65,7 +65,7 @@
                     <Slider Grid.Column="1" Maximum="1" VerticalAlignment="Center" Margin="0,0,0,-8"
                             SnapsTo="StepValues" StepFrequency="0.01" Value="{Binding ServicePlayer.Player.Volume}"
                             ThumbToolTipValueConverter="{StaticResource volTooTipCon}"
-                            IsEnabled="{Binding IsStreaming}"/>
+                            IsEnabled="{Binding Communicator.IsStreaming}"/>
 
                 </Grid>
 

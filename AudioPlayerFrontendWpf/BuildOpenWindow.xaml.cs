@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using AudioPlayerBackend;
 using AudioPlayerBackend.Communication;
+using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend
 {
@@ -38,22 +39,20 @@ namespace AudioPlayerFrontend
             InitializeComponent();
         }
 
-        public BuildOpenWindow(ServiceBuild build)
+        public BuildOpenWindow(ServiceBuild build) : this()
         {
-            InitializeComponent();
-
             Build = build;
         }
 
-        //protected override async void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
-        //{
-        //    base.OnPropertyChanged(e);
+        protected override async void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+        {
+            base.OnPropertyChanged(e);
 
-        //    if (e.Property == VisibilityProperty && Visibility == Visibility.Visible)
-        //    {
-        //        await AwaitBuild();
-        //    }
-        //}
+            if (e.Property == VisibilityProperty && Visibility == Visibility.Visible)
+            {
+                await AwaitBuild();
+            }
+        }
 
         protected override async void OnActivated(EventArgs e)
         {
@@ -70,7 +69,11 @@ namespace AudioPlayerFrontend
             await Task.Delay(100);
             BuildEndedType result = await Build.CompleteToken.EndTask;
 
-            if (result == BuildEndedType.Successful || result == BuildEndedType.Settings) DialogResult = true;
+            if (Visibility != Visibility.Visible) MessageBox.Show("BuildOpenWindow not visible!");
+            if ((result == BuildEndedType.Successful || result == BuildEndedType.Settings) && Visibility == Visibility.Visible)
+            {
+                DialogResult = true;
+            }
 
             isAwaiting = false;
         }
@@ -129,22 +132,22 @@ namespace AudioPlayerFrontend
 
         private async void BtnPrevious_Click(object sender, RoutedEventArgs e)
         {
-            await build.CommunicatorToken.Result.PreviousSong();
+            await build.SetPreviousSong();
         }
 
         private async void BtnPlay_Click(object sender, RoutedEventArgs e)
         {
-            await build.CommunicatorToken.Result.PlaySong();
+            await build.SetPlayState(PlaybackState.Playing);
         }
 
         private async void BtnPause_Click(object sender, RoutedEventArgs e)
         {
-            await build.CommunicatorToken.Result.PauseSong();
+            await build.SetPlayState(PlaybackState.Paused);
         }
 
         private async void BtnNext_Click(object sender, RoutedEventArgs e)
         {
-            await build.CommunicatorToken.Result.NextSong();
+            await build.SetNextSong();
         }
     }
 }

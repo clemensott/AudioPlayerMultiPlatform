@@ -19,6 +19,11 @@ namespace AudioPlayerBackend.Communication
             return communicator.SendCommand("pause");
         }
 
+        public static Task StopSong(this ICommunicator communicator)
+        {
+            return communicator.SendCommand("stop");
+        }
+
         public static Task NextSong(this ICommunicator communicator)
         {
             return communicator.SendCommand("Next");
