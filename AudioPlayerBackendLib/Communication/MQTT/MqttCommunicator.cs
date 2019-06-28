@@ -240,7 +240,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             ByteQueue data = new ByteQueue();
             data.Enqueue(Service.Volume);
 
-            await PublishAsync(nameof(Service.Volume), data);
+            await PublishAsync(nameof(Service.Volume), data, MqttQualityOfServiceLevel.AtMostOnce);
         }
 
         private async void Playlist_FileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
