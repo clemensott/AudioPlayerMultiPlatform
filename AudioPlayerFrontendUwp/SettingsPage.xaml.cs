@@ -21,7 +21,7 @@ namespace AudioPlayerFrontend
         public ServiceBuilder ServiceBuilder
         {
             get => serviceBuilder;
-            set
+            private set
             {
                 serviceBuilder = null;
 
