@@ -44,7 +44,6 @@ namespace AudioPlayerFrontend
 
             switch (build.CompleteToken?.IsEnded)
             {
-                case BuildEndedType.Canceled:
                 case BuildEndedType.Settings:
                     NavigateToSettingsPage();
                     break;
@@ -110,6 +109,7 @@ namespace AudioPlayerFrontend
 
             NavigateToSettingsPage();
         }
+
         private void NavigateToSettingsPage()
         {
             viewModel.ServiceOpenBuild = null;

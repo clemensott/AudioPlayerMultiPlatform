@@ -159,6 +159,8 @@ namespace AudioPlayerFrontend
         {
             System.Diagnostics.Debug.WriteLine("EnterBackground: " + viewModel.Communicator?.IsOpen);
 
+            viewModel.ServiceOpenBuild?.Cancel();
+
             if (viewModel.Communicator?.IsOpen != true) return;
 
             Deferral deferral = e.GetDeferral();
@@ -174,24 +176,20 @@ namespace AudioPlayerFrontend
 
         private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("LeaveBackground1: " + viewModel.Communicator?.IsOpen);
-
             Frame frame = Window.Current.Content as Frame;
 
-            if (viewModel.Communicator == null) return;
+            System.Diagnostics.Debug.WriteLine("LeaveBackground1: " + GetDebugText(frame));
+
+            if (frame == null || viewModel.ServiceOpenBuild == null) return;
 
             try
             {
-                if (frame == null || frame.CurrentSourcePageType == typeof(BuildOpenPage))
+                if (frame.CurrentSourcePageType == typeof(BuildOpenPage))
                 {
-                    string pageType = frame?.CurrentSourcePageType.ToString() ?? "Page==null";
-                    string comState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "CommunicatorState==null";
-                    string syncState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "SyncState==null";
-                    string playerState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "PlayerState==null";
-                    string copState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "CompleteState==null";
-                    string content = string.Join("\r\n", pageType, comState, syncState, playerState, copState);
-                    await new Windows.UI.Popups.MessageDialog(content, "App_LeaveBackground").ShowAsync();
-                    return;
+                    frame.GoBack();
+
+                    System.Diagnostics.Debug.WriteLine("GoBack: " + GetDebugText(frame));
+                    await new Windows.UI.Popups.MessageDialog(GetDebugText(frame), "App_LeaveBackground").ShowAsync();
                 }
             }
             catch (Exception exc)
@@ -200,8 +198,24 @@ namespace AudioPlayerFrontend
                 return;
             }
 
-            ServiceBuild build = viewModel.Open();
+            System.Diagnostics.Debug.WriteLine("LeaveBackground2: " + (viewModel.Communicator != null));
+            ServiceBuild build = viewModel.Communicator != null ? viewModel.Open() : viewModel.Build();
             frame.Navigate(typeof(BuildOpenPage), build);
+
+            //await dialogTask;
+        }
+
+        private string GetDebugText(Frame frame)
+        {
+            string pageType = frame?.CurrentSourcePageType != null ? frame.CurrentSourcePageType.ToString() : "Page==null";
+            string communicator = viewModel.Communicator?.ToString() ?? "Communicator==null";
+            string build = viewModel.ServiceOpenBuild?.ToString() ?? "Build==null";
+            string comState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "CommunicatorState==null";
+            string syncState = viewModel.ServiceOpenBuild?.SyncToken.IsEnded?.ToString() ?? "SyncState==null";
+            string playerState = viewModel.ServiceOpenBuild?.PlayerToken.IsEnded?.ToString() ?? "PlayerState==null";
+            string copState = viewModel.ServiceOpenBuild?.CompleteToken.IsEnded?.ToString() ?? "CompleteState==null";
+
+            return string.Join("\r\n", pageType, communicator, build, comState, syncState, playerState, copState);
         }
     }
 }
