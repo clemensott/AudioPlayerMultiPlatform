@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
 using AudioPlayerBackend;
-using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend
@@ -138,6 +137,11 @@ namespace AudioPlayerFrontend
         private async void BtnPlay_Click(object sender, RoutedEventArgs e)
         {
             await build.SetPlayState(PlaybackState.Playing);
+        }
+
+        private async void TbnToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            await build.SetToggle();
         }
 
         private async void BtnPause_Click(object sender, RoutedEventArgs e)

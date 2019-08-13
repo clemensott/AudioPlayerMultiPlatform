@@ -26,7 +26,12 @@ namespace AudioPlayerBackend.Communication
 
         public static Task NextSong(this ICommunicator communicator)
         {
-            return communicator.SendCommand("Next");
+            return communicator.SendCommand("next");
+        }
+
+        public static Task ToggleSong(this ICommunicator communicator)
+        {
+            return communicator.SendCommand("toggle");
         }
     }
 }

@@ -59,6 +59,11 @@ namespace AudioPlayerFrontend
             await build.SetPlayState(PlaybackState.Paused);
         }
 
+        private async void AtbToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            await build.SetToggle();
+        }
+
         private async void AbbNext_Click(object sender, RoutedEventArgs e)
         {
             await build.SetNextSong();
