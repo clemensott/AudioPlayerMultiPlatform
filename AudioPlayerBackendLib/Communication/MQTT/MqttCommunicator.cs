@@ -486,6 +486,12 @@ namespace AudioPlayerBackend.Communication.MQTT
                             Service.PlayState = PlaybackState.Paused;
                             break;
 
+                        case "toggle":
+                            Service.PlayState = Service.PlayState != PlaybackState.Playing 
+                                ? PlaybackState.Playing
+                                : PlaybackState.Paused;
+                            break;
+
                         case "next":
                             service = Service as IAudioService;
                             if (service != null) service.SetNextSong();

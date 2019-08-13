@@ -9,9 +9,21 @@ namespace AudioPlayerBackend
 {
     public class ServiceBuild : INotifyPropertyChanged
     {
-        private bool sendCommandsDirect;
+        private bool sendCommandsDirect, sendToggle;
         private int songOffset;
         private PlaybackState? sendPlayState;
+
+        public bool SendToggle
+        {
+            get => sendToggle;
+            private set
+            {
+                if (value == sendToggle) return;
+
+                sendToggle = value;
+                OnPropertyChanged(nameof(SendToggle));
+            }
+        }
 
         public int SongOffset
         {
@@ -286,6 +298,11 @@ namespace AudioPlayerBackend
             if (SendPlayState == PlaybackState.Playing) await communicator.PlaySong();
             else if (SendPlayState == PlaybackState.Paused) await communicator.PauseSong();
             else if (SendPlayState == PlaybackState.Stopped) await communicator.StopSong();
+            else if (SendToggle)
+            {
+                await communicator.ToggleSong();
+                SendToggle = false;
+            }
         }
 
         public async Task SetNextSong(int offset = 1)
@@ -318,6 +335,7 @@ namespace AudioPlayerBackend
 
         public async Task SetPlayState(PlaybackState? state)
         {
+            SendToggle = false;
             SendPlayState = state;
 
             if (sendCommandsDirect)
@@ -327,6 +345,23 @@ namespace AudioPlayerBackend
                 if (state == PlaybackState.Playing) await communicator.PlaySong();
                 else if (state == PlaybackState.Paused) await communicator.PauseSong();
                 else if (state == PlaybackState.Stopped) await communicator.StopSong();
+            }
+        }
+
+        public async Task SetToggle(bool value = true)
+        {
+            SendToggle = value;
+            SendPlayState = null;
+
+            if (sendCommandsDirect)
+            {
+                ICommunicator communicator = await CommunicatorToken.ResultTask;
+
+                if (SendToggle)
+                {
+                    await communicator.ToggleSong();
+                    SendToggle = false;
+                }
             }
         }
 

@@ -10,7 +10,7 @@
         xmlns:pla="clr-namespace:AudioPlayerBackend.Player;assembly=AudioPlayerBackendLib"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
-        Title="Open Service - Hotkey Music" Height="185" Width="400" ResizeMode="NoResize">
+        Title="Open Service - Hotkey Music" Height="185" Width="500" ResizeMode="NoResize">
 
     <Window.Resources>
         <back:BuildEndedType x:Key="canceled">Canceled</back:BuildEndedType>
@@ -29,7 +29,10 @@
     <StackPanel VerticalAlignment="Center">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top"
                     Visibility="{Binding CompleteToken.IsEnded,Converter={StaticResource openVisCon}}">
-            <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Opening Service:" FontSize="20" HorizontalAlignment="Center" Margin="5"/>
+                <TextBlock Text=""/>
+            </StackPanel>
             <ProgressBar IsIndeterminate="True" Height="20" Margin="30,5"/>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -54,6 +57,8 @@
             <Button Content="Previous" Width="75" Margin="5" Click="BtnPrevious_Click"/>
             <Button Content="Play" Width="75" Margin="5" Click="BtnPlay_Click"
                     IsEnabled="{Binding SendPlayState,Converter={StaticResource playCon}}"/>
+            <ToggleButton Content="Toggle" Width="75" Margin="5" 
+                          IsChecked="{Binding SendToggle,Mode=OneWay}" Checked="TbnToggle_Checked"/>
             <Button Content="Pause" Width="75" Margin="5" Click="BtnPause_Click"
                     IsEnabled="{Binding SendPlayState,Converter={StaticResource pauseCon}}"/>
             <Button Content="Next" Width="75" Margin="5" Click="BtnNext_Click"/>
