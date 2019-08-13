@@ -62,19 +62,27 @@ namespace AudioPlayerFrontend
 
         private async Task AwaitBuild()
         {
-            if (isAwaiting) return;
-            isAwaiting = true;
-
-            await Task.Delay(100);
-            BuildEndedType result = await Build.CompleteToken.EndTask;
-
-            if (Visibility != Visibility.Visible) MessageBox.Show("BuildOpenWindow not visible!");
-            if ((result == BuildEndedType.Successful || result == BuildEndedType.Settings) && Visibility == Visibility.Visible)
+            try
             {
-                DialogResult = true;
-            }
+                System.Diagnostics.Debug.WriteLine("BeginAwait: {0}", isAwaiting);
+                if (isAwaiting) return;
+                isAwaiting = true;
 
-            isAwaiting = false;
+                System.Diagnostics.Debug.WriteLine("DoAwait");
+                await Task.Delay(100);
+                BuildEndedType result = await Build.CompleteToken.EndTask;
+                System.Diagnostics.Debug.WriteLine("AwatiedBuild: {0} | {1} | ", result, Visibility, DialogResult);
+
+                if (Visibility != Visibility.Visible) MessageBox.Show("BuildOpenWindow not visible!");
+                if ((result == BuildEndedType.Successful || result == BuildEndedType.Settings) && Visibility == Visibility.Visible)
+                {
+                    DialogResult = true;
+                }
+            }
+            finally
+            {
+                isAwaiting = false;
+            }
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
@@ -113,8 +121,10 @@ namespace AudioPlayerFrontend
         {
             if (DialogResult == true)
             {
+                //System.Diagnostics.Debug.WriteLine("OnCloding1");
                 e.Cancel = true;
                 Hide();
+                System.Diagnostics.Debug.WriteLine("OnCloding2");
             }
 
             base.OnClosing(e);
