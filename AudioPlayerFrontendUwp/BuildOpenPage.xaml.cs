@@ -4,8 +4,6 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend;
 using AudioPlayerBackend.Player;
-using System.Threading.Tasks;
-using System;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
 
@@ -32,9 +30,9 @@ namespace AudioPlayerFrontend
             tblFrameStack.Text = string.Join("\r\n", Frame.BackStack.Select(s => s.SourcePageType.FullName));
         }
 
-        private void BtnCancel_Click(object sender, RoutedEventArgs e)
+        private void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            build.Cancel();
+            build.Settings();
         }
 
         private async void BuildOpenPage_Loaded(object sender, RoutedEventArgs e)
