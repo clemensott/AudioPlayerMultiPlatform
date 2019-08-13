@@ -38,7 +38,14 @@ namespace AudioPlayerBackend
 
         public BuildStatusToken()
         {
-            ResultTask = Utils.WaitAsync(lockObj).ContinueWith(t => Result);
+            ResultTask = GetResult();
+        }
+
+        private async Task<TResult> GetResult()
+        {
+            await EndTask;
+
+            return Result;
         }
 
         public void Cancel()
