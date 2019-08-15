@@ -74,7 +74,7 @@ namespace AudioPlayerFrontend
 
                     if (HotKey == null || (HotKey.Key != key || HotKey.KeyModifiers != changeModifier))
                     {
-                        HotKey = new HotKey(key, changeModifier);
+                        HotKey = HotKey.GetInstance(key, changeModifier);
                     }
                     break;
             }
@@ -84,7 +84,7 @@ namespace AudioPlayerFrontend
             e.Handled = true;
         }
 
-        private KeyModifier Set(KeyModifier combination, KeyModifier add)
+        private static KeyModifier Set(KeyModifier combination, KeyModifier add)
         {
             return (KeyModifier)((int)combination | (int)add);
         }
@@ -125,7 +125,7 @@ namespace AudioPlayerFrontend
             e.Handled = true;
         }
 
-        private KeyModifier Unset(KeyModifier combination, KeyModifier sub)
+        private static KeyModifier Unset(KeyModifier combination, KeyModifier sub)
         {
             return (KeyModifier)((int)combination & ~(int)sub);
         }

@@ -14,19 +14,11 @@ namespace AudioPlayerFrontend
             {
                 if (value == toggle) return;
 
-                if (toggle != null)
-                {
-                    toggle.Pressed -= Toggle_Press;
-                    toggle.Unregister();
-                }
+                if (toggle != null) toggle.Pressed -= Toggle_Press;
 
                 toggle = value;
 
-                if (toggle != null)
-                {
-                    toggle.Pressed += Toggle_Press;
-                    toggle.Register();
-                }
+                if (toggle != null) toggle.Pressed += Toggle_Press;
             }
         }
 
@@ -37,19 +29,11 @@ namespace AudioPlayerFrontend
             {
                 if (value == next) return;
 
-                if (next != null)
-                {
-                    next.Pressed -= Toggle_Press;
-                    next.Unregister();
-                }
+                if (next != null) next.Pressed -= Next_Press;
 
                 next = value;
 
-                if (next != null)
-                {
-                    next.Pressed += Toggle_Press;
-                    next.Register();
-                }
+                if (next != null) next.Pressed += Next_Press;
             }
         }
 
@@ -60,19 +44,11 @@ namespace AudioPlayerFrontend
             {
                 if (value == previous) return;
 
-                if (previous != null)
-                {
-                    previous.Pressed -= Toggle_Press;
-                    previous.Unregister();
-                }
+                if (previous != null) previous.Pressed -= Previous_Press;
 
                 previous = value;
 
-                if (previous != null)
-                {
-                    previous.Pressed += Toggle_Press;
-                    previous.Register();
-                }
+                if (previous != null) previous.Pressed += Previous_Press;
             }
         }
 
@@ -83,19 +59,11 @@ namespace AudioPlayerFrontend
             {
                 if (value == play) return;
 
-                if (play != null)
-                {
-                    play.Pressed -= Toggle_Press;
-                    play.Unregister();
-                }
+                if (play != null) play.Pressed -= Play_Press;
 
                 play = value;
 
-                if (play != null)
-                {
-                    play.Pressed += Toggle_Press;
-                    play.Register();
-                }
+                if (play != null) play.Pressed += Play_Press;
             }
         }
 
@@ -106,19 +74,11 @@ namespace AudioPlayerFrontend
             {
                 if (value == pause) return;
 
-                if (pause != null)
-                {
-                    pause.Pressed -= Toggle_Press;
-                    pause.Unregister();
-                }
+                if (pause != null) pause.Pressed -= Pause_Press;
 
                 pause = value;
 
-                if (pause != null)
-                {
-                    pause.Pressed += Toggle_Press;
-                    pause.Register();
-                }
+                if (pause != null) pause.Pressed += Pause_Press;
             }
         }
 
@@ -129,19 +89,11 @@ namespace AudioPlayerFrontend
             {
                 if (value == restart) return;
 
-                if (restart != null)
-                {
-                    restart.Pressed -= Toggle_Press;
-                    restart.Unregister();
-                }
+                if (restart != null) restart.Pressed -= Restart_Press;
 
                 restart = value;
 
-                if (restart != null)
-                {
-                    restart.Pressed += Toggle_Press;
-                    restart.Register();
-                }
+                if (restart != null) restart.Pressed += Restart_Press;
             }
         }
 
