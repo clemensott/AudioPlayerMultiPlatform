@@ -21,8 +21,8 @@ namespace AudioPlayerFrontend
     {
         private static readonly TimeSpan buildOpenDelay = TimeSpan.FromMilliseconds(300);
 
-        private readonly ServiceBuilder serviceBuilder;
-        private readonly HotKeysBuilder hotKeysBuilder;
+        private ServiceBuilder serviceBuilder;
+        private HotKeysBuilder hotKeysBuilder;
         private readonly ViewModel viewModel;
         private HotKeys hotKeys;
         private WidthService widthService;
@@ -65,11 +65,11 @@ namespace AudioPlayerFrontend
                 case PowerModes.Suspend:
                     Unsubscribe(hotKeys);
 
-                    if (viewModel.CommunicatorUI != null)
+                    if (viewModel.Service.Communicator != null)
                     {
                         try
                         {
-                            await viewModel.CommunicatorUI.CloseAsync();
+                            await viewModel.Service.Communicator.CloseAsync();
                         }
                         catch { }
                     }
@@ -153,15 +153,25 @@ namespace AudioPlayerFrontend
             return window.ShowDialog();
         }
 
-        private void UpdateBuilders()
+        private bool UpdateBuilders()
         {
+            ServiceBuilder serviceBuilder = this.serviceBuilder.Clone();
+            HotKeysBuilder hotKeysBuilder = this.hotKeysBuilder.Clone();
+
             if (viewModel?.Service?.AudioService != null) serviceBuilder.WithService(viewModel.Service.AudioService);
-            //if (viewModel?.Service?.Communicator != null) serviceBuilder.WithCommunicator(viewModel.Service.Communicator);
-            //if (viewModel?.Service?.ServicePlayer != null) serviceBuilder.WithPlayerService(viewModel.Service.ServicePlayer);
+            if (viewModel?.Service?.Communicator != null) serviceBuilder.WithCommunicator(viewModel.Service.Communicator);
             if (hotKeys != null) hotKeysBuilder.WithHotKeys(hotKeys);
 
             SettingsWindow window = new SettingsWindow(serviceBuilder, hotKeysBuilder);
-            window.ShowDialog();
+
+            if (window.ShowDialog() == true)
+            {
+                this.serviceBuilder = serviceBuilder;
+                this.hotKeysBuilder = hotKeysBuilder;
+                return true;
+            }
+
+            return false;
         }
 
         private void BuildHotKeys()
@@ -170,12 +180,9 @@ namespace AudioPlayerFrontend
             {
                 HotKeys hotKeys = hotKeysBuilder.Build();
 
-                if (hotKeys != this.hotKeys)
-                {
                     Unsubscribe(this.hotKeys);
                     this.hotKeys = hotKeys;
                     Subscribe(hotKeys);
-                }
             }
             catch (Exception exc)
             {
@@ -253,7 +260,16 @@ namespace AudioPlayerFrontend
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            UpdateBuilders();
+            if (!UpdateBuilders()) return;
+
+            if (viewModel.Service.Communicator != null)
+            {
+                try
+                {
+                    await viewModel.Service.Communicator.CloseAsync();
+                }
+                catch { }
+            }
 
             await BuildAudioServiceAsync();
 

@@ -47,7 +47,11 @@ namespace AudioPlayerFrontend
             else if (serviceBuilder.BuildClient) tbxPort.Text = clientPortConverter.Convert(serviceBuilder.ClientPort);
             else tbxPort.Text = "1884";
 
-            if (string.IsNullOrWhiteSpace(ServiceBuilder.ServerAddress)) ServiceBuilder.ServerAddress = "127.0.0.1";
+            if (string.IsNullOrWhiteSpace(ServiceBuilder.ServerAddress))
+            {
+                tbxServerAddress.Text = ServiceBuilder.ServerAddress = "127.0.0.1";
+            }
+            else tbxServerAddress.Text = serviceBuilder.ServerAddress;
         }
 
         private void RbnStandalone_Checked(object sender, RoutedEventArgs e)
@@ -101,6 +105,16 @@ namespace AudioPlayerFrontend
         private void CbxOnlySearch_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             ServiceBuilder.IsOnlySearch = null;
+        }
+
+        private void BtnOk_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = true;
+        }
+
+        private void BtnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
         }
     }
 }

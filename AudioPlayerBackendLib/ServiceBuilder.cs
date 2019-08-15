@@ -4,6 +4,7 @@ using AudioPlayerBackend.Communication.MQTT;
 using AudioPlayerBackend.Player;
 using StdOttStandard;
 using StdOttStandard.CommendlinePaser;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -20,9 +21,6 @@ namespace AudioPlayerBackend
         private string searchKey, serverAddress;
         private float? volume;
         private string[] mediaSources;
-        private IAudioService service;
-        private ICommunicator communicator;
-        private IServicePlayer servicePlayer;
         private IWaveProviderPlayer player;
 
         public bool BuildStandalone { get; private set; }
@@ -187,18 +185,6 @@ namespace AudioPlayerBackend
             }
         }
 
-        public IAudioService Service
-        {
-            get => service;
-            set
-            {
-                if (value == service) return;
-
-                service = value;
-                OnPropertyChanged(nameof(Service));
-            }
-        }
-
         public IWaveProviderPlayer Player
         {
             get => player;
@@ -275,8 +261,6 @@ namespace AudioPlayerBackend
 
         public ServiceBuilder WithService(IAudioService service)
         {
-            Service = service;
-
             return WithMediaSources(service.SourcePlaylist.FileMediaSources)
                 .WithIsAllShuffle(service.SourcePlaylist.IsAllShuffle)
                 .WithIsSearchShuffle(service.SourcePlaylist.IsSearchShuffle)
@@ -319,6 +303,21 @@ namespace AudioPlayerBackend
             BuildClient = true;
 
             return WithServerAddress(serverAddress).WithClientPort(port);
+        }
+
+        public void WithCommunicator(ICommunicator communicator)
+        {
+            if (communicator is MqttClientCommunicator)
+            {
+                MqttClientCommunicator clientCommunicator = (MqttClientCommunicator)communicator;
+                ServerAddress = clientCommunicator.ServerAddress;
+                ClientPort = clientCommunicator.Port;
+            }
+            else if (communicator is MqttServerCommunicator)
+            {
+                MqttServerCommunicator serverCommunicator = (MqttServerCommunicator)communicator;
+                ServerPort = serverCommunicator.Port;
+            }
         }
 
         public ServiceBuilder WithServerAddress(string serverAddress)
@@ -460,6 +459,30 @@ namespace AudioPlayerBackend
         protected virtual AudioServicePlayer CreateAudioServicePlayer(IWaveProviderPlayer player, IAudioService service)
         {
             return helper.CreateAudioServicePlayer(player, service);
+        }
+
+        public ServiceBuilder Clone()
+        {
+            return new ServiceBuilder(helper)
+            {
+                BuildClient = BuildClient,
+                BuildServer = BuildServer,
+                BuildStandalone = BuildStandalone,
+                ClientPort = ClientPort,
+                IfNon = ifNon,
+                IsAllShuffle = IsAllShuffle,
+                IsOnlySearch = IsOnlySearch,
+                IsSearchShuffle = IsSearchShuffle,
+                IsStreaming = IsStreaming,
+                MediaSources = MediaSources?.ToArray(),
+                Play = Play,
+                Player = Player,
+                Reload = Reload,
+                SearchKey = SearchKey,
+                ServerAddress = ServerAddress,
+                ServerPort = ServerPort,
+                Volume = Volume
+            };
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

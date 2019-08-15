@@ -11,7 +11,6 @@ namespace AudioPlayerFrontend
     public class HotKeysBuilder : INotifyPropertyChanged
     {
         private HotKey toggle, next, previous, play, pause, restart;
-        private HotKeys hotKeys;
 
         public HotKey Toggle
         {
@@ -87,7 +86,12 @@ namespace AudioPlayerFrontend
 
         public HotKeysBuilder WithHotKeys(HotKeys hotKeys)
         {
-            this.hotKeys = hotKeys;
+            Toggle = hotKeys.Toggle;
+            Next = hotKeys.Next;
+            Previous = hotKeys.Previous;
+            Play = hotKeys.Play;
+            Pause = hotKeys.Pause;
+            Restart = hotKeys.Restart;
 
             return this;
         }
@@ -134,7 +138,7 @@ namespace AudioPlayerFrontend
                 if (Enum.TryParse(modifierString, true, out modifier)) allModifier += (int)modifier;
             }
 
-            hotKey = new HotKey(key, (KeyModifier)allModifier);
+            hotKey = HotKey.GetInstance(key, (KeyModifier)allModifier);
             return true;
         }
 
@@ -184,12 +188,12 @@ namespace AudioPlayerFrontend
         {
             KeyModifier modifier = (KeyModifier)modifiers.Select(m => (int)m).Sum();
 
-            return new HotKey(key, modifier);
+            return HotKey.GetInstance(key, modifier);
         }
 
         public HotKeys Build()
         {
-            HotKeys hotKeys = this.hotKeys ?? new HotKeys();
+            HotKeys hotKeys = new HotKeys();
 
             if (toggle != null) hotKeys.Toggle = toggle;
             if (next != null) hotKeys.Next = next;
@@ -199,6 +203,19 @@ namespace AudioPlayerFrontend
             if (restart != null) hotKeys.Restart = restart;
 
             return hotKeys;
+        }
+
+        public HotKeysBuilder Clone()
+        {
+            return new HotKeysBuilder()
+            {
+                Next = Next,
+                Pause = Pause,
+                Play = Play,
+                Previous = Previous,
+                Restart = Restart,
+                Toggle = Toggle
+            };
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

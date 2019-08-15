@@ -127,7 +127,7 @@ namespace AudioPlayerBackend
             {
                 try
                 {
-                    service = serviceBuilder.Service ?? new AudioService(serviceHelper);
+                    service = new AudioService(serviceHelper);
 
                     if (communicator != null)
                     {
