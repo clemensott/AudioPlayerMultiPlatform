@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using AudioPlayerBackend.Audio;
 using StdOttStandard;
@@ -106,6 +107,8 @@ namespace AudioPlayerBackend.Data
 
         private void Load()
         {
+            if (!File.Exists(readPath)) return;
+
             AudioServiceData data = Utils.XmlDeserializeFile<AudioServiceData>(readPath);
 
             Service.Volume = data.Volume;

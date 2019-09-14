@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackend;
+﻿using AudioPlayerBackend.Build;
 using StdOttUwp.Converters;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
