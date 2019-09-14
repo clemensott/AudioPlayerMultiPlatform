@@ -4,12 +4,13 @@ using AudioPlayerBackend.Communication.MQTT;
 using AudioPlayerBackend.Player;
 using StdOttStandard;
 using StdOttStandard.CommendlinePaser;
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
+using AudioPlayerBackend.Data;
 
-namespace AudioPlayerBackend
+namespace AudioPlayerBackend.Build
 {
     public class ServiceBuilder : INotifyPropertyChanged
     {
@@ -18,7 +19,7 @@ namespace AudioPlayerBackend
         private bool? isAllShuffle, isSearchShuffle, isOnlySearch, play, isStreaming;
         private int serverPort;
         private int? clientPort;
-        private string searchKey, serverAddress;
+        private string searchKey, serverAddress, dataReadFile, dataWriteFile;
         private float? volume;
         private string[] mediaSources;
         private IWaveProviderPlayer player;
@@ -161,6 +162,30 @@ namespace AudioPlayerBackend
             }
         }
 
+        public string DataReadFile
+        {
+            get => dataReadFile;
+            set
+            {
+                if (value == dataReadFile) return;
+
+                dataReadFile = value;
+                OnPropertyChanged(nameof(DataReadFile));
+            }
+        }
+
+        public string DataWriteFile
+        {
+            get => dataWriteFile;
+            set
+            {
+                if (value == dataWriteFile) return;
+
+                dataWriteFile = value;
+                OnPropertyChanged(nameof(DataWriteFile));
+            }
+        }
+
         public float? Volume
         {
             get => volume;
@@ -218,9 +243,11 @@ namespace AudioPlayerBackend
             Option playOpt = new Option("p", "play", "Starts playback on startup", false, 0, 0);
             Option serviceVolOpt = new Option("v", "volume", "The volume of service (value between 0 and 1)", false, 1, 1);
             Option streamingOpt = Option.GetLongOnly("stream", "If given the audio is streamed to the client", false, 0, 0);
+            Option dataFileReadOpt = Option.GetLongOnly("data-file-read", "Filepath to where to read data from.", false, 1, 1);
+            Option dataFileWriteOpt = Option.GetLongOnly("data-file-write", "Filepath to where to write data from.", false, 1, 1);
 
             Options options = new Options(sourcesOpt, ifNonOpt, reloadOpt, clientOpt, serverOpt, playOpt,
-                allShuffleOpt, searchShuffleOpt, onlySearchOpt, searchKeyOpt, serviceVolOpt, streamingOpt);
+                allShuffleOpt, searchShuffleOpt, onlySearchOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileReadOpt, dataFileWriteOpt);
             OptionParseResult result = options.Parse(args);
 
             int port;
@@ -255,6 +282,9 @@ namespace AudioPlayerBackend
                 float.TryParse(parsed.Values[0], out volume)) WithVolume(volume);
 
             if (result.HasValidOptionParseds(streamingOpt)) WithIsStreaming();
+
+            if (result.TryGetFirstValidOptionParseds(dataFileReadOpt, out parsed)) DataReadFile = parsed.Values[0];
+            if (result.TryGetFirstValidOptionParseds(dataFileWriteOpt, out parsed)) DataWriteFile = parsed.Values[0];
 
             return this;
         }
@@ -425,7 +455,7 @@ namespace AudioPlayerBackend
             return CreateAudioServicePlayer(Player, service);
         }
 
-        public void CompleteService(IAudioService service)
+        public async Task <ReadWriteAudioServiceData> CompleteService(IAudioService service)
         {
             bool setMediaSources = mediaSources != null && (!ifNon || !service.SourcePlaylist.FileMediaSources.ToNotNull().Any());
             if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.SourcePlaylist.FileMediaSources))
@@ -439,6 +469,10 @@ namespace AudioPlayerBackend
             if (SearchKey != null) service.SourcePlaylist.SearchKey = SearchKey;
             if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (volume.HasValue) service.Volume = volume.Value;
+
+            await Task.Delay(1000);
+
+            return new ReadWriteAudioServiceData(DataReadFile, DataWriteFile, service, helper);
         }
 
         protected virtual MqttClientCommunicator CreateMqttClientCommunicator(string serverAddress, int? port)

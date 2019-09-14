@@ -212,6 +212,8 @@ namespace AudioPlayerBackend.Player
         {
             Reader = ToWaveProvider(CreateWaveProvider(Service.CurrentPlaylist.CurrentSong.Value));
 
+            System.Diagnostics.Debug.WriteLine("GetWP: {0}\r\n{1}; {2}; {3}", Service.CurrentPlaylist.CurrentSong.Value,
+                Reader.TotalTime, Service.CurrentPlaylist.Duration, Service.CurrentPlaylist.Position);
             if (Reader.TotalTime == Service.CurrentPlaylist.Duration && Reader.TotalTime > Service.CurrentPlaylist.Position)
             {
                 Reader.CurrentTime = Service.CurrentPlaylist.Position;
@@ -280,11 +282,15 @@ namespace AudioPlayerBackend.Player
             Player.PlaybackStopped -= Player_PlaybackStopped;
             timer.Dispose();
 
+            Player?.Stop();
+
             if (Reader != null)
             {
-                Player.Stop();
+                Reader?.Dispose();
                 Reader = null;
             }
+
+            Player?.Dispose();
 
             Unsubscribe(Service);
         }

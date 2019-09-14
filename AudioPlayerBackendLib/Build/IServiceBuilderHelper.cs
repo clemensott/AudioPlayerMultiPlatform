@@ -2,7 +2,7 @@
 using AudioPlayerBackend.Player;
 using System;
 
-namespace AudioPlayerBackend
+namespace AudioPlayerBackend.Build
 {
     public interface IServiceBuilderHelper : INotifyPropertyChangedHelper
     {

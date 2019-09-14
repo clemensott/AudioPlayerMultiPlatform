@@ -1,7 +1,6 @@
 ﻿using System;
-using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Communication.MQTT;
+using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend.Join

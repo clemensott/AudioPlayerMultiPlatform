@@ -2,12 +2,10 @@
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Player;
 using System.ComponentModel;
-using AudioPlayerBackend;
+using AudioPlayerBackend.Build;
 
 namespace AudioPlayerFrontend
 {
-    enum OpenState { Open, TryOpening, IDLE, Settings }
-
     public class ViewModel : INotifyPropertyChanged
     {
         private bool isUiEnabled;
@@ -56,17 +54,9 @@ namespace AudioPlayerFrontend
                 OnPropertyChanged(nameof(CommunicatorUI));
                 OnPropertyChanged(nameof(ServicePlayerUI));
 
-                if (oldService?.ServicePlayer != Service?.ServicePlayer)
-                {
-                    oldService?.ServicePlayer?.Dispose();
-
-                    if (oldService?.ServicePlayer?.Player != Service?.ServicePlayer?.Player)
-                    {
-                        oldService?.ServicePlayer?.Player?.Dispose();
-                    }
-                }
-
+                if (oldService?.ServicePlayer != Service?.ServicePlayer) oldService?.ServicePlayer?.Dispose();
                 if (oldService?.Communicator != Service?.Communicator) oldService?.Communicator?.Dispose();
+                if (oldService?.Data != Service?.Data) oldService?.Data?.Dispose();
             }
         }
 

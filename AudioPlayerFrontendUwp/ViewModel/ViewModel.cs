@@ -4,6 +4,7 @@ using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 using AudioPlayerFrontend.Join;
 
@@ -12,6 +13,7 @@ namespace AudioPlayerFrontend
     class ViewModel : INotifyPropertyChanged
     {
         private ServiceBuild serviceOpenBuild;
+        private ServiceBuildResult buildResult;
         private IAudioService audioService;
         private ICommunicator communicator;
         private IServicePlayer servicePlayer;
@@ -80,7 +82,8 @@ namespace AudioPlayerFrontend
 
         public ServiceBuild Open()
         {
-            return ServiceOpenBuild = ServiceBuild.Open(Communicator, AudioService, ServicePlayer, TimeSpan.FromMilliseconds(200));
+            return ServiceOpenBuild = ServiceBuild.Open(Communicator, AudioService, 
+                ServicePlayer, buildResult.Data, TimeSpan.FromMilliseconds(200));
         }
 
         private async void SetBuildResult(ServiceBuild build)
@@ -94,6 +97,8 @@ namespace AudioPlayerFrontend
             AudioService = result?.AudioService;
             Communicator = result?.Communicator;
             ServicePlayer = result?.ServicePlayer;
+
+            buildResult = result;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

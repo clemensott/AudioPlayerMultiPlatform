@@ -3,9 +3,10 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
+using AudioPlayerBackend.Data;
 using AudioPlayerBackend.Player;
 
-namespace AudioPlayerBackend
+namespace AudioPlayerBackend.Build
 {
     public class ServiceBuild : INotifyPropertyChanged
     {
@@ -183,11 +184,11 @@ namespace AudioPlayerBackend
             {
                 try
                 {
-                    serviceBuilder.CompleteService(service);
+                    ReadWriteAudioServiceData data = await serviceBuilder.CompleteService(service);
 
                     if (CompleteToken.IsEnded.HasValue) return;
 
-                    ServiceBuildResult result = new ServiceBuildResult(service, communicator, servicePlayer);
+                    ServiceBuildResult result = new ServiceBuildResult(service, communicator, servicePlayer, data);
                     CompleteToken.End(BuildEndedType.Successful, result);
                     break;
                 }
@@ -203,16 +204,16 @@ namespace AudioPlayerBackend
         }
 
         public static ServiceBuild Open(ICommunicator communicator, IAudioService service,
-            IServicePlayer player, TimeSpan delayTime)
+            IServicePlayer player, ReadWriteAudioServiceData data, TimeSpan delayTime)
         {
             ServiceBuild build = new ServiceBuild();
-            build.Open(delayTime, communicator, service, player);
+            build.Open(delayTime, communicator, service, data, player);
 
             return build;
         }
 
         private async void Open(TimeSpan delayTime, ICommunicator communicator,
-            IAudioService service, IServicePlayer player)
+            IAudioService service, ReadWriteAudioServiceData data, IServicePlayer player)
         {
             while (true)
             {
@@ -274,7 +275,7 @@ namespace AudioPlayerBackend
             }
 
             PlayerToken.Successful(player);
-            CompleteToken.Successful(new ServiceBuildResult(service, communicator, player));
+            CompleteToken.Successful(new ServiceBuildResult(service, communicator, player, data));
         }
 
         private async Task SendCommands(ICommunicator communicator)

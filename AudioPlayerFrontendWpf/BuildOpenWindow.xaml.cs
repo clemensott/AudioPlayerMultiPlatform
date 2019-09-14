@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
-using AudioPlayerBackend;
+using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend

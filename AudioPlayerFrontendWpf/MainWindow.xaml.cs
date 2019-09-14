@@ -14,6 +14,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using AudioPlayerBackend.Build;
 
 namespace AudioPlayerFrontend
 {
@@ -79,10 +80,9 @@ namespace AudioPlayerFrontend
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            IntPtr windowHandle = new WindowInteropHelper(this).Handle;
             string[] args = Environment.GetCommandLineArgs().Skip(1).ToArray();
 
-            serviceBuilder.WithArgs(args).WithPlayer(new Player(-1, windowHandle));
+            serviceBuilder.WithArgs(args);
             hotKeysBuilder.WithArgs(args);
 
             Option disableUiOpt = Option.GetLongOnly("disable-ui", "Disables UI on startup.", false, 0);
@@ -95,8 +95,11 @@ namespace AudioPlayerFrontend
             BuildHotKeys();
         }
 
-        public async Task BuildAudioServiceAsync()
+        private async Task BuildAudioServiceAsync()
         {
+            IntPtr windowHandle = new WindowInteropHelper(this).Handle;
+            serviceBuilder.WithPlayer(new Player(-1, windowHandle));
+
             while (true)
             {
                 ServiceBuild build = ServiceBuild.Build(serviceBuilder, TimeSpan.FromMilliseconds(500), AudioServiceHelper.Current);
@@ -117,14 +120,14 @@ namespace AudioPlayerFrontend
             if (Visibility != Visibility.Visible) Show();
         }
 
-        public async Task OpenAudioServiceAsync()
+        private async Task OpenAudioServiceAsync()
         {
             Hide();
 
             while (true)
             {
                 ServiceBuild build = ServiceBuild.Open(viewModel.Service.Communicator, viewModel.Service.AudioService,
-                    viewModel.Service.ServicePlayer, TimeSpan.FromMilliseconds(500));
+                    viewModel.Service.ServicePlayer, viewModel.Service.Data, TimeSpan.FromMilliseconds(500));
 
                 if (ShowBuildOpenWindow(build) == false)
                 {
@@ -180,9 +183,9 @@ namespace AudioPlayerFrontend
             {
                 HotKeys hotKeys = hotKeysBuilder.Build();
 
-                    Unsubscribe(this.hotKeys);
-                    this.hotKeys = hotKeys;
-                    Subscribe(hotKeys);
+                Unsubscribe(this.hotKeys);
+                this.hotKeys = hotKeys;
+                Subscribe(hotKeys);
             }
             catch (Exception exc)
             {

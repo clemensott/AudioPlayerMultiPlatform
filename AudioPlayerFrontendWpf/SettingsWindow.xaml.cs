@@ -1,10 +1,10 @@
-﻿using AudioPlayerBackend;
-using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.Audio;
 using AudioPlayerFrontend.Join;
 using StdOttFramework.Converters;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using AudioPlayerBackend.Build;
 
 namespace AudioPlayerFrontend
 {

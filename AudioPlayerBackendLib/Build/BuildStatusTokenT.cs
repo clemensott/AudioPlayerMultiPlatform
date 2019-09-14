@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using StdOttStandard;
 
-namespace AudioPlayerBackend
+namespace AudioPlayerBackend.Build
 {
     public class BuildStatusToken<TResult> : BuildStatusToken
     {

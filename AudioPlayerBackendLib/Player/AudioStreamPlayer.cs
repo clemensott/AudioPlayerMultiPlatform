@@ -63,6 +63,7 @@ namespace AudioPlayerBackend.Player
 
         public void Dispose()
         {
+            Player?.Dispose();
             buffer?.Dispose();
         }
     }

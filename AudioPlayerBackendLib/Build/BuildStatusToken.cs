@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using StdOttStandard;
 
-namespace AudioPlayerBackend
+namespace AudioPlayerBackend.Build
 {
     public enum BuildEndedType { Successful, Canceled, Settings }
 

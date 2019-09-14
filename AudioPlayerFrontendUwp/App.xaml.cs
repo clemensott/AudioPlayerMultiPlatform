@@ -11,6 +11,7 @@ using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
+using AudioPlayerBackend.Build;
 
 namespace AudioPlayerFrontend
 {
