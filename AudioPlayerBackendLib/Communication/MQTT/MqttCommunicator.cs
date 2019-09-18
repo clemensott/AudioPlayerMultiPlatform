@@ -294,6 +294,7 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             ByteQueue data = new ByteQueue();
             if (playlist.CurrentSong.HasValue) data.Enqueue(playlist.CurrentSong.Value);
+            else data.Enqueue(false);
 
             await PublishAsync(playlist, nameof(playlist.CurrentSong), data);
         }
@@ -488,7 +489,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                             break;
 
                         case "toggle":
-                            Service.PlayState = Service.PlayState != PlaybackState.Playing 
+                            Service.PlayState = Service.PlayState != PlaybackState.Playing
                                 ? PlaybackState.Playing
                                 : PlaybackState.Paused;
                             break;
@@ -523,7 +524,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             switch (topic)
             {
                 case nameof(playlist.CurrentSong):
-                    playlist.CurrentSong = data.Any() ? (Song?)data.DequeueSong() : null;
+                    playlist.CurrentSong = data.Count() > 1 ? (Song?)data.DequeueSong() : null;
                     break;
 
                 case nameof(playlist.Duration):

@@ -29,7 +29,7 @@ namespace AudioPlayerBackend.Data
 
         public PlaylistData(IPlaylistBase playlist)
         {
-            CurrentSongPath = playlist.CurrentSong?.FullPath;
+            CurrentSongPath = playlist.CurrentSong?.FullPath ?? string.Empty;
             IsAllShuffle = playlist.IsAllShuffle;
             Loop = playlist.Loop;
             PositionTicks = playlist.Position.Ticks;

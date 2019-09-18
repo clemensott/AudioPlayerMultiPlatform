@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using StdOttStandard;
 
@@ -13,6 +15,8 @@ namespace AudioPlayerBackend.Data
 
         private readonly INotifyPropertyChangedHelper helper;
         private readonly string readPath, writePath;
+        private SemaphoreSlim saveSem;
+        private bool disposed;
 
         public IAudioServiceBase Service { get; }
 
@@ -25,7 +29,12 @@ namespace AudioPlayerBackend.Data
             this.helper = helper;
 
             if (!string.IsNullOrWhiteSpace(readPath)) Load();
-            if (!string.IsNullOrWhiteSpace(writePath)) Subscribe(Service);
+            if (!string.IsNullOrWhiteSpace(writePath))
+            {
+                saveSem = new SemaphoreSlim(0);
+                SaveHandler();
+                Subscribe(Service);
+            }
         }
 
         private void Subscribe(IAudioServiceBase service)
@@ -121,23 +130,16 @@ namespace AudioPlayerBackend.Data
 
         private IPlaylistBase MergePlaylist(IPlaylistBase playlist, PlaylistData data)
         {
-            System.Diagnostics.Debug.WriteLine("Merge: {0}; {1}", playlist.CurrentSong, playlist.Songs.Length);
-
             playlist.Songs = MergeSongs(playlist.Songs, data.Songs);
 
             Song currentSong;
-            if (playlist.Songs.TryFirst(s => s.FullPath == data.CurrentSongPath, out currentSong))
-            {
-                System.Diagnostics.Debug.WriteLine("LoadCurrentSong: {0}\r\n{1}", currentSong, Service.CurrentPlaylist.Duration);
-                playlist.CurrentSong = currentSong;
-            }
+            playlist.CurrentSong = playlist.Songs.TryFirst(s => s.FullPath == data.CurrentSongPath, out currentSong) ? 
+                (Song?)currentSong : null;
 
             playlist.IsAllShuffle = data.IsAllShuffle;
             playlist.Loop = data.Loop;
             playlist.Duration = data.Duration;
             playlist.Position = data.Position;
-
-            System.Diagnostics.Debug.WriteLine("Merged: {0}; {1}; {2}", playlist.CurrentSong, currentSong, playlist.Songs.Length);
 
             return playlist;
         }
@@ -163,14 +165,39 @@ namespace AudioPlayerBackend.Data
 
         private void Save()
         {
-            System.Diagnostics.Debug.WriteLine("Save: " + DateTime.Now.GetDateTimeFormats()[44]);
-            AudioServiceData data = new AudioServiceData(Service);
-            Utils.XmlSerialize(writePath, data);
+            saveSem.Release();
+        }
+
+        private async Task SaveHandler()
+        {
+            while (!disposed)
+            {
+                try
+                {
+                    do
+                    {
+                        await saveSem.WaitAsync();
+                    }
+                    while (saveSem.CurrentCount > 0);
+
+                    await Task.Delay(200);
+
+                    AudioServiceData data = new AudioServiceData(Service);
+                    Utils.XmlSerialize(writePath, data);
+
+                    await Task.Delay(200);
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine(e);
+                }
+            }
         }
 
         public void Dispose()
         {
             Save();
+            disposed = true;
             Unsubscribe(Service);
         }
     }
