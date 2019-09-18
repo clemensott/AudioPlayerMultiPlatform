@@ -1,6 +1,6 @@
 ﻿using AudioPlayerBackend.Player;
 using NAudio.CoreAudioApi;
-using NAudio.Win8.Wave.WaveOutputs;
+//using NAudio.Wave.WaveOutputs;
 using System;
 
 namespace AudioPlayerFrontend.Join
@@ -10,7 +10,7 @@ namespace AudioPlayerFrontend.Join
         private bool stop, stopped;
         private NAudio.Wave.IWaveProvider waveProvider;
         private Func<NAudio.Wave.IWaveProvider> playWaveProviderFunc;
-        private readonly WasapiOutRT waveOut;
+        //private readonly WasapiOutRT waveOut;
         private PlaybackState playState;
 
         public PlaybackState PlayState
@@ -32,8 +32,8 @@ namespace AudioPlayerFrontend.Join
             stop = false;
             stopped = true;
 
-            waveOut = new WasapiOutRT(AudioClientShareMode.Shared, 200);
-            waveOut.PlaybackStopped += WaveOut_PlaybackStopped;
+            //waveOut = new WasapiOutRT(AudioClientShareMode.Shared, 200);
+            //waveOut.PlaybackStopped += WaveOut_PlaybackStopped;
         }
 
         private void WaveOut_PlaybackStopped(object sender, NAudio.Wave.StoppedEventArgs e)
@@ -44,7 +44,7 @@ namespace AudioPlayerFrontend.Join
             {
                 if (waveProvider is IDisposable disposable) disposable.Dispose();
 
-                waveOut.Init(playWaveProviderFunc);
+                //waveOut.Init(playWaveProviderFunc);
                 playWaveProviderFunc = null;
 
                 ExecutePlayState();
@@ -71,13 +71,13 @@ namespace AudioPlayerFrontend.Join
             {
                 if (waveProvider is IDisposable disposable) disposable.Dispose();
 
-                waveOut.Init(wpf);
+                //waveOut.Init(wpf);
                 ExecutePlayState();
             }
             else
             {
                 playWaveProviderFunc = wpf;
-                waveOut.Stop();
+                //waveOut.Stop();
             }
         }
 
@@ -98,7 +98,7 @@ namespace AudioPlayerFrontend.Join
             if (!stopped)
             {
                 stop = true;
-                waveOut.Stop();
+                //waveOut.Stop();
             }
             else if (waveProvider is IDisposable disposable) disposable.Dispose();
         }
@@ -110,17 +110,17 @@ namespace AudioPlayerFrontend.Join
             switch (PlayState)
             {
                 case PlaybackState.Stopped:
-                    waveOut.Stop();
+                    //waveOut.Stop();
                     break;
 
                 case PlaybackState.Playing:
                     stopped = false;
-                    waveOut.Play();
+                    //waveOut.Play();
                     break;
 
                 case PlaybackState.Paused:
                     stopped = false;
-                    waveOut.Pause();
+                    //waveOut.Pause();
                     break;
             }
         }
@@ -129,7 +129,7 @@ namespace AudioPlayerFrontend.Join
         {
             if (waveProvider is IDisposable disposable) disposable.Dispose();
 
-            waveOut.Dispose();
+            //waveOut.Dispose();
         }
     }
 }
