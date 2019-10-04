@@ -184,7 +184,7 @@ namespace AudioPlayerBackend.Build
             {
                 try
                 {
-                    ReadWriteAudioServiceData data = await serviceBuilder.CompleteService(service);
+                    ReadWriteAudioServiceData data = serviceBuilder.CompleteService(service);
 
                     if (CompleteToken.IsEnded.HasValue) return;
 

@@ -23,7 +23,7 @@ namespace AudioPlayerBackend.Data
         [XmlIgnore]
         public TimeSpan Duration => new TimeSpan(DurationTicks);
 
-        public Song[] Songs { get; set; }
+        public string[] Songs { get; set; }
 
         public PlaylistData() { }
 
@@ -34,7 +34,7 @@ namespace AudioPlayerBackend.Data
             Loop = playlist.Loop;
             PositionTicks = playlist.Position.Ticks;
             DurationTicks = playlist.Duration.Ticks;
-            Songs = playlist.Songs.ToArray();
+            Songs = playlist.Songs.Select(s => s.FullPath).ToArray();
         }
     }
 }

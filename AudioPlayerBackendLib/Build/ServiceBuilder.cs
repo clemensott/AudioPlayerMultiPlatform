@@ -7,7 +7,6 @@ using StdOttStandard.CommendlinePaser;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 using AudioPlayerBackend.Data;
 
 namespace AudioPlayerBackend.Build
@@ -455,7 +454,7 @@ namespace AudioPlayerBackend.Build
             return CreateAudioServicePlayer(Player, service);
         }
 
-        public async Task <ReadWriteAudioServiceData> CompleteService(IAudioService service)
+        public ReadWriteAudioServiceData CompleteService(IAudioService service)
         {
             bool setMediaSources = mediaSources != null && (!ifNon || !service.SourcePlaylist.FileMediaSources.ToNotNull().Any());
             if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.SourcePlaylist.FileMediaSources))
@@ -469,8 +468,6 @@ namespace AudioPlayerBackend.Build
             if (SearchKey != null) service.SourcePlaylist.SearchKey = SearchKey;
             if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (volume.HasValue) service.Volume = volume.Value;
-
-            await Task.Delay(1000);
 
             return new ReadWriteAudioServiceData(DataReadFile, DataWriteFile, service, helper);
         }

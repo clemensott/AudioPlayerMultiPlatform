@@ -28,37 +28,44 @@ namespace AudioPlayerBackend.Data
             Service = service;
             this.helper = helper;
 
+            Init();
+        }
+
+        private async void Init()
+        {
+            await Task.Delay(1000);
+
             if (!string.IsNullOrWhiteSpace(readPath)) Load();
             if (!string.IsNullOrWhiteSpace(writePath))
             {
                 saveSem = new SemaphoreSlim(0);
-                SaveHandler();
-                Subscribe(Service);
+                Task.Run(SaveHandler);
+                Subscribe();
             }
         }
 
-        private void Subscribe(IAudioServiceBase service)
+        private void Subscribe()
         {
-            if (service == null) return;
+            if (Service == null) return;
 
-            service.CurrentPlaylistChanged += Save;
-            service.PlaylistsChanged += Service_PlaylistsChanged;
-            service.VolumeChanged += Save;
+            Service.CurrentPlaylistChanged += Save;
+            Service.PlaylistsChanged += Service_PlaylistsChanged;
+            Service.VolumeChanged += Save;
 
-            Subscribe(service.CurrentPlaylist);
-            Subscribe(service.Playlists);
+            Subscribe(Service.CurrentPlaylist);
+            Subscribe(Service.Playlists);
         }
 
-        private void Unsubscribe(IAudioServiceBase service)
+        private void Unsubscribe()
         {
-            if (service == null) return;
+            if (Service == null) return;
 
-            service.CurrentPlaylistChanged -= Save;
-            service.PlaylistsChanged -= Service_PlaylistsChanged;
-            service.VolumeChanged -= Save;
+            Service.CurrentPlaylistChanged -= Save;
+            Service.PlaylistsChanged -= Service_PlaylistsChanged;
+            Service.VolumeChanged -= Save;
 
-            Unsubscribe(service.CurrentPlaylist);
-            Unsubscribe(service.Playlists);
+            Unsubscribe(Service.CurrentPlaylist);
+            Unsubscribe(Service.Playlists);
         }
 
         private void Subscribe(IPlaylistBase playlist)
@@ -68,7 +75,6 @@ namespace AudioPlayerBackend.Data
             playlist.CurrentSongChanged += Save;
             playlist.IsAllShuffleChanged += Save;
             playlist.LoopChanged += Save;
-            playlist.PositionChanged += Save;
             playlist.DurationChanged += Save;
             playlist.SongsChanged += Save;
         }
@@ -80,7 +86,6 @@ namespace AudioPlayerBackend.Data
             playlist.CurrentSongChanged -= Save;
             playlist.IsAllShuffleChanged -= Save;
             playlist.LoopChanged -= Save;
-            playlist.PositionChanged -= Save;
             playlist.DurationChanged -= Save;
             playlist.SongsChanged -= Save;
         }
@@ -133,7 +138,7 @@ namespace AudioPlayerBackend.Data
             playlist.Songs = MergeSongs(playlist.Songs, data.Songs);
 
             Song currentSong;
-            playlist.CurrentSong = playlist.Songs.TryFirst(s => s.FullPath == data.CurrentSongPath, out currentSong) ? 
+            playlist.CurrentSong = playlist.Songs.TryFirst(s => s.FullPath == data.CurrentSongPath, out currentSong) ?
                 (Song?)currentSong : null;
 
             playlist.IsAllShuffle = data.IsAllShuffle;
@@ -144,11 +149,22 @@ namespace AudioPlayerBackend.Data
             return playlist;
         }
 
-        private static Song[] MergeSongs(Song[] currentSongs, Song[] oldSongs)
+        private static Song[] MergeSongs(Song[] currentSongs, string[] oldSongs)
         {
-            List<Song> newSongs = oldSongs.Where(o => currentSongs.Any(c => c.FullPath == o.FullPath)).ToList();
+            List<Song> newSongs = new List<Song>();
+            List<Song> remainingSongs = currentSongs.ToList();
 
-            foreach (Song newSong in currentSongs.Where(c => oldSongs.All(o => o.FullPath != c.FullPath)))
+            foreach (string oldPath in oldSongs)
+            {
+                int index = remainingSongs.FindIndex(n => n.FullPath == oldPath);
+
+                if (index == -1) continue;
+
+                newSongs.Add(remainingSongs[index]);
+                remainingSongs.RemoveAt(index);
+            }
+
+            foreach (Song newSong in remainingSongs)
             {
                 newSongs.Insert(rnd.Next(newSongs.Count), newSong);
             }
@@ -180,12 +196,12 @@ namespace AudioPlayerBackend.Data
                     }
                     while (saveSem.CurrentCount > 0);
 
-                    await Task.Delay(200);
+                    await Task.Delay(400);
 
                     AudioServiceData data = new AudioServiceData(Service);
                     Utils.XmlSerialize(writePath, data);
 
-                    await Task.Delay(200);
+                    await Task.Delay(500);
                 }
                 catch (Exception e)
                 {
@@ -196,9 +212,9 @@ namespace AudioPlayerBackend.Data
 
         public void Dispose()
         {
+            Unsubscribe();
             Save();
             disposed = true;
-            Unsubscribe(Service);
         }
     }
 }
