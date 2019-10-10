@@ -133,13 +133,15 @@ namespace AudioPlayerBackend.Data
             Service.CurrentPlaylist = Service.Playlists.ElementAtOrDefault(data.CurrentPlaylistIndex) ?? Service.SourcePlaylist;
         }
 
-        private IPlaylistBase MergePlaylist(IPlaylistBase playlist, PlaylistData data)
+        private static IPlaylistBase MergePlaylist(IPlaylistBase playlist, PlaylistData data)
         {
             playlist.Songs = MergeSongs(playlist.Songs, data.Songs);
 
             Song currentSong;
-            playlist.CurrentSong = playlist.Songs.TryFirst(s => s.FullPath == data.CurrentSongPath, out currentSong) ?
-                (Song?)currentSong : null;
+            if (playlist.Songs.TryFirst(s => s.FullPath == data.CurrentSongPath, out currentSong))
+            {
+                playlist.CurrentSong = currentSong;
+            }
 
             playlist.IsAllShuffle = data.IsAllShuffle;
             playlist.Loop = data.Loop;

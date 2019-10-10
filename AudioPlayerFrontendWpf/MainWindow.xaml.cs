@@ -210,7 +210,8 @@ namespace AudioPlayerFrontend
                 case Key.Enter:
                     if (service.SourcePlaylist.SearchSongs.Any())
                     {
-                        viewModel.AudioServiceUI.AddSongsToFirstPlaylist(service.SourcePlaylist.SearchSongs.Take(1));
+                        bool prepend = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+                        viewModel.AudioServiceUI.AddSongsToFirstPlaylist(service.SourcePlaylist.SearchSongs.Take(1), prepend);
                         service.PlayState = PlaybackState.Playing;
                     }
                     break;
@@ -304,6 +305,7 @@ namespace AudioPlayerFrontend
             hotKeys?.Dispose();
 
             viewModel.CommunicatorUI?.Dispose();
+            viewModel.Service?.Data?.Dispose();
         }
 
         private void StackPanel_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
@@ -408,6 +410,7 @@ namespace AudioPlayerFrontend
             if (changedInput == 6 && !isSearching && index != -1) input2 = songs.ElementAt(index);
             else if (!currentSong.HasValue) input6 = -1;
             else if (songs.Contains(currentSong.Value)) input6 = songs.IndexOf(currentSong.Value);
+            else input6 = -1;
 
             return isSearching || currentPlaylist.ID == Guid.Empty;
         }

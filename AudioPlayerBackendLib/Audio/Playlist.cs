@@ -13,7 +13,7 @@ namespace AudioPlayerBackend.Audio
         private Song? currentSong;
         private Song[] songs;
         private IEnumerable<Song> allSongs;
-        private INotifyPropertyChangedHelper helper;
+        private readonly INotifyPropertyChangedHelper helper;
 
         public event EventHandler<ValueChangedEventArgs<bool>> IsAllShuffleChanged;
         public event EventHandler<ValueChangedEventArgs<LoopType>> LoopChanged;

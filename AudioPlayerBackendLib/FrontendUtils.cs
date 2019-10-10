@@ -37,7 +37,12 @@ namespace AudioPlayerBackend
 
                 if (playlist.ID == service.CurrentPlaylist.ID)
                 {
-                    if (prepend) playlist.Songs = songs.Concat(playlist.Songs).Distinct().ToArray();
+                    if (prepend)
+                    {
+                        playlist.Songs = songs.Concat(playlist.Songs).Distinct().ToArray();
+
+                        if (songs.Any()) playlist.CurrentSong = songs.First();
+                    }
                     else playlist.Songs = playlist.Songs.Concat(songs).Distinct().ToArray();
                 }
                 else
