@@ -127,15 +127,21 @@ namespace AudioPlayerBackend.Data
 
             Service.Volume = data.Volume;
 
-            MergePlaylist(Service.SourcePlaylist, data.SourcePlaylist);
-            Service.Playlists = data.Playlists.Select(p => MergePlaylist(new Playlist(helper), p)).ToArray();
+            MergePlaylist(Service.SourcePlaylist, data.SourcePlaylist, Service.CurrentPlaylist.Songs);
+            Service.Playlists = data.Playlists.Select(playlistData =>
+            {
+                IPlaylistBase newPlaylist = new Playlist(helper);
+                MergePlaylist(newPlaylist, playlistData, Service.CurrentPlaylist.Songs);
+
+                return newPlaylist;
+            }).Where(p => p.Songs.Length > 0).ToArray();
 
             Service.CurrentPlaylist = Service.Playlists.ElementAtOrDefault(data.CurrentPlaylistIndex) ?? Service.SourcePlaylist;
         }
 
-        private static IPlaylistBase MergePlaylist(IPlaylistBase playlist, PlaylistData data)
+        private static void MergePlaylist(IPlaylistBase playlist, PlaylistData data, Song[] allSongs)
         {
-            playlist.Songs = MergeSongs(playlist.Songs, data.Songs);
+            playlist.Songs = MergeSongs(playlist.Songs, data.Songs, allSongs);
 
             Song currentSong;
             if (playlist.Songs.TryFirst(s => s.FullPath == data.CurrentSongPath, out currentSong))
@@ -147,23 +153,20 @@ namespace AudioPlayerBackend.Data
             playlist.Loop = data.Loop;
             playlist.Duration = data.Duration;
             playlist.Position = data.Position;
-
-            return playlist;
         }
 
-        private static Song[] MergeSongs(Song[] currentSongs, string[] oldSongs)
+        private static Song[] MergeSongs(Song[] currentSongs, string[] oldSongs, Song[] allSongs)
         {
             List<Song> newSongs = new List<Song>();
             List<Song> remainingSongs = currentSongs.ToList();
 
             foreach (string oldPath in oldSongs)
             {
-                int index = remainingSongs.FindIndex(n => n.FullPath == oldPath);
+                Song song;
+                if (!allSongs.TryFirst(n => n.FullPath == oldPath, out song)) continue;
 
-                if (index == -1) continue;
-
-                newSongs.Add(remainingSongs[index]);
-                remainingSongs.RemoveAt(index);
+                newSongs.Add(song);
+                remainingSongs.Remove(song);
             }
 
             foreach (Song newSong in remainingSongs)
