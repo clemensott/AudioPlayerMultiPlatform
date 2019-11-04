@@ -17,6 +17,7 @@ namespace AudioPlayerBackend.Player
         private readonly Timer timer;
         private readonly object readerLockObj = new object();
         private ReadEventWaveProvider waveProvider;
+        private string currentReaderPath;
 
         public IPositionWaveProvider Reader { get; private set; }
 
@@ -187,7 +188,23 @@ namespace AudioPlayerBackend.Player
                 return;
             }
 
-            if (Reader != null) Player.Stop();
+            if (Reader != null)
+            {
+                IPlaylist currentPlaylist = Service.CurrentPlaylist;
+
+                if (currentPlaylist.CurrentSong.HasValue &&
+                    currentPlaylist.CurrentSong.Value.FullPath == currentReaderPath)
+                {
+                    if (currentPlaylist.Position - Reader.CurrentTime > TimeSpan.FromMilliseconds(500))
+                    {
+                        Reader.CurrentTime = currentPlaylist.Position;
+                    }
+
+                    return;
+                }
+
+                Player.Stop();
+            }
 
             try
             {
@@ -210,7 +227,9 @@ namespace AudioPlayerBackend.Player
 
         private IPositionWaveProvider GetWaveProvider()
         {
-            Reader = ToWaveProvider(CreateWaveProvider(Service.CurrentPlaylist.CurrentSong.Value));
+            Song currentSong = Service.CurrentPlaylist.CurrentSong.Value;
+            currentReaderPath = currentSong.FullPath;
+            Reader = ToWaveProvider(CreateWaveProvider(currentSong));
 
             System.Diagnostics.Debug.WriteLine("GetWP: {0}\r\n{1}; {2}; {3}", Service.CurrentPlaylist.CurrentSong.Value,
                 Reader.TotalTime, Service.CurrentPlaylist.Duration, Service.CurrentPlaylist.Position);
@@ -253,11 +272,6 @@ namespace AudioPlayerBackend.Player
         protected virtual IPositionWaveProvider CreateWaveProvider(Song song)
         {
             return helper.CreateWaveProvider(song, Service);
-        }
-
-        private IEnumerable<Song> GetShuffledSongs(IEnumerable<Song> songs)
-        {
-            return songs.OrderBy(s => ran.Next());
         }
 
         private void EnableTimer()

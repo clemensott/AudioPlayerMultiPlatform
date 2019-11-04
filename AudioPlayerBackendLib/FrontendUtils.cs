@@ -31,38 +31,75 @@ namespace AudioPlayerBackend
 
             if (!songs.Any()) return;
 
+            IPlaylist currentPlaylist = service.CurrentPlaylist;
+
             if (service.Playlists.Length > 0)
             {
                 IPlaylist playlist = service.Playlists[0];
 
-                if (playlist.ID == service.CurrentPlaylist.ID)
+                if (playlist.ID == currentPlaylist.ID)
                 {
                     if (prepend)
                     {
                         playlist.Songs = songs.Concat(playlist.Songs).Distinct().ToArray();
-
-                        if (songs.Any()) playlist.CurrentSong = songs.First();
+                        playlist.CurrentSong = songs.First();
                     }
                     else playlist.Songs = playlist.Songs.Concat(songs).Distinct().ToArray();
                 }
                 else
                 {
-                    playlist.Songs = songs.ToArray();
-                    playlist.Position = TimeSpan.Zero;
-                }
+                    if (prepend || !currentPlaylist.CurrentSong.HasValue)
+                    {
+                        playlist.Songs = songs.ToArray();
+                        playlist.Position = TimeSpan.Zero;
+                        playlist.CurrentSong = songs.First();
 
-                service.CurrentPlaylist = playlist;
+                        service.CurrentPlaylist = playlist;
+                    }
+                    else
+                    {
+                        playlist.Songs = songs.Insert(0, currentPlaylist.CurrentSong.Value).ToArray();
+                        playlist.CurrentSong = currentPlaylist.CurrentSong.Value;
+                        playlist.Duration = currentPlaylist.Duration;
+                        playlist.Position = currentPlaylist.Position;
+
+                        service.CurrentPlaylist = playlist;
+
+                        currentPlaylist.CurrentSong = currentPlaylist.Songs.Cast<Song?>()
+                            .NextOrDefault(currentPlaylist.CurrentSong).next;
+                        currentPlaylist.Position = TimeSpan.Zero;
+                    }
+                }
             }
             else
             {
-                IPlaylist newPlaylist = new Playlist(helper);
-                newPlaylist.Loop = LoopType.Next;
-                newPlaylist.IsAllShuffle = true;
-                newPlaylist.Songs = songs.ToArray();
-                newPlaylist.CurrentSong = songs.First();
+                IPlaylist playlist = new Playlist(helper);
+                playlist.Loop = LoopType.Next;
+                playlist.IsAllShuffle = true;
 
-                service.Playlists = service.Playlists.ConcatParams(newPlaylist).Distinct().ToArray();
-                service.CurrentPlaylist = newPlaylist;
+                if (prepend || !currentPlaylist.CurrentSong.HasValue)
+                {
+                    playlist.Songs = songs.ToArray();
+                    playlist.Position = TimeSpan.Zero;
+                    playlist.CurrentSong = songs.First();
+
+                    service.Playlists = service.Playlists.ConcatParams(playlist).Distinct().ToArray();
+                    service.CurrentPlaylist = playlist;
+                }
+                else
+                {
+                    playlist.Songs = songs.Insert(0, currentPlaylist.CurrentSong.Value).ToArray();
+                    playlist.CurrentSong = currentPlaylist.CurrentSong.Value;
+                    playlist.Duration = currentPlaylist.Duration;
+                    playlist.Position = currentPlaylist.Position;
+
+                    service.Playlists = service.Playlists.ConcatParams(playlist).Distinct().ToArray();
+                    service.CurrentPlaylist = playlist;
+
+                    currentPlaylist.CurrentSong = currentPlaylist.Songs.Cast<Song?>()
+                        .NextOrDefault(currentPlaylist.CurrentSong).next;
+                    currentPlaylist.Position = TimeSpan.Zero;
+                }
             }
         }
     }
