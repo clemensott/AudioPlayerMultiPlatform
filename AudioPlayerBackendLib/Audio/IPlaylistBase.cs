@@ -2,7 +2,7 @@
 
 namespace AudioPlayerBackend.Audio
 {
-    public enum LoopType { Next, Stop, CurrentPlaylist, CurrentSong }
+    public enum LoopType { Next, Stop, CurrentPlaylist, CurrentSong, StopCurrentSong }
 
     public interface IPlaylistBase
     {

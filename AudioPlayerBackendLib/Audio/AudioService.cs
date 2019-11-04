@@ -158,7 +158,12 @@ namespace AudioPlayerBackend.Audio
 
             (Song? newCurrentSong, bool overflow) = SongsService.GetNextSong(CurrentPlaylist);
 
-            if (CurrentPlaylist.Loop == LoopType.CurrentPlaylist || !overflow)
+            if (CurrentPlaylist.Loop == LoopType.StopCurrentSong)
+            {
+                PlayState = PlaybackState.Stopped;
+                ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
+            }
+            else if (CurrentPlaylist.Loop == LoopType.CurrentPlaylist || !overflow)
             {
                 ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
             }

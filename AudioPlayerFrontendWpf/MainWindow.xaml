@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AudioPlayerFrontend"
         xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
-        xmlns:spi="clr-namespace:StdOttFramework.Converters.Specialized;assembly=StdOttFrameworkLib"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:audio="clr-namespace:AudioPlayerBackend.Audio;assembly=AudioPlayerBackendLib"
         mc:Ignorable="d"
         Title="Hotkey Music" Height="650" Width="625"
         AllowDrop="True" Drop="Window_Drop"
@@ -21,6 +21,8 @@
         <local:IsAudioStreamPlayerConverter x:Key="isClientCon"/>
 
         <sys:Int32 x:Key="negativeOne">-1</sys:Int32>
+
+
     </Window.Resources>
 
     <Grid Margin="5">
@@ -55,8 +57,14 @@
             <Button Margin="5,3" Content="Reload" Width="100" Click="Reload_Click"/>
             <Button Margin="5,3" Content="Settings" Width="100" Click="BtnSettings_Click"/>
 
-            <Button Margin="5,3" Width="100" Content="{Binding AudioServiceUI.CurrentPlaylist.Loop}"
-                    Click="BtnLoop_Click"/>
+            <ComboBox Margin="5,3" Width="130" 
+                      SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Loop,Mode=TwoWay}">
+                <audio:LoopType>Next</audio:LoopType>
+                <audio:LoopType>Stop</audio:LoopType>
+                <audio:LoopType>CurrentPlaylist</audio:LoopType>
+                <audio:LoopType>CurrentSong</audio:LoopType>
+                <audio:LoopType>StopCurrentSong</audio:LoopType>
+            </ComboBox>
 
             <con:MultipleInputs4Converter x:Name="micShuffle"
                                           Input0="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
