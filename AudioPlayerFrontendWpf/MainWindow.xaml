@@ -36,7 +36,7 @@
                 <TextBox Name="tbxSearch" HorizontalAlignment="Stretch" MinWidth="200"
                          Text="{Binding AudioServiceUI.SourcePlaylist.SearchKey,
                            Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
-                         KeyDown="TbxSearch_KeyDown"/>
+                         PreviewKeyDown="TbxSearch_PreviewKeyDown"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
@@ -72,18 +72,18 @@
                       HorizontalAlignment="Right" IsChecked="{Binding IsUiEnabled,Mode=TwoWay}"/>
         </WrapPanel>
 
-        <con:MultipleInputs7Converter x:Name="micSongs" 
+        <con:MultipleInputs6Converter x:Name="micSongs" 
                                       Input0="{Binding AudioServiceUI.CurrentPlaylist}"
                                       Input1="{Binding AudioServiceUI.CurrentPlaylist.AllSongs}"
                                       Input2="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong,Mode=TwoWay}" 
                                       Input3="{Binding AudioServiceUI.SourcePlaylist.SearchSongs}"
                                       Input4="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
-                                      Input6="{StaticResource negativeOne}"
+                                      Input5="{StaticResource negativeOne}"
                                       ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
         <ListBox Grid.Row="1" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
-                 ItemsSource="{Binding ElementName=micSongs,Path=Input5}"
-                 SelectedIndex="{Binding ElementName=micSongs,Path=Input6,Mode=TwoWay}"
+                 ItemsSource="{Binding ElementName=micSongs,Path=Output}"
+                 SelectedIndex="{Binding ElementName=micSongs,Path=Input5,Mode=TwoWay}"
                  SelectionChanged="LbxSongs_SelectionChanged">
             <ListBox.ItemTemplate>
                 <DataTemplate>

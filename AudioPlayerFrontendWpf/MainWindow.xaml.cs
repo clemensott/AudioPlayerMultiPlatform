@@ -20,13 +20,12 @@ namespace AudioPlayerFrontend
 {
     public partial class MainWindow : Window
     {
-        private static readonly TimeSpan buildOpenDelay = TimeSpan.FromMilliseconds(300);
-
         private ServiceBuilder serviceBuilder;
         private HotKeysBuilder hotKeysBuilder;
         private readonly ViewModel viewModel;
         private HotKeys hotKeys;
-        private WidthService widthService;
+        private readonly WidthService widthService;
+        private bool isChangingSelectedSongIndex;
 
         public MainWindow()
         {
@@ -158,39 +157,37 @@ namespace AudioPlayerFrontend
 
         private bool UpdateBuilders()
         {
-            ServiceBuilder serviceBuilder = this.serviceBuilder.Clone();
-            HotKeysBuilder hotKeysBuilder = this.hotKeysBuilder.Clone();
+            ServiceBuilder serviceBuilderEdit = serviceBuilder.Clone();
+            HotKeysBuilder hotKeysBuilderEdit = hotKeysBuilder.Clone();
 
-            if (viewModel?.Service?.AudioService != null) serviceBuilder.WithService(viewModel.Service.AudioService);
-            if (viewModel?.Service?.Communicator != null) serviceBuilder.WithCommunicator(viewModel.Service.Communicator);
-            if (hotKeys != null) hotKeysBuilder.WithHotKeys(hotKeys);
+            if (viewModel?.Service?.AudioService != null) serviceBuilderEdit.WithService(viewModel.Service.AudioService);
+            if (viewModel?.Service?.Communicator != null) serviceBuilderEdit.WithCommunicator(viewModel.Service.Communicator);
+            if (hotKeys != null) hotKeysBuilderEdit.WithHotKeys(hotKeys);
 
-            SettingsWindow window = new SettingsWindow(serviceBuilder, hotKeysBuilder);
+            SettingsWindow window = new SettingsWindow(serviceBuilderEdit, hotKeysBuilderEdit);
 
-            if (window.ShowDialog() == true)
-            {
-                this.serviceBuilder = serviceBuilder;
-                this.hotKeysBuilder = hotKeysBuilder;
-                return true;
-            }
+            if (window.ShowDialog() != true) return false;
 
-            return false;
+            serviceBuilder = serviceBuilderEdit;
+            hotKeysBuilder = hotKeysBuilderEdit;
+            return true;
+
         }
 
         private void BuildHotKeys()
         {
             try
             {
-                HotKeys hotKeys = hotKeysBuilder.Build();
+                HotKeys newHotKeys = hotKeysBuilder.Build();
 
-                Unsubscribe(this.hotKeys);
-                this.hotKeys = hotKeys;
-                Subscribe(hotKeys);
+                Unsubscribe(hotKeys);
+                hotKeys = newHotKeys;
+                Subscribe(newHotKeys);
             }
             catch (Exception exc)
             {
                 MessageBox.Show(exc.ToString(),
-                    "Building hotkeys error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    "Building HotKeys error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -199,25 +196,52 @@ namespace AudioPlayerFrontend
             if (e.Key == Key.F3) tbxSearch.Focus();
         }
 
-        private void TbxSearch_KeyDown(object sender, KeyEventArgs e)
+        private void TbxSearch_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             IAudioService service = viewModel.AudioServiceUI;
 
             if (service == null) return;
 
+            e.Handled = true;
+
             switch (e.Key)
             {
                 case Key.Enter:
-                    if (service.SourcePlaylist.SearchSongs.Any())
+                    if (lbxSongs.SelectedItem is Song)
                     {
                         bool prepend = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
-                        viewModel.AudioServiceUI.AddSongsToFirstPlaylist(service.SourcePlaylist.SearchSongs.Take(1), prepend);
+                        Song addSong = (Song)lbxSongs.SelectedItem;
+                        viewModel.AudioServiceUI.AddSongsToFirstPlaylist(new Song[] { addSong }, prepend);
                         service.PlayState = PlaybackState.Playing;
                     }
                     break;
 
                 case Key.Escape:
                     service.SourcePlaylist.SearchKey = string.Empty;
+                    break;
+
+                case Key.Up:
+                    if (lbxSongs.Items.Count > 0 && viewModel.AudioServiceUI?.SourcePlaylist.IsSearching == true)
+                    {
+                        isChangingSelectedSongIndex = true;
+                        lbxSongs.SelectedIndex =
+                            Utils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, -1).index;
+                        isChangingSelectedSongIndex = false;
+                    }
+                    break;
+
+                case Key.Down:
+                    if (lbxSongs.Items.Count > 0 && viewModel.AudioServiceUI?.SourcePlaylist.IsSearching == true)
+                    {
+                        isChangingSelectedSongIndex = true;
+                        lbxSongs.SelectedIndex =
+                            Utils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, 1).index;
+                        isChangingSelectedSongIndex = false;
+                    }
+                    break;
+
+                default:
+                    e.Handled = false;
                     break;
             }
         }
@@ -320,13 +344,14 @@ namespace AudioPlayerFrontend
 
                 try
                 {
-                    if (result == MessageBoxResult.Yes)
+                    switch (result)
                     {
-                        player.waveOut.Play();
-                    }
-                    else if (result == MessageBoxResult.No)
-                    {
-                        viewModel.Service.AudioService.PlayState = PlaybackState.Playing;
+                        case MessageBoxResult.Yes:
+                            player.waveOut.Play();
+                            break;
+                        case MessageBoxResult.No:
+                            viewModel.Service.AudioService.PlayState = PlaybackState.Playing;
+                            break;
                     }
                 }
                 catch (Exception exc)
@@ -389,30 +414,47 @@ namespace AudioPlayerFrontend
         }
 
         private object MicCurrentSongIndex_ConvertRef(ref object input0, ref object input1, ref object input2,
-            ref object input3, ref object input4, ref object input5, ref object input6, int changedInput)
+            ref object input3, ref object input4, ref object input5, int changedInput)
         {
-            if (input0 == null || input1 == null || input3 == null || input4 == null || input6 == null)
-            {
-                input5 = null;
-                return null;
-            }
+            if (input0 == null || input1 == null || input3 == null || input4 == null || input5 == null) return null;
 
-            IPlaylist currentPlaylist = (IPlaylist)input0;
-            IEnumerable<Song> allSongs = (IEnumerable<Song>)input1;
             Song? currentSong = (Song?)input2;
-            IEnumerable<Song> searchSongs = (IEnumerable<Song>)input3;
             bool isSearching = (bool)input4;
-            int index = (int)input6;
-            IEnumerable<Song> songs = isSearching ? searchSongs : allSongs;
+            int indexLbx = (int)input5;
 
-            input5 = songs;
+            object songsLbx = MicCurrentSongIndex_Convert((IEnumerable<Song>)input1,
+                (IEnumerable<Song>)input3, isSearching, ref currentSong, ref indexLbx, changedInput);
 
-            if (changedInput == 6 && !isSearching && index != -1) input2 = songs.ElementAt(index);
-            else if (!currentSong.HasValue) input6 = -1;
-            else if (songs.Contains(currentSong.Value)) input6 = songs.IndexOf(currentSong.Value);
-            else input6 = -1;
+            input2 = currentSong;
+            input4 = isSearching;
+            input5 = indexLbx;
 
-            return isSearching || currentPlaylist.ID == Guid.Empty;
+            return songsLbx;
+        }
+
+        private object MicCurrentSongIndex_Convert(IEnumerable<Song> allSongs, IEnumerable<Song> searchSongs, bool isSearching,
+            ref Song? currentSong, ref int lbxIndex, int changedInput)
+        {
+            IEnumerable<Song> songs;
+            IPlaylist currentPlaylist = viewModel.AudioServiceUI?.CurrentPlaylist;
+            IPlaylist sourcePlaylist = viewModel.AudioServiceUI?.SourcePlaylist;
+            bool isCurrentPlaylistSourcePlaylist = currentPlaylist?.ID == sourcePlaylist?.ID;
+
+            if (!isSearching) songs = allSongs;
+            else if (isCurrentPlaylistSourcePlaylist) songs = searchSongs;
+            else songs = searchSongs.Except(allSongs);
+
+            if (changedInput == 5 && lbxIndex != -1 && isChangingSelectedSongIndex) ;
+            else if (changedInput == 5 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))
+            {
+                currentSong = songs.ElementAt(lbxIndex);
+            }
+            else if (!currentSong.HasValue) lbxIndex = -1;
+            else if (songs.Contains(currentSong.Value)) lbxIndex = songs.IndexOf(currentSong.Value);
+            else if (songs.Any()) lbxIndex = 0;
+            else lbxIndex = -1;
+
+            return songs;
         }
 
         private object MicShuffle_ConvertRef(ref object input0, ref object input1, ref object input2, ref object input3, int changedInput)
