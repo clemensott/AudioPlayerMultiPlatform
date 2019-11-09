@@ -22,6 +22,9 @@ namespace AudioPlayerFrontend
 
                 case LoopType.CurrentSong:
                     return Symbol.RepeatOne;
+
+                case LoopType.StopCurrentSong:
+                    return Symbol.DisableUpdates;
             }
 
             throw new ArgumentException("LoopType \"" + value + "\" is not implemented.", nameof(value));

@@ -151,6 +151,10 @@ namespace AudioPlayerFrontend
                     break;
 
                 case LoopType.CurrentSong:
+                    viewModel.AudioService.CurrentPlaylist.Loop = LoopType.StopCurrentSong;
+                    break;
+
+                case LoopType.StopCurrentSong:
                     viewModel.AudioService.CurrentPlaylist.Loop = LoopType.Next;
                     break;
             }
