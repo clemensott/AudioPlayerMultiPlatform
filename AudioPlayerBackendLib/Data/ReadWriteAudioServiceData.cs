@@ -186,7 +186,7 @@ namespace AudioPlayerBackend.Data
 
         private void Save()
         {
-            saveSem.Release();
+            saveSem?.Release();
         }
 
         private async Task SaveHandler()
