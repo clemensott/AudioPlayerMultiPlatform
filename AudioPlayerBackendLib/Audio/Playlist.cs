@@ -11,6 +11,7 @@ namespace AudioPlayerBackend.Audio
         private TimeSpan position, duration;
         private LoopType loop;
         private Song? currentSong;
+        private RequestSong? wannaSong;
         private Song[] songs;
         private IEnumerable<Song> allSongs;
         private readonly INotifyPropertyChangedHelper helper;
@@ -20,6 +21,7 @@ namespace AudioPlayerBackend.Audio
         public event EventHandler<ValueChangedEventArgs<TimeSpan>> PositionChanged;
         public event EventHandler<ValueChangedEventArgs<TimeSpan>> DurationChanged;
         public event EventHandler<ValueChangedEventArgs<Song?>> CurrentSongChanged;
+        public event EventHandler<ValueChangedEventArgs<RequestSong?>> WannaSongChanged;
         public event EventHandler<ValueChangedEventArgs<Song[]>> SongsChanged;
 
         public Guid ID { get; }
@@ -59,6 +61,8 @@ namespace AudioPlayerBackend.Audio
             get => position;
             set
             {
+                value = TimeSpan.FromSeconds(Math.Round(value.TotalSeconds));
+
                 if (value == position) return;
 
                 var args = new ValueChangedEventArgs<TimeSpan>(Position, value);
@@ -99,6 +103,21 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
+        public RequestSong? WannaSong
+        {
+            get => wannaSong;
+            set
+            {
+                if (value.HasValue == wannaSong.HasValue && value.Equals(wannaSong)) return;
+
+                var args = new ValueChangedEventArgs<RequestSong?>(WannaSong, value);
+                wannaSong = value;
+                WannaSongChanged?.Invoke(this, args);
+
+                OnPropertyChanged(nameof(WannaSong));
+            }
+        }
+
         public Song[] Songs
         {
             get => songs;
@@ -136,6 +155,7 @@ namespace AudioPlayerBackend.Audio
 
             ID = id;
             Loop = LoopType.CurrentPlaylist;
+            WannaSong = null;
             Songs = new Song[0];
         }
 
@@ -151,8 +171,7 @@ namespace AudioPlayerBackend.Audio
 
         private void ChangeCurrentSongOrRestart(Song? newCurrentSong)
         {
-            if (newCurrentSong != CurrentSong) CurrentSong = newCurrentSong;
-            else Position = TimeSpan.Zero;
+            WannaSong = RequestSong.Get(newCurrentSong);
         }
 
         protected virtual void OnIsAllShuffleChanged()

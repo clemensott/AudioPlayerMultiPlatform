@@ -31,10 +31,8 @@ namespace AudioPlayerBackend.Data
             Init();
         }
 
-        private async void Init()
+        private void Init()
         {
-            await Task.Delay(1000);
-
             if (!string.IsNullOrWhiteSpace(readPath)) Load();
             if (!string.IsNullOrWhiteSpace(writePath))
             {
@@ -108,7 +106,7 @@ namespace AudioPlayerBackend.Data
 
         private void Save(object sender, EventArgs args)
         {
-            Save();
+            TriggerSave();
         }
 
         private void Service_PlaylistsChanged(object sender, ValueChangedEventArgs<IPlaylistBase[]> e)
@@ -116,7 +114,7 @@ namespace AudioPlayerBackend.Data
             Unsubscribe(e.OldValue);
             Subscribe(e.NewValue);
 
-            Save();
+            TriggerSave();
         }
 
         private void Load()
@@ -142,17 +140,17 @@ namespace AudioPlayerBackend.Data
         private static void MergePlaylist(IPlaylistBase playlist, PlaylistData data, Song[] allSongs)
         {
             playlist.Songs = MergeSongs(playlist.Songs, data.Songs, allSongs);
+            playlist.IsAllShuffle = data.IsAllShuffle;
+            playlist.Loop = data.Loop;
 
             Song currentSong;
             if (playlist.Songs.TryFirst(s => s.FullPath == data.CurrentSongPath, out currentSong))
             {
                 playlist.CurrentSong = currentSong;
+                playlist.Position = data.Position;
+                playlist.Duration = data.Duration;
+                playlist.WannaSong = RequestSong.Get(currentSong, data.Position, data.Duration);
             }
-
-            playlist.IsAllShuffle = data.IsAllShuffle;
-            playlist.Loop = data.Loop;
-            playlist.Duration = data.Duration;
-            playlist.Position = data.Position;
         }
 
         private static Song[] MergeSongs(Song[] currentSongs, string[] oldSongs, Song[] allSongs)
@@ -184,7 +182,7 @@ namespace AudioPlayerBackend.Data
             return newSongs.ToArray();
         }
 
-        private void Save()
+        private void TriggerSave()
         {
             saveSem?.Release();
         }
@@ -202,10 +200,7 @@ namespace AudioPlayerBackend.Data
                     while (saveSem.CurrentCount > 0);
 
                     await Task.Delay(400);
-
-                    AudioServiceData data = new AudioServiceData(Service);
-                    Utils.XmlSerialize(writePath, data);
-
+                    Save();
                     await Task.Delay(500);
                 }
                 catch (Exception e)
@@ -215,11 +210,18 @@ namespace AudioPlayerBackend.Data
             }
         }
 
+        private void Save()
+        {
+            AudioServiceData data = new AudioServiceData(Service);
+            Utils.XmlSerialize(writePath, data);
+        }
+
         public void Dispose()
         {
             Unsubscribe();
-            Save();
             disposed = true;
+
+            if (!string.IsNullOrWhiteSpace(writePath)) Save();
         }
     }
 }

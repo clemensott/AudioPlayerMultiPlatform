@@ -11,6 +11,7 @@ namespace AudioPlayerBackend.Audio
         event EventHandler<ValueChangedEventArgs<TimeSpan>> PositionChanged;
         event EventHandler<ValueChangedEventArgs<TimeSpan>> DurationChanged;
         event EventHandler<ValueChangedEventArgs<Song?>> CurrentSongChanged;
+        event EventHandler<ValueChangedEventArgs<RequestSong?>> WannaSongChanged;
         event EventHandler<ValueChangedEventArgs<Song[]>> SongsChanged;
 
         Guid ID { get; }
@@ -24,6 +25,8 @@ namespace AudioPlayerBackend.Audio
         TimeSpan Duration { get; set; }
 
         Song? CurrentSong { get; set; }
+
+        RequestSong? WannaSong { get; set; }
 
         Song[] Songs { get; set; }
     }

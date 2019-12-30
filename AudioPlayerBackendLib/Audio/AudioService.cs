@@ -152,7 +152,7 @@ namespace AudioPlayerBackend.Audio
         {
             if (CurrentPlaylist.Loop == LoopType.CurrentSong)
             {
-                CurrentPlaylist.Position = TimeSpan.Zero;
+                CurrentPlaylist.WannaSong = RequestSong.Get(CurrentPlaylist.CurrentSong, TimeSpan.Zero);
                 return;
             }
 
@@ -197,8 +197,7 @@ namespace AudioPlayerBackend.Audio
 
         private static void ChangeCurrentSongOrRestart(IPlaylistBase playlist, Song? newCurrentSong)
         {
-            if (newCurrentSong != playlist.CurrentSong) playlist.CurrentSong = newCurrentSong;
-            else playlist.Position = TimeSpan.Zero;
+            playlist.WannaSong = RequestSong.Get(newCurrentSong);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

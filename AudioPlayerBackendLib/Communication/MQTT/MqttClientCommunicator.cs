@@ -236,29 +236,22 @@ namespace AudioPlayerBackend.Communication.MQTT
             {
                 try
                 {
-                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish1");
-                    ////if (!MqttClient.IsConnected)  await OpenAsync();
-
-                    //DateTime time = DateTime.Now;
-                    //while (time + TimeSpan.FromMilliseconds(100) > DateTime.Now) ;
-
-                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish2");
                     currentPublish = publishQueue.Dequeue();
 
-                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish3");
-                    //time = DateTime.Now;
-                    //while (time + TimeSpan.FromMilliseconds(100) > DateTime.Now) ;
+                    if (currentPublish.QualityOfServiceLevel != MqttQualityOfServiceLevel.AtMostOnce)
+                    {
+                        Task waitForReply = Utils.WaitAsync(currentPublish);
+                        System.Diagnostics.Debug.WriteLine("ConsumerPublish5: " + currentPublish.Topic);
 
-                    Task waitForReply = Utils.WaitAsync(currentPublish);
-                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish4");
-                    //Task waitForTimeOut = Task.Delay(timeout);
-                    System.Diagnostics.Debug.WriteLine("ConsumerPublish5: " + currentPublish.Topic);
+                        await MqttClient.PublishAsync(currentPublish);
 
-                    await MqttClient.PublishAsync(currentPublish);
-                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish6");
-
-                    await Task.WhenAny(waitForReply, Task.Delay(timeout));
-                    //System.Diagnostics.Debug.WriteLine("ConsumerPublish7");
+                        await Task.WhenAny(waitForReply, Task.Delay(timeout));
+                    }
+                    else
+                    {
+                        await MqttClient.PublishAsync(currentPublish);
+                        continue;
+                    }
                 }
                 catch (Exception e)
                 {
@@ -387,12 +380,8 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             if (!IsOpen || IsTopicLocked(message.Topic, message.Payload)) return;
 
-            if (message.QualityOfServiceLevel != MqttQualityOfServiceLevel.AtMostOnce)
-            {
-                publishQueue.Enqueue(message);
-                await Utils.WaitAsync(message);
-            }
-            else await MqttClient.PublishAsync(message);
+            publishQueue.Enqueue(message);
+            await Utils.WaitAsync(message);
         }
 
         public override async void Dispose()

@@ -80,18 +80,19 @@
                       HorizontalAlignment="Right" IsChecked="{Binding IsUiEnabled,Mode=TwoWay}"/>
         </WrapPanel>
 
-        <con:MultipleInputs6Converter x:Name="micSongs" 
+        <con:MultipleInputs7Converter x:Name="micSongs" 
                                       Input0="{Binding AudioServiceUI.CurrentPlaylist}"
-                                      Input1="{Binding AudioServiceUI.CurrentPlaylist.AllSongs}"
-                                      Input2="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong,Mode=TwoWay}" 
-                                      Input3="{Binding AudioServiceUI.SourcePlaylist.SearchSongs}"
-                                      Input4="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
-                                      Input5="{StaticResource negativeOne}"
+                                      Input1="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
+                                      Input2="{Binding AudioServiceUI.CurrentPlaylist.WannaSong,Mode=TwoWay}"
+                                      Input3="{Binding AudioServiceUI.CurrentPlaylist.AllSongs}"
+                                      Input4="{Binding AudioServiceUI.SourcePlaylist.SearchSongs}"
+                                      Input5="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
+                                      Input6="{StaticResource negativeOne}"
                                       ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
         <ListBox Grid.Row="1" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
                  ItemsSource="{Binding ElementName=micSongs,Path=Output}"
-                 SelectedIndex="{Binding ElementName=micSongs,Path=Input5,Mode=TwoWay}"
+                 SelectedIndex="{Binding ElementName=micSongs,Path=Input6,Mode=TwoWay}"
                  SelectionChanged="LbxSongs_SelectionChanged">
             <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -149,8 +150,9 @@
                 <TextBlock Grid.Column="0" Margin="5,0" VerticalAlignment="Center"
                            Text="{Binding Position,Converter={StaticResource timeTextCon}}"/>
                 <Slider Grid.Column="1" x:Name="sldPosition" Minimum="0" VerticalAlignment="Center" IsMoveToPointEnabled="True"
-                        Value="{Binding Position,Mode=TwoWay,Converter={StaticResource timeSecCon}}"
-                        Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"/>
+                        Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"
+                        Value="{Binding Position,Mode=OneWay,Converter={StaticResource timeSecCon}}"
+                        ValueChanged="SldPosition_ValueChanged"/>
                 <TextBlock Grid.Column="2" x:Name="tblDuration" Margin="5,0" VerticalAlignment="Center"
                            Text="{Binding Duration,Converter={StaticResource timeTextCon}}"/>
             </Grid>

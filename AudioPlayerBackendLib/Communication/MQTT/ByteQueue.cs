@@ -102,6 +102,13 @@ namespace AudioPlayerBackend.Communication.MQTT
             Enqueue(guids, Enqueue);
         }
 
+        public void Enqueue(RequestSong value)
+        {
+            Enqueue(value.Song);
+            Enqueue(value.Position);
+            Enqueue(value.Duration);
+        }
+
         private void Enqueue<T>(IEnumerable<T> items, Action<T> itemEnqueueAction)
         {
             IList<T> list = items as IList<T> ?? items?.ToArray();
@@ -196,6 +203,15 @@ namespace AudioPlayerBackend.Communication.MQTT
         public Guid[] DequeueGuids()
         {
             return DequeueArray(DequeueGuid);
+        }
+
+        public RequestSong DequeueSongWithPosition()
+        {
+            Song song = DequeueSong();
+            TimeSpan postion = DequeueTimeSpan();
+            TimeSpan duration = DequeueTimeSpan();
+
+            return RequestSong.Get(song, postion, duration);
         }
 
         private T[] DequeueArray<T>(Func<T> itemDequeueFunc)

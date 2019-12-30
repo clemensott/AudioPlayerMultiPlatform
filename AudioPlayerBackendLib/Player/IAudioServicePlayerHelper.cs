@@ -7,6 +7,6 @@ namespace AudioPlayerBackend.Player
     {
         IPositionWaveProvider CreateWaveProvider(Song song, IAudioService service);
 
-        Action<IServicePlayer> SetCurrentSongThreadSafe { get; }
+        Action<IServicePlayer> SetWannaSongThreadSafe { get; }
     }
 }

@@ -42,7 +42,7 @@ namespace AudioPlayerBackend
                     if (prepend)
                     {
                         playlist.Songs = songs.Concat(playlist.Songs).Distinct().ToArray();
-                        playlist.CurrentSong = songs.First();
+                        playlist.WannaSong = RequestSong.Get(songs.First());
                     }
                     else playlist.Songs = playlist.Songs.Concat(songs).Distinct().ToArray();
                 }
@@ -51,23 +51,22 @@ namespace AudioPlayerBackend
                     if (prepend || !currentPlaylist.CurrentSong.HasValue)
                     {
                         playlist.Songs = songs.ToArray();
-                        playlist.Position = TimeSpan.Zero;
-                        playlist.CurrentSong = songs.First();
+                        playlist.WannaSong = RequestSong.Get(songs.First());
 
                         service.CurrentPlaylist = playlist;
                     }
                     else
                     {
                         playlist.Songs = songs.Insert(0, currentPlaylist.CurrentSong.Value).ToArray();
-                        playlist.CurrentSong = currentPlaylist.CurrentSong.Value;
-                        playlist.Duration = currentPlaylist.Duration;
-                        playlist.Position = currentPlaylist.Position;
+                        playlist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong.Value,
+                            currentPlaylist.Position, currentPlaylist.Duration);
 
                         service.CurrentPlaylist = playlist;
 
                         currentPlaylist.CurrentSong = currentPlaylist.Songs.Cast<Song?>()
                             .NextOrDefault(currentPlaylist.CurrentSong).next;
                         currentPlaylist.Position = TimeSpan.Zero;
+                        currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong);
                     }
                 }
             }
@@ -80,8 +79,7 @@ namespace AudioPlayerBackend
                 if (prepend || !currentPlaylist.CurrentSong.HasValue)
                 {
                     playlist.Songs = songs.ToArray();
-                    playlist.Position = TimeSpan.Zero;
-                    playlist.CurrentSong = songs.First();
+                    playlist.WannaSong = RequestSong.Get(songs.First());
 
                     service.Playlists = service.Playlists.ConcatParams(playlist).Distinct().ToArray();
                     service.CurrentPlaylist = playlist;
@@ -89,9 +87,8 @@ namespace AudioPlayerBackend
                 else
                 {
                     playlist.Songs = songs.Insert(0, currentPlaylist.CurrentSong.Value).ToArray();
-                    playlist.CurrentSong = currentPlaylist.CurrentSong.Value;
-                    playlist.Duration = currentPlaylist.Duration;
-                    playlist.Position = currentPlaylist.Position;
+                    playlist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong.Value,
+                        currentPlaylist.Position, currentPlaylist.Duration);
 
                     service.Playlists = service.Playlists.ConcatParams(playlist).Distinct().ToArray();
                     service.CurrentPlaylist = playlist;
@@ -99,6 +96,7 @@ namespace AudioPlayerBackend
                     currentPlaylist.CurrentSong = currentPlaylist.Songs.Cast<Song?>()
                         .NextOrDefault(currentPlaylist.CurrentSong).next;
                     currentPlaylist.Position = TimeSpan.Zero;
+                    currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong);
                 }
             }
         }

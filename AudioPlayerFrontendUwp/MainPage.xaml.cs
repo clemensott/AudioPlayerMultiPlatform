@@ -122,7 +122,7 @@ namespace AudioPlayerFrontend
             return !ReferenceEquals(input0, input1);
         }
 
-        private void SyiRemove_Tapped(object sender, TappedRoutedEventArgs e)
+        private void SyiRemove_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
             Song song = (Song)((FrameworkElement)sender).DataContext;
             IAudioService service = viewModel.AudioService;
@@ -165,22 +165,20 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
-        private object MicCurrentSongIndex_ConvertRef(ref object input0,
-            ref object input1, ref object input2, ref object input3, int changedInput)
+        private object MicCurrentSongIndex_ConvertRef(ref object rawAllSongs,
+            ref object rawCurrentSong, ref object rawWannaSong, ref object rawIndex, int changedInput)
         {
-            if (input0 == null) return null;
+            if (rawAllSongs == null || changedInput == 2) return rawAllSongs;
 
-            IEnumerable<Song> allSongs = (IEnumerable<Song>)input0;
-            Song? currentSong = (Song?)input1;
-            int index = (int)input3;
+            IEnumerable<Song> allSongs = (IEnumerable<Song>)rawAllSongs;
+            Song? currentSong = (Song?)rawCurrentSong;
+            int index = (int)rawIndex;
 
-            input2 = allSongs;
+            if (changedInput == 3 && index != -1) rawWannaSong = RequestSong.Get(allSongs.ElementAt(index));
+            else if (!currentSong.HasValue) rawIndex = -1;
+            else rawIndex = allSongs.IndexOf(currentSong.Value);
 
-            if (changedInput == 3 && index != -1) input1 = allSongs.ElementAt(index);
-            else if (!currentSong.HasValue) input3 = -1;
-            else input3 = allSongs.IndexOf(currentSong.Value);
-
-            return null;
+            return allSongs;
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)

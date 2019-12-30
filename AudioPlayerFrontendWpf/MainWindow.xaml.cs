@@ -413,27 +413,29 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
-        private object MicCurrentSongIndex_ConvertRef(ref object input0, ref object input1, ref object input2,
-            ref object input3, ref object input4, ref object input5, int changedInput)
+        private object MicCurrentSongIndex_ConvertRef(ref object rawCurrentPlaylist, ref object rawCurrentSong, ref object rawWannaSong,
+            ref object rawAllSongs, ref object rawSearchSongs, ref object rawIsSearching, ref object rawLbxIndex, int changedInput)
         {
-            if (input0 == null || input1 == null || input3 == null || input4 == null || input5 == null) return null;
+            if (rawCurrentPlaylist == null || rawAllSongs == null || rawSearchSongs == null || rawIsSearching == null || rawLbxIndex == null) return null;
 
-            Song? currentSong = (Song?)input2;
-            bool isSearching = (bool)input4;
-            int indexLbx = (int)input5;
+            Song? currentSong = (Song?)rawCurrentSong;
+            RequestSong? wannaSong = (RequestSong?)rawWannaSong;
+            IEnumerable<Song> allSongs = (IEnumerable<Song>)rawAllSongs;
+            IEnumerable<Song> searchSongs = (IEnumerable<Song>)rawSearchSongs;
+            bool isSearching = (bool)rawIsSearching;
+            int indexLbx = (int)rawLbxIndex;
 
-            object songsLbx = MicCurrentSongIndex_Convert((IEnumerable<Song>)input1,
-                (IEnumerable<Song>)input3, isSearching, ref currentSong, ref indexLbx, changedInput);
+            object songsLbx = MicCurrentSongIndex_Convert(currentSong, ref wannaSong,
+                allSongs, searchSongs, isSearching, ref indexLbx, changedInput);
 
-            input2 = currentSong;
-            input4 = isSearching;
-            input5 = indexLbx;
+            rawWannaSong = wannaSong;
+            rawLbxIndex = indexLbx;
 
             return songsLbx;
         }
 
-        private object MicCurrentSongIndex_Convert(IEnumerable<Song> allSongs, IEnumerable<Song> searchSongs, bool isSearching,
-            ref Song? currentSong, ref int lbxIndex, int changedInput)
+        private object MicCurrentSongIndex_Convert(Song? currentSong, ref RequestSong? wannaSong,
+            IEnumerable<Song> allSongs, IEnumerable<Song> searchSongs, bool isSearching, ref int lbxIndex, int changedInput)
         {
             IEnumerable<Song> songs;
             IPlaylist currentPlaylist = viewModel.AudioServiceUI?.CurrentPlaylist;
@@ -444,10 +446,10 @@ namespace AudioPlayerFrontend
             else if (isCurrentPlaylistSourcePlaylist) songs = searchSongs;
             else songs = searchSongs.Except(allSongs);
 
-            if (changedInput == 5 && lbxIndex != -1 && isChangingSelectedSongIndex) ;
-            else if (changedInput == 5 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))
+            if (changedInput == 6 && lbxIndex != -1 && isChangingSelectedSongIndex) ;
+            else if (changedInput == 6 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))
             {
-                currentSong = songs.ElementAt(lbxIndex);
+                wannaSong = RequestSong.Get(songs.ElementAt(lbxIndex));
             }
             else if (!currentSong.HasValue) lbxIndex = -1;
             else if (songs.Contains(currentSong.Value)) lbxIndex = songs.IndexOf(currentSong.Value);
@@ -499,6 +501,18 @@ namespace AudioPlayerFrontend
                 case LoopType.CurrentSong:
                     viewModel.AudioServiceUI.CurrentPlaylist.Loop = LoopType.Next;
                     break;
+            }
+        }
+
+        private void SldPosition_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            TimeSpan position = TimeSpan.FromSeconds(e.NewValue);
+            IPlaylistBase currentPlaylist = viewModel.AudioServiceUI?.CurrentPlaylist;
+            var pos = currentPlaylist.Position;
+
+            if (currentPlaylist != null && currentPlaylist.CurrentSong.HasValue && currentPlaylist.Position != position)
+            {
+                currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong, position);
             }
         }
     }

@@ -129,6 +129,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             playlist.IsAllShuffleChanged += Playlist_IsAllShuffleChanged;
             playlist.LoopChanged += Playlist_LoopChanged;
             playlist.PositionChanged += Playlist_PositionChanged;
+            playlist.WannaSongChanged += Playlist_WannaSongChanged;
             playlist.SongsChanged += Playlist_SongsChanged;
         }
 
@@ -142,6 +143,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             playlist.IsAllShuffleChanged -= Playlist_IsAllShuffleChanged;
             playlist.LoopChanged -= Playlist_LoopChanged;
             playlist.PositionChanged -= Playlist_PositionChanged;
+            playlist.WannaSongChanged -= Playlist_WannaSongChanged;
             playlist.SongsChanged -= Playlist_SongsChanged;
         }
 
@@ -215,7 +217,7 @@ namespace AudioPlayerBackend.Communication.MQTT
         protected async Task PublishPlaylist(IPlaylistBase playlist)
         {
             await Task.WhenAll(PublishIsAllShuffle(playlist), PublishLoop(playlist), PublishPosition(playlist),
-                PublishDuration(playlist), PublishSongs(playlist), PublishCurrentSong(playlist));
+                PublishDuration(playlist), PublishWannaSong(playlist), PublishSongs(playlist), PublishCurrentSong(playlist));
         }
 
         private async void Service_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
@@ -349,6 +351,19 @@ namespace AudioPlayerBackend.Communication.MQTT
             data.Enqueue(playlist.Position);
 
             await PublishAsync(playlist, nameof(playlist.Position), data);
+        }
+
+        private async void Playlist_WannaSongChanged(object sender, ValueChangedEventArgs<RequestSong?> e)
+        {
+            await PublishWannaSong((IPlaylistBase)sender);
+        }
+
+        private async Task PublishWannaSong(IPlaylistBase playlist)
+        {
+            ByteQueue data = new ByteQueue();
+            if (playlist.WannaSong.HasValue) data.Enqueue(playlist.WannaSong.Value);
+
+            await PublishAsync(playlist, nameof(playlist.WannaSong), data, MqttQualityOfServiceLevel.AtMostOnce, false);
         }
 
         private async void Playlist_SongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
@@ -542,6 +557,10 @@ namespace AudioPlayerBackend.Communication.MQTT
                 case nameof(playlist.Position):
                     playlist.Position = data.DequeueTimeSpan();
                     break;
+
+                case nameof(playlist.WannaSong):
+                    playlist.WannaSong = data.Any() ? (RequestSong?)data.DequeueSongWithPosition() : null;
+                    return false;
 
                 case nameof(playlist.Songs):
                     playlist.Songs = data.DequeueSongs();

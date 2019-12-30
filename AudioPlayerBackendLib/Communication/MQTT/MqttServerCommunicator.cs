@@ -138,7 +138,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             try
             {
-                await HandleMessage(rawTopic, payload);
+                context.AcceptPublish = await HandleMessage(rawTopic, payload);
             }
             catch (Exception e)
             {

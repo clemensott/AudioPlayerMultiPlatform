@@ -8,7 +8,6 @@
     xmlns:com="using:AudioPlayerBackend.Player"
     xmlns:con="using:StdOttUwp.Converters"
     xmlns:spi="using:StdOttUwp.Converters.Specialized"
-    xmlns:sys="using:System"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     Loaded="Page_Loaded">
@@ -104,7 +103,8 @@
 
             <con:MultipleInputs4Converter x:Name="micSongs" 
                                           Input0="{Binding AudioService.CurrentPlaylist.AllSongs}" 
-                                          Input1="{Binding AudioService.CurrentPlaylist.CurrentSong,Mode=TwoWay}" 
+                                          Input1="{Binding AudioService.CurrentPlaylist.CurrentSong}" 
+                                          Input2="{Binding AudioService.CurrentPlaylist.WannaSong,Mode=TwoWay}" 
                                           Input3="{StaticResource negativeOne}"
                                           ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
@@ -114,7 +114,7 @@
                                           Convert="MicDoRemove_Convert"/>
 
             <ListBox Grid.Row="2" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
-                     ItemsSource="{Binding ElementName=micSongs,Path=Input2}"
+                     ItemsSource="{Binding ElementName=micSongs,Path=Output}"
                      SelectedIndex="{Binding ElementName=micSongs,Path=Input3,Mode=TwoWay}"
                      SelectionChanged="LbxSongs_SelectionChanged">
                 <ListBox.ItemContainerStyle>
@@ -145,7 +145,7 @@
 
                             <SymbolIcon Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" 
                                         Visibility="{Binding ElementName=micDoRemove,Path=Output,Converter={StaticResource visCon}}"
-                                        Symbol="Remove" Tapped="SyiRemove_Tapped"/>
+                                        Symbol="Remove" PointerReleased="SyiRemove_PointerReleased"/>
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>

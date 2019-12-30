@@ -20,7 +20,7 @@ namespace AudioPlayerFrontend.Join
 
         private PlayerHelper() { }
 
-        public Action<IServicePlayer> SetCurrentSongThreadSafe => null;
+        public Action<IServicePlayer> SetWannaSongThreadSafe => null;
 
         public Action<Action> InvokeDispatcher => null;
 

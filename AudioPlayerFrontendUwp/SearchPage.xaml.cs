@@ -34,8 +34,6 @@ namespace AudioPlayerFrontend
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
             viewModel.AudioService.AddSongsToFirstPlaylist(new Song[] { song }, true, AudioServiceHelper.Current);
-
-            viewModel.AudioService.CurrentPlaylist.CurrentSong = song;
         }
 
         private void SyiAdd_Tapped(object sender, TappedRoutedEventArgs e)
@@ -55,12 +53,7 @@ namespace AudioPlayerFrontend
 
             viewModel.AudioService.AddSongsToFirstPlaylist(songs, AudioServiceHelper.Current);
         }
-
-        private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            ((ListBox)sender).SelectedItem = null;
-        }
-
+        
         private void BtnClear_Click(object sender, RoutedEventArgs e)
         {
             if (viewModel.AudioService.Playlists.Length > 0)
