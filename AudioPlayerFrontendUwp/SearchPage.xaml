@@ -5,6 +5,7 @@
     xmlns:local="using:AudioPlayerFrontend"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ctl="using:StdOttUwp.Controls"
     xmlns:con="using:StdOttUwp.Converters"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
@@ -24,21 +25,18 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Button Grid.Column="0" Margin="3" Click="BtnBack_Click">
-            <SymbolIcon Symbol="Back"/>
-        </Button>
+        <ctl:IconButton Grid.Column="0" Symbol="Back" Margin="3" Click="IbnBack_Click"/>
 
         <TextBox Grid.Column="1" Name="tbxSearchKey" Margin="3" 
                  Text="{Binding AudioService.SourcePlaylist.SearchKey,
                    Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
 
-        <ToggleButton Grid.Column="2" Margin="3" IsChecked="{Binding AudioService.SourcePlaylist.IsSearchShuffle,Mode=TwoWay}">
+        <ToggleButton Grid.Column="2" Margin="3" 
+                      IsChecked="{Binding AudioService.SourcePlaylist.IsSearchShuffle,Mode=TwoWay}">
             <SymbolIcon Symbol="Shuffle"/>
         </ToggleButton>
 
-        <Button Grid.Column="3" Margin="3" Click="BtnSelectAll_Click">
-            <SymbolIcon Symbol="SelectAll"/>
-        </Button>
+        <ctl:IconButton Grid.Column="3" Symbol="SelectAll" Margin="3" Click="IbnSelectAll_Click"/>
 
         <con:SingleInputConverter x:Name="sicPlaylist" Input="{Binding AudioService.Playlists}"
                                   Convert="SicPlaylist_Convert"/>
@@ -82,8 +80,10 @@
                         <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
 
                         <StackPanel Grid.Column="3" Grid.RowSpan="2" Orientation="Horizontal">
-                            <SymbolIcon Symbol="Play" Margin="10,5" Tapped="SyiPlay_Tapped"/>
-                            <SymbolIcon Symbol="Add" Margin="10,5" Tapped="SyiAdd_Tapped"/>
+                            <ctl:IconButton Symbol="Play" Background="Transparent" 
+                                            Margin="3" Click="IbnPlay_Click"/>
+                            <ctl:IconButton Symbol="Add" Background="Transparent" 
+                                            Margin="3" Click="IbnAdd_Click"/>
                         </StackPanel>
                     </Grid>
                 </DataTemplate>

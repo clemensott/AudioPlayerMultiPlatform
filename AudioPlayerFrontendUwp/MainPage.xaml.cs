@@ -59,7 +59,7 @@ namespace AudioPlayerFrontend
             viewModel.AudioService?.SourcePlaylist.Reload();
         }
 
-        private void BtnSearch_Click(object sender, RoutedEventArgs e)
+        private void IbnSearch_Click(object sender, RoutedEventArgs e)
         {
             if (viewModel.AudioService != null) Frame.Navigate(typeof(SearchPage), viewModel);
         }
@@ -128,7 +128,7 @@ namespace AudioPlayerFrontend
             return !ReferenceEquals(input0, input1);
         }
 
-        private void BtnRemove_Click(object sender, RoutedEventArgs e)
+        private void IbnRemove_Click(object sender, RoutedEventArgs e)
         {
             Song song = (Song)((FrameworkElement)sender).DataContext;
             IAudioService service = viewModel.AudioService;
@@ -140,7 +140,7 @@ namespace AudioPlayerFrontend
             else service.CurrentPlaylist.Songs = service.CurrentPlaylist.Songs.Where(s => s != song).ToArray();
         }
 
-        private void BtnLoopType_Click(object sender, RoutedEventArgs e)
+        private void IbnLoopType_Click(object sender, RoutedEventArgs e)
         {
             switch (viewModel.AudioService?.CurrentPlaylist.Loop)
             {

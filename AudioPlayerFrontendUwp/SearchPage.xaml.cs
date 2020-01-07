@@ -27,7 +27,7 @@ namespace AudioPlayerFrontend
             base.OnNavigatedTo(e);
         }
 
-        private void SyiPlay_Tapped(object sender, TappedRoutedEventArgs e)
+        private void IbnPlay_Click(object sender, RoutedEventArgs e)
         {
             if (viewModel.AudioService == null) return;
 
@@ -36,7 +36,7 @@ namespace AudioPlayerFrontend
             viewModel.AudioService.AddSongsToFirstPlaylist(new Song[] { song }, true, AudioServiceHelper.Current);
         }
 
-        private void SyiAdd_Tapped(object sender, TappedRoutedEventArgs e)
+        private void IbnAdd_Click(object sender, RoutedEventArgs e)
         {
             if (viewModel.AudioService == null) return;
 
@@ -45,7 +45,7 @@ namespace AudioPlayerFrontend
             viewModel.AudioService.AddSongsToFirstPlaylist(new Song[] { song }, AudioServiceHelper.Current);
         }
 
-        private void BtnSelectAll_Click(object sender, RoutedEventArgs e)
+        private void IbnSelectAll_Click(object sender, RoutedEventArgs e)
         {
             if (viewModel.AudioService == null) return;
 
@@ -62,7 +62,7 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private void BtnBack_Click(object sender, RoutedEventArgs e)
+        private void IbnBack_Click(object sender, RoutedEventArgs e)
         {
             Frame.GoBack();
         }

@@ -5,6 +5,7 @@
     xmlns:local="using:AudioPlayerFrontend"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ctl="using:StdOttUwp.Controls"
     xmlns:com="using:AudioPlayerBackend.Player"
     xmlns:con="using:StdOttUwp.Converters"
     xmlns:spi="using:StdOttUwp.Converters.Specialized"
@@ -65,12 +66,9 @@
                             SnapsTo="StepValues" StepFrequency="0.01" Value="{Binding ServicePlayer.Player.Volume}"
                             ThumbToolTipValueConverter="{StaticResource volTooTipCon}"
                             IsEnabled="{Binding Communicator.IsStreaming}"/>
-
                 </Grid>
 
-                <Button Grid.Column="1" Margin="3" Click="BtnReload_Click">
-                    <SymbolIcon Symbol="Refresh"/>
-                </Button>
+                <ctl:IconButton Grid.Column="1" Symbol="Refresh" Margin="3" Click="BtnReload_Click"/>
             </Grid>
 
             <Grid Grid.Row="1">
@@ -87,18 +85,16 @@
                         StepFrequency="0.01" Maximum="1" Value="{Binding AudioService.Volume,Mode=TwoWay}"
                         ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
 
-                <Button Grid.Column="2" Margin="3" Click="BtnLoopType_Click">
-                    <SymbolIcon Symbol="{Binding AudioService.CurrentPlaylist.Loop,
-                                  Converter={StaticResource loopIcoCon}}"/>
-                </Button>
+                <ctl:IconButton Grid.Column="2" Margin="3" Click="IbnLoopType_Click"
+                                Symbol="{Binding AudioService.CurrentPlaylist.Loop,
+                                  Converter={StaticResource loopIcoCon}}" />
 
-                <ToggleButton Grid.Column="3" Margin="3" IsChecked="{Binding AudioService.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}">
+                <ToggleButton Grid.Column="3" Margin="3" 
+                              IsChecked="{Binding AudioService.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}">
                     <SymbolIcon Symbol="Shuffle"/>
                 </ToggleButton>
 
-                <Button Grid.Column="4" Margin="3" Click="BtnSearch_Click">
-                    <SymbolIcon Symbol="Find"/>
-                </Button>
+                <ctl:IconButton Grid.Column="4" Symbol="Find" Margin="3" Click="IbnSearch_Click"/>
             </Grid>
 
             <con:MultipleInputs4Converter x:Name="micSongs" 
@@ -143,10 +139,9 @@
                             <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}"/>
                             <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
 
-                            <Button Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Click="BtnRemove_Click"
-                                    Visibility="{Binding ElementName=micDoRemove,Path=Output,Converter={StaticResource visCon}}">
-                                <SymbolIcon Symbol="Remove"/>
-                            </Button>
+                            <ctl:IconButton Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Click="IbnRemove_Click"
+                                            Symbol="Remove" Visibility="{Binding ElementName=micDoRemove,
+                                              Path=Output,Converter={StaticResource visCon}}"/>
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
