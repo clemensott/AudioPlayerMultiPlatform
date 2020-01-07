@@ -143,9 +143,10 @@
                             <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}"/>
                             <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
 
-                            <SymbolIcon Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" 
-                                        Visibility="{Binding ElementName=micDoRemove,Path=Output,Converter={StaticResource visCon}}"
-                                        Symbol="Remove" PointerReleased="SyiRemove_PointerReleased"/>
+                            <Button Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Click="BtnRemove_Click"
+                                    Visibility="{Binding ElementName=micDoRemove,Path=Output,Converter={StaticResource visCon}}">
+                                <SymbolIcon Symbol="Remove"/>
+                            </Button>
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -163,8 +164,9 @@
                 </StackPanel>
             </Grid>
 
-            <local:AudioPositionSlider Grid.Row="4" Position="{Binding AudioService.CurrentPlaylist.Position,Mode=TwoWay}"
-                                       Duration="{Binding AudioService.CurrentPlaylist.Duration}"/>
+            <local:AudioPositionSlider Grid.Row="4" Position="{Binding AudioService.CurrentPlaylist.Position}"
+                                       Duration="{Binding AudioService.CurrentPlaylist.Duration}"
+                                       UserPositionChanged="AudioPositionSlider_UserPositionChanged"/>
         </Grid>
     </Grid>
 

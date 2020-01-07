@@ -43,6 +43,8 @@ namespace AudioPlayerFrontend
 
         private bool isUpdatingSliderValue, isManipulatingSlider;
 
+        public event EventHandler<TimeSpan> UserPositionChanged;
+
         public TimeSpan Position
         {
             get => (TimeSpan)GetValue(PositionProperty);
@@ -79,7 +81,7 @@ namespace AudioPlayerFrontend
 
             await Task.Delay(100);
 
-            if (!isManipulatingSlider) Position = TimeSpan.FromSeconds(sldPosition.Value);
+            if (!isManipulatingSlider) UserPositionChanged?.Invoke(this, TimeSpan.FromSeconds(sldPosition.Value));
 
             isUpdatingSliderValue = false;
         }

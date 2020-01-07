@@ -69,6 +69,12 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
+        private void AudioPositionSlider_UserPositionChanged(object sender, TimeSpan e)
+        {
+            IPlaylist playlist = viewModel.AudioService?.CurrentPlaylist;
+            if (playlist != null) playlist.WannaSong = RequestSong.Get(playlist.CurrentSong, e);
+        }
+
         private void Scroll()
         {
             if (lbxSongs.SelectedItem != null) lbxSongs.ScrollIntoView(lbxSongs.SelectedItem);
@@ -122,7 +128,7 @@ namespace AudioPlayerFrontend
             return !ReferenceEquals(input0, input1);
         }
 
-        private void SyiRemove_PointerReleased(object sender, PointerRoutedEventArgs e)
+        private void BtnRemove_Click(object sender, RoutedEventArgs e)
         {
             Song song = (Song)((FrameworkElement)sender).DataContext;
             IAudioService service = viewModel.AudioService;
