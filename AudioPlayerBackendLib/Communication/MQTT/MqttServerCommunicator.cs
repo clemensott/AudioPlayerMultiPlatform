@@ -17,6 +17,8 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         public override bool IsOpen => isOpen;
 
+        public override string Name => "Server:" + Port;
+
         public MqttServerCommunicator(int port, INotifyPropertyChangedHelper helper = null) : base(helper)
         {
             server = new MqttFactory().CreateMqttServer();

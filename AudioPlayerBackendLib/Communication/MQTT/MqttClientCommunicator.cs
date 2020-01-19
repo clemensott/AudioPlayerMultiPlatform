@@ -54,6 +54,20 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         public IMqttClient MqttClient { get; }
 
+        public InitList<string> InitProps
+        {
+            get => initProps;
+            private set
+            {
+                if (value == initProps) return;
+
+                initProps = value;
+                OnPropertyChanged(nameof(InitProps));
+            }
+        }
+
+        public override string Name => string.Format("{0}:{1}", ServerAddress.Trim(), Port?.ToString() ?? "Default");
+
         public MqttClientCommunicator(string server, int? port = null,
             INotifyPropertyChangedHelper helper = null) : base(helper)
         {
@@ -98,7 +112,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                 }
                 catch { }
 
-                initProps = null;
+                InitProps = null;
                 IsSyncing = false;
             }
         }
@@ -122,7 +136,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             }
             finally
             {
-                initProps = null;
+                InitProps = null;
                 IsSyncing = false;
             }
         }
@@ -148,7 +162,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 TopicFilter[] serviceTopics = GetTopicFilters().Concat(GetTopicFilters(Service.SourcePlaylist))
                     .Concat(GetTopicFilters(playlists.Values)).ToArray();
-                initProps = new InitList<string>(serviceTopics.Select(t => t.Topic));
+                InitProps = new InitList<string>(serviceTopics.Select(t => t.Topic));
 
                 await MqttClient.SubscribeAsync(serviceTopics);
 
@@ -156,9 +170,9 @@ namespace AudioPlayerBackend.Communication.MQTT
                 {
                     if (statusToken.IsEnded.HasValue) return;
 
-                    await Task.WhenAny(initProps.Task, statusToken.EndTask);
+                    await Task.WhenAny(InitProps.Task, statusToken.EndTask);
                 }
-                else await initProps.Task;
+                else await InitProps.Task;
             }
             catch
             {
@@ -168,7 +182,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             }
             finally
             {
-                initProps = null;
+                InitProps = null;
                 IsSyncing = false;
             }
         }
@@ -356,7 +370,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                 await PublishDebug(text);
             }
 
-            initProps?.Remove(rawTopic);
+            InitProps?.Remove(rawTopic);
 
             UnlockTopic(rawTopic);
         }
@@ -365,7 +379,7 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             System.Diagnostics.Debug.WriteLine("SubscribeOrPublishAsync: " + playlist.ID);
 
-            initProps?.AddRange(GetTopicFilters(playlist).Select(tf => tf.Topic));
+            InitProps?.AddRange(GetTopicFilters(playlist).Select(tf => tf.Topic));
 
             await MqttClient.SubscribeAsync(GetTopicFilters(playlist));
         }

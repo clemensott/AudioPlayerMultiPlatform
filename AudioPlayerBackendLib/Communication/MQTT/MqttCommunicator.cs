@@ -40,6 +40,8 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         public IAudioServiceBase Service { get; protected set; }
 
+        public abstract string Name { get; }
+
         protected MqttCommunicator(INotifyPropertyChangedHelper helper = null)
         {
             this.helper = helper;

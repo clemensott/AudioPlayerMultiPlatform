@@ -9,6 +9,8 @@ namespace AudioPlayerBackend.Communication
     {
         bool IsOpen { get; }
 
+        string Name { get; }
+
         IAudioServiceBase Service { get; }
 
         Task OpenAsync(BuildStatusToken statusToken);

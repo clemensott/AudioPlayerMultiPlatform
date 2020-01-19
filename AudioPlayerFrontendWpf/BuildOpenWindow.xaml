@@ -10,7 +10,7 @@
         xmlns:pla="clr-namespace:AudioPlayerBackend.Player;assembly=AudioPlayerBackendLib"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
-        Title="Open Service - Hotkey Music" Height="190" Width="500" ResizeMode="NoResize">
+        Title="Open Service - Hotkey Music" Height="300" Width="500" ResizeMode="NoResize">
 
     <Window.Resources>
         <build:BuildEndedType x:Key="canceled">Canceled</build:BuildEndedType>
@@ -26,13 +26,23 @@
                                     NotEqualsValue="{StaticResource true}"/>
     </Window.Resources>
 
-    <StackPanel VerticalAlignment="Top">
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top"
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
+            <TextBlock Text="Opening Service:" FontSize="20" Margin="5,0"/>
+            <TextBlock FontSize="18" VerticalAlignment="Center" Text="{Binding Communicator.Name}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top"
                     Visibility="{Binding CompleteToken.IsEnded,Converter={StaticResource openVisCon}}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Opening Service:" FontSize="20" HorizontalAlignment="Center" Margin="5"/>
-                <TextBlock Text=""/>
-            </StackPanel>
             <ProgressBar IsIndeterminate="True" Height="20" Margin="30,5"/>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -44,7 +54,7 @@
             </StackPanel>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top"
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top"
                     Visibility="{Binding CompleteToken.IsEnded,Converter={StaticResource idleVisCon}}">
             <Button Content="Retry" Width="100" Margin="5" Click="BtnRetry_Click"/>
             <Button Content="Settings" Width="100" Margin="5" Click="BtnSettings_Click"/>
@@ -53,7 +63,8 @@
                       Converter={StaticResource excCon}}" Click="BtnException_Click"/>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top">
+        <StackPanel Grid.Row="2" Orientation="Horizontal"
+                    HorizontalAlignment="Center" VerticalAlignment="Top">
             <Button Content="Previous" Width="75" Margin="5" Click="BtnPrevious_Click"/>
             <Button Content="Play" Width="75" Margin="5" Click="BtnPlay_Click"
                     IsEnabled="{Binding SendPlayState,Converter={StaticResource playCon}}"/>
@@ -64,7 +75,7 @@
             <Button Content="Next" Width="75" Margin="5" Click="BtnNext_Click"/>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="3"
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="3"
                     Visibility="{Binding CommunicatorToken.Result,Converter={StaticResource openVisCon}}">
             <TextBlock Text="SongOffset: "/>
             <TextBlock Text="{Binding SongOffset}"/>
@@ -76,5 +87,12 @@
                                       Input2="{Binding PlayerToken.Exception}"
                                       Input3="{Binding CompleteToken.Exception}"
                                       Convert="MicException_Convert"/>
-    </StackPanel>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="3">
+            <TextBlock Text="State: "/>
+            <TextBlock Text="{Binding State}"/>
+        </StackPanel>
+
+        <ListBox Grid.Row="5" ItemsSource="{Binding Communicator.InitProps}"/>
+    </Grid>
 </Window>

@@ -1,41 +1,40 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
+using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
-using StdOttStandard;
 
 namespace AudioPlayerBackend.Communication.MQTT
 {
-    class InitList<T>
+    public class InitList<T> : ObservableCollection<T>
     {
-        private readonly List<T> initItems;
+        private readonly SemaphoreSlim finishedSem;
 
         public Task Task { get; }
 
-        public InitList(IEnumerable<T> items)
+        public InitList(IEnumerable<T> items) : base(items)
         {
-            initItems = items.ToList();
-            Task = Utils.WaitAsync(initItems);
-        }
-
-        public void Add(T item)
-        {
-            initItems.Add(item);
+            finishedSem = new SemaphoreSlim(0);
+            Task = finishedSem.WaitAsync();
         }
 
         public void AddRange(IEnumerable<T> items)
         {
-            initItems.AddRange(items);
+            foreach (T item in items)
+            {
+                Add(item);
+            }
         }
 
-        public void Remove(T item)
+        protected override void ClearItems()
         {
-            lock (initItems)
-            {
-                initItems.Remove(item);
+            base.ClearItems();
+            finishedSem.Release();
+        }
 
-                if (initItems.Count == 0) Monitor.Pulse(initItems);
-            }
+        protected override void RemoveItem(int index)
+        {
+            base.RemoveItem(index);
+            if (Count == 0) finishedSem.Release();
         }
     }
 }
