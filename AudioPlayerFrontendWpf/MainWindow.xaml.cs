@@ -24,7 +24,6 @@ namespace AudioPlayerFrontend
         private HotKeysBuilder hotKeysBuilder;
         private readonly ViewModel viewModel;
         private HotKeys hotKeys;
-        private readonly WidthService widthService;
         private bool isChangingSelectedSongIndex;
 
         public MainWindow()
@@ -35,7 +34,6 @@ namespace AudioPlayerFrontend
             hotKeysBuilder = new HotKeysBuilder();
 
             DataContext = viewModel = new ViewModel();
-            widthService = new WidthService(tblTitle, tblArtist, cdSong, sldPosition);
 
             DependencyPropertyDescriptor dpd = DependencyPropertyDescriptor
                 .FromProperty(ItemsControl.ItemsSourceProperty, typeof(ListBox));

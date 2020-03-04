@@ -30,6 +30,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <WrapPanel Margin="5,3">
@@ -118,13 +119,29 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="2" Margin="0,0,0,5" DataContext="{Binding AudioServiceUI.CurrentPlaylist}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Margin="5,0" VerticalAlignment="Center"
+                       Text="{Binding Position,Converter={StaticResource timeTextCon}}"/>
+            <Slider Grid.Column="1" Minimum="0" VerticalAlignment="Center" IsMoveToPointEnabled="True"
+                    Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"
+                    Value="{Binding Position,Mode=OneWay,Converter={StaticResource timeSecCon}}"
+                    ValueChanged="SldPosition_ValueChanged"/>
+            <TextBlock Grid.Column="2" Margin="5,0" VerticalAlignment="Center"
+                       Text="{Binding Duration,Converter={StaticResource timeTextCon}}"/>
+        </Grid>
+
+        <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto" Name="cdSong"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" Content="Previous" Width="75" Click="OnPrevious"/>
@@ -136,26 +153,9 @@
             <StackPanel Grid.Column="3" DataContext="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
                         MouseLeftButtonDown="StpCurrentSong_MouseLeftButtonDown"
                         MouseRightButtonUp="StackPanel_MouseRightButtonUp">
-                <TextBlock Name="tblTitle" Text="{Binding Title}" TextWrapping="Wrap" Margin="10,0,0,0"/>
-                <TextBlock Name="tblArtist" Text="{Binding Artist}" TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0"/>
+                <TextBlock Text="{Binding Title}" TextWrapping="Wrap" Margin="10,0,0,0"/>
+                <TextBlock Text="{Binding Artist}" TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0"/>
             </StackPanel>
-
-            <Grid Grid.Column="4" DataContext="{Binding AudioServiceUI.CurrentPlaylist}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0" Margin="5,0" VerticalAlignment="Center"
-                           Text="{Binding Position,Converter={StaticResource timeTextCon}}"/>
-                <Slider Grid.Column="1" x:Name="sldPosition" Minimum="0" VerticalAlignment="Center" IsMoveToPointEnabled="True"
-                        Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"
-                        Value="{Binding Position,Mode=OneWay,Converter={StaticResource timeSecCon}}"
-                        ValueChanged="SldPosition_ValueChanged"/>
-                <TextBlock Grid.Column="2" x:Name="tblDuration" Margin="5,0" VerticalAlignment="Center"
-                           Text="{Binding Duration,Converter={StaticResource timeTextCon}}"/>
-            </Grid>
         </Grid>
     </Grid>
 </Window>

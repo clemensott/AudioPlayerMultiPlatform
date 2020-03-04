@@ -109,7 +109,6 @@
     <Compile Include="TimeSpanToSecondsConverter.cs" />
     <Compile Include="IsAudioStreamPlayerConverter.cs" />
     <Compile Include="ViewModels\ViewModel.cs" />
-    <Compile Include="WidthService.cs" />
     <Page Include="BuildOpenWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
