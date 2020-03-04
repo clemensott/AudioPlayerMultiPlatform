@@ -8,7 +8,7 @@ namespace AudioPlayerFrontend
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {
-            return Utils.ToString(TimeSpan.FromSeconds((double)value));
+            return StdUtils.ToString(TimeSpan.FromSeconds((double)value));
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, string language)

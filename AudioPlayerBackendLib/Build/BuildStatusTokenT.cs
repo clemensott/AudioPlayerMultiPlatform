@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using StdOttStandard;
+using StdOttStandard.Equal;
 
 namespace AudioPlayerBackend.Build
 {
@@ -15,7 +16,7 @@ namespace AudioPlayerBackend.Build
             get => result;
             private set
             {
-                if (Utils.ReferenceEqualsOrEquals(value, result)) return;
+                if (EqualUtils.ReferenceEqualsOrEquals(value, result)) return;
 
                 result = value;
                 OnPropertyChanged(nameof(Result));

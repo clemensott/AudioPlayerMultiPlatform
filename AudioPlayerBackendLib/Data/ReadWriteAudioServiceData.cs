@@ -121,7 +121,7 @@ namespace AudioPlayerBackend.Data
         {
             if (!File.Exists(readPath)) return;
 
-            AudioServiceData data = Utils.XmlDeserializeFile<AudioServiceData>(readPath);
+            AudioServiceData data = StdUtils.XmlDeserializeFile<AudioServiceData>(readPath);
 
             Service.Volume = data.Volume;
 
@@ -213,7 +213,7 @@ namespace AudioPlayerBackend.Data
         private void Save()
         {
             AudioServiceData data = new AudioServiceData(Service);
-            Utils.XmlSerialize(writePath, data);
+            StdUtils.XmlSerialize(writePath, data);
         }
 
         public void Dispose()

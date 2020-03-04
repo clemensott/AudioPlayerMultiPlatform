@@ -8,6 +8,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerFrontend.Join;
+using Windows.UI.Xaml.Controls.Primitives;
 
 namespace AudioPlayerFrontend
 {
@@ -99,6 +100,12 @@ namespace AudioPlayerFrontend
         private object SicSongsCount_Convert(object input, int changedIndex)
         {
             return ((Array)input)?.Length ?? -1;
+        }
+
+        private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Selector selector = (Selector)sender;
+            selector.SelectedItem = null;
         }
     }
 }

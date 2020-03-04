@@ -254,7 +254,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                     if (currentPublish.QualityOfServiceLevel != MqttQualityOfServiceLevel.AtMostOnce)
                     {
-                        Task waitForReply = Utils.WaitAsync(currentPublish);
+                        Task waitForReply = StdUtils.WaitAsync(currentPublish);
                         System.Diagnostics.Debug.WriteLine("ConsumerPublish5: " + currentPublish.Topic);
 
                         await MqttClient.PublishAsync(currentPublish);
@@ -264,6 +264,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                     else
                     {
                         await MqttClient.PublishAsync(currentPublish);
+                        lock (currentPublish) Monitor.PulseAll(currentPublish);
                         continue;
                     }
                 }
@@ -338,7 +339,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             {
                 try
                 {
-                    await Utils.WaitAsync(receiveMessages, () => receiveMessages.Count == 0);
+                    await StdUtils.WaitAsync(receiveMessages, () => receiveMessages.Count == 0);
                     ProcessApplicationMessage(receiveMessages.Dequeue());
                 }
                 catch (Exception e)
@@ -386,16 +387,11 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected override async Task PublishAsync(MqttApplicationMessage message)
         {
-            if (IsSyncing && message.Topic != cmdString)
-            {
-                System.Diagnostics.Debug.WriteLine("PublishOnOpening: " + message.Topic);
-                return;
-            }
-
-            if (!IsOpen || IsTopicLocked(message.Topic, message.Payload)) return;
+            if ((IsSyncing && message.QualityOfServiceLevel != MqttQualityOfServiceLevel.AtMostOnce) ||
+                !IsOpen || IsTopicLocked(message.Topic, message.Payload)) return;
 
             publishQueue.Enqueue(message);
-            await Utils.WaitAsync(message);
+            await StdUtils.WaitAsync(message);
         }
 
         public override async void Dispose()

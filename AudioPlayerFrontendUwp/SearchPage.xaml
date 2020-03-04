@@ -51,14 +51,14 @@
                                       Input1="{Binding AudioService.CurrentPlaylist.AllSongs}"
                                       Convert="MicSongs_Convert"/>
 
-        <ListView Grid.Row="2" Grid.ColumnSpan="5" Margin="0,5" HorizontalAlignment="Stretch"
-                 SelectionMode="None" ItemsSource="{Binding ElementName=micSongs,Path=Output}">
-            <ListView.ItemContainerStyle>
-                <Style TargetType="ListViewItem">
+        <ListBox Grid.Row="2" Grid.ColumnSpan="5" Margin="0,5" HorizontalAlignment="Stretch"
+                 ItemsSource="{Binding ElementName=micSongs,Path=Output}" SelectionChanged="ListBox_SelectionChanged">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                 </Style>
-            </ListView.ItemContainerStyle>
-            <ListView.ItemTemplate>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Grid Margin="0,-8">
                         <Grid.ColumnDefinitions>
@@ -87,7 +87,7 @@
                         </StackPanel>
                     </Grid>
                 </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </Page>

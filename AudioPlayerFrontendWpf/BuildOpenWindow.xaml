@@ -5,25 +5,19 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AudioPlayerFrontend"
         xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
-        xmlns:spi="clr-namespace:StdOttFramework.Converters.Specialized;assembly=StdOttFrameworkLib"
         xmlns:build="clr-namespace:AudioPlayerBackend.Build;assembly=AudioPlayerBackendLib"
-        xmlns:pla="clr-namespace:AudioPlayerBackend.Player;assembly=AudioPlayerBackendLib"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         Title="Open Service - Hotkey Music" Height="300" Width="500" ResizeMode="NoResize">
 
     <Window.Resources>
         <build:BuildEndedType x:Key="canceled">Canceled</build:BuildEndedType>
-        <spi:VisibleCollapsedConverter x:Key="idleVisCon" CompareValue="{StaticResource canceled}"/>
-        <spi:VisibleCollapsedConverter x:Key="openVisCon" CompareValue="{x:Null}"/>
-        <spi:CollapsedVisibleConverter x:Key="excCon" CompareValue="{x:Null}"/>
+        <con:VisibleCollapsedConverter x:Key="idleVisCon" CompareValue="Canceled" DecideType="Enum"/>
+        <con:VisibleCollapsedConverter x:Key="openVisCon" DecideType="IsNull"/>
+        <con:CollapsedVisibleConverter x:Key="excCon" DecideType="IsNull"/>
 
-        <sys:Boolean x:Key="true">True</sys:Boolean>
-        <sys:Boolean x:Key="false">False</sys:Boolean>
-        <con:IsEnumToValueConverter x:Key="playCon" CompareValue="Playing" EqualsValue="{StaticResource false}"
-                                    NotEqualsValue="{StaticResource true}"/>
-        <con:IsEnumToValueConverter x:Key="pauseCon" CompareValue="Paused" EqualsValue="{StaticResource false}"
-                                    NotEqualsValue="{StaticResource true}"/>
+        <con:FalsyConverter x:Key="playCon" CompareValue="Playing" DecideType="Enum"/>
+        <con:FalsyConverter x:Key="pauseCon" CompareValue="Paused" DecideType="Enum"/>
     </Window.Resources>
 
     <Grid>

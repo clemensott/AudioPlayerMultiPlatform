@@ -36,7 +36,7 @@ namespace AudioPlayerBackend.Build
 
         private async Task<BuildEndedType> GetIsEnded()
         {
-            await Utils.WaitAsync(lockObj);
+            await StdUtils.WaitAsync(lockObj);
 
             return IsEnded ?? BuildEndedType.Successful;
         }

@@ -8,7 +8,6 @@
     xmlns:ctl="using:StdOttUwp.Controls"
     xmlns:com="using:AudioPlayerBackend.Player"
     xmlns:con="using:StdOttUwp.Converters"
-    xmlns:spi="using:StdOttUwp.Converters.Specialized"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     Loaded="Page_Loaded">
@@ -20,17 +19,17 @@
         <com:PlaybackState x:Key="playingState">Playing</com:PlaybackState>
         <Symbol x:Key="playSym">Play</Symbol>
         <Symbol x:Key="pauseSym">Pause</Symbol>
-        <con:IsEnumToValueConverter x:Key="isPlayPauseIconCon"
-                                    CompareValue="{StaticResource playingState}" 
-                                    EqualsValue="{StaticResource pauseSym}"
-                                    NotEqualsValue="{StaticResource playSym}"/>
-        <con:IsEnumToValueConverter x:Key="isPlayPauseLabelCon"
-                                    CompareValue="{StaticResource playingState}" 
-                                    EqualsValue="Pause"
-                                    NotEqualsValue="Play"/>
+        <con:IsValueToTwoValueConverter x:Key="isPlayPauseIconCon"
+                                        CompareValue="Playing" DecideType="Enum"
+                                        EqualsValue="{StaticResource pauseSym}"
+                                        NotEqualsValue="{StaticResource playSym}"/>
+        <con:IsValueToTwoValueConverter x:Key="isPlayPauseLabelCon"
+                                        CompareValue="Playing" DecideType="Enum"
+                                        EqualsValue="Pause"
+                                        NotEqualsValue="Play"/>
 
-        <spi:VisibleCollapsedConverter x:Key="visCon" />
-        <spi:CollapsedVisibleConverter x:Key="hidCon" />
+        <con:VisibleCollapsedConverter x:Key="visCon" />
+        <con:CollapsedVisibleConverter x:Key="hidCon" />
 
         <local:LoopIconConverter x:Key="loopIcoCon" />
 

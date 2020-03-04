@@ -225,7 +225,7 @@ namespace AudioPlayerFrontend
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
-                            Utils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, -1).index;
+                            StdUtils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, -1).index;
                         isChangingSelectedSongIndex = false;
                     }
                     break;
@@ -235,7 +235,7 @@ namespace AudioPlayerFrontend
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
-                            Utils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, 1).index;
+                            StdUtils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, 1).index;
                         isChangingSelectedSongIndex = false;
                     }
                     break;
