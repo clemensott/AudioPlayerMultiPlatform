@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using StdOttStandard;
 
 namespace AudioPlayerBackend.Audio
@@ -49,7 +51,8 @@ namespace AudioPlayerBackend.Audio
                 OnPropertyChanged(nameof(SearchKey));
 
                 IsSearching = SongsService.GetIsSearching(SearchKey);
-                SearchSongs = SongsService.GetSearchSongs(this).ToBuffer();
+
+                UpdateSearchSongs();
             }
         }
 
@@ -109,6 +112,14 @@ namespace AudioPlayerBackend.Audio
         public SourcePlaylist(IAudioServiceHelper helper = null) : base(Guid.Empty)
         {
             this.helper = helper;
+        }
+
+        private async void UpdateSearchSongs()
+        {
+            string searchKey = SearchKey;
+
+            Song[] searchSongs = await Task.Run(() => SongsService.GetSearchSongs(this).Take(50).ToArray());
+            if (searchKey == SearchKey) SearchSongs = searchSongs;
         }
 
         protected override void OnSongsChanged()
