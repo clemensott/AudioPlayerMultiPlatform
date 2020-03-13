@@ -27,13 +27,13 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Name="tblFrameStack" VerticalAlignment="Top"/>
-        
+
         <StackPanel Grid.Row="1" VerticalAlignment="Center">
             <StackPanel Margin="5">
                 <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5,0"/>
                 <TextBlock FontSize="18" HorizontalAlignment="Center" Text="{Binding Communicator.Name}"/>
             </StackPanel>
-            
+
             <ProgressRing IsActive="True" Height="100" Width="100" Margin="10"/>
             <Button Content="Settings" Width="100" Margin="5" HorizontalAlignment="Center" Click="BtnSettings_Click"/>
         </StackPanel>
@@ -56,14 +56,17 @@
         <CommandBar>
             <CommandBar.PrimaryCommands>
                 <AppBarButton Label="Previous" Icon="Previous" Click="AbbPrevious_Click"/>
-                <AppBarButton Label="Play" Icon="Play" Click="AbbPlay_Click"
-                              IsEnabled="{Binding SendPlayState,Converter={StaticResource playCon}}"/>
                 <AppBarToggleButton Label="Toggle" Icon="Switch" 
                                     IsChecked="{Binding SendToggle,Mode=OneWay}" Checked="AtbToggle_Checked"/>
-                <AppBarButton Label="Pause" Icon="Pause" Click="AbbPause_Click"
-                              IsEnabled="{Binding SendPlayState,Converter={StaticResource pauseCon}}"/>
                 <AppBarButton Label="Next" Icon="next" Click="AbbNext_Click"/>
             </CommandBar.PrimaryCommands>
+
+            <CommandBar.SecondaryCommands>
+                <AppBarButton Label="Play" Icon="Play" Click="AbbPlay_Click"
+                              IsEnabled="{Binding SendPlayState,Converter={StaticResource playCon}}"/>
+                <AppBarButton Label="Pause" Icon="Pause" Click="AbbPause_Click"
+                              IsEnabled="{Binding SendPlayState,Converter={StaticResource pauseCon}}"/>
+            </CommandBar.SecondaryCommands>
         </CommandBar>
     </Page.BottomAppBar>
 </Page>
