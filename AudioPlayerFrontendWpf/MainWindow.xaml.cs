@@ -113,14 +113,10 @@ namespace AudioPlayerFrontend
                 if (build.CompleteToken.IsEnded is BuildEndedType.Successful) break;
                 if (build.CompleteToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
             }
-
-            if (Visibility != Visibility.Visible) Show();
         }
 
         private async Task OpenAudioServiceAsync()
         {
-            Hide();
-
             while (true)
             {
                 ServiceBuild build = ServiceBuild.Open(viewModel.Service.Communicator, viewModel.Service.AudioService,
@@ -138,8 +134,6 @@ namespace AudioPlayerFrontend
                 if (build.CompleteToken.IsEnded is BuildEndedType.Successful) break;
                 if (build.CompleteToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
             }
-
-            Show();
         }
 
         private bool? ShowBuildOpenWindow(ServiceBuild build)
@@ -148,8 +142,7 @@ namespace AudioPlayerFrontend
 
             //BuildOpenWindow window = new BuildOpenWindow(build);
             window.Build = build;
-
-            Hide();
+            
             return window.ShowDialog();
         }
 
