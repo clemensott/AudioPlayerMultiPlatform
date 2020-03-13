@@ -284,7 +284,7 @@ namespace AudioPlayerBackend.Build
 
                     if (Communicator != null)
                     {
-                        await Task.WhenAny(Communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
+                        await await Task.WhenAny(Communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
                     }
 
                     if (CommunicatorToken.IsEnded.HasValue) return;
@@ -312,7 +312,7 @@ namespace AudioPlayerBackend.Build
 
                     if (Communicator != null)
                     {
-                        await Task.WhenAny(Communicator.SyncService(SyncToken), SyncToken.EndTask);
+                        await await Task.WhenAny(Communicator.SyncService(SyncToken), SyncToken.EndTask);
                     }
 
                     if (SyncToken.IsEnded.HasValue) return;
