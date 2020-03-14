@@ -20,6 +20,8 @@ namespace AudioPlayerFrontend
 {
     public partial class MainWindow : Window
     {
+        private const double minSliderWidth = 300;
+
         private ServiceBuilder serviceBuilder;
         private HotKeysBuilder hotKeysBuilder;
         private readonly ViewModel viewModel;
@@ -504,6 +506,22 @@ namespace AudioPlayerFrontend
             if (currentPlaylist != null && currentPlaylist.CurrentSong.HasValue && currentPlaylist.Position != position)
             {
                 currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong, position);
+            }
+        }
+
+        private void GidMainBottom_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (cdnSlider.ActualWidth > minSliderWidth)
+            {
+                gidSlider.SetValue(Grid.RowProperty, 1);
+                gidSlider.SetValue(Grid.ColumnProperty, 1);
+                gidSlider.SetValue(Grid.ColumnSpanProperty, 1);
+            }
+            else
+            {
+                gidSlider.SetValue(Grid.RowProperty, 0);
+                gidSlider.SetValue(Grid.ColumnProperty, 0);
+                gidSlider.SetValue(Grid.ColumnSpanProperty, 2);
             }
         }
     }
