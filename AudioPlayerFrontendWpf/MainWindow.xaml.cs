@@ -15,6 +15,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using AudioPlayerBackend.Build;
+using StdOttFramework.RestoreWindow;
 
 namespace AudioPlayerFrontend
 {
@@ -31,6 +32,8 @@ namespace AudioPlayerFrontend
         public MainWindow()
         {
             InitializeComponent();
+
+            RestoreWindowHandler.Activate(this, RestoreWindowSettings.GetDefault());
 
             serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
             hotKeysBuilder = new HotKeysBuilder();
