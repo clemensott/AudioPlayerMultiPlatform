@@ -12,6 +12,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
+using StdOttUwp;
 
 namespace AudioPlayerFrontend
 {
@@ -61,6 +62,7 @@ namespace AudioPlayerFrontend
         {
             Frame rootFrame = Window.Current.Content as Frame;
 
+            BackPressHandler.Current.Activate();
             LoadExceptionFile();
 
             // App-Initialisierung nicht wiederholen, wenn das Fenster bereits Inhalte enthält.
