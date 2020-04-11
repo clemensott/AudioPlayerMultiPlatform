@@ -9,7 +9,7 @@
         Title="SettingsWindow" Height="450" Width="800">
 
     <Window.Resources>
-        <con:InvertConverter x:Key="inverter"/>
+        <con:FalsyConverter x:Key="inverter"/>
         <local:FloatNullableToFloatConverter x:Key="volCon"/>
         <local:FloatNullableToFloatConverter x:Key="clientVolCon"/>
         <local:FilePathsToSingleStringConverter x:Key="pathsCon"/>

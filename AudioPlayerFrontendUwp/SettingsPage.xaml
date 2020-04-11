@@ -10,7 +10,7 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Page.Resources>
-        <con:InvertConverter x:Key="inverter"/>
+        <con:FalsyConverter x:Key="inverter"/>
         <local:FloatNullableToFloatConverter x:Key="volCon"/>
         <local:FloatNullableToFloatConverter x:Key="clientVolCon"/>
         <local:FilePathsToSingleStringConverter x:Key="pathsCon"/>

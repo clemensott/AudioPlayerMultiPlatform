@@ -4,7 +4,8 @@ using AudioPlayerBackend.Player;
 using AudioPlayerFrontend.Join;
 using Microsoft.Win32;
 using StdOttStandard;
-using StdOttStandard.CommendlinePaser;
+using StdOttStandard.Linq;
+using StdOttStandard.CommandlineParser;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -504,7 +505,6 @@ namespace AudioPlayerFrontend
         {
             TimeSpan position = TimeSpan.FromSeconds(e.NewValue);
             IPlaylistBase currentPlaylist = viewModel.AudioServiceUI?.CurrentPlaylist;
-            var pos = currentPlaylist.Position;
 
             if (currentPlaylist != null && currentPlaylist.CurrentSong.HasValue && currentPlaylist.Position != position)
             {

@@ -3,7 +3,7 @@ using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 using MQTTnet;
 using MQTTnet.Protocol;
-using StdOttStandard;
+using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

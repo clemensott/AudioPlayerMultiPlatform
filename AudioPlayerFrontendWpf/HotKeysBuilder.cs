@@ -1,5 +1,5 @@
 ﻿using StdOttFramework.Hotkey;
-using StdOttStandard.CommendlinePaser;
+using StdOttStandard.CommandlineParser;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

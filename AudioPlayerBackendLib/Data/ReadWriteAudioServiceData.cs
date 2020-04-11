@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using StdOttStandard;
+using StdOttStandard.Linq;
 
 namespace AudioPlayerBackend.Data
 {

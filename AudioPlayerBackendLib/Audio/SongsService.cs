@@ -1,4 +1,4 @@
-﻿using StdOttStandard;
+﻿using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -109,12 +109,22 @@ namespace AudioPlayerBackend.Audio
 
         public static (Song? song, bool overflow) GetNextSong(IPlaylistBase playlist)
         {
-            return GetAllSongs(playlist).Cast<Song?>().NextOrDefault(playlist.CurrentSong);
+            if (!playlist.CurrentSong.HasValue) return (null, false);
+
+            (Song next, bool found, bool overflow) = GetAllSongs(playlist)
+                .NextOrDefault(playlist.CurrentSong.Value);
+
+            return (found ? (Song?)next : null, overflow);
         }
 
         public static (Song? song, bool underflow) GetPreviousSong(IPlaylistBase playlist)
         {
-            return GetAllSongs(playlist).Cast<Song?>().PreviousOrDefault(playlist.CurrentSong);
+            if (!playlist.CurrentSong.HasValue) return (null, false);
+
+            (Song next, bool found, bool underflow) = GetAllSongs(playlist)
+                .PreviousOrDefault(playlist.CurrentSong.Value);
+
+            return (found ? (Song?)next : null, underflow);
         }
     }
 }

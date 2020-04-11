@@ -16,7 +16,7 @@ namespace AudioPlayerBackend.Build
             get => result;
             private set
             {
-                if (EqualUtils.ReferenceEqualsOrEquals(value, result)) return;
+                if (Equals(value, result)) return;
 
                 result = value;
                 OnPropertyChanged(nameof(Result));
