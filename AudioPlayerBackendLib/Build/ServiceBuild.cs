@@ -152,9 +152,10 @@ namespace AudioPlayerBackend.Build
                 try
                 {
                     State = BuildState.OpenCommunicator;
-                    Communicator = serviceBuilder.CreateCommunicator();
+                    if (Communicator == null) Communicator = serviceBuilder.CreateCommunicator();
+                    else CommunicatorToken.Reset();
 
-                    if (Communicator != null)
+                    if (Communicator != null && !Communicator.IsOpen)
                     {
                         await await Task.WhenAny(Communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
                     }
@@ -162,7 +163,6 @@ namespace AudioPlayerBackend.Build
                     if (CommunicatorToken.IsEnded.HasValue) return;
 
                     CommunicatorToken.End(BuildEndedType.Successful, Communicator);
-                    break;
                 }
                 catch (Exception e)
                 {
@@ -171,15 +171,14 @@ namespace AudioPlayerBackend.Build
                     if (CommunicatorToken.IsEnded.HasValue) return;
 
                     await Task.Delay(delayTime);
+                    continue;
                 }
-            }
 
-            Task sendCmdTask = SendCommands();
+                Task sendCmdTask = SendCommands();
 
-            while (true)
-            {
                 try
                 {
+                    SyncToken.Reset();
                     State = BuildState.SyncCommunicator;
                     service = new AudioService(serviceHelper);
 
@@ -191,7 +190,6 @@ namespace AudioPlayerBackend.Build
                     if (SyncToken.IsEnded.HasValue) return;
 
                     SyncToken.End(BuildEndedType.Successful, service);
-                    break;
                 }
                 catch (Exception e)
                 {
@@ -200,30 +198,28 @@ namespace AudioPlayerBackend.Build
                     if (SyncToken.IsEnded.HasValue) return;
 
                     await Task.Delay(delayTime);
+                    continue;
                 }
-            }
 
-            try
-            {
-                State = BuildState.SendCommands;
-                await sendCmdTask;
-            }
-            catch (Exception e)
-            {
-                System.Diagnostics.Debug.WriteLine(e);
-            }
-
-            while (true)
-            {
                 try
                 {
+                    State = BuildState.SendCommands;
+                    await sendCmdTask;
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine(e);
+                }
+
+                try
+                {
+                    PlayerToken.Reset();
                     State = BuildState.CreatePlayer;
                     servicePlayer = serviceBuilder.CreateServicePlayer(service);
 
                     if (PlayerToken.IsEnded.HasValue) return;
 
                     PlayerToken.End(BuildEndedType.Successful, servicePlayer);
-                    break;
                 }
                 catch (Exception e)
                 {
@@ -232,11 +228,9 @@ namespace AudioPlayerBackend.Build
                     if (PlayerToken.IsEnded.HasValue) return;
 
                     await Task.Delay(delayTime);
+                    continue;
                 }
-            }
 
-            while (true)
-            {
                 try
                 {
                     State = BuildState.CompleteSerivce;
@@ -246,7 +240,6 @@ namespace AudioPlayerBackend.Build
 
                     ServiceBuildResult result = new ServiceBuildResult(service, Communicator, servicePlayer, data);
                     CompleteToken.End(BuildEndedType.Successful, result);
-                    break;
                 }
                 catch (Exception e)
                 {
@@ -255,7 +248,9 @@ namespace AudioPlayerBackend.Build
                     if (CompleteToken.IsEnded.HasValue) return;
 
                     await Task.Delay(delayTime);
+                    continue;
                 }
+                break;
             }
 
             State = BuildState.Finished;
@@ -280,6 +275,7 @@ namespace AudioPlayerBackend.Build
             {
                 try
                 {
+                    CommunicatorToken.Reset();
                     State = BuildState.OpenCommunicator;
 
                     if (Communicator != null)
@@ -290,7 +286,6 @@ namespace AudioPlayerBackend.Build
                     if (CommunicatorToken.IsEnded.HasValue) return;
 
                     CommunicatorToken.End(BuildEndedType.Successful, Communicator);
-                    break;
                 }
                 catch (Exception e)
                 {
@@ -299,15 +294,14 @@ namespace AudioPlayerBackend.Build
                     if (CommunicatorToken.IsEnded.HasValue) return;
 
                     await Task.Delay(delayTime);
+                    continue;
                 }
-            }
 
-            Task sendCmdTask = SendCommands();
+                Task sendCmdTask = SendCommands();
 
-            while (true)
-            {
                 try
                 {
+                    SyncToken.Reset();
                     State = BuildState.SyncCommunicator;
 
                     if (Communicator != null)
@@ -318,7 +312,6 @@ namespace AudioPlayerBackend.Build
                     if (SyncToken.IsEnded.HasValue) return;
 
                     SyncToken.End(BuildEndedType.Successful, service);
-                    break;
                 }
                 catch (Exception e)
                 {
@@ -327,17 +320,19 @@ namespace AudioPlayerBackend.Build
                     if (SyncToken.IsEnded.HasValue) return;
 
                     await Task.Delay(delayTime);
+                    continue;
                 }
-            }
 
-            try
-            {
-                State = BuildState.SendCommands;
-                await sendCmdTask;
-            }
-            catch (Exception e)
-            {
-                System.Diagnostics.Debug.WriteLine(e);
+                try
+                {
+                    State = BuildState.SendCommands;
+                    await sendCmdTask;
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine(e);
+                }
+                break;
             }
 
             State = BuildState.CreatePlayer;

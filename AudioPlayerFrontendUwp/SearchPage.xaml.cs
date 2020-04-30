@@ -9,6 +9,7 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerFrontend.Join;
 using Windows.UI.Xaml.Controls.Primitives;
+using StdOttStandard.Converter.MultipleInputs;
 
 namespace AudioPlayerFrontend
 {
@@ -78,7 +79,7 @@ namespace AudioPlayerFrontend
 
         }
 
-        private object MicSongs_Convert(object input0, object input1, int changedIndex)
+        private object MicSongs_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
             IAudioService service = viewModel?.AudioService;
 
@@ -92,14 +93,14 @@ namespace AudioPlayerFrontend
             return viewSongs.Except(service.CurrentPlaylist.Songs);
         }
 
-        private object SicPlaylist_Convert(object input, int changedInput)
+        private object SicPlaylist_Convert(object sender, SingleInputsConvertEventArgs args)
         {
-            return ((IEnumerable<IPlaylistBase>)input)?.FirstOrDefault();
+            return ((IEnumerable<IPlaylistBase>)args.Input)?.FirstOrDefault();
         }
 
-        private object SicSongsCount_Convert(object input, int changedIndex)
+        private object SicSongsCount_Convert(object sender, SingleInputsConvertEventArgs args)
         {
-            return ((Array)input)?.Length ?? -1;
+            return ((Array)args.Input)?.Length ?? -1;
         }
 
         private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

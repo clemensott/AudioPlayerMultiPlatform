@@ -24,6 +24,8 @@ namespace AudioPlayerBackend.Communication.MQTT
         protected readonly Dictionary<Guid, IPlaylistBase> playlists = new Dictionary<Guid, IPlaylistBase>();
         private readonly Dictionary<Guid, InitList<string>> initPlaylistLists = new Dictionary<Guid, InitList<string>>();
 
+        public abstract event EventHandler<DisconnectedEventArgs> Disconnected;
+
         public abstract bool IsOpen { get; }
 
         public bool IsSyncing
@@ -49,6 +51,8 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected async void InitPlaylists()
         {
+            playlists.Clear();
+
             foreach (IPlaylistBase playlist in (Service?.Playlists).ToNotNull())
             {
                 await AddPlaylist(playlist);
@@ -125,7 +129,6 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             if (playlist == null) return;
 
-            System.Diagnostics.Debug.WriteLine("Subscribe: " + playlist.ID);
             playlist.CurrentSongChanged += Playlist_CurrentSongChanged;
             playlist.DurationChanged += Playlist_DurationChanged;
             playlist.IsAllShuffleChanged += Playlist_IsAllShuffleChanged;
@@ -139,7 +142,6 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             if (playlist == null) return;
 
-            System.Diagnostics.Debug.WriteLine("Unsubscribe: " + playlist.ID);
             playlist.CurrentSongChanged -= Playlist_CurrentSongChanged;
             playlist.DurationChanged -= Playlist_DurationChanged;
             playlist.IsAllShuffleChanged -= Playlist_IsAllShuffleChanged;
@@ -242,10 +244,14 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected async Task PublishVolume()
         {
-            ByteQueue data = new ByteQueue();
-            data.Enqueue(Service.Volume);
+            try
+            {
+                ByteQueue data = new ByteQueue();
+                data.Enqueue(Service.Volume);
 
-            await PublishAsync(nameof(Service.Volume), data, MqttQualityOfServiceLevel.AtMostOnce);
+                await PublishAsync(nameof(Service.Volume), data, MqttQualityOfServiceLevel.AtMostOnce);
+            }
+            catch { }
         }
 
         private async void Playlist_FileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
@@ -448,12 +454,10 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             string topic;
             Guid id;
-
-            ByteQueue data = payload;
-
+            
             if (ContainsPlaylist(rawTopic, out topic, out id))
             {
-                bool handled = HandleMessage(id, topic, data);
+                bool handled = await HandlePlaylistMessage(id, topic, payload);
 
                 InitList<string> initPlaylistList;
                 if (initPlaylistLists.TryGetValue(id, out initPlaylistList)) initPlaylistList?.Remove(rawTopic);
@@ -461,14 +465,15 @@ namespace AudioPlayerBackend.Communication.MQTT
                 return handled;
             }
 
+            return HandleServiceMessage(topic, payload);
+        }
+
+        private bool HandleServiceMessage(string topic, ByteQueue data)
+        {
             switch (topic)
             {
                 case nameof(Service.Playlists):
-                    Task<IPlaylistBase>[] tasks = data.DequeueGuids().Select(guid => GetInitPlaylist(guid)).ToArray();
-
-                    await Task.WhenAll(tasks);
-
-                    Service.Playlists = tasks.Select(t => t.Result).ToArray();
+                    HandlePlaylistsTopic(data);
                     break;
 
                 case nameof(Service.AudioData):
@@ -476,7 +481,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                     break;
 
                 case nameof(Service.CurrentPlaylist):
-                    Service.CurrentPlaylist = await GetInitPlaylist(data.DequeueGuid());
+                    HandleCurrentPlaylistTopic(data);
                     break;
 
                 case nameof(Service.AudioFormat):
@@ -533,9 +538,23 @@ namespace AudioPlayerBackend.Communication.MQTT
             return true;
         }
 
-        private bool HandleMessage(Guid id, string topic, ByteQueue data)
+        private async void HandlePlaylistsTopic(ByteQueue data)
         {
-            IPlaylistBase playlist = GetPlaylist(id);
+            Task<IPlaylistBase>[] tasks = data.DequeueGuids().Select(guid => GetInitPlaylist(guid)).ToArray();
+
+            await Task.WhenAll(tasks);
+
+            Service.Playlists = tasks.Select(t => t.Result).ToArray();
+        }
+
+        private async void HandleCurrentPlaylistTopic(ByteQueue data)
+        {
+            Service.CurrentPlaylist = await GetInitPlaylist(data.DequeueGuid());
+        }
+
+        private async Task<bool> HandlePlaylistMessage(Guid id, string topic, ByteQueue data)
+        {
+            IPlaylistBase playlist = await GetPlaylist(id);
             ISourcePlaylistBase source = playlist as ISourcePlaylistBase;
 
             switch (topic)
@@ -602,7 +621,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             return true;
         }
 
-        private IPlaylistBase GetPlaylist(Guid id)
+        private async Task<IPlaylistBase> GetPlaylist(Guid id)
         {
             if (id == Guid.Empty) return Service.SourcePlaylist;
 
@@ -611,7 +630,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             {
                 playlist = new Playlist(id, helper);
 
-                InitPlaylist(playlist);
+                await InitPlaylist(playlist, false);
             }
 
             return playlist;
@@ -628,24 +647,27 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             playlist = new Playlist(id);
 
-            await InitPlaylist(playlist);
+            await InitPlaylist(playlist, true);
 
             return playlist;
         }
 
-        private async Task InitPlaylist(IPlaylistBase playlist)
+        private async Task InitPlaylist(IPlaylistBase playlist, bool wait)
         {
-            System.Diagnostics.Debug.WriteLine("InitPlaylist1: " + playlist.ID);
-            await AddPlaylist(playlist, false);
-
             InitList<string> initPlaylistList = new InitList<string>(GetTopics(playlist));
             initPlaylistLists.Add(playlist.ID, initPlaylistList);
 
-            await initPlaylistList.Task;
+            await AddPlaylist(playlist, false);
 
-            initPlaylistLists.Remove(playlist.ID);
+            Task waitTask = WaitInitiation();
+            if (wait) await waitTask;
 
-            System.Diagnostics.Debug.WriteLine("InitPlaylist2: " + playlist.ID);
+            async Task WaitInitiation()
+            {
+                await initPlaylistList.Task;
+
+                initPlaylistLists.Remove(playlist.ID);
+            }
         }
 
         protected static IEnumerable<string> GetTopics(IPlaylistBase playlist)

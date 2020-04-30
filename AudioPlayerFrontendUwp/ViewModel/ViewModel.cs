@@ -1,12 +1,13 @@
 ﻿using System;
-using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
 using System.ComponentModel;
-using System.Threading.Tasks;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 using AudioPlayerFrontend.Join;
+using Windows.UI.Xaml.Controls;
+using System.Threading.Tasks;
+using StdOttUwp;
 
 namespace AudioPlayerFrontend
 {
@@ -21,7 +22,7 @@ namespace AudioPlayerFrontend
         public ServiceBuild ServiceOpenBuild
         {
             get => serviceOpenBuild;
-            set
+            private set
             {
                 if (value == serviceOpenBuild) return;
 
@@ -35,7 +36,7 @@ namespace AudioPlayerFrontend
         public IAudioService AudioService
         {
             get => audioService;
-            set
+            private set
             {
                 if (value == audioService) return;
 
@@ -47,19 +48,23 @@ namespace AudioPlayerFrontend
         public ICommunicator Communicator
         {
             get => communicator;
-            set
+            private set
             {
                 if (value == communicator) return;
 
+                if (communicator != null) communicator.Disconnected -= Communicator_Disconnected;
                 communicator = value;
+                if (communicator != null) communicator.Disconnected += Communicator_Disconnected;
+
                 OnPropertyChanged(nameof(Communicator));
+
             }
         }
 
         public IServicePlayer ServicePlayer
         {
             get => servicePlayer;
-            set
+            private set
             {
                 if (value == servicePlayer) return;
 
@@ -70,19 +75,36 @@ namespace AudioPlayerFrontend
 
         public ServiceBuilder Builder { get; }
 
+        public Frame Frame { get; private set; }
+
         public ViewModel(ServiceBuilder builder)
         {
             Builder = builder;
         }
 
-        public ServiceBuild Build()
+        public Task ConnectAsync()
         {
-            return ServiceOpenBuild = ServiceBuild.Build(Builder, TimeSpan.FromMilliseconds(200), AudioServiceHelper.Current);
+            ServiceOpenBuild = Communicator != null ? Open() : Build();
+            Frame.Navigate(typeof(BuildOpenPage), ServiceOpenBuild);
+
+            return ServiceOpenBuild.CompleteToken.EndTask;
         }
 
-        public ServiceBuild Open()
+        public Task ConnectAsync(Frame frame)
         {
-            return ServiceOpenBuild = ServiceBuild.Open(Communicator, AudioService, 
+            Frame = frame;
+
+            return ConnectAsync();
+        }
+
+        private ServiceBuild Build()
+        {
+            return ServiceBuild.Build(Builder, TimeSpan.FromMilliseconds(200), AudioServiceHelper.Current);
+        }
+
+        private ServiceBuild Open()
+        {
+            return ServiceBuild.Open(Communicator, AudioService,
                 ServicePlayer, buildResult.Data, TimeSpan.FromMilliseconds(200));
         }
 
@@ -99,6 +121,27 @@ namespace AudioPlayerFrontend
             ServicePlayer = result?.ServicePlayer;
 
             buildResult = result;
+        }
+
+        private async void Communicator_Disconnected(object sender, DisconnectedEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("Disconnected");
+            if (e.OnDisconnect) return;
+
+            await UwpUtils.RunSafe(async () =>
+            {
+                await CloseAsync();
+                if (Frame.CurrentSourcePageType == typeof(BuildOpenPage)) Frame.GoBack();
+
+                await ConnectAsync();
+            });
+        }
+
+        public async Task CloseAsync()
+        {
+            ServiceOpenBuild?.Cancel();
+            ServiceOpenBuild = null;
+            await (Communicator?.CloseAsync() ?? Task.CompletedTask);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

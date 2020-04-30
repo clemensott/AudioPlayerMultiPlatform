@@ -8,16 +8,18 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Communication.MQTT
 {
-    public class MqttServerCommunicator : MqttCommunicator
+    public class MqttServerCommunicator : MqttCommunicator, IMqttServerApplicationMessageInterceptor
     {
         private bool isOpen;
         private readonly IMqttServer server;
+
+        public override event EventHandler<DisconnectedEventArgs> Disconnected;
 
         public int Port { get; }
 
         public override bool IsOpen => isOpen;
 
-        public override string Name => "Server:" + Port;
+        public override string Name => "Server: " + Port;
 
         public MqttServerCommunicator(int port, INotifyPropertyChangedHelper helper = null) : base(helper)
         {
@@ -34,7 +36,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 IMqttServerOptions options = new MqttServerOptionsBuilder()
                     .WithDefaultEndpointPort(Port)
-                    .WithApplicationMessageInterceptor(OnApplicationMessageInterception)
+                    .WithApplicationMessageInterceptor(this)
                     .Build();
 
                 if (statusToken?.IsEnded.HasValue == true) return;
@@ -127,7 +129,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await server.StopAsync();
         }
 
-        private async void OnApplicationMessageInterception(MqttApplicationMessageInterceptorContext context)
+        public async Task InterceptApplicationMessagePublishAsync(MqttApplicationMessageInterceptorContext context)
         {
             if (context.ClientId == null) return;
 

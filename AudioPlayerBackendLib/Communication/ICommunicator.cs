@@ -7,6 +7,8 @@ namespace AudioPlayerBackend.Communication
 {
     public interface ICommunicator : IDisposable
     {
+        event EventHandler<DisconnectedEventArgs> Disconnected;
+
         bool IsOpen { get; }
 
         string Name { get; }

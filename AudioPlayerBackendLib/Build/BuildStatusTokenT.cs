@@ -35,11 +35,18 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public Task<TResult> ResultTask { get; }
+        public Task<TResult> ResultTask { get; private set; }
 
         public BuildStatusToken()
         {
-            ResultTask = GetResult();
+            Reset();
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+
+            if (ResultTask == null || IsEnded.HasValue) ResultTask = GetResult();
         }
 
         private async Task<TResult> GetResult()

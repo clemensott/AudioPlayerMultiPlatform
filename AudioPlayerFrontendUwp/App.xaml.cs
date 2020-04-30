@@ -1,8 +1,6 @@
-﻿using AudioPlayerBackend;
-using AudioPlayerFrontend.Join;
+﻿using AudioPlayerFrontend.Join;
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
@@ -89,7 +87,6 @@ namespace AudioPlayerFrontend
                 {
                     try
                     {
-                        //serviceBuilder.WithClient("nas-server", 1884);
                         StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
                         string xmlText = await FileIO.ReadTextAsync(file);
                         StringReader reader = new StringReader(xmlText);
@@ -170,20 +167,21 @@ namespace AudioPlayerFrontend
 
             try
             {
-                await viewModel.Communicator.CloseAsync();
+                await viewModel.CloseAsync();
             }
             catch { }
 
             deferral.Complete();
         }
 
+        private static DateTime lastConnectStart;
         private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            Frame frame = Window.Current.Content as Frame;
+            Frame frame = viewModel.Frame;
 
             System.Diagnostics.Debug.WriteLine("LeaveBackground1: " + GetDebugText(frame));
 
-            if (frame == null || viewModel.ServiceOpenBuild == null) return;
+            if (frame == null) return;
 
             try
             {
@@ -201,11 +199,9 @@ namespace AudioPlayerFrontend
                 return;
             }
 
+            lastConnectStart = DateTime.Now;
+            await viewModel.ConnectAsync();
             System.Diagnostics.Debug.WriteLine("LeaveBackground2: " + (viewModel.Communicator != null));
-            ServiceBuild build = viewModel.Communicator != null ? viewModel.Open() : viewModel.Build();
-            frame.Navigate(typeof(BuildOpenPage), build);
-
-            //await dialogTask;
         }
 
         private string GetDebugText(Frame frame)
@@ -213,12 +209,13 @@ namespace AudioPlayerFrontend
             string pageType = frame?.CurrentSourcePageType != null ? frame.CurrentSourcePageType.ToString() : "Page==null";
             string communicator = viewModel.Communicator?.ToString() ?? "Communicator==null";
             string build = viewModel.ServiceOpenBuild?.ToString() ?? "Build==null";
+            string buildState = viewModel.ServiceOpenBuild?.State.ToString() ?? "BuildState==null";
             string comState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "CommunicatorState==null";
             string syncState = viewModel.ServiceOpenBuild?.SyncToken.IsEnded?.ToString() ?? "SyncState==null";
             string playerState = viewModel.ServiceOpenBuild?.PlayerToken.IsEnded?.ToString() ?? "PlayerState==null";
             string copState = viewModel.ServiceOpenBuild?.CompleteToken.IsEnded?.ToString() ?? "CompleteState==null";
 
-            return string.Join("\r\n", pageType, communicator, build, comState, syncState, playerState, copState);
+            return string.Join("\r\n", pageType, communicator, build, buildState, comState, syncState, playerState, copState, lastConnectStart);
         }
     }
 }

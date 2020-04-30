@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
+using StdOttStandard.Converter.MultipleInputs;
 
 namespace AudioPlayerFrontend
 {
@@ -130,13 +131,9 @@ namespace AudioPlayerFrontend
             base.OnClosing(e);
         }
 
-        private object MicException_Convert(object input0, object input1, object input2, object input3, int changedInput)
+        private object MicException_Convert(object sender, MultiplesInputsConvert4EventArgs args)
         {
-            if (input3 != null) return input3;
-            if (input2 != null) return input2;
-            if (input1 != null) return input1;
-
-            return input0;
+            return args.Input3 ?? args.Input2 ?? args.Input1 ?? args.Input0;
         }
 
         private async void BtnPrevious_Click(object sender, RoutedEventArgs e)

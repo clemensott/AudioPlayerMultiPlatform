@@ -17,6 +17,8 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using AudioPlayerBackend.Build;
 using StdOttFramework.RestoreWindow;
+using StdOttStandard.Converter.MultipleInputs;
+using AudioPlayerBackend.Communication;
 
 namespace AudioPlayerFrontend
 {
@@ -105,6 +107,8 @@ namespace AudioPlayerFrontend
 
             while (true)
             {
+                if (viewModel.Service?.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
+
                 ServiceBuild build = ServiceBuild.Build(serviceBuilder, TimeSpan.FromMilliseconds(500), AudioServiceHelper.Current);
 
                 if (ShowBuildOpenWindow(build) == false)
@@ -116,15 +120,28 @@ namespace AudioPlayerFrontend
 
                 viewModel.Service = await build.CompleteToken.ResultTask;
 
-                if (build.CompleteToken.IsEnded is BuildEndedType.Successful) break;
                 if (build.CompleteToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
+                else if (build.CompleteToken.IsEnded is BuildEndedType.Successful)
+                {
+                    if (build.Communicator != null) build.Communicator.Disconnected += Communicator_Disconnected;
+                    break;
+                }
             }
+        }
+
+        private void Communicator_Disconnected(object sender, DisconnectedEventArgs e)
+        {
+            if (e.OnDisconnect) return;
+
+            Dispatcher.Invoke(() => OpenAudioServiceAsync());
         }
 
         private async Task OpenAudioServiceAsync()
         {
             while (true)
             {
+                if (viewModel.Service?.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
+
                 ServiceBuild build = ServiceBuild.Open(viewModel.Service.Communicator, viewModel.Service.AudioService,
                     viewModel.Service.ServicePlayer, viewModel.Service.Data, TimeSpan.FromMilliseconds(500));
 
@@ -137,8 +154,12 @@ namespace AudioPlayerFrontend
 
                 await build.CompleteToken.ResultTask;
 
-                if (build.CompleteToken.IsEnded is BuildEndedType.Successful) break;
                 if (build.CompleteToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
+                else if (build.CompleteToken.IsEnded is BuildEndedType.Successful)
+                {
+                    if (build.Communicator != null) build.Communicator.Disconnected += Communicator_Disconnected;
+                    break;
+                }
             }
         }
 
@@ -148,7 +169,7 @@ namespace AudioPlayerFrontend
 
             //BuildOpenWindow window = new BuildOpenWindow(build);
             window.Build = build;
-            
+
             return window.ShowDialog();
         }
 
@@ -410,28 +431,27 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
-        private object MicCurrentSongIndex_ConvertRef(ref object rawCurrentPlaylist, ref object rawCurrentSong, ref object rawWannaSong,
-            ref object rawAllSongs, ref object rawSearchSongs, ref object rawIsSearching, ref object rawLbxIndex, int changedInput)
+        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert7EventArgs args)
         {
-            if (rawCurrentPlaylist == null || rawAllSongs == null || rawSearchSongs == null || rawIsSearching == null || rawLbxIndex == null) return null;
+            if (args.Input0 == null || args.Input3 == null || args.Input4 == null || args.Input5 == null || args.Input6 == null) return null;
 
-            Song? currentSong = (Song?)rawCurrentSong;
-            RequestSong? wannaSong = (RequestSong?)rawWannaSong;
-            IEnumerable<Song> allSongs = (IEnumerable<Song>)rawAllSongs;
-            IEnumerable<Song> searchSongs = (IEnumerable<Song>)rawSearchSongs;
-            bool isSearching = (bool)rawIsSearching;
-            int indexLbx = (int)rawLbxIndex;
+            Song? currentSong = (Song?)args.Input1;
+            RequestSong? wannaSong = (RequestSong?)args.Input2;
+            IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input3;
+            IEnumerable<Song> searchSongs = (IEnumerable<Song>)args.Input4;
+            bool isSearching = (bool)args.Input5;
+            int indexLbx = (int)args.Input6;
 
-            object songsLbx = MicCurrentSongIndex_Convert(currentSong, ref wannaSong,
-                allSongs, searchSongs, isSearching, ref indexLbx, changedInput);
+            object songsLbx = MicCurrentSongIndex_ConvertRef(currentSong, ref wannaSong,
+                allSongs, searchSongs, isSearching, ref indexLbx, args.ChangedValueIndex);
 
-            rawWannaSong = wannaSong;
-            rawLbxIndex = indexLbx;
+            args.Input2 = wannaSong;
+            args.Input6 = indexLbx;
 
             return songsLbx;
         }
 
-        private object MicCurrentSongIndex_Convert(Song? currentSong, ref RequestSong? wannaSong,
+        private object MicCurrentSongIndex_ConvertRef(Song? currentSong, ref RequestSong? wannaSong,
             IEnumerable<Song> allSongs, IEnumerable<Song> searchSongs, bool isSearching, ref int lbxIndex, int changedInput)
         {
             IEnumerable<Song> songs;
@@ -456,25 +476,25 @@ namespace AudioPlayerFrontend
             return songs;
         }
 
-        private object MicShuffle_ConvertRef(ref object input0, ref object input1, ref object input2, ref object input3, int changedInput)
+        private object MicShuffle_ConvertRef(object sender, MultiplesInputsConvert4EventArgs args)
         {
-            if (input0 == null || input1 == null || input2 == null)
+            if (args.Input0 == null || args.Input1 == null || args.Input2 == null)
             {
-                input3 = false;
+                args.Input3 = false;
                 return null;
             }
 
-            bool isSearching = (bool)input0;
-            bool isAllShuffle = (bool)input1;
-            bool isSearchShuffle = (bool)input2;
-            bool? isShuffle = (bool?)input3;
+            bool isSearching = (bool)args.Input0;
+            bool isAllShuffle = (bool)args.Input1;
+            bool isSearchShuffle = (bool)args.Input2;
+            bool? isShuffle = (bool?)args.Input3;
 
-            if (changedInput == 3 && isShuffle.HasValue)
+            if (args.ChangedValueIndex == 3 && isShuffle.HasValue)
             {
-                if (isSearching) input2 = isShuffle;
-                else input1 = isShuffle;
+                if (isSearching) args.Input2 = isShuffle;
+                else args.Input1 = isShuffle;
             }
-            else input3 = isSearching ? isSearchShuffle : isAllShuffle;
+            else args.Input3 = isSearching ? isSearchShuffle : isAllShuffle;
 
             return null;
         }

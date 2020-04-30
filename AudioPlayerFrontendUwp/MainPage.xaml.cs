@@ -11,6 +11,8 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
+using StdOttStandard.Converter.MultipleInputs;
+using System.Threading.Tasks;
 
 namespace AudioPlayerFrontend
 {
@@ -25,32 +27,26 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            if (e.Parameter is ViewModel)
-            {
-                DataContext = viewModel = e.Parameter as ViewModel;
-            }
+            DataContext = viewModel = (ViewModel)e.Parameter;
         }
 
-        private void Page_Loaded(object sender, RoutedEventArgs e)
+        private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
             ServiceBuild build = viewModel.ServiceOpenBuild;
 
-            if (build == null)
+            if (build == null) await viewModel.ConnectAsync(Frame);
+            else
             {
-                build = viewModel.Build();
-                Frame.Navigate(typeof(BuildOpenPage), build);
-                return;
-            }
+                switch (build.CompleteToken?.IsEnded)
+                {
+                    case BuildEndedType.Settings:
+                        await NavigateToSettingsPage();
+                        break;
 
-            switch (build.CompleteToken?.IsEnded)
-            {
-                case BuildEndedType.Settings:
-                    NavigateToSettingsPage();
-                    break;
-
-                case null:
-                    Frame.Navigate(typeof(BuildOpenPage), viewModel.ServiceOpenBuild);
-                    break;
+                    case null:
+                        Frame.Navigate(typeof(BuildOpenPage), viewModel.ServiceOpenBuild);
+                        break;
+                }
             }
         }
 
@@ -105,27 +101,20 @@ namespace AudioPlayerFrontend
             if (viewModel.AudioService != null)
             {
                 viewModel.Builder.WithService(viewModel.AudioService);
-
-                try
-                {
-                    if (viewModel.Communicator != null) await viewModel.Communicator.CloseAsync();
-                }
-                catch { }
             }
 
-            NavigateToSettingsPage();
+            await NavigateToSettingsPage();
         }
 
-        private void NavigateToSettingsPage()
+        private async Task NavigateToSettingsPage()
         {
-            viewModel.ServiceOpenBuild = null;
+            await viewModel.CloseAsync();
             Frame.Navigate(typeof(SettingsPage), viewModel.Builder);
         }
 
-
-        private object MicDoRemove_Convert(object input0, object input1, int changedIndex)
+        private object MicDoRemove_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
-            return !ReferenceEquals(input0, input1);
+            return !ReferenceEquals(args.Input0, args.Input1);
         }
 
         private void IbnRemove_Click(object sender, RoutedEventArgs e)
@@ -171,18 +160,17 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
-        private object MicCurrentSongIndex_ConvertRef(ref object rawAllSongs,
-            ref object rawCurrentSong, ref object rawWannaSong, ref object rawIndex, int changedInput)
+        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert4EventArgs args)
         {
-            if (rawAllSongs == null || changedInput == 2) return rawAllSongs;
+            if (args.Input0 == null || args.ChangedValueIndex == 2) return args.Input0;
 
-            IEnumerable<Song> allSongs = (IEnumerable<Song>)rawAllSongs;
-            Song? currentSong = (Song?)rawCurrentSong;
-            int index = (int)rawIndex;
+            IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input0;
+            Song? currentSong = (Song?)args.Input1;
+            int index = (int)args.Input3;
 
-            if (changedInput == 3 && index != -1) rawWannaSong = RequestSong.Get(allSongs.ElementAt(index));
-            else if (!currentSong.HasValue) rawIndex = -1;
-            else rawIndex = allSongs.IndexOf(currentSong.Value);
+            if (args.ChangedValueIndex == 3 && index != -1) args.Input2 = RequestSong.Get(allSongs.ElementAt(index));
+            else if (!currentSong.HasValue) args.Input3 = -1;
+            else args.Input3 = allSongs.IndexOf(currentSong.Value);
 
             return allSongs;
         }

@@ -9,7 +9,7 @@ namespace AudioPlayerBackend.Build
 
     public class BuildStatusToken : INotifyPropertyChanged
     {
-        protected readonly object lockObj = new object();
+        protected object lockObj;
         private BuildEndedType? ended;
 
         public event EventHandler<BuildEndedType> Ended;
@@ -27,15 +27,24 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public Task<BuildEndedType> EndTask { get; }
+        public Task<BuildEndedType> EndTask { get; private set; }
 
         public BuildStatusToken()
         {
+            Reset();
+        }
+
+        public virtual void Reset()
+        {
+            if (EndTask != null && !IsEnded.HasValue) return;
+
+            IsEnded = null;
             EndTask = GetIsEnded();
         }
 
         private async Task<BuildEndedType> GetIsEnded()
         {
+            lockObj = new object();
             await StdUtils.WaitAsync(lockObj);
 
             return IsEnded ?? BuildEndedType.Successful;
