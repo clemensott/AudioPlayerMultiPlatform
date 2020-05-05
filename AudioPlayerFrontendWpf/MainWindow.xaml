@@ -118,7 +118,7 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <Grid Grid.Row="2" SizeChanged="GidMainBottom_SizeChanged">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition x:Name="cdnSlider" Width="*"/>
@@ -142,7 +142,7 @@
                 <Slider Grid.Column="1" Minimum="0" VerticalAlignment="Center" IsMoveToPointEnabled="True"
                         Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"
                         Value="{Binding Position,Mode=OneWay,Converter={StaticResource timeSecCon}}"
-                        ValueChanged="SldPosition_ValueChanged"/>
+                        ValueChanged="SldPosition_ValueChanged" SizeChanged="SldPosition_SizeChanged"/>
                 <TextBlock Grid.Column="2" Margin="5,0" VerticalAlignment="Center"
                            Text="{Binding Duration,Converter={StaticResource timeTextCon}}"/>
             </Grid>
@@ -163,7 +163,8 @@
 
                 <StackPanel Grid.Column="3" DataContext="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
                             MouseLeftButtonDown="StpCurrentSong_MouseLeftButtonDown"
-                            MouseRightButtonUp="StackPanel_MouseRightButtonUp">
+                            MouseRightButtonUp="StackPanel_MouseRightButtonUp"
+                            SizeChanged="StpCurrentSong_SizeChanged">
                     <TextBlock Text="{Binding Title}" TextWrapping="Wrap" Margin="10,0,0,0"/>
                     <TextBlock Text="{Binding Artist}" TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0"/>
                 </StackPanel>

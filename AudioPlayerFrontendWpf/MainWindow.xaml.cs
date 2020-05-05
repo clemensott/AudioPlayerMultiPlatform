@@ -532,7 +532,17 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private void GidMainBottom_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void SldPosition_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateSldPositionPosition();
+        }
+
+        private void StpCurrentSong_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateSldPositionPosition();
+        }
+
+        private void UpdateSldPositionPosition()
         {
             if (cdnSlider.ActualWidth > minSliderWidth)
             {
