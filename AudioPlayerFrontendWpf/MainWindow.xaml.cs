@@ -531,31 +531,5 @@ namespace AudioPlayerFrontend
                 currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong, position);
             }
         }
-
-        private void SldPosition_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            UpdateSldPositionPosition();
-        }
-
-        private void StpCurrentSong_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            UpdateSldPositionPosition();
-        }
-
-        private void UpdateSldPositionPosition()
-        {
-            if (cdnSlider.ActualWidth > minSliderWidth)
-            {
-                gidSlider.SetValue(Grid.RowProperty, 1);
-                gidSlider.SetValue(Grid.ColumnProperty, 1);
-                gidSlider.SetValue(Grid.ColumnSpanProperty, 1);
-            }
-            else
-            {
-                gidSlider.SetValue(Grid.RowProperty, 0);
-                gidSlider.SetValue(Grid.ColumnProperty, 0);
-                gidSlider.SetValue(Grid.ColumnSpanProperty, 2);
-            }
-        }
     }
 }

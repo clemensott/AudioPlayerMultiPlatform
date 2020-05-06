@@ -21,8 +21,6 @@
         <local:IsAudioStreamPlayerConverter x:Key="isClientCon"/>
 
         <sys:Int32 x:Key="negativeOne">-1</sys:Int32>
-
-
     </Window.Resources>
 
     <Grid Margin="5">
@@ -54,18 +52,6 @@
                 <Slider Maximum="1" Value="{Binding ServicePlayerUI.Player.Volume}" Width="100" VerticalAlignment="Center"/>
             </StackPanel>
 
-            <Button Margin="5,3" Content="Reload" Width="100" Click="Reload_Click"/>
-            <Button Margin="5,3" Content="Settings" Width="100" Click="BtnSettings_Click"/>
-
-            <ComboBox Margin="5,3" Width="130" 
-                      SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Loop,Mode=TwoWay}">
-                <audio:LoopType>Next</audio:LoopType>
-                <audio:LoopType>Stop</audio:LoopType>
-                <audio:LoopType>CurrentPlaylist</audio:LoopType>
-                <audio:LoopType>CurrentSong</audio:LoopType>
-                <audio:LoopType>StopCurrentSong</audio:LoopType>
-            </ComboBox>
-
             <con:MultipleInputs4Converter x:Name="micShuffle"
                                           Input0="{Binding AudioServiceUI.SourcePlaylist.IsSearching}"
                                           Input1="{Binding AudioServiceUI.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}"
@@ -78,6 +64,18 @@
 
             <CheckBox Margin="5,3" Content="EnableUI" VerticalAlignment="Center" 
                       HorizontalAlignment="Right" IsChecked="{Binding IsUiEnabled,Mode=TwoWay}"/>
+
+            <ComboBox Margin="5,3" Width="130" 
+                      SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Loop,Mode=TwoWay}">
+                <audio:LoopType>Next</audio:LoopType>
+                <audio:LoopType>Stop</audio:LoopType>
+                <audio:LoopType>CurrentPlaylist</audio:LoopType>
+                <audio:LoopType>CurrentSong</audio:LoopType>
+                <audio:LoopType>StopCurrentSong</audio:LoopType>
+            </ComboBox>
+
+            <Button Margin="5,3" Content="Reload" Width="100" Click="Reload_Click"/>
+            <Button Margin="5,3" Content="Settings" Width="100" Click="BtnSettings_Click"/>
         </WrapPanel>
 
         <con:MultipleInputs7Converter x:Name="micSongs" 
@@ -91,9 +89,15 @@
                                       ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
         <ListBox Grid.Row="1" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ItemsSource="{Binding ElementName=micSongs,Path=Output}"
                  SelectedIndex="{Binding ElementName=micSongs,Path=Input6,Mode=TwoWay}"
                  SelectionChanged="LbxSongs_SelectionChanged">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Grid Margin="3">
@@ -109,27 +113,23 @@
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.RowSpan="2" TextAlignment="Center" VerticalAlignment="Center"
-                                   Text="{Binding Index}" Margin="5,0"/>
+                                   Margin="5,0" Text="{Binding Index}"/>
 
-                        <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding Title}"/>
-                        <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
+                        <TextBlock Grid.Column="2" Grid.Row="0" TextWrapping="Wrap" Text="{Binding Title}"/>
+                        <TextBlock Grid.Column="2" Grid.Row="1" FontStyle="Italic"
+                                   TextWrapping="Wrap" Text="{Binding Artist}"/>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
 
         <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition x:Name="cdnSlider" Width="*"/>
-            </Grid.ColumnDefinitions>
-
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid Grid.ColumnSpan="2" Name="gidSlider" Margin="0,0,0,5"
+            <Grid Grid.ColumnSpan="2" Margin="0,0,0,5"
                   DataContext="{Binding AudioServiceUI.CurrentPlaylist}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -141,8 +141,7 @@
                            Text="{Binding Position,Converter={StaticResource timeTextCon}}"/>
                 <Slider Grid.Column="1" Minimum="0" VerticalAlignment="Center" IsMoveToPointEnabled="True"
                         Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"
-                        Value="{Binding Position,Mode=OneWay,Converter={StaticResource timeSecCon}}"
-                        ValueChanged="SldPosition_ValueChanged" SizeChanged="SldPosition_SizeChanged"/>
+                        Value="{Binding Position,Mode=OneWay,Converter={StaticResource timeSecCon}}"/>
                 <TextBlock Grid.Column="2" Margin="5,0" VerticalAlignment="Center"
                            Text="{Binding Duration,Converter={StaticResource timeTextCon}}"/>
             </Grid>
@@ -152,7 +151,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Column="0" Content="Previous" Width="75" Click="OnPrevious"/>
@@ -163,8 +162,7 @@
 
                 <StackPanel Grid.Column="3" DataContext="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
                             MouseLeftButtonDown="StpCurrentSong_MouseLeftButtonDown"
-                            MouseRightButtonUp="StackPanel_MouseRightButtonUp"
-                            SizeChanged="StpCurrentSong_SizeChanged">
+                            MouseRightButtonUp="StackPanel_MouseRightButtonUp">
                     <TextBlock Text="{Binding Title}" TextWrapping="Wrap" Margin="10,0,0,0"/>
                     <TextBlock Text="{Binding Artist}" TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0"/>
                 </StackPanel>
