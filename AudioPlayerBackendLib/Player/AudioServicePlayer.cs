@@ -9,11 +9,10 @@ namespace AudioPlayerBackend.Player
     public class AudioServicePlayer : IServicePlayer
     {
         private const int updateInterval = 100;
-        private static readonly Random ran = new Random();
 
         private bool isSetCurrentSong;
         private RequestSong? currentWannaSong, nextWannaSong;
-        private SemaphoreSlim setWannaSongSem;
+        private readonly SemaphoreSlim setWannaSongSem;
         private readonly IAudioServicePlayerHelper helper;
         private readonly Timer timer;
         private ReadEventWaveProvider waveProvider;
@@ -198,6 +197,7 @@ namespace AudioPlayerBackend.Player
                     }
 
                     Service.CurrentPlaylist.CurrentSong = currentWannaSong.Value.Song;
+                    Service.CurrentPlaylist.Duration = Reader.TotalTime;
                     return;
                 }
 
