@@ -4,12 +4,12 @@ using System.Threading;
 
 namespace AudioPlayerBackend.Communication.MQTT
 {
-    class PublishQueue
+    class MqttPublishQueue
     {
         private readonly Queue<string> queue;
         private readonly Dictionary<string, MqttApplicationMessage> dict;
 
-        public PublishQueue()
+        public MqttPublishQueue()
         {
             queue = new Queue<string>();
             dict = new Dictionary<string, MqttApplicationMessage>();

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Communication.MQTT
 {
-    public class MqttServerCommunicator : MqttCommunicator, IMqttServerApplicationMessageInterceptor
+    public class MqttServerCommunicator : MqttCommunicator, IServerCommunicator, IMqttServerApplicationMessageInterceptor
     {
         private bool isOpen;
         private readonly IMqttServer server;
@@ -19,7 +19,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         public override bool IsOpen => isOpen;
 
-        public override string Name => "Server: " + Port;
+        public override string Name => "MQTT Server: " + Port;
 
         public MqttServerCommunicator(int port, INotifyPropertyChangedHelper helper = null) : base(helper)
         {
@@ -178,7 +178,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             }
         }
 
-        public async override void Dispose()
+        public override async void Dispose()
         {
             if (IsOpen) await CloseAsync();
         }

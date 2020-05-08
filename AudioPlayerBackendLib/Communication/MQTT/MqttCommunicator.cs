@@ -1,52 +1,23 @@
 ﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 using MQTTnet;
 using MQTTnet.Protocol;
 using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using AudioPlayerBackend.Communication.Base;
 
 namespace AudioPlayerBackend.Communication.MQTT
 {
-    public abstract class MqttCommunicator : ICommunicator, INotifyPropertyChanged
+    public abstract class MqttCommunicator : BaseCommunicator
     {
-        protected const string cmdString = "Command";
-
-        private bool isSyncing;
-        protected readonly INotifyPropertyChangedHelper helper;
-        protected readonly Dictionary<string, byte[]> receivingDict = new Dictionary<string, byte[]>();
-        protected readonly Dictionary<Guid, IPlaylistBase> playlists = new Dictionary<Guid, IPlaylistBase>();
         private readonly Dictionary<Guid, InitList<string>> initPlaylistLists = new Dictionary<Guid, InitList<string>>();
 
-        public abstract event EventHandler<DisconnectedEventArgs> Disconnected;
-
-        public abstract bool IsOpen { get; }
-
-        public bool IsSyncing
+        protected MqttCommunicator(INotifyPropertyChangedHelper helper = null) : base(helper)
         {
-            get => isSyncing;
-            protected set
-            {
-                if (value == isSyncing) return;
-
-                isSyncing = value;
-                OnPropertyChanged(nameof(IsSyncing));
-            }
-        }
-
-        public IAudioServiceBase Service { get; protected set; }
-
-        public abstract string Name { get; }
-
-        protected MqttCommunicator(INotifyPropertyChangedHelper helper = null)
-        {
-            this.helper = helper;
         }
 
         protected async void InitPlaylists()
@@ -59,101 +30,9 @@ namespace AudioPlayerBackend.Communication.MQTT
             }
         }
 
-        public abstract Task SetService(IAudioServiceBase service, BuildStatusToken statusToken);
-
-        public abstract Task SyncService(BuildStatusToken statusToken);
-
-        protected void Subscribe(IAudioServiceBase service)
-        {
-            if (service == null) return;
-
-            service.AudioDataChanged += Service_AudioDataChanged;
-            service.AudioFormatChanged += Service_AudioFormatChanged;
-            service.CurrentPlaylistChanged += Service_CurrentPlaylistChanged;
-            service.PlaylistsChanged += Service_PlaylistsChanged;
-            service.PlayStateChanged += Service_PlayStateChanged;
-            service.VolumeChanged += Service_VolumeChanged;
-
-            Subscribe(service.SourcePlaylist);
-            Subscribe(service.Playlists);
-        }
-
-        protected void Unsubscribe(IAudioServiceBase service)
-        {
-            if (service == null) return;
-
-            service.AudioDataChanged -= Service_AudioDataChanged;
-            service.AudioFormatChanged -= Service_AudioFormatChanged;
-            service.CurrentPlaylistChanged -= Service_CurrentPlaylistChanged;
-            service.PlaylistsChanged -= Service_PlaylistsChanged;
-            service.PlayStateChanged -= Service_PlayStateChanged;
-            service.VolumeChanged -= Service_VolumeChanged;
-
-            Unsubscribe(service.SourcePlaylist);
-            Unsubscribe(service.Playlists);
-        }
-
-        private void Subscribe(ISourcePlaylistBase playlist)
-        {
-            if (playlist == null) return;
-
-            Subscribe((IPlaylistBase)playlist);
-
-            playlist.FileMediaSourcesChanged += Playlist_FileMediaSourcesChanged;
-            playlist.IsSearchShuffleChanged += Playlist_IsSearchShuffleChanged;
-            playlist.SearchKeyChanged += Playlist_SearchKeyChanged;
-        }
-
-        private void Unsubscribe(ISourcePlaylistBase playlist)
-        {
-            if (playlist == null) return;
-
-            Unsubscribe((IPlaylistBase)playlist);
-
-            playlist.FileMediaSourcesChanged -= Playlist_FileMediaSourcesChanged;
-            playlist.IsSearchShuffleChanged -= Playlist_IsSearchShuffleChanged;
-            playlist.SearchKeyChanged -= Playlist_SearchKeyChanged;
-        }
-
-        private void Subscribe(IEnumerable<IPlaylistBase> playlists)
-        {
-            foreach (IPlaylistBase playlist in playlists ?? Enumerable.Empty<IPlaylistBase>()) Subscribe(playlist);
-        }
-
-        private void Unsubscribe(IEnumerable<IPlaylistBase> playlists)
-        {
-            foreach (IPlaylistBase playlist in playlists ?? Enumerable.Empty<IPlaylistBase>()) Unsubscribe(playlist);
-        }
-
-        private void Subscribe(IPlaylistBase playlist)
-        {
-            if (playlist == null) return;
-
-            playlist.CurrentSongChanged += Playlist_CurrentSongChanged;
-            playlist.DurationChanged += Playlist_DurationChanged;
-            playlist.IsAllShuffleChanged += Playlist_IsAllShuffleChanged;
-            playlist.LoopChanged += Playlist_LoopChanged;
-            playlist.PositionChanged += Playlist_PositionChanged;
-            playlist.WannaSongChanged += Playlist_WannaSongChanged;
-            playlist.SongsChanged += Playlist_SongsChanged;
-        }
-
-        private void Unsubscribe(IPlaylistBase playlist)
-        {
-            if (playlist == null) return;
-
-            playlist.CurrentSongChanged -= Playlist_CurrentSongChanged;
-            playlist.DurationChanged -= Playlist_DurationChanged;
-            playlist.IsAllShuffleChanged -= Playlist_IsAllShuffleChanged;
-            playlist.LoopChanged -= Playlist_LoopChanged;
-            playlist.PositionChanged -= Playlist_PositionChanged;
-            playlist.WannaSongChanged -= Playlist_WannaSongChanged;
-            playlist.SongsChanged -= Playlist_SongsChanged;
-        }
-
         protected abstract Task SubscribeAsync(IPlaylistBase playlist);
 
-        private async void Service_AudioDataChanged(object sender, ValueChangedEventArgs<byte[]> e)
+        protected override async void OnServiceAudioDataChanged(object sender, ValueChangedEventArgs<byte[]> e)
         {
             await PublishAudioData();
         }
@@ -163,7 +42,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(nameof(Service.AudioData), Service.AudioData, MqttQualityOfServiceLevel.AtMostOnce);
         }
 
-        private async void Service_AudioFormatChanged(object sender, ValueChangedEventArgs<WaveFormat> e)
+        protected override async void OnServiceAudioFormatChanged(object sender, ValueChangedEventArgs<WaveFormat> e)
         {
             await PublishFormat();
         }
@@ -176,7 +55,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(nameof(Service.AudioFormat), data);
         }
 
-        private async void Service_CurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
+        protected override async void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
         {
             await PublishCurrentPlaylist();
         }
@@ -189,7 +68,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await Task.WhenAll(PublishAsync(nameof(Service.CurrentPlaylist), data), AddPlaylist(Service.CurrentPlaylist));
         }
 
-        private async void Service_PlaylistsChanged(object sender, ValueChangedEventArgs<IPlaylistBase[]> e)
+        protected override async void OnServicePlaylistsChanged(object sender, ValueChangedEventArgs<IPlaylistBase[]> e)
         {
             foreach (IPlaylistBase playlist in e.NewValue.Except(e.OldValue))
             {
@@ -224,7 +103,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                 PublishDuration(playlist), PublishWannaSong(playlist), PublishSongs(playlist), PublishCurrentSong(playlist));
         }
 
-        private async void Service_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
+        protected override async void OnServicePlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
         {
             await PublishPlayState();
         }
@@ -237,7 +116,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(nameof(Service.PlayState), data);
         }
 
-        private async void Service_VolumeChanged(object sender, ValueChangedEventArgs<float> e)
+        protected override async void OnServiceVolumeChanged(object sender, ValueChangedEventArgs<float> e)
         {
             await PublishVolume();
         }
@@ -254,7 +133,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             catch { }
         }
 
-        private async void Playlist_FileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
+        protected override async void OnPlaylistFileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
         {
             await PublishMediaSources((ISourcePlaylistBase)sender);
         }
@@ -267,7 +146,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(source, nameof(source.FileMediaSources), data);
         }
 
-        private async void Playlist_IsSearchShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
+        protected override async void OnPlaylistIsSearchShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
         {
             await PublishIsSearchShuffle((ISourcePlaylistBase)sender);
         }
@@ -281,7 +160,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(playlist, nameof(playlist.IsSearchShuffle), data);
         }
 
-        private async void Playlist_SearchKeyChanged(object sender, ValueChangedEventArgs<string> e)
+        protected override async void OnPlaylistSearchKeyChanged(object sender, ValueChangedEventArgs<string> e)
         {
             await PublishSearchKey((ISourcePlaylistBase)sender);
         }
@@ -295,7 +174,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(playlist, nameof(playlist.SearchKey), data);
         }
 
-        private async void Playlist_CurrentSongChanged(object sender, ValueChangedEventArgs<Song?> e)
+        protected override async void OnPlaylistCurrentSongChanged(object sender, ValueChangedEventArgs<Song?> e)
         {
             await PublishCurrentSong((IPlaylistBase)sender);
         }
@@ -303,13 +182,12 @@ namespace AudioPlayerBackend.Communication.MQTT
         protected async Task PublishCurrentSong(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
-            if (playlist.CurrentSong.HasValue) data.Enqueue(playlist.CurrentSong.Value);
-            else data.Enqueue(false);
+            data.Enqueue(playlist.CurrentSong);
 
             await PublishAsync(playlist, nameof(playlist.CurrentSong), data);
         }
 
-        private async void Playlist_DurationChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
+        protected override async void OnPlaylistDurationChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
         {
             await PublishDuration((IPlaylistBase)sender);
         }
@@ -322,7 +200,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(playlist, nameof(playlist.Duration), data);
         }
 
-        private async void Playlist_IsAllShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
+        protected override async void OnPlaylistIsAllShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
         {
             await PublishIsAllShuffle((IPlaylistBase)sender);
         }
@@ -335,7 +213,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(playlist, nameof(playlist.IsAllShuffle), data);
         }
 
-        private async void Playlist_LoopChanged(object sender, ValueChangedEventArgs<LoopType> e)
+        protected override async void OnPlaylistLoopChanged(object sender, ValueChangedEventArgs<LoopType> e)
         {
             await PublishLoop((IPlaylistBase)sender);
         }
@@ -348,7 +226,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(playlist, nameof(playlist.Loop), data);
         }
 
-        private async void Playlist_PositionChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
+        protected override async void OnPlaylistPositionChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
         {
             await PublishPosition((IPlaylistBase)sender);
         }
@@ -361,7 +239,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(playlist, nameof(playlist.Position), data);
         }
 
-        private async void Playlist_WannaSongChanged(object sender, ValueChangedEventArgs<RequestSong?> e)
+        protected override async void OnPlaylistWannaSongChanged(object sender, ValueChangedEventArgs<RequestSong?> e)
         {
             await PublishWannaSong((IPlaylistBase)sender);
         }
@@ -369,12 +247,12 @@ namespace AudioPlayerBackend.Communication.MQTT
         private async Task PublishWannaSong(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
-            if (playlist.WannaSong.HasValue) data.Enqueue(playlist.WannaSong.Value);
+            data.Enqueue(playlist.WannaSong);
 
             await PublishAsync(playlist, nameof(playlist.WannaSong), data, MqttQualityOfServiceLevel.AtMostOnce, false);
         }
 
-        private async void Playlist_SongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
+        protected override async void OnPlaylistSongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
         {
             await PublishSongs((IPlaylistBase)sender);
         }
@@ -387,11 +265,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishAsync(playlist, nameof(playlist.Songs), data);
         }
 
-        public abstract Task CloseAsync();
-
-        public abstract Task OpenAsync(BuildStatusToken statusToken);
-
-        public async Task SendCommand(string cmd)
+        public override async Task SendCommand(string cmd)
         {
             byte[] payload = Encoding.UTF8.GetBytes(cmd);
 
@@ -454,7 +328,7 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             string topic;
             Guid id;
-            
+
             if (ContainsPlaylist(rawTopic, out topic, out id))
             {
                 bool handled = await HandlePlaylistMessage(id, topic, payload);
@@ -560,7 +434,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             switch (topic)
             {
                 case nameof(playlist.CurrentSong):
-                    playlist.CurrentSong = data.Count() > 1 ? (Song?)data.DequeueSong() : null;
+                    playlist.CurrentSong = data.DequeueNullableSong();
                     break;
 
                 case nameof(playlist.Duration):
@@ -580,7 +454,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                     break;
 
                 case nameof(playlist.WannaSong):
-                    playlist.WannaSong = data.Any() ? (RequestSong?)data.DequeueSongWithPosition() : null;
+                    playlist.WannaSong = data.DequeueNullableRequestSong();
                     return false;
 
                 case nameof(playlist.Songs):
@@ -606,7 +480,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             return true;
         }
 
-        public bool ContainsPlaylist(string rawTopic, out string topic, out Guid id)
+        private static bool ContainsPlaylist(string rawTopic, out string topic, out Guid id)
         {
             if (!rawTopic.Contains('.'))
             {
@@ -680,6 +554,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             yield return id + nameof(playlist.IsAllShuffle);
             yield return id + nameof(playlist.Loop);
             yield return id + nameof(playlist.Position);
+            yield return id + nameof(playlist.WannaSong);
         }
 
         private async Task AddPlaylist(IPlaylistBase playlist)
@@ -695,103 +570,6 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             await SubscribeAsync(playlist);
             if (publish) await PublishPlaylist(playlist);
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged(string name)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-        }
-
-        public abstract void Dispose();
-
-        public void LockTopic(string topic, byte[] payload)
-        {
-            LockTopic(receivingDict, topic, payload);
-        }
-
-        public static void LockTopic(Dictionary<string, byte[]> dict, string topic, byte[] payload)
-        {
-            byte[] payloadLock;
-
-            while (true)
-            {
-                lock (dict)
-                {
-                    if (!dict.TryGetValue(topic, out payloadLock))
-                    {
-                        dict.Add(topic, payload);
-                        return;
-                    }
-                }
-
-                lock (payloadLock) Monitor.Wait(payloadLock);
-            }
-        }
-
-        public bool IsTopicLocked(string topic, byte[] payload)
-        {
-            return IsTopicLocked(receivingDict, topic, payload);
-        }
-
-        public static bool IsTopicLocked(Dictionary<string, byte[]> dict, string topic, byte[] payload)
-        {
-            byte[] payloadLock;
-
-            if (!dict.TryGetValue(topic, out payloadLock)) return false;
-
-            return payload.BothNullOrSequenceEqual(payloadLock);
-        }
-
-        public bool UnlockTopic(string topic, bool pulseAll = false)
-        {
-            return UnlockTopic(receivingDict, topic, pulseAll);
-        }
-
-        public static bool UnlockTopic(Dictionary<string, byte[]> dict, string topic, bool pulseAll = false)
-        {
-            byte[] payloadLock;
-
-            lock (dict)
-            {
-                if (!dict.TryGetValue(topic, out payloadLock)) return false;
-
-                dict.Remove(topic);
-            }
-
-            lock (payloadLock)
-            {
-                if (pulseAll) Monitor.PulseAll(payloadLock);
-                else Monitor.Pulse(payloadLock);
-            }
-
-            return true;
-        }
-
-        public bool UnlockTopic(string topic, byte[] payload, bool pulseAll = false)
-        {
-            return UnlockTopic(receivingDict, topic, payload, pulseAll);
-        }
-
-        public static bool UnlockTopic(Dictionary<string, byte[]> dict, string topic, byte[] payload, bool pulseAll = false)
-        {
-            byte[] payloadLock;
-
-            lock (dict)
-            {
-                if (!dict.TryGetValue(topic, out payloadLock) || payloadLock.BothNullOrSequenceEqual(payload)) return false;
-
-                dict.Remove(topic);
-            }
-
-            lock (payloadLock)
-            {
-                if (pulseAll) Monitor.PulseAll(payloadLock);
-                else Monitor.Pulse(payloadLock);
-            }
-
-            return true;
         }
     }
 }

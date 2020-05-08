@@ -160,7 +160,11 @@ namespace AudioPlayerBackend.Build
                         await await Task.WhenAny(Communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
                     }
 
-                    if (CommunicatorToken.IsEnded.HasValue) return;
+                    if (CommunicatorToken.IsEnded.HasValue)
+                    {
+                        if (Communicator != null) await Communicator.CloseAsync();
+                        return;
+                    }
 
                     CommunicatorToken.End(BuildEndedType.Successful, Communicator);
                 }
@@ -187,7 +191,11 @@ namespace AudioPlayerBackend.Build
                         await await Task.WhenAny(Communicator.SetService(service, SyncToken), SyncToken.EndTask);
                     }
 
-                    if (SyncToken.IsEnded.HasValue) return;
+                    if (SyncToken.IsEnded.HasValue)
+                    {
+                        if (Communicator != null) await Communicator.CloseAsync();
+                        return;
+                    }
 
                     SyncToken.End(BuildEndedType.Successful, service);
                 }
@@ -217,7 +225,11 @@ namespace AudioPlayerBackend.Build
                     State = BuildState.CreatePlayer;
                     servicePlayer = serviceBuilder.CreateServicePlayer(service);
 
-                    if (PlayerToken.IsEnded.HasValue) return;
+                    if (PlayerToken.IsEnded.HasValue)
+                    {
+                        if (Communicator != null) await Communicator.CloseAsync();
+                        return;
+                    }
 
                     PlayerToken.End(BuildEndedType.Successful, servicePlayer);
                 }
@@ -236,7 +248,11 @@ namespace AudioPlayerBackend.Build
                     State = BuildState.CompleteSerivce;
                     ReadWriteAudioServiceData data = serviceBuilder.CompleteService(service);
 
-                    if (CompleteToken.IsEnded.HasValue) return;
+                    if (CompleteToken.IsEnded.HasValue)
+                    {
+                        if (Communicator != null) await Communicator.CloseAsync();
+                        return;
+                    }
 
                     ServiceBuildResult result = new ServiceBuildResult(service, Communicator, servicePlayer, data);
                     CompleteToken.End(BuildEndedType.Successful, result);
@@ -283,7 +299,11 @@ namespace AudioPlayerBackend.Build
                         await await Task.WhenAny(Communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
                     }
 
-                    if (CommunicatorToken.IsEnded.HasValue) return;
+                    if (CommunicatorToken.IsEnded.HasValue)
+                    {
+                        if (Communicator != null) await Communicator.CloseAsync();
+                        return;
+                    }
 
                     CommunicatorToken.End(BuildEndedType.Successful, Communicator);
                 }
@@ -309,7 +329,11 @@ namespace AudioPlayerBackend.Build
                         await await Task.WhenAny(Communicator.SyncService(SyncToken), SyncToken.EndTask);
                     }
 
-                    if (SyncToken.IsEnded.HasValue) return;
+                    if (SyncToken.IsEnded.HasValue)
+                    {
+                        if (Communicator != null) await Communicator.CloseAsync();
+                        return;
+                    }
 
                     SyncToken.End(BuildEndedType.Successful, service);
                 }

@@ -15,13 +15,13 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Communication.MQTT
 {
-    public class MqttClientCommunicator : MqttCommunicator
+    public class MqttClientCommunicator : MqttCommunicator, IClientCommunicator
     {
         private static readonly TimeSpan timeout = TimeSpan.FromSeconds(2);
 
-        private bool isDisconnecting, raiseDisconnected, isStreaming, isReceiveProcessorRunning;
+        private bool isDisconnecting, isStreaming, isReceiveProcessorRunning;
         private InitList<string> initProps;
-        private readonly PublishQueue publishQueue = new PublishQueue();
+        private readonly MqttPublishQueue publishQueue = new MqttPublishQueue();
         private readonly AsyncQueue<MqttApplicationMessage> receiveMessages = new AsyncQueue<MqttApplicationMessage>();
         private MqttApplicationMessage currentPublish;
 
@@ -71,7 +71,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             }
         }
 
-        public override string Name => string.Format("{0}:{1}", ServerAddress.Trim(), Port?.ToString() ?? "Default");
+        public override string Name => $"MQTT: {ServerAddress.Trim()}:{Port?.ToString() ?? "Default"}";
 
         public MqttClientCommunicator(string server, int? port = null,
             INotifyPropertyChangedHelper helper = null) : base(helper)
@@ -94,7 +94,6 @@ namespace AudioPlayerBackend.Communication.MQTT
                     .Build();
 
                 if (statusToken?.IsEnded.HasValue == true) return;
-                raiseDisconnected = false;
                 await MqttClient.ConnectAsync(options);
                 if (statusToken?.IsEnded.HasValue == true) return;
 
@@ -398,9 +397,6 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         private void RaiseDisconnected(Exception exception)
         {
-            //if (raiseDisconnected) return;
-            raiseDisconnected = true;
-
             Disconnected?.Invoke(this, new DisconnectedEventArgs(isDisconnecting, exception));
         }
 

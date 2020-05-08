@@ -109,7 +109,7 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        public SourcePlaylist(IAudioServiceHelper helper = null) : base(Guid.Empty)
+        public SourcePlaylist(IAudioServiceHelper helper = null) : base(Guid.Empty, helper)
         {
             this.helper = helper;
         }

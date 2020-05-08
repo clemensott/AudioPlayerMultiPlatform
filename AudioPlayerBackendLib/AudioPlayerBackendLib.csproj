@@ -14,4 +14,10 @@
     <ProjectReference Include="..\..\StdOttLib\StdOttStandardLib\StdOttStandardLib.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="System.Net.NameResolution">
+      <HintPath>C:\Program Files (x86)\Microsoft SDKs\UWPNuGetPackages\system.net.nameresolution\4.0.0\ref\netstandard1.3\System.Net.NameResolution.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

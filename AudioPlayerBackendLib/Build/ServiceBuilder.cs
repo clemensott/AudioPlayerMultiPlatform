@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using System;
+using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.MQTT;
 using AudioPlayerBackend.Player;
@@ -6,6 +7,7 @@ using StdOttStandard.CommandlineParser;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using AudioPlayerBackend.Communication.OwnTcp;
 using AudioPlayerBackend.Data;
 using StdOttStandard.Linq;
 
@@ -21,6 +23,7 @@ namespace AudioPlayerBackend.Build
         private string searchKey, serverAddress, dataReadFile, dataWriteFile;
         private float? volume;
         private string[] mediaSources;
+        private CommunicatorType communicatorType;
         private IWaveProviderPlayer player;
 
         public bool BuildStandalone { get; private set; }
@@ -28,6 +31,18 @@ namespace AudioPlayerBackend.Build
         public bool BuildServer { get; private set; }
 
         public bool BuildClient { get; private set; }
+
+        public CommunicatorType CommunicatorType
+        {
+            get => communicatorType;
+            set
+            {
+                if (value == communicatorType) return;
+
+                communicatorType = value;
+                OnPropertyChanged(nameof(CommunicatorType));
+            }
+        }
 
         public bool IfNon
         {
@@ -230,8 +245,8 @@ namespace AudioPlayerBackend.Build
 
         public ServiceBuilder WithArgs(IEnumerable<string> args)
         {
-            Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 2, 1);
-            Option serverOpt = new Option("s", "server", "Starts the app as server with the following port", false, 1, 1);
+            Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 3, 2);
+            Option serverOpt = new Option("s", "server", "Starts the app as server with the following port", false, 2, 2);
             Option sourcesOpt = new Option("m", "media-sources", "Files and directories to play", false, -1, 0);
             Option ifNonOpt = new Option("i", "if-non", "If given the Media sources are only used if there are non", false, 0, 0);
             Option reloadOpt = new Option("r", "reload", "Forces to reload", false, 0, 0);
@@ -249,19 +264,22 @@ namespace AudioPlayerBackend.Build
                 allShuffleOpt, searchShuffleOpt, onlySearchOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileReadOpt, dataFileWriteOpt);
             OptionParseResult result = options.Parse(args);
 
-            int port;
-            float volume;
             OptionParsed parsed;
 
-            if (result.TryGetFirstValidOptionParseds(serverOpt, out parsed) &&
-                int.TryParse(parsed.Values[0], out port)) WithServer(port);
+            if (result.TryGetFirstValidOptionParseds(serverOpt, out parsed))
+            {
+                WithCommunicatorType((CommunicatorType)Enum
+                        .Parse(typeof(CommunicatorType), parsed.Values[0], true))
+                    .WithServer(int.Parse(parsed.Values[1]));
+            }
 
             if (result.TryGetFirstValidOptionParseds(clientOpt, out parsed))
             {
-                string serverAddress = parsed.Values[0];
+                WithCommunicatorType((CommunicatorType)Enum
+                    .Parse(typeof(CommunicatorType), parsed.Values[0], true));
 
-                if (parsed.Values.Count > 1 && int.TryParse(parsed.Values[1], out port)) WithClient(serverAddress, port);
-                else WithClient(serverAddress);
+                if (parsed.Values.Count > 2) WithClient(parsed.Values[1], int.Parse(parsed.Values[2]));
+                else WithClient(parsed.Values[1]);
             }
 
             if (result.HasValidOptionParseds(sourcesOpt))
@@ -277,8 +295,7 @@ namespace AudioPlayerBackend.Build
             if (result.HasValidOptionParseds(reloadOpt)) WithReload();
             if (result.HasValidOptionParseds(playOpt)) WithPlay();
 
-            if (result.TryGetFirstValidOptionParseds(serviceVolOpt, out parsed) &&
-                float.TryParse(parsed.Values[0], out volume)) WithVolume(volume);
+            if (result.TryGetFirstValidOptionParseds(serviceVolOpt, out parsed)) WithVolume(float.Parse(parsed.Values[0]));
 
             if (result.HasValidOptionParseds(streamingOpt)) WithIsStreaming();
 
@@ -318,6 +335,24 @@ namespace AudioPlayerBackend.Build
             return WithServerPort(port);
         }
 
+        public ServiceBuilder WithCommunicatorType(CommunicatorType communicatorType)
+        {
+            CommunicatorType = communicatorType;
+            return this;
+        }
+
+        public ServiceBuilder WithMqtt()
+        {
+            CommunicatorType = CommunicatorType.MQTT;
+            return this;
+        }
+
+        public ServiceBuilder WithOwnTcp()
+        {
+            CommunicatorType = CommunicatorType.OwnTCP;
+            return this;
+        }
+
         public ServiceBuilder WithServerPort(int port)
         {
             ServerPort = port;
@@ -336,15 +371,15 @@ namespace AudioPlayerBackend.Build
 
         public void WithCommunicator(ICommunicator communicator)
         {
-            if (communicator is MqttClientCommunicator)
+            if (communicator is IClientCommunicator)
             {
-                MqttClientCommunicator clientCommunicator = (MqttClientCommunicator)communicator;
+                IClientCommunicator clientCommunicator = (IClientCommunicator)communicator;
                 ServerAddress = clientCommunicator.ServerAddress;
                 ClientPort = clientCommunicator.Port;
             }
-            else if (communicator is MqttServerCommunicator)
+            else if (communicator is IServerCommunicator)
             {
-                MqttServerCommunicator serverCommunicator = (MqttServerCommunicator)communicator;
+                IServerCommunicator serverCommunicator = (IServerCommunicator)communicator;
                 ServerPort = serverCommunicator.Port;
             }
         }
@@ -442,8 +477,21 @@ namespace AudioPlayerBackend.Build
 
         public ICommunicator CreateCommunicator()
         {
-            if (BuildServer) return CreateMqttServerCommunicator(ServerPort);
-            if (BuildClient) return CreateMqttClientCommunicator(ServerAddress, ClientPort);
+            switch (CommunicatorType)
+            {
+                case CommunicatorType.MQTT:
+                    if (BuildServer) return CreateMqttServerCommunicator(ServerPort);
+                    if (BuildClient) return CreateMqttClientCommunicator(ServerAddress, ClientPort);
+                    break;
+
+                case CommunicatorType.OwnTCP:
+                    if (BuildServer) return CreateOwnTcpServerCommunicator(ServerPort);
+                    if (BuildClient) return CreateOwnTcpClientCommunicator(ServerAddress, ClientPort ?? 1884);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
 
             return null;
         }
@@ -480,6 +528,16 @@ namespace AudioPlayerBackend.Build
         protected virtual MqttServerCommunicator CreateMqttServerCommunicator(int port)
         {
             return new MqttServerCommunicator(port, helper);
+        }
+
+        protected virtual OwnTcpClientCommunicator CreateOwnTcpClientCommunicator(string serverAddress, int port)
+        {
+            return new OwnTcpClientCommunicator(serverAddress, port, helper);
+        }
+
+        protected virtual OwnTcpServerCommunicator CreateOwnTcpServerCommunicator(int port)
+        {
+            return new OwnTcpServerCommunicator(port, helper);
         }
 
         protected virtual AudioStreamPlayer CreateAudioStreamPlayer(IWaveProviderPlayer player, IAudioService service)
