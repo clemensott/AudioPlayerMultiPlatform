@@ -24,8 +24,6 @@ namespace AudioPlayerFrontend
 {
     public partial class MainWindow : Window
     {
-        private const double minSliderWidth = 300;
-
         private ServiceBuilder serviceBuilder;
         private HotKeysBuilder hotKeysBuilder;
         private readonly ViewModel viewModel;
@@ -60,7 +58,7 @@ namespace AudioPlayerFrontend
             switch (e.Mode)
             {
                 case PowerModes.Resume:
-                    if (viewModel.CommunicatorUI != null)
+                    if (viewModel.Service.Communicator != null)
                     {
                         await OpenAudioServiceAsync();
                     }
@@ -75,7 +73,7 @@ namespace AudioPlayerFrontend
                     {
                         try
                         {
-                            await viewModel.Service.Communicator.CloseAsync();
+                            viewModel.Service.Communicator.Dispose();
                         }
                         catch { }
                     }
@@ -86,9 +84,27 @@ namespace AudioPlayerFrontend
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             string[] args = Environment.GetCommandLineArgs().Skip(1).ToArray();
+            try
+            {
+                serviceBuilder.WithArgs(args);
+            }
+            catch (Exception exc)
+            {
+                MessageBox.Show(exc.Message, "Create service builder error");
+                Close();
+                return;
+            }
 
-            serviceBuilder.WithArgs(args);
-            hotKeysBuilder.WithArgs(args);
+            try
+            {
+                hotKeysBuilder.WithArgs(args);
+            }
+            catch (Exception exc)
+            {
+                MessageBox.Show(exc.Message, "Create hotkeys builder error");
+                Close();
+                throw;
+            }
 
             Option disableUiOpt = Option.GetLongOnly("disable-ui", "Disables UI on startup.", false, 0);
             OptionParseResult result = new Options(disableUiOpt).Parse(args);
@@ -133,14 +149,14 @@ namespace AudioPlayerFrontend
         {
             if (e.OnDisconnect) return;
 
-            Dispatcher.Invoke(() => OpenAudioServiceAsync());
+            Dispatcher.Invoke(async () => await OpenAudioServiceAsync());
         }
 
         private async Task OpenAudioServiceAsync()
         {
             while (true)
             {
-                if (viewModel.Service?.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
+                if (viewModel.Service.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
 
                 ServiceBuild build = ServiceBuild.Open(viewModel.Service.Communicator, viewModel.Service.AudioService,
                     viewModel.Service.ServicePlayer, viewModel.Service.Data, TimeSpan.FromMilliseconds(500));
@@ -345,8 +361,7 @@ namespace AudioPlayerFrontend
         private void Window_Closing(object sender, CancelEventArgs e)
         {
             hotKeys?.Dispose();
-
-            viewModel.CommunicatorUI?.Dispose();
+            viewModel.Service?.Communicator?.Dispose();
             viewModel.Service?.Data?.Dispose();
         }
 
@@ -497,28 +512,6 @@ namespace AudioPlayerFrontend
             else args.Input3 = isSearching ? isSearchShuffle : isAllShuffle;
 
             return null;
-        }
-
-        private void BtnLoop_Click(object sender, RoutedEventArgs e)
-        {
-            switch (viewModel.AudioServiceUI?.CurrentPlaylist.Loop)
-            {
-                case LoopType.Next:
-                    viewModel.AudioServiceUI.CurrentPlaylist.Loop = LoopType.Stop;
-                    break;
-
-                case LoopType.Stop:
-                    viewModel.AudioServiceUI.CurrentPlaylist.Loop = LoopType.CurrentPlaylist;
-                    break;
-
-                case LoopType.CurrentPlaylist:
-                    viewModel.AudioServiceUI.CurrentPlaylist.Loop = LoopType.CurrentSong;
-                    break;
-
-                case LoopType.CurrentSong:
-                    viewModel.AudioServiceUI.CurrentPlaylist.Loop = LoopType.Next;
-                    break;
-            }
         }
 
         private void SldPosition_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

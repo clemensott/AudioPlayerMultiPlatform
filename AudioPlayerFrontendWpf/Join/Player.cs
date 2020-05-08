@@ -41,6 +41,7 @@ namespace AudioPlayerFrontend.Join
 
             if (nextWaveProvider != null)
             {
+                stop = false;
                 DisposeWaveProvider();
 
                 waveProvider = nextWaveProvider;
@@ -51,11 +52,10 @@ namespace AudioPlayerFrontend.Join
             }
             else if (stop)
             {
+                stop = false;
                 DisposeWaveProvider();
 
                 ExecutePlayState();
-
-                stop = false;
             }
             else PlaybackStopped?.Invoke(this, e.ToBackend());
         }

@@ -31,7 +31,7 @@ namespace AudioPlayerFrontend.Join
             return task.Result;
         }
 
-        private async static Task<IEnumerable<string>> LoadFilePathsAsync(string path)
+        private static async Task<IEnumerable<string>> LoadFilePathsAsync(string path)
         {
             List<string> paths = new List<string>();
 

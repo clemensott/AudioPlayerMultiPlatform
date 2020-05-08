@@ -124,7 +124,7 @@ namespace AudioPlayerFrontend.Join
             return task.Result;
         }
 
-        private async static Task<IRandomAccessStream> OpenFileStreamAsync(string path)
+        private static async Task<IRandomAccessStream> OpenFileStreamAsync(string path)
         {
             StorageFile file = await StorageFile.GetFileFromPathAsync(path);
 
