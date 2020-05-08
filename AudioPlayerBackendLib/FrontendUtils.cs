@@ -50,14 +50,14 @@ namespace AudioPlayerBackend
                 {
                     if (prepend || !currentPlaylist.CurrentSong.HasValue)
                     {
-                        playlist.Songs = songs.ToArray();
+                        playlist.Songs = songs.Distinct().ToArray();
                         playlist.WannaSong = RequestSong.Get(songs.First());
 
                         service.CurrentPlaylist = playlist;
                     }
                     else
                     {
-                        playlist.Songs = songs.Insert(0, currentPlaylist.CurrentSong.Value).ToArray();
+                        playlist.Songs = songs.Insert(0, currentPlaylist.CurrentSong.Value).Distinct().ToArray();
                         playlist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong.Value,
                             currentPlaylist.Position, currentPlaylist.Duration);
 
