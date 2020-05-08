@@ -52,10 +52,7 @@ namespace AudioPlayerFrontend
             {
                 if (value == communicator) return;
 
-                if (communicator != null) communicator.Disconnected -= Communicator_Disconnected;
                 communicator = value;
-                if (communicator != null) communicator.Disconnected += Communicator_Disconnected;
-
                 OnPropertyChanged(nameof(Communicator));
 
             }
@@ -112,6 +109,8 @@ namespace AudioPlayerFrontend
         {
             if (build == null) return;
 
+            if (Communicator != null) Communicator.Disconnected -= Communicator_Disconnected;
+
             ServiceBuildResult result = await build.CompleteToken.ResultTask;
 
             if (build != ServiceOpenBuild) return;
@@ -121,11 +120,12 @@ namespace AudioPlayerFrontend
             ServicePlayer = result?.ServicePlayer;
 
             buildResult = result;
+
+            if (Communicator != null) Communicator.Disconnected += Communicator_Disconnected;
         }
 
         private async void Communicator_Disconnected(object sender, DisconnectedEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("Disconnected");
             if (e.OnDisconnect) return;
 
             await UwpUtils.RunSafe(async () =>
