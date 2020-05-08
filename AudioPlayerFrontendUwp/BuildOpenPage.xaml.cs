@@ -4,6 +4,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
+using StdOttStandard.Converter.MultipleInputs;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
 
@@ -30,15 +31,23 @@ namespace AudioPlayerFrontend
             tblFrameStack.Text = string.Join("\r\n", Frame.BackStack.Select(s => s.SourcePageType.FullName));
         }
 
+        private object MicException_Convert(object sender, MultiplesInputsConvert4EventArgs args)
+        {
+            return args.Input3 ?? args.Input2 ?? args.Input1 ?? args.Input0;
+        }
+
         private void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
             build.Settings();
         }
 
+        private void BtnException_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
         private async void BuildOpenPage_Loaded(object sender, RoutedEventArgs e)
         {
-            await build.CommunicatorToken.ResultTask;
-
             await build.CompleteToken.EndTask;
 
             Frame.GoBack();
