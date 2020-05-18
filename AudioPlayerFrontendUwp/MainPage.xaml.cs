@@ -3,6 +3,7 @@ using AudioPlayerBackend.Player;
 using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Windows.Storage;
 using Windows.UI.Popups;
@@ -32,21 +33,17 @@ namespace AudioPlayerFrontend
 
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            ServiceBuild build = viewModel.ServiceOpenBuild;
+            viewModel.SetFrame(Frame);
 
-            if (build == null) await viewModel.ConnectAsync(Frame);
-            else
+            switch (viewModel.ServiceOpenBuild?.CompleteToken?.IsEnded)
             {
-                switch (build.CompleteToken?.IsEnded)
-                {
-                    case BuildEndedType.Settings:
-                        await NavigateToSettingsPage();
-                        break;
+                case BuildEndedType.Settings:
+                    await NavigateToSettingsPage();
+                    break;
 
-                    case null:
-                        Frame.Navigate(typeof(BuildOpenPage), viewModel.ServiceOpenBuild);
-                        break;
-                }
+                case null:
+                    Frame.Navigate(typeof(BuildOpenPage), viewModel.ServiceOpenBuild);
+                    break;
             }
         }
 
@@ -88,7 +85,9 @@ namespace AudioPlayerFrontend
 
             if (service == null) return;
 
-            service.PlayState = service.PlayState == PlaybackState.Playing ? PlaybackState.Paused : PlaybackState.Playing;
+            service.PlayState = service.PlayState == PlaybackState.Playing
+                ? PlaybackState.Paused
+                : PlaybackState.Playing;
         }
 
         private void AbbNext_Click(object sender, RoutedEventArgs e)
@@ -162,7 +161,12 @@ namespace AudioPlayerFrontend
 
         private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert4EventArgs args)
         {
-            if (args.Input0 == null || args.ChangedValueIndex == 2) return args.Input0;
+            if (args.Input0 == null)
+            {
+                args.Input3 = -1;
+                return null;
+            }
+            if (args.ChangedValueIndex == 2) return args.Input0;
 
             IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input0;
             Song? currentSong = (Song?)args.Input1;
@@ -177,7 +181,7 @@ namespace AudioPlayerFrontend
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)
         {
-            await new MessageDialog("CreateTime: " + App.CreateTime).ShowAsync();
+            await new MessageDialog(App.CreateTime.ToString(CultureInfo.InvariantCulture), "CreateTime").ShowAsync();
 
             string exceptionText;
 

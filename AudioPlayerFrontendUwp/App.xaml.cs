@@ -11,6 +11,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
 using StdOttUwp;
+using System.Threading.Tasks;
 
 namespace AudioPlayerFrontend
 {
@@ -81,13 +82,16 @@ namespace AudioPlayerFrontend
                 Window.Current.Content = rootFrame;
             }
 
+            Task buildTask = Task.CompletedTask;
+
             if (e.PrelaunchActivated == false)
             {
                 if (rootFrame.Content == null)
                 {
                     try
                     {
-                        StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
+                        StorageFile file =
+                            await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
                         string xmlText = await FileIO.ReadTextAsync(file);
                         StringReader reader = new StringReader(xmlText);
 
@@ -102,11 +106,14 @@ namespace AudioPlayerFrontend
                         serviceBuilder.WithClient("nas-server", 1884);
                     }
 
+                    buildTask = viewModel.ConnectAsync();
                     rootFrame.Navigate(typeof(MainPage), viewModel);
                 }
                 // Sicherstellen, dass das aktuelle Fenster aktiv ist
                 Window.Current.Activate();
             }
+
+            await buildTask;
         }
 
         private async void LoadExceptionFile()
@@ -134,8 +141,7 @@ namespace AudioPlayerFrontend
         /// <param name="e">Details zur Anhalteanforderung.</param>
         private async void OnSuspending(object sender, SuspendingEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("Suspend: " + viewModel.Communicator?.IsOpen);
-            var deferral = e.SuspendingOperation.GetDeferral();
+            SuspendingDeferral deferral = e.SuspendingOperation.GetDeferral();
 
             try
             {
@@ -157,8 +163,6 @@ namespace AudioPlayerFrontend
 
         private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("EnterBackground: " + viewModel.Communicator?.IsOpen);
-
             viewModel.ServiceOpenBuild?.Cancel();
 
             if (viewModel.Communicator?.IsOpen != true) return;
@@ -169,53 +173,17 @@ namespace AudioPlayerFrontend
             {
                 await viewModel.CloseAsync();
             }
-            catch { }
+            catch (Exception exc)
+            {
+                System.Diagnostics.Debug.WriteLine("App enter background error:\r\n" + exc);
+            }
 
             deferral.Complete();
         }
 
-        private static DateTime lastConnectStart;
         private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            Frame frame = viewModel.Frame;
-
-            System.Diagnostics.Debug.WriteLine("LeaveBackground1: " + GetDebugText(frame));
-
-            if (frame == null) return;
-
-            try
-            {
-                if (frame.CurrentSourcePageType == typeof(BuildOpenPage))
-                {
-                    frame.GoBack();
-
-                    System.Diagnostics.Debug.WriteLine("GoBack: " + GetDebugText(frame));
-                    await new Windows.UI.Popups.MessageDialog(GetDebugText(frame), "App_LeaveBackground").ShowAsync();
-                }
-            }
-            catch (Exception exc)
-            {
-                await new Windows.UI.Popups.MessageDialog(exc.ToString(), "App_LeaveBackgroundFail").ShowAsync();
-                return;
-            }
-
-            lastConnectStart = DateTime.Now;
-            await viewModel.ConnectAsync();
-            System.Diagnostics.Debug.WriteLine("LeaveBackground2: " + (viewModel.Communicator != null));
-        }
-
-        private string GetDebugText(Frame frame)
-        {
-            string pageType = frame?.CurrentSourcePageType != null ? frame.CurrentSourcePageType.ToString() : "Page==null";
-            string communicator = viewModel.Communicator?.ToString() ?? "Communicator==null";
-            string build = viewModel.ServiceOpenBuild?.ToString() ?? "Build==null";
-            string buildState = viewModel.ServiceOpenBuild?.State.ToString() ?? "BuildState==null";
-            string comState = viewModel.ServiceOpenBuild?.CommunicatorToken.IsEnded?.ToString() ?? "CommunicatorState==null";
-            string syncState = viewModel.ServiceOpenBuild?.SyncToken.IsEnded?.ToString() ?? "SyncState==null";
-            string playerState = viewModel.ServiceOpenBuild?.PlayerToken.IsEnded?.ToString() ?? "PlayerState==null";
-            string copState = viewModel.ServiceOpenBuild?.CompleteToken.IsEnded?.ToString() ?? "CompleteState==null";
-
-            return string.Join("\r\n", pageType, communicator, build, buildState, comState, syncState, playerState, copState, lastConnectStart);
+            if (viewModel.Frame != null) await viewModel.ConnectAsync();
         }
     }
 }

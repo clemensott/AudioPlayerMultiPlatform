@@ -78,20 +78,18 @@ namespace AudioPlayerFrontend
         {
             Builder = builder;
         }
-
+        
         public Task ConnectAsync()
         {
             ServiceOpenBuild = Communicator != null ? Open() : Build();
-            Frame.Navigate(typeof(BuildOpenPage), ServiceOpenBuild);
+            if (Frame != null) Frame.Navigate(typeof(BuildOpenPage), ServiceOpenBuild);
 
             return ServiceOpenBuild.CompleteToken.EndTask;
         }
 
-        public Task ConnectAsync(Frame frame)
+        public void SetFrame(Frame frame)
         {
             Frame = frame;
-
-            return ConnectAsync();
         }
 
         private ServiceBuild Build()
@@ -131,8 +129,6 @@ namespace AudioPlayerFrontend
             await UwpUtils.RunSafe(async () =>
             {
                 await CloseAsync();
-                if (Frame.CurrentSourcePageType == typeof(BuildOpenPage)) Frame.GoBack();
-
                 await ConnectAsync();
             });
         }

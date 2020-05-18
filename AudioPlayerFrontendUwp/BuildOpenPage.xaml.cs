@@ -1,4 +1,7 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -28,7 +31,8 @@ namespace AudioPlayerFrontend
 
             base.OnNavigatedTo(e);
 
-            tblFrameStack.Text = string.Join("\r\n", Frame.BackStack.Select(s => s.SourcePageType.FullName));
+            IEnumerable<string> frames = Frame.BackStack.Select(s => s.SourcePageType.FullName);
+            tblFrameStack.Text = string.Join("\r\n", frames);
         }
 
         private object MicException_Convert(object sender, MultiplesInputsConvert4EventArgs args)
@@ -41,9 +45,14 @@ namespace AudioPlayerFrontend
             build.Settings();
         }
 
-        private void BtnException_Click(object sender, RoutedEventArgs e)
+        private async void BtnException_Click(object sender, RoutedEventArgs e)
         {
+            Exception exception = (Exception)micException.Output;
 
+            if (exception != null)
+            {
+                await new MessageDialog(exception.ToString(), "Building audio service error").ShowAsync();
+            }
         }
 
         private async void BuildOpenPage_Loaded(object sender, RoutedEventArgs e)

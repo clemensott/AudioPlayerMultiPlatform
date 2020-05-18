@@ -147,129 +147,120 @@ namespace AudioPlayerBackend.Build
 
         private async void Build(TimeSpan delayTime, ServiceBuilder serviceBuilder, IAudioServiceHelper serviceHelper)
         {
-            while (true)
+            try
             {
-                try
+                while (true)
                 {
-                    State = BuildState.OpenCommunicator;
-                    if (Communicator == null) Communicator = serviceBuilder.CreateCommunicator();
-                    else CommunicatorToken.Reset();
-
-                    if (Communicator != null && !Communicator.IsOpen)
+                    try
                     {
-                        await await Task.WhenAny(Communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
+                        State = BuildState.OpenCommunicator;
+                        if (Communicator == null) Communicator = serviceBuilder.CreateCommunicator();
+                        else CommunicatorToken.Reset();
+
+                        if (Communicator != null && !Communicator.IsOpen)
+                        {
+                            await await Task.WhenAny(Communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
+                        }
+
+                        if (CommunicatorToken.IsEnded.HasValue) return;
+
+                        CommunicatorToken.End(BuildEndedType.Successful, Communicator);
+                    }
+                    catch (Exception e)
+                    {
+                        CommunicatorToken.Exception = e;
+
+                        if (CommunicatorToken.IsEnded.HasValue) return;
+
+                        await Task.Delay(delayTime);
+                        continue;
                     }
 
-                    if (CommunicatorToken.IsEnded.HasValue)
+                    Task sendCmdTask = SendCommands();
+
+                    try
                     {
-                        if (Communicator != null) await Communicator.CloseAsync();
-                        return;
+                        SyncToken.Reset();
+                        State = BuildState.SyncCommunicator;
+                        service = new AudioService(serviceHelper);
+
+                        if (Communicator != null)
+                        {
+                            await await Task.WhenAny(Communicator.SetService(service, SyncToken), SyncToken.EndTask);
+                        }
+
+                        if (SyncToken.IsEnded.HasValue) return;
+
+                        SyncToken.End(BuildEndedType.Successful, service);
+                    }
+                    catch (Exception e)
+                    {
+                        SyncToken.Exception = e;
+
+                        if (SyncToken.IsEnded.HasValue) return;
+
+                        await Task.Delay(delayTime);
+                        continue;
                     }
 
-                    CommunicatorToken.End(BuildEndedType.Successful, Communicator);
-                }
-                catch (Exception e)
-                {
-                    CommunicatorToken.Exception = e;
-
-                    if (CommunicatorToken.IsEnded.HasValue) return;
-
-                    await Task.Delay(delayTime);
-                    continue;
-                }
-
-                Task sendCmdTask = SendCommands();
-
-                try
-                {
-                    SyncToken.Reset();
-                    State = BuildState.SyncCommunicator;
-                    service = new AudioService(serviceHelper);
-
-                    if (Communicator != null)
+                    try
                     {
-                        await await Task.WhenAny(Communicator.SetService(service, SyncToken), SyncToken.EndTask);
+                        State = BuildState.SendCommands;
+                        await sendCmdTask;
+                    }
+                    catch (Exception e)
+                    {
+                        System.Diagnostics.Debug.WriteLine(e);
                     }
 
-                    if (SyncToken.IsEnded.HasValue)
+                    try
                     {
-                        if (Communicator != null) await Communicator.CloseAsync();
-                        return;
+                        PlayerToken.Reset();
+                        State = BuildState.CreatePlayer;
+                        servicePlayer = serviceBuilder.CreateServicePlayer(service);
+
+                        if (PlayerToken.IsEnded.HasValue) return;
+
+                        PlayerToken.End(BuildEndedType.Successful, servicePlayer);
+                    }
+                    catch (Exception e)
+                    {
+                        PlayerToken.Exception = e;
+
+                        if (PlayerToken.IsEnded.HasValue) return;
+
+                        await Task.Delay(delayTime);
+                        continue;
                     }
 
-                    SyncToken.End(BuildEndedType.Successful, service);
-                }
-                catch (Exception e)
-                {
-                    SyncToken.Exception = e;
-
-                    if (SyncToken.IsEnded.HasValue) return;
-
-                    await Task.Delay(delayTime);
-                    continue;
-                }
-
-                try
-                {
-                    State = BuildState.SendCommands;
-                    await sendCmdTask;
-                }
-                catch (Exception e)
-                {
-                    System.Diagnostics.Debug.WriteLine(e);
-                }
-
-                try
-                {
-                    PlayerToken.Reset();
-                    State = BuildState.CreatePlayer;
-                    servicePlayer = serviceBuilder.CreateServicePlayer(service);
-
-                    if (PlayerToken.IsEnded.HasValue)
+                    try
                     {
-                        if (Communicator != null) await Communicator.CloseAsync();
-                        return;
+                        State = BuildState.CompleteSerivce;
+                        ReadWriteAudioServiceData data = serviceBuilder.CompleteService(service);
+
+                        if (CompleteToken.IsEnded.HasValue) return;
+
+                        ServiceBuildResult result = new ServiceBuildResult(service, Communicator, servicePlayer, data);
+                        CompleteToken.End(BuildEndedType.Successful, result);
                     }
-
-                    PlayerToken.End(BuildEndedType.Successful, servicePlayer);
-                }
-                catch (Exception e)
-                {
-                    PlayerToken.Exception = e;
-
-                    if (PlayerToken.IsEnded.HasValue) return;
-
-                    await Task.Delay(delayTime);
-                    continue;
-                }
-
-                try
-                {
-                    State = BuildState.CompleteSerivce;
-                    ReadWriteAudioServiceData data = serviceBuilder.CompleteService(service);
-
-                    if (CompleteToken.IsEnded.HasValue)
+                    catch (Exception e)
                     {
-                        if (Communicator != null) await Communicator.CloseAsync();
-                        return;
+                        CompleteToken.Exception = e;
+
+                        if (CompleteToken.IsEnded.HasValue) return;
+
+                        await Task.Delay(delayTime);
+                        continue;
                     }
-
-                    ServiceBuildResult result = new ServiceBuildResult(service, Communicator, servicePlayer, data);
-                    CompleteToken.End(BuildEndedType.Successful, result);
+                    break;
                 }
-                catch (Exception e)
-                {
-                    CompleteToken.Exception = e;
 
-                    if (CompleteToken.IsEnded.HasValue) return;
-
-                    await Task.Delay(delayTime);
-                    continue;
-                }
-                break;
+                State = BuildState.Finished;
             }
-
-            State = BuildState.Finished;
+            finally
+            {
+                if (Communicator != null && State != BuildState.Finished) await Communicator.CloseAsync();
+            }
         }
 
         public static ServiceBuild Open(ICommunicator communicator, IAudioService service,
@@ -284,86 +275,85 @@ namespace AudioPlayerBackend.Build
         private async void Open(TimeSpan delayTime, ICommunicator communicator,
             IAudioService service, ReadWriteAudioServiceData data, IServicePlayer player)
         {
-            Communicator = communicator;
-            Service = service;
-
-            while (true)
+            try
             {
-                try
-                {
-                    CommunicatorToken.Reset();
-                    State = BuildState.OpenCommunicator;
+                Communicator = communicator;
+                Service = service;
 
-                    if (Communicator != null)
+                while (true)
+                {
+                    try
                     {
-                        await await Task.WhenAny(Communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
+                        CommunicatorToken.Reset();
+                        State = BuildState.OpenCommunicator;
+
+                        if (Communicator != null)
+                        {
+                            await await Task.WhenAny(Communicator.OpenAsync(CommunicatorToken), CommunicatorToken.EndTask);
+                        }
+
+                        if (CommunicatorToken.IsEnded.HasValue) return;
+
+                        CommunicatorToken.End(BuildEndedType.Successful, Communicator);
+                    }
+                    catch (Exception e)
+                    {
+                        CommunicatorToken.Exception = e;
+
+                        if (CommunicatorToken.IsEnded.HasValue) return;
+
+                        await Task.Delay(delayTime);
+                        continue;
                     }
 
-                    if (CommunicatorToken.IsEnded.HasValue)
+                    Task sendCmdTask = SendCommands();
+
+                    try
                     {
-                        if (Communicator != null) await Communicator.CloseAsync();
-                        return;
+                        SyncToken.Reset();
+                        State = BuildState.SyncCommunicator;
+
+                        if (Communicator != null)
+                        {
+                            await await Task.WhenAny(Communicator.SyncService(SyncToken), SyncToken.EndTask);
+                        }
+
+                        if (SyncToken.IsEnded.HasValue) return;
+
+                        SyncToken.End(BuildEndedType.Successful, service);
+                    }
+                    catch (Exception e)
+                    {
+                        SyncToken.Exception = e;
+
+                        if (SyncToken.IsEnded.HasValue) return;
+
+                        await Task.Delay(delayTime);
+                        continue;
                     }
 
-                    CommunicatorToken.End(BuildEndedType.Successful, Communicator);
-                }
-                catch (Exception e)
-                {
-                    CommunicatorToken.Exception = e;
-
-                    if (CommunicatorToken.IsEnded.HasValue) return;
-
-                    await Task.Delay(delayTime);
-                    continue;
-                }
-
-                Task sendCmdTask = SendCommands();
-
-                try
-                {
-                    SyncToken.Reset();
-                    State = BuildState.SyncCommunicator;
-
-                    if (Communicator != null)
+                    try
                     {
-                        await await Task.WhenAny(Communicator.SyncService(SyncToken), SyncToken.EndTask);
+                        State = BuildState.SendCommands;
+                        await sendCmdTask;
                     }
-
-                    if (SyncToken.IsEnded.HasValue)
+                    catch (Exception e)
                     {
-                        if (Communicator != null) await Communicator.CloseAsync();
-                        return;
+                        System.Diagnostics.Debug.WriteLine(e);
                     }
-
-                    SyncToken.End(BuildEndedType.Successful, service);
-                }
-                catch (Exception e)
-                {
-                    SyncToken.Exception = e;
-
-                    if (SyncToken.IsEnded.HasValue) return;
-
-                    await Task.Delay(delayTime);
-                    continue;
+                    break;
                 }
 
-                try
-                {
-                    State = BuildState.SendCommands;
-                    await sendCmdTask;
-                }
-                catch (Exception e)
-                {
-                    System.Diagnostics.Debug.WriteLine(e);
-                }
-                break;
+                State = BuildState.CreatePlayer;
+                PlayerToken.Successful(player);
+                State = BuildState.CompleteSerivce;
+                CompleteToken.Successful(new ServiceBuildResult(service, Communicator, player, data));
+                State = BuildState.Finished;
             }
-
-            State = BuildState.CreatePlayer;
-            PlayerToken.Successful(player);
-            State = BuildState.CompleteSerivce;
-            CompleteToken.Successful(new ServiceBuildResult(service, Communicator, player, data));
-            State = BuildState.Finished;
+            finally
+            {
+                if (Communicator != null && State != BuildState.Finished) await Communicator.CloseAsync();
+            }
         }
 
         private async Task SendCommands()
