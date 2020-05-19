@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
@@ -15,9 +16,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 {
     public class OwnTcpClientCommunicator : OwnTcpCommunicator, IClientCommunicator
     {
+        private static readonly TimeSpan pingInterval = TimeSpan.FromSeconds(10);
+
         private bool isSyncing, isSynced;
         private TcpClient client;
         private OwnTcpSendQueue sendQueue;
+        private SemaphoreSlim pingSem;
         private AsyncQueue<OwnTcpMessage> processQueue;
         private Task openTask;
 
@@ -86,16 +90,18 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                 NetworkStream stream = client.GetStream();
                 Dictionary<uint, OwnTcpSendMessage> waitDict = new Dictionary<uint, OwnTcpSendMessage>();
+                pingSem = new SemaphoreSlim(0);
                 processQueue = new AsyncQueue<OwnTcpMessage>();
 
                 Task publishTask = Task.Run(() => SendMessagesHandler(stream, sendQueue, waitDict));
+                Task pingTask = Task.Run(() => SendPingsHandler(sendQueue, pingSem));
                 Task receiveTask = Task.Run(() => ReceiveHandler(stream, waitDict, processQueue));
                 Task processTask = ProcessHandler(processQueue);
 
                 await SendCommand(syncCmd, false);
                 isSynced = true;
 
-                openTask = Task.WhenAll(publishTask, receiveTask, processTask);
+                openTask = Task.WhenAll(publishTask, pingTask, receiveTask, processTask);
             }
             catch (Exception e)
             {
@@ -207,6 +213,27 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             catch (Exception e)
             {
                 await CloseAsync(new Exception("SendMessageHandler error", e), false);
+            }
+        }
+
+        private async Task SendPingsHandler(OwnTcpSendQueue sendQueue, SemaphoreSlim pingSem)
+        {
+            Task cancelTask = pingSem.WaitAsync();
+            try
+            {
+                while (client.Connected)
+                {
+                    Task delayTask = Task.Delay(pingInterval);
+                    await Task.WhenAny(delayTask, cancelTask);
+
+                    if (cancelTask.IsCompleted) return;
+
+                    await SendCommand(pingCmd, false);
+                }
+            }
+            catch (Exception e)
+            {
+                await CloseAsync(new Exception("ReceiveHandler error", e), false);
             }
         }
 
