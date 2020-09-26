@@ -2,19 +2,28 @@
 
 namespace AudioPlayerFrontend.Join
 {
-    class BufferedWaveProvider : NAudio.Wave.BufferedWaveProvider, IBufferedWaveProvider, IWaveProvider
+    class BufferedWaveProvider : IBufferedWaveProvider, IWaveProvider
     {
-        private WaveFormat format;
+        public WaveFormat WaveFormat => throw new System.NotImplementedException();
 
-        WaveFormat AudioPlayerBackend.Player.IWaveProvider.WaveFormat => format;
-
-        public BufferedWaveProvider(WaveFormat format) : base(format.ToFrontend())
+        public void AddSamples(byte[] data, int offset, int count)
         {
-            this.format = format;
+            throw new System.NotImplementedException();
+        }
+
+        public void ClearBuffer()
+        {
+            throw new System.NotImplementedException();
         }
 
         public void Dispose()
         {
+            throw new System.NotImplementedException();
+        }
+
+        public int Read(byte[] buffer, int offset, int count)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

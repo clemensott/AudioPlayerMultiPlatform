@@ -1,6 +1,6 @@
 ﻿namespace AudioPlayerFrontend.Join
 {
-    interface IWaveProvider : NAudio.Wave.IWaveProvider, AudioPlayerBackend.Player.IWaveProvider
+    interface IWaveProvider : AudioPlayerBackend.Player.IWaveProvider
     {
     }
 }

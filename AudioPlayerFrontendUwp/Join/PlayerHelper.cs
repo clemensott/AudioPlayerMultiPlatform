@@ -3,10 +3,8 @@ using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Windows.ApplicationModel.Core;
 using Windows.Storage;
 using Windows.Storage.Streams;
-using Windows.UI.Core;
 
 namespace AudioPlayerFrontend.Join
 {
@@ -30,12 +28,12 @@ namespace AudioPlayerFrontend.Join
 
         public IBufferedWaveProvider CreateBufferedWaveProvider(WaveFormat format, IAudioServiceBase service)
         {
-            return new BufferedWaveProvider(format);
+            throw new NotImplementedException();
         }
 
         public IPositionWaveProvider CreateWaveProvider(Song song, IAudioService service)
         {
-            return new AudioFileReader(OpenFileStream(song.FullPath));
+            throw new NotImplementedException();
         }
 
         public IEnumerable<string> LoadFilePaths(string path, IAudioService service)
@@ -74,47 +72,6 @@ namespace AudioPlayerFrontend.Join
 
             return paths;
         }
-
-        //public void DoSetCurrentSongThreadSafe(IServicePlayer service)
-        //{
-        //    IPlayer player = service.ServicePlayer;
-        //    AudioFileReader reader = (AudioFileReader)service.Reader;
-        //    Song? currentSong = service?.CurrentPlaylist?.CurrentSong;
-        //    try
-        //    {
-        //        if (reader == null)
-        //        {
-        //            if (!currentSong.HasValue) return;
-
-        //            player.Play(() =>
-        //            {
-        //                service.Reader = reader = (AudioFileReader)CreateWaveProvider(currentSong.Value, service);
-        //                service.CurrentPlaylist.Duration = reader.TotalTime;
-
-        //                return reader;
-        //            });
-        //        }
-        //        else
-        //        {
-        //            IDisposable oldStream = reader.Stream;
-
-        //            if (currentSong.HasValue) reader.Stream = OpenFileStream(currentSong.Value.FullPath);
-
-        //            oldStream?.Dispose();
-        //            player.ExecutePlayState();
-
-        //            service.CurrentPlaylist.Duration = reader.TotalTime;
-        //        }
-        //    }
-        //    catch
-        //    {
-        //        if (reader?.Stream != null)
-        //        {
-        //            player.Stop(reader);
-        //            reader.Stream = null;
-        //        }
-        //    }
-        //}
 
         private static IRandomAccessStream OpenFileStream(string path)
         {
