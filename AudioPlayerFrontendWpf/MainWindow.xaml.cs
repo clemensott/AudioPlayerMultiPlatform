@@ -69,14 +69,7 @@ namespace AudioPlayerFrontend
                 case PowerModes.Suspend:
                     Unsubscribe(hotKeys);
 
-                    if (viewModel.Service.Communicator != null)
-                    {
-                        try
-                        {
-                            viewModel.Service.Communicator.Dispose();
-                        }
-                        catch { }
-                    }
+                    viewModel.Service?.Communicator?.Dispose();
                     break;
             }
         }
@@ -147,6 +140,7 @@ namespace AudioPlayerFrontend
 
         private void Communicator_Disconnected(object sender, DisconnectedEventArgs e)
         {
+            Logs.Log($"Disconnected: {e.OnDisconnect} | {e.Exception?.Message ?? "<none>"}");
             if (e.OnDisconnect) return;
 
             Dispatcher.Invoke(async () => await OpenAudioServiceAsync());
@@ -367,50 +361,11 @@ namespace AudioPlayerFrontend
 
         private void StackPanel_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (viewModel.Service.ServicePlayer.Player is Player player)
-            {
-                string message = string.Format("ServiceState: {0}\r\nWaveOutPlayState: {1}\r\ncurrentWaveProvider {2}\r\n" +
-                     "nextWaveProvider {3}\r\nStop: {4}\r\nStopped: {5}\r\nDebug: {6}\r\n\r\nPlay WaveOut? (Yes)\r\nPlay Service? (No)",
-                     viewModel?.Service?.AudioService?.PlayState, player.waveOut.PlaybackState, GetFileName(player.waveProvider),
-                     GetFileName(player.nextWaveProvider), player.stop, player.stopped, player.debug);
-                MessageBoxResult result = MessageBox.Show(message, "State", MessageBoxButton.YesNoCancel);
+            string message = $"Communicator: {viewModel.Service?.Communicator?.Name}\r\nState: {viewModel.Service?.Communicator?.IsOpen}";
+            MessageBox.Show(message, "State");
 
-                try
-                {
-                    switch (result)
-                    {
-                        case MessageBoxResult.Yes:
-                            player.waveOut.Play();
-                            break;
-                        case MessageBoxResult.No:
-                            viewModel.Service.AudioService.PlayState = PlaybackState.Playing;
-                            break;
-                    }
-                }
-                catch (Exception exc)
-                {
-                    MessageBox.Show(exc.ToString(), "Exception");
-                }
-            }
-        }
-
-        private static string GetFileName(NAudio.Wave.IWaveProvider iwp)
-        {
-            if (iwp == null) return "null";
-
-            if (iwp is WaveProvider wp)
-            {
-                if (wp.Parent is ReadEventWaveProvider rewp)
-                {
-                    if (rewp.Parent is AudioFileReader afr)
-                    {
-                        return afr.FileName;
-                    }
-                    else return "not AudiFileReader: " + rewp.GetType();
-                }
-                else return "not ReadEventWaveProvider: " + wp.GetType();
-            }
-            else return "not WaveProvider: " + iwp.GetType();
+            MessageBoxResult clearLogsResult = MessageBox.Show(Logs.Get() + "\r\nClear?", "Logs", MessageBoxButton.YesNo);
+            if (clearLogsResult == MessageBoxResult.Yes) Logs.Clear();
         }
 
         private void Subscribe(HotKeys hotKeys)
