@@ -112,13 +112,14 @@ namespace AudioPlayerFrontend
         private async Task BuildAudioServiceAsync()
         {
             IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-            serviceBuilder.WithPlayer(new Player(-1, windowHandle));
+            serviceBuilder.WithPlayer(new Player(-1, windowHandle))
+                .WithAudioServiceHelper(AudioServiceHelper.Current);
 
             while (true)
             {
                 if (viewModel.Service?.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
 
-                ServiceBuild build = ServiceBuild.Build(serviceBuilder, TimeSpan.FromMilliseconds(500), AudioServiceHelper.Current);
+                ServiceBuild build = ServiceBuild.Build(serviceBuilder, TimeSpan.FromMilliseconds(500));
 
                 if (ShowBuildOpenWindow(build) == false)
                 {

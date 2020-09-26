@@ -3,7 +3,7 @@ using System;
 
 namespace AudioPlayerBackend.Player
 {
-    public interface IAudioServicePlayerHelper : INotifyPropertyChangedHelper
+    public interface IAudioServicePlayerHelper
     {
         IPositionWaveProvider CreateWaveProvider(Song song, IAudioService service);
 

@@ -88,7 +88,7 @@ namespace AudioPlayerFrontend
                 if (build == null) return Task.CompletedTask;
 
                 ICommunicator communicator = Communicator;
-                if (communicator == null) build.StartBuild(Builder, TimeSpan.FromMilliseconds(200), AudioServiceHelper.Current);
+                if (communicator == null) build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
                 else build.StartOpen(communicator, Audio, Player, buildResult.Data, TimeSpan.FromMilliseconds(200));
 
                 return ServiceOpenBuild.CompleteToken.EndTask;

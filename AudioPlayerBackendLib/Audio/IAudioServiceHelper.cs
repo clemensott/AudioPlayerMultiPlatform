@@ -2,7 +2,7 @@
 
 namespace AudioPlayerBackend.Audio
 {
-    public interface IAudioServiceHelper : INotifyPropertyChangedHelper
+    public interface IAudioServiceHelper
     {
         void Reload(ISourcePlaylist playlist);
     }

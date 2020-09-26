@@ -109,9 +109,10 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        public SourcePlaylist(IAudioServiceHelper helper = null) : base(Guid.Empty, helper)
+        public SourcePlaylist(IAudioServiceHelper audioServiceHelper = null, INotifyPropertyChangedHelper notifyHelper = null)
+            : base(Guid.Empty, notifyHelper)
         {
-            this.helper = helper;
+            helper = audioServiceHelper;
         }
 
         private async void UpdateSearchSongs()

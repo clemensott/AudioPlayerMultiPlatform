@@ -25,6 +25,8 @@ namespace AudioPlayerBackend.Build
         private string[] mediaSources;
         private CommunicatorProtocol communicatorProtocol;
         private IWaveProviderPlayer player;
+        private IAudioServiceHelper audioServiceHelper;
+        private INotifyPropertyChangedHelper notifyPropertyChangedHelper;
 
         public bool BuildStandalone { get; private set; }
 
@@ -224,6 +226,30 @@ namespace AudioPlayerBackend.Build
             }
         }
 
+        public IAudioServiceHelper AudioServiceHelper
+        {
+            get => audioServiceHelper;
+            set
+            {
+                if (value == audioServiceHelper) return;
+
+                audioServiceHelper = value;
+                OnPropertyChanged(nameof(AudioServiceHelper));
+            }
+        }
+
+        public INotifyPropertyChangedHelper NotifyPropertyChangedHelper
+        {
+            get => notifyPropertyChangedHelper;
+            set
+            {
+                if (value == notifyPropertyChangedHelper) return;
+
+                notifyPropertyChangedHelper = value;
+                OnPropertyChanged(nameof(NotifyPropertyChangedHelper));
+            }
+        }
+
         public ServiceBuilder(IServiceBuilderHelper helper = null)
         {
             this.helper = helper;
@@ -233,6 +259,7 @@ namespace AudioPlayerBackend.Build
 
         public ServiceBuilder WithArgs(IEnumerable<string> args)
         {
+            OptionParsed parsed;
             Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 3, 2);
             Option serverOpt = new Option("s", "server", "Starts the app as server with the following port", false, 2, 2);
             Option sourcesOpt = new Option("m", "media-sources", "Files and directories to play", false, -1, 0);
@@ -250,8 +277,6 @@ namespace AudioPlayerBackend.Build
             Options options = new Options(sourcesOpt, ifNonOpt, reloadOpt, clientOpt, serverOpt, playOpt,
                 allShuffleOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileReadOpt, dataFileWriteOpt);
             OptionParseResult result = options.Parse(args);
-
-            OptionParsed parsed;
 
             if (result.TryGetFirstValidOptionParseds(serverOpt, out parsed))
             {
@@ -455,6 +480,20 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
+        public ServiceBuilder WithAudioServiceHelper(IAudioServiceHelper helper)
+        {
+            AudioServiceHelper = helper;
+
+            return this;
+        }
+
+        public ServiceBuilder WithNotifyPropertyChangedHelper(INotifyPropertyChangedHelper helper)
+        {
+            NotifyPropertyChangedHelper = helper;
+
+            return this;
+        }
+
         public ICommunicator CreateCommunicator()
         {
             switch (CommunicatorProtocol)
@@ -497,27 +536,27 @@ namespace AudioPlayerBackend.Build
             if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (volume.HasValue) service.Volume = volume.Value;
 
-            return new ReadWriteAudioServiceData(DataReadFile, DataWriteFile, service, helper);
+            return new ReadWriteAudioServiceData(DataReadFile, DataWriteFile, service, NotifyPropertyChangedHelper);
         }
 
         protected virtual MqttClientCommunicator CreateMqttClientCommunicator(string serverAddress, int? port)
         {
-            return new MqttClientCommunicator(serverAddress, port, helper);
+            return new MqttClientCommunicator(serverAddress, port, NotifyPropertyChangedHelper);
         }
 
         protected virtual MqttServerCommunicator CreateMqttServerCommunicator(int port)
         {
-            return new MqttServerCommunicator(port, helper);
+            return new MqttServerCommunicator(port, NotifyPropertyChangedHelper);
         }
 
         protected virtual OwnTcpClientCommunicator CreateOwnTcpClientCommunicator(string serverAddress, int port)
         {
-            return new OwnTcpClientCommunicator(serverAddress, port, helper);
+            return new OwnTcpClientCommunicator(serverAddress, port, NotifyPropertyChangedHelper);
         }
 
         protected virtual OwnTcpServerCommunicator CreateOwnTcpServerCommunicator(int port)
         {
-            return new OwnTcpServerCommunicator(port, helper);
+            return new OwnTcpServerCommunicator(port, NotifyPropertyChangedHelper);
         }
 
         protected virtual AudioStreamPlayer CreateAudioStreamPlayer(IWaveProviderPlayer player, IAudioService service)

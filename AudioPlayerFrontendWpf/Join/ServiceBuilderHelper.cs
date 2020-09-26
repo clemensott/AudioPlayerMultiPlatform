@@ -19,14 +19,7 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        public Func<IAudioService> CreateAudioService => DoCreateAudioService;
-
         private ServiceBuilderHelper() { }
-
-        private IAudioService DoCreateAudioService()
-        {
-            return new AudioService(AudioServiceHelper.Current);
-        }
 
         public Action<Action> InvokeDispatcher => null;
 

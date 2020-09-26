@@ -40,7 +40,9 @@ namespace AudioPlayerFrontend
             this.Suspending += OnSuspending;
 
             serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
-            serviceBuilder.WithPlayer(new Player());
+            serviceBuilder
+                .WithAudioServiceHelper(AudioServiceHelper.Current)
+                .WithNotifyPropertyChangedHelper(ServiceBuilderHelper.Current);
 
             Dispatcher dispatcher = new Dispatcher();
             ServiceHandler service = new ServiceHandler(dispatcher, serviceBuilder);

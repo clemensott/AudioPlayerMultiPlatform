@@ -129,13 +129,13 @@ namespace AudioPlayerBackend.Audio
 
         IPlaylistBase[] IAudioServiceBase.Playlists { get => Playlists; set => Playlists = value.Cast<IPlaylist>().ToArray(); }
 
-        public AudioService(IAudioServiceHelper helper = null)
+        public AudioService(IAudioServiceHelper audioServiceHelper = null, INotifyPropertyChangedHelper notifyHelper = null)
         {
-            this.helper = helper;
+            helper = notifyHelper;
             playState = PlaybackState.Stopped;
 
             Playlists = new IPlaylist[0];
-            CurrentPlaylist = SourcePlaylist = new SourcePlaylist(helper);
+            CurrentPlaylist = SourcePlaylist = new SourcePlaylist(audioServiceHelper);
         }
 
         protected virtual void OnPlayStateChanged() { }
