@@ -32,6 +32,7 @@
     <uap:Capability Name="picturesLibrary" />
     <uap:Capability Name="sharedUserCertificates" />
     <uap:Capability Name="enterpriseAuthentication" />
+    <rescap:Capability Name="extendedBackgroundTaskTime"/>
     <DeviceCapability Name="wiFiControl" />
   </Capabilities>
 </Package>

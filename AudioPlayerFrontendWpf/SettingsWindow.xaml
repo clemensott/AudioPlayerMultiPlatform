@@ -10,7 +10,7 @@
 
     <Window.Resources>
         <con:FalsyConverter x:Key="inverter"/>
-        <con:EnumConverter x:Key="communicatorTypeCon"/>
+        <con:EnumConverter x:Key="communicatorProtocolCon"/>
 
         <local:FloatNullableToFloatConverter x:Key="volCon"/>
         <local:FloatNullableToFloatConverter x:Key="clientVolCon"/>
@@ -71,11 +71,11 @@
                         
                         <StackPanel VerticalAlignment="Center" Margin="3">
                             <RadioButton Content="Mqtt" Margin="2" HorizontalAlignment="Left"
-                                         IsChecked="{Binding CommunicatorType,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
-                                           Converter={StaticResource communicatorTypeCon},ConverterParameter=MQTT}"/>
+                                         IsChecked="{Binding CommunicatorProtocol,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
+                                           Converter={StaticResource communicatorProtocolCon},ConverterParameter=MQTT}"/>
                             <RadioButton Content="Own TCP" Margin="2" HorizontalAlignment="Left"
-                                         IsChecked="{Binding CommunicatorType,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
-                                           Converter={StaticResource communicatorTypeCon},ConverterParameter=OwnTCP}"/>
+                                         IsChecked="{Binding CommunicatorProtocol,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
+                                           Converter={StaticResource communicatorProtocolCon},ConverterParameter=OwnTCP}"/>
                         </StackPanel>
 
                         <StackPanel Margin="3" VerticalAlignment="Center">
@@ -85,9 +85,6 @@
                             <CheckBox Content="Shuffle search songs" Margin="3"
                                       IsChecked="{Binding IsSearchShuffle,Mode=TwoWay}"
                                       MouseRightButtonUp="CbxSearchShuffle_MouseRightButtonUp"/>
-                            <CheckBox Content="Play only search songs"  Margin="3"
-                                      IsChecked="{Binding IsOnlySearch,Mode=TwoWay}"
-                                      MouseRightButtonUp="CbxOnlySearch_MouseRightButtonUp"/>
                         </StackPanel>
 
                         <Grid VerticalAlignment="Center" Margin="5">

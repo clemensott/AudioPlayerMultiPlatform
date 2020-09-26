@@ -1,6 +1,6 @@
 ﻿namespace AudioPlayerBackend.Build
 {
-    public enum CommunicatorType
+    public enum CommunicatorProtocol
     {
         MQTT,
         OwnTCP,

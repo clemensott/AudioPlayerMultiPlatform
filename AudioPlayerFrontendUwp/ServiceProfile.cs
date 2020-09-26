@@ -10,7 +10,7 @@ namespace AudioPlayerFrontend
 
         public bool BuildClient { get; set; }
 
-        public CommunicatorType CommunicatorType { get; set; }
+        public CommunicatorProtocol CommunicatorProtocol { get; set; }
 
         public bool IfNon { get; set; }
 
@@ -19,8 +19,6 @@ namespace AudioPlayerFrontend
         public bool? IsAllShuffle { get; set; }
 
         public bool? IsSearchShuffle { get; set; }
-
-        public bool? IsOnlySearch { get; set; }
 
         public bool? Play { get; set; }
 
@@ -45,12 +43,11 @@ namespace AudioPlayerFrontend
             BuildStandalone = sb.BuildStandalone;
             BuildServer = sb.BuildServer;
             BuildClient = sb.BuildClient;
-            CommunicatorType = sb.CommunicatorType;
+            CommunicatorProtocol = sb.CommunicatorProtocol;
             IfNon = sb.IfNon;
             Reload = sb.Reload;
             IsAllShuffle = sb.IsAllShuffle;
             IsSearchShuffle = sb.IsSearchShuffle;
-            IsOnlySearch = sb.IsOnlySearch;
             Play = sb.Play;
             IsStreaming = sb.IsStreaming;
             ServerPort = sb.ServerPort;
@@ -68,11 +65,10 @@ namespace AudioPlayerFrontend
             else if (BuildServer) builder.WithServer(ServerPort);
             else if (BuildClient) builder.WithClient(ServerAddress, ClientPort);
 
-            builder.WithCommunicatorType(CommunicatorType)
+            builder.WithCommunicatorProtocol(CommunicatorProtocol)
                 .WithSetMediaIfNon(IfNon)
                 .WithReload(Reload).WithIsAllShuffle(IsAllShuffle)
                 .WithIsSearchShuffle(IsSearchShuffle)
-                .WithIsOnlySearch(IsOnlySearch)
                 .WithPlay(Play)
                 .WithIsStreaming(IsStreaming)
                 .WithServerPort(ServerPort)
@@ -89,7 +85,7 @@ namespace AudioPlayerFrontend
             else if (BuildServer) builder.WithServer(ServerPort);
             else if (BuildClient) builder.WithClient(ServerAddress, ClientPort);
 
-            builder.WithCommunicatorType(CommunicatorType);
+            builder.WithCommunicatorProtocol(CommunicatorProtocol);
         }
 
         public void ToClient()

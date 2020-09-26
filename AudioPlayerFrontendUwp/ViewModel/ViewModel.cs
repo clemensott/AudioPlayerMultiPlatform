@@ -1,143 +1,14 @@
-﻿using System;
-using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Communication;
-using System.ComponentModel;
-using AudioPlayerBackend.Build;
-using AudioPlayerBackend.Player;
-using AudioPlayerFrontend.Join;
-using Windows.UI.Xaml.Controls;
-using System.Threading.Tasks;
-using StdOttUwp;
+﻿using System.ComponentModel;
 
 namespace AudioPlayerFrontend
 {
     class ViewModel : INotifyPropertyChanged
     {
-        private ServiceBuild serviceOpenBuild;
-        private ServiceBuildResult buildResult;
-        private IAudioService audioService;
-        private ICommunicator communicator;
-        private IServicePlayer servicePlayer;
+        public ServiceHandler Service { get; }
 
-        public ServiceBuild ServiceOpenBuild
+        public ViewModel(ServiceHandler service)
         {
-            get => serviceOpenBuild;
-            private set
-            {
-                if (value == serviceOpenBuild) return;
-
-                serviceOpenBuild = value;
-                OnPropertyChanged(nameof(ServiceOpenBuild));
-
-                SetBuildResult(serviceOpenBuild);
-            }
-        }
-
-        public IAudioService AudioService
-        {
-            get => audioService;
-            private set
-            {
-                if (value == audioService) return;
-
-                audioService = value;
-                OnPropertyChanged(nameof(AudioService));
-            }
-        }
-
-        public ICommunicator Communicator
-        {
-            get => communicator;
-            private set
-            {
-                if (value == communicator) return;
-
-                communicator = value;
-                OnPropertyChanged(nameof(Communicator));
-
-            }
-        }
-
-        public IServicePlayer ServicePlayer
-        {
-            get => servicePlayer;
-            private set
-            {
-                if (value == servicePlayer) return;
-
-                servicePlayer = value;
-                OnPropertyChanged(nameof(ServicePlayer));
-            }
-        }
-
-        public ServiceBuilder Builder { get; }
-
-        public Frame Frame { get; private set; }
-
-        public ViewModel(ServiceBuilder builder)
-        {
-            Builder = builder;
-        }
-        
-        public Task ConnectAsync()
-        {
-            ServiceOpenBuild = Communicator != null ? Open() : Build();
-            if (Frame != null) Frame.Navigate(typeof(BuildOpenPage), ServiceOpenBuild);
-
-            return ServiceOpenBuild.CompleteToken.EndTask;
-        }
-
-        public void SetFrame(Frame frame)
-        {
-            Frame = frame;
-        }
-
-        private ServiceBuild Build()
-        {
-            return ServiceBuild.Build(Builder, TimeSpan.FromMilliseconds(200), AudioServiceHelper.Current);
-        }
-
-        private ServiceBuild Open()
-        {
-            return ServiceBuild.Open(Communicator, AudioService,
-                ServicePlayer, buildResult.Data, TimeSpan.FromMilliseconds(200));
-        }
-
-        private async void SetBuildResult(ServiceBuild build)
-        {
-            if (build == null) return;
-
-            if (Communicator != null) Communicator.Disconnected -= Communicator_Disconnected;
-
-            ServiceBuildResult result = await build.CompleteToken.ResultTask;
-
-            if (build != ServiceOpenBuild) return;
-
-            AudioService = result?.AudioService;
-            Communicator = result?.Communicator;
-            ServicePlayer = result?.ServicePlayer;
-
-            buildResult = result;
-
-            if (Communicator != null) Communicator.Disconnected += Communicator_Disconnected;
-        }
-
-        private async void Communicator_Disconnected(object sender, DisconnectedEventArgs e)
-        {
-            if (e.OnDisconnect) return;
-
-            await UwpUtils.RunSafe(async () =>
-            {
-                await CloseAsync();
-                await ConnectAsync();
-            });
-        }
-
-        public async Task CloseAsync()
-        {
-            ServiceOpenBuild?.Cancel();
-            ServiceOpenBuild = null;
-            await (Communicator?.CloseAsync() ?? Task.CompletedTask);
+            Service = service;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

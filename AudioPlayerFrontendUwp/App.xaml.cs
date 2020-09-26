@@ -4,7 +4,6 @@ using System.IO;
 using System.Xml.Serialization;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
 using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -12,6 +11,10 @@ using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
 using StdOttUwp;
 using System.Threading.Tasks;
+using AudioPlayerFrontend.Background;
+using Windows.ApplicationModel.Background;
+using StdOttStandard.Dispatch;
+using System.ComponentModel;
 
 namespace AudioPlayerFrontend
 {
@@ -23,11 +26,11 @@ namespace AudioPlayerFrontend
         private const string serviceProfileFilename = "serviceProfile.xml";
 
         public static DateTime CreateTime = DateTime.MinValue;
-        public static StorageFile ExceptionFile;
         private static readonly XmlSerializer serializer = new XmlSerializer(typeof(ServiceProfile));
 
         private readonly ServiceBuilder serviceBuilder;
         private readonly ViewModel viewModel;
+        private Frame rootFrame;
 
         public App()
         {
@@ -39,17 +42,20 @@ namespace AudioPlayerFrontend
             serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
             serviceBuilder.WithPlayer(new Player());
 
-            viewModel = new ViewModel(serviceBuilder);
+            Dispatcher dispatcher = new Dispatcher();
+            ServiceHandler service = new ServiceHandler(dispatcher, serviceBuilder);
+            service.PropertyChanged += Service_PropertyChanged;
+
+            viewModel = new ViewModel(service);
+            BackgroundTaskHandler.Current = new BackgroundTaskHandler(dispatcher, service);
 
             UnhandledException += App_UnhandledException;
-
-            EnteredBackground += Application_EnteredBackground;
             LeavingBackground += Application_LeavingBackground;
         }
 
         private void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            FileIO.WriteTextAsync(ExceptionFile, e.Exception.ToString()).AsTask().Wait();
+            Settings.Current.SetUnhandledException(e.Exception);
         }
 
         /// <summary>
@@ -59,10 +65,9 @@ namespace AudioPlayerFrontend
         /// <param name="e">Details über Startanforderung und -prozess.</param>
         protected override async void OnLaunched(LaunchActivatedEventArgs e)
         {
-            Frame rootFrame = Window.Current.Content as Frame;
+            rootFrame = Window.Current.Content as Frame;
 
             BackPressHandler.Current.Activate();
-            LoadExceptionFile();
 
             // App-Initialisierung nicht wiederholen, wenn das Fenster bereits Inhalte enthält.
             // Nur sicherstellen, dass das Fenster aktiv ist.
@@ -106,20 +111,14 @@ namespace AudioPlayerFrontend
                         serviceBuilder.WithClient("nas-server", 1884);
                     }
 
-                    buildTask = viewModel.ConnectAsync();
                     rootFrame.Navigate(typeof(MainPage), viewModel);
+                    buildTask = viewModel.Service.ConnectAsync();
                 }
                 // Sicherstellen, dass das aktuelle Fenster aktiv ist
                 Window.Current.Activate();
             }
 
             await buildTask;
-        }
-
-        private async void LoadExceptionFile()
-        {
-            ExceptionFile = await ApplicationData.Current.LocalFolder
-                .CreateFileAsync("Exception.txt", CreationCollisionOption.OpenIfExists);
         }
 
         /// <summary>
@@ -143,6 +142,8 @@ namespace AudioPlayerFrontend
         {
             SuspendingDeferral deferral = e.SuspendingOperation.GetDeferral();
 
+            BackgroundTaskHandler.Current.Stop();
+
             try
             {
                 ServiceProfile profile = new ServiceProfile(serviceBuilder);
@@ -161,29 +162,26 @@ namespace AudioPlayerFrontend
             deferral.Complete();
         }
 
-        private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
+        private void Service_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            viewModel.ServiceOpenBuild?.Cancel();
-
-            if (viewModel.Communicator?.IsOpen != true) return;
-
-            Deferral deferral = e.GetDeferral();
-
-            try
+            ServiceHandler service = (ServiceHandler)sender;
+            if (e.PropertyName == nameof(ServiceHandler.ServiceOpenBuild) && service.ServiceOpenBuild != null)
             {
-                await viewModel.CloseAsync();
+                rootFrame.Navigate(typeof(BuildOpenPage), service.ServiceOpenBuild);
             }
-            catch (Exception exc)
-            {
-                System.Diagnostics.Debug.WriteLine("App enter background error:\r\n" + exc);
-            }
-
-            deferral.Complete();
         }
 
         private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            if (viewModel.Frame != null) await viewModel.ConnectAsync();
+            if (!BackgroundTaskHandler.Current.IsRunning) await BackgroundTaskHelper.Current.Start();
+            if (viewModel.Service.Communicator?.IsOpen == false) await viewModel.Service.ConnectAsync();
+        }
+
+        protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)
+        {
+            BackgroundTaskDeferral deferral = args.TaskInstance.GetDeferral();
+            await BackgroundTaskHandler.Current.Run();
+            deferral.Complete();
         }
     }
 }

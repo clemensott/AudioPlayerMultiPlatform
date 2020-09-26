@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerFrontend.Join;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -15,7 +14,7 @@ namespace AudioPlayerFrontend
 {
     public sealed partial class SearchPage : Page
     {
-        private ViewModel viewModel;
+        private ServiceHandler service;
 
         public SearchPage()
         {
@@ -24,43 +23,43 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            DataContext = viewModel = (ViewModel)e.Parameter;
+            DataContext = service = (ServiceHandler)e.Parameter;
 
             base.OnNavigatedTo(e);
         }
 
         private void IbnPlay_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.AudioService == null) return;
+            if (service.Audio == null) return;
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            viewModel.AudioService.AddSongsToFirstPlaylist(new Song[] { song }, true, AudioServiceHelper.Current);
+            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, true, AudioServiceHelper.Current);
         }
 
         private void IbnAdd_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.AudioService == null) return;
+            if (service.Audio == null) return;
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            viewModel.AudioService.AddSongsToFirstPlaylist(new Song[] { song }, AudioServiceHelper.Current);
+            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, AudioServiceHelper.Current);
         }
 
         private void IbnSelectAll_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.AudioService == null) return;
+            if (service.Audio == null) return;
 
             IEnumerable<Song> songs = (IEnumerable<Song>)micSongs.Output;
 
-            viewModel.AudioService.AddSongsToFirstPlaylist(songs, AudioServiceHelper.Current);
+            service.Audio.AddSongsToFirstPlaylist(songs, AudioServiceHelper.Current);
         }
         
         private void BtnClear_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.AudioService.Playlists.Length > 0)
+            if (service.Audio.Playlists.Length > 0)
             {
-                viewModel.AudioService.Playlists[0].Songs = new Song[0];
+                service.Audio.Playlists[0].Songs = new Song[0];
             }
         }
 
@@ -81,16 +80,16 @@ namespace AudioPlayerFrontend
 
         private object MicSongs_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
-            IAudioService service = viewModel?.AudioService;
+            IAudioService audio = service?.Audio;
 
-            if (service == null) return null;
+            if (audio == null) return null;
 
-            IEnumerable<Song> viewSongs = service.SourcePlaylist.IsSearching ?
-                service.SourcePlaylist.SearchSongs : service.SourcePlaylist.AllSongs;
+            IEnumerable<Song> viewSongs = audio.SourcePlaylist.IsSearching ?
+                audio.SourcePlaylist.SearchSongs : audio.SourcePlaylist.AllSongs;
 
-            if (service.CurrentPlaylist == service.SourcePlaylist) return viewSongs;
+            if (audio.CurrentPlaylist == audio.SourcePlaylist) return viewSongs;
 
-            return viewSongs.Except(service.CurrentPlaylist.Songs);
+            return viewSongs.Except(audio.CurrentPlaylist.Songs);
         }
 
         private object SicPlaylist_Convert(object sender, SingleInputsConvertEventArgs args)

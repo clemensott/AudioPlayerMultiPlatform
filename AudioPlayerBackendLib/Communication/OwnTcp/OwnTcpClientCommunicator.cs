@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Communication.Base;
+using StdOttStandard.Linq;
 using StdOttStandard.Linq.DataStructures;
 
 namespace AudioPlayerBackend.Communication.OwnTcp
@@ -20,6 +21,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         private bool isSyncing, isSynced;
         private TcpClient client;
+        private Dictionary<uint, OwnTcpSendMessage> waitDict;
         private OwnTcpSendQueue sendQueue;
         private SemaphoreSlim pingSem;
         private AsyncQueue<OwnTcpMessage> processQueue;
@@ -89,16 +91,16 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 isSynced = false;
 
                 NetworkStream stream = client.GetStream();
-                Dictionary<uint, OwnTcpSendMessage> waitDict = new Dictionary<uint, OwnTcpSendMessage>();
+                waitDict = new Dictionary<uint, OwnTcpSendMessage>();
                 pingSem = new SemaphoreSlim(0);
                 processQueue = new AsyncQueue<OwnTcpMessage>();
 
                 Task publishTask = Task.Run(() => SendMessagesHandler(stream, sendQueue, waitDict));
                 Task pingTask = Task.Run(() => SendPingsHandler(sendQueue, pingSem));
                 Task receiveTask = Task.Run(() => ReceiveHandler(stream, waitDict, processQueue));
-                Task processTask = ProcessHandler(processQueue);
+                Task processTask = Task.Run(() => ProcessHandler(processQueue));
 
-                await SendCommand(syncCmd, false);
+                await SendCommand(syncCmd, false, TimeSpan.FromSeconds(10));
                 isSynced = true;
 
                 openTask = Task.WhenAll(publishTask, pingTask, receiveTask, processTask);
@@ -119,46 +121,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        public override Task CloseAsync()
-        {
-            return CloseAsync(null, true);
-        }
-
-        private async Task CloseAsync(Exception e, bool awaitAll)
-        {
-            if (!IsOpen) return;
-
-            isSynced = false;
-            if (e == null) await SendCommand(closeCmd, true).ConfigureAwait(false);
-
-            sendQueue.End();
-            await processQueue.End().ConfigureAwait(false);
-
-            client?.Dispose();
-            client = null;
-
-            Task raiseTask = RaiseDisconnected();
-            if (awaitAll) await raiseTask.ConfigureAwait(false);
-
-            async Task RaiseDisconnected()
-            {
-                if (openTask != null) await openTask.ConfigureAwait(false);
-
-                if (e != null) { }
-                Disconnected?.Invoke(this, new DisconnectedEventArgs(e == null, e));
-            }
-        }
-
-        public override void Dispose()
-        {
-            DisposeTask().Wait();
-
-            async Task DisposeTask()
-            {
-                await CloseAsync(null, false).ConfigureAwait(false);
-            }
-        }
-
         public override async Task SendCommand(string cmd)
         {
             if (!IsOpen) return;
@@ -173,11 +135,17 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await sendQueue.Enqueue(message);
         }
 
-        private async Task SendCommand(string cmd, bool fireAndForget)
+        private async Task SendCommand(string cmd, bool fireAndForget, TimeSpan? timeout = null)
         {
             if (!IsOpen) return;
 
-            await sendQueue.Enqueue(OwnTcpMessage.FromCommand(cmd, fireAndForget)).ConfigureAwait(false);
+            Task cmdTask = sendQueue.Enqueue(OwnTcpMessage.FromCommand(cmd, fireAndForget));
+            if (timeout.HasValue && timeout.Value >= TimeSpan.Zero)
+            {
+                await Task.WhenAny(cmdTask, Task.Delay(timeout.Value));
+                if (!cmdTask.IsCompleted) throw new TimeoutException($"Command ran in timout: {cmd}");
+            }
+            else await cmdTask.ConfigureAwait(false);
         }
 
         protected override async Task SendAsync(string topic, byte[] payload, bool fireAndForget)
@@ -221,14 +189,14 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             Task cancelTask = pingSem.WaitAsync();
             try
             {
-                while (client.Connected)
+                while (client?.Connected == true)
                 {
                     Task delayTask = Task.Delay(pingInterval);
                     await Task.WhenAny(delayTask, cancelTask);
 
                     if (cancelTask.IsCompleted) return;
 
-                    await SendCommand(pingCmd, false);
+                    await SendCommand(pingCmd, false, TimeSpan.FromSeconds(2));
                 }
             }
             catch (Exception e)
@@ -242,10 +210,10 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         {
             try
             {
-                while (client.Connected)
+                while (client?.Connected == true)
                 {
                     OwnTcpMessage message = await ReadMessage(stream);
-                    if (message == null || !client.Connected) break;
+                    if (message == null || client?.Connected != true) break;
 
                     switch (message.Topic)
                     {
@@ -288,7 +256,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         {
             while (true)
             {
-                (_, OwnTcpMessage item) = await queue.Dequeue();
+                (_, OwnTcpMessage item) = await queue.Dequeue().ConfigureAwait(false);
                 if (queue.IsEnd) break;
 
                 try
@@ -312,6 +280,52 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 {
                     UnlockTopic(item.Topic);
                 }
+            }
+        }
+
+        public override Task CloseAsync()
+        {
+            return CloseAsync(null, true);
+        }
+
+        private async Task CloseAsync(Exception e, bool awaitAll)
+        {
+            if (!isSynced) return;
+            isSynced = false;
+
+            if (e == null) await SendCommand(closeCmd, true).ConfigureAwait(false);
+
+            pingSem.Release();
+            sendQueue.End();
+
+            await processQueue.End().ConfigureAwait(false);
+
+            client?.Dispose();
+            client = null;
+
+            foreach (OwnTcpSendMessage message in waitDict?.Values.ToNotNull())
+            {
+                message.SetValue(false);
+            }
+
+            Task raiseTask = RaiseDisconnected();
+            if (awaitAll) await raiseTask.ConfigureAwait(false);
+
+            async Task RaiseDisconnected()
+            {
+                if (openTask != null) await openTask.ConfigureAwait(false);
+
+                Disconnected?.Invoke(this, new DisconnectedEventArgs(e == null, e));
+            }
+        }
+
+        public override void Dispose()
+        {
+            DisposeTask().Wait();
+
+            async Task DisposeTask()
+            {
+                await CloseAsync(null, false).ConfigureAwait(false);
             }
         }
     }

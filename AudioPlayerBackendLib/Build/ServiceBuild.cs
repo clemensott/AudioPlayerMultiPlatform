@@ -112,7 +112,7 @@ namespace AudioPlayerBackend.Build
 
         public BuildStatusToken<ServiceBuildResult> CompleteToken { get; }
 
-        private ServiceBuild()
+        public ServiceBuild()
         {
             State = BuildState.Init;
             CommunicatorToken = new BuildStatusToken<ICommunicator>();
@@ -140,13 +140,15 @@ namespace AudioPlayerBackend.Build
         public static ServiceBuild Build(ServiceBuilder serviceBuilder, TimeSpan delayTime, IAudioServiceHelper serviceHelper = null)
         {
             ServiceBuild build = new ServiceBuild();
-            build.Build(delayTime, serviceBuilder, serviceHelper);
+            build.StartBuild(serviceBuilder, delayTime, serviceHelper);
 
             return build;
         }
 
-        private async void Build(TimeSpan delayTime, ServiceBuilder serviceBuilder, IAudioServiceHelper serviceHelper)
+        public async void StartBuild(ServiceBuilder serviceBuilder, TimeSpan delayTime, IAudioServiceHelper serviceHelper = null)
         {
+            if (State != BuildState.Init) throw new InvalidOperationException("Build has already benn started: " + State);
+
             try
             {
                 while (true)
@@ -267,14 +269,16 @@ namespace AudioPlayerBackend.Build
             IServicePlayer player, ReadWriteAudioServiceData data, TimeSpan delayTime)
         {
             ServiceBuild build = new ServiceBuild();
-            build.Open(delayTime, communicator, service, data, player);
+            build.StartOpen(communicator, service, player, data, delayTime);
 
             return build;
         }
 
-        private async void Open(TimeSpan delayTime, ICommunicator communicator,
-            IAudioService service, ReadWriteAudioServiceData data, IServicePlayer player)
+        public async void StartOpen(ICommunicator communicator, IAudioService service,
+            IServicePlayer player, ReadWriteAudioServiceData data, TimeSpan delayTime)
         {
+            if (State != BuildState.Init) throw new InvalidOperationException("Build has already benn started: " + State);
+
             try
             {
                 Communicator = communicator;

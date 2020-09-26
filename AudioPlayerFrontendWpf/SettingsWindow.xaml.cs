@@ -102,11 +102,6 @@ namespace AudioPlayerFrontend
             ServiceBuilder.IsSearchShuffle = null;
         }
 
-        private void CbxOnlySearch_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            ServiceBuilder.IsOnlySearch = null;
-        }
-
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = true;

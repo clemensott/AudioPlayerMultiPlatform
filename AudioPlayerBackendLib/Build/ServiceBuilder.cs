@@ -17,13 +17,13 @@ namespace AudioPlayerBackend.Build
     {
         private readonly IServiceBuilderHelper helper;
         private bool ifNon, reload;
-        private bool? isAllShuffle, isSearchShuffle, isOnlySearch, play, isStreaming;
+        private bool? isAllShuffle, isSearchShuffle, play, isStreaming;
         private int serverPort;
         private int? clientPort;
         private string searchKey, serverAddress, dataReadFile, dataWriteFile;
         private float? volume;
         private string[] mediaSources;
-        private CommunicatorType communicatorType;
+        private CommunicatorProtocol communicatorProtocol;
         private IWaveProviderPlayer player;
 
         public bool BuildStandalone { get; private set; }
@@ -32,15 +32,15 @@ namespace AudioPlayerBackend.Build
 
         public bool BuildClient { get; private set; }
 
-        public CommunicatorType CommunicatorType
+        public CommunicatorProtocol CommunicatorProtocol
         {
-            get => communicatorType;
+            get => communicatorProtocol;
             set
             {
-                if (value == communicatorType) return;
+                if (value == communicatorProtocol) return;
 
-                communicatorType = value;
-                OnPropertyChanged(nameof(CommunicatorType));
+                communicatorProtocol = value;
+                OnPropertyChanged(nameof(CommunicatorProtocol));
             }
         }
 
@@ -89,18 +89,6 @@ namespace AudioPlayerBackend.Build
 
                 isSearchShuffle = value;
                 OnPropertyChanged(nameof(IsSearchShuffle));
-            }
-        }
-
-        public bool? IsOnlySearch
-        {
-            get => isOnlySearch;
-            set
-            {
-                if (value == isOnlySearch) return;
-
-                isOnlySearch = value;
-                OnPropertyChanged(nameof(IsOnlySearch));
             }
         }
 
@@ -252,7 +240,6 @@ namespace AudioPlayerBackend.Build
             Option reloadOpt = new Option("r", "reload", "Forces to reload", false, 0, 0);
             Option allShuffleOpt = Option.GetLongOnly("all-shuffle", "Shuffles all songs.", false, 0, 0);
             Option searchShuffleOpt = Option.GetLongOnly("search-shuffle", "Shuffles all songs.", false, 0, 0);
-            Option onlySearchOpt = Option.GetLongOnly("only-search", "Shuffles all songs.", false, 0, 0);
             Option searchKeyOpt = Option.GetLongOnly("search-key", "Shuffles all songs.", false, 1, 0);
             Option playOpt = new Option("p", "play", "Starts playback on startup", false, 0, 0);
             Option serviceVolOpt = new Option("v", "volume", "The volume of service (value between 0 and 1)", false, 1, 1);
@@ -261,22 +248,22 @@ namespace AudioPlayerBackend.Build
             Option dataFileWriteOpt = Option.GetLongOnly("data-file-write", "Filepath to where to write data from.", false, 1, 1);
 
             Options options = new Options(sourcesOpt, ifNonOpt, reloadOpt, clientOpt, serverOpt, playOpt,
-                allShuffleOpt, searchShuffleOpt, onlySearchOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileReadOpt, dataFileWriteOpt);
+                allShuffleOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileReadOpt, dataFileWriteOpt);
             OptionParseResult result = options.Parse(args);
 
             OptionParsed parsed;
 
             if (result.TryGetFirstValidOptionParseds(serverOpt, out parsed))
             {
-                WithCommunicatorType((CommunicatorType)Enum
-                        .Parse(typeof(CommunicatorType), parsed.Values[0], true))
+                WithCommunicatorProtocol((CommunicatorProtocol)Enum
+                        .Parse(typeof(CommunicatorProtocol), parsed.Values[0], true))
                     .WithServer(int.Parse(parsed.Values[1]));
             }
 
             if (result.TryGetFirstValidOptionParseds(clientOpt, out parsed))
             {
-                WithCommunicatorType((CommunicatorType)Enum
-                    .Parse(typeof(CommunicatorType), parsed.Values[0], true));
+                WithCommunicatorProtocol((CommunicatorProtocol)Enum
+                    .Parse(typeof(CommunicatorProtocol), parsed.Values[0], true));
 
                 if (parsed.Values.Count > 2) WithClient(parsed.Values[1], int.Parse(parsed.Values[2]));
                 else WithClient(parsed.Values[1]);
@@ -289,7 +276,6 @@ namespace AudioPlayerBackend.Build
 
             if (result.TryGetFirstValidOptionParseds(allShuffleOpt, out parsed)) WithIsAllShuffle();
             if (result.TryGetFirstValidOptionParseds(searchShuffleOpt, out parsed)) WithIsSearchShuffle();
-            if (result.TryGetFirstValidOptionParseds(onlySearchOpt, out parsed)) WithIsOnlySearch();
             if (result.TryGetFirstValidOptionParseds(searchKeyOpt, out parsed)) WithSearchKey(parsed.Values.FirstOrDefault());
             if (result.HasValidOptionParseds(ifNonOpt)) WithSetMediaIfNon();
             if (result.HasValidOptionParseds(reloadOpt)) WithReload();
@@ -335,21 +321,21 @@ namespace AudioPlayerBackend.Build
             return WithServerPort(port);
         }
 
-        public ServiceBuilder WithCommunicatorType(CommunicatorType communicatorType)
+        public ServiceBuilder WithCommunicatorProtocol(CommunicatorProtocol communicatorProtocol)
         {
-            CommunicatorType = communicatorType;
+            CommunicatorProtocol = communicatorProtocol;
             return this;
         }
 
         public ServiceBuilder WithMqtt()
         {
-            CommunicatorType = CommunicatorType.MQTT;
+            CommunicatorProtocol = CommunicatorProtocol.MQTT;
             return this;
         }
 
         public ServiceBuilder WithOwnTcp()
         {
-            CommunicatorType = CommunicatorType.OwnTCP;
+            CommunicatorProtocol = CommunicatorProtocol.OwnTCP;
             return this;
         }
 
@@ -369,19 +355,20 @@ namespace AudioPlayerBackend.Build
             return WithServerAddress(serverAddress).WithClientPort(port);
         }
 
-        public void WithCommunicator(ICommunicator communicator)
+        public ServiceBuilder WithCommunicator(ICommunicator communicator)
         {
             if (communicator is IClientCommunicator)
             {
                 IClientCommunicator clientCommunicator = (IClientCommunicator)communicator;
-                ServerAddress = clientCommunicator.ServerAddress;
-                ClientPort = clientCommunicator.Port;
+                return WithClient(clientCommunicator.ServerAddress, clientCommunicator.Port);
             }
             else if (communicator is IServerCommunicator)
             {
                 IServerCommunicator serverCommunicator = (IServerCommunicator)communicator;
-                ServerPort = serverCommunicator.Port;
+                return WithServer(serverCommunicator.Port);
             }
+
+            return WithStandalone();
         }
 
         public ServiceBuilder WithServerAddress(string serverAddress)
@@ -422,13 +409,6 @@ namespace AudioPlayerBackend.Build
         public ServiceBuilder WithIsSearchShuffle(bool? value = true)
         {
             IsSearchShuffle = value;
-
-            return this;
-        }
-
-        public ServiceBuilder WithIsOnlySearch(bool? value = true)
-        {
-            IsOnlySearch = value;
 
             return this;
         }
@@ -477,14 +457,14 @@ namespace AudioPlayerBackend.Build
 
         public ICommunicator CreateCommunicator()
         {
-            switch (CommunicatorType)
+            switch (CommunicatorProtocol)
             {
-                case CommunicatorType.MQTT:
+                case CommunicatorProtocol.MQTT:
                     if (BuildServer) return CreateMqttServerCommunicator(ServerPort);
                     if (BuildClient) return CreateMqttClientCommunicator(ServerAddress, ClientPort);
                     break;
 
-                case CommunicatorType.OwnTCP:
+                case CommunicatorProtocol.OwnTCP:
                     if (BuildServer) return CreateOwnTcpServerCommunicator(ServerPort);
                     if (BuildClient) return CreateOwnTcpClientCommunicator(ServerAddress, ClientPort ?? 1884);
                     break;
@@ -560,7 +540,6 @@ namespace AudioPlayerBackend.Build
                 ClientPort = ClientPort,
                 IfNon = ifNon,
                 IsAllShuffle = IsAllShuffle,
-                IsOnlySearch = IsOnlySearch,
                 IsSearchShuffle = IsSearchShuffle,
                 IsStreaming = IsStreaming,
                 MediaSources = MediaSources?.ToArray(),

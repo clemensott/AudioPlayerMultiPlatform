@@ -402,7 +402,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             IPlaylistBase existingPlaylist;
             IPlaylistBase currentPlaylist = data.DequeuePlaylist(id => new Playlist(id, helper));
 
-            if (playlists.TryGetValue(currentPlaylist.ID, out existingPlaylist))
+            if (Service.SourcePlaylist.ID == currentPlaylist.ID)
+            {
+                Service.CurrentPlaylist = Service.SourcePlaylist;
+            }
+            else if (playlists.TryGetValue(currentPlaylist.ID, out existingPlaylist))
             {
                 Service.CurrentPlaylist = existingPlaylist;
             }
