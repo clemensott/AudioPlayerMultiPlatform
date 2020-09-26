@@ -17,6 +17,11 @@ namespace AudioPlayerBackend.Audio
             Duration = duration;
         }
 
+        public override string ToString()
+        {
+            return $"{Song.FullPath} @ {Position} / {Duration}";
+        }
+
         public static RequestSong Get(Song song, TimeSpan? position = null, TimeSpan? duration = null)
         {
             return new RequestSong(song, position ?? TimeSpan.Zero, duration ?? TimeSpan.Zero);

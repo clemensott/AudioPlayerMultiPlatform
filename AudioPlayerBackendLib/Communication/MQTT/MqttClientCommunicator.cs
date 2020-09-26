@@ -71,7 +71,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             }
         }
 
-        public override string Name => $"MQTT: {ServerAddress.Trim()}:{Port?.ToString() ?? "Default"}";
+        public override string Name => $"MQTT: {ServerAddress?.Trim()} : {Port?.ToString() ?? "Default"}";
 
         public MqttClientCommunicator(string server, int? port = null,
             INotifyPropertyChangedHelper helper = null) : base(helper)

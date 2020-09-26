@@ -18,20 +18,20 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         {
         }
 
-        protected override async void OnServiceAudioDataChanged(object sender, ValueChangedEventArgs<byte[]> e)
-        {
-            //await PublishAudioData();
-        }
+        //protected override void OnServiceAudioDataChanged(object sender, ValueChangedEventArgs<byte[]> e)
+        //{
+        //    await PublishAudioData();
+        //}
 
         protected async Task PublishAudioData()
         {
             await SendAsync(nameof(Service.AudioData), Service.AudioData, true);
         }
 
-        protected override async void OnServiceAudioFormatChanged(object sender, ValueChangedEventArgs<WaveFormat> e)
-        {
-            //await PublishFormat();
-        }
+        //protected override void OnServiceAudioFormatChanged(object sender, ValueChangedEventArgs<WaveFormat> e)
+        //{
+        //    await PublishFormat();
+        //}
 
         protected async Task PublishFormat()
         {
