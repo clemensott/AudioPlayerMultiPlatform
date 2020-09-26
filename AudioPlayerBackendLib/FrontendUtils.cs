@@ -3,6 +3,7 @@ using StdOttStandard.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using AudioPlayerBackend.Audio;
+using System.Text;
 
 namespace AudioPlayerBackend
 {
@@ -99,6 +100,32 @@ namespace AudioPlayerBackend
                     currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong);
                 }
             }
+        }
+    }
+
+    public static class Logs
+    {
+        private static readonly StringBuilder builder = new StringBuilder();
+
+        public static void Log(string text)
+        {
+            builder.AppendLine(GetLogLine(text));
+        }
+
+        private static string GetLogLine(string text)
+        {
+            DateTime n = DateTime.Now;
+            return $"{n.Day:00}.{n.Month:00}.{n.Year} {n.Hour:00}:{n.Minute:00}:{n.Second:00}.{n.Millisecond:000}: {text}";
+        }
+
+        public static void Clear()
+        {
+            builder.Clear();
+        }
+
+        public static string Get()
+        {
+            return builder.ToString();
         }
     }
 }
