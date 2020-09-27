@@ -50,6 +50,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <Grid Margin="5,0" VerticalAlignment="Center"
@@ -67,7 +68,14 @@
                             IsEnabled="{Binding Communicator.IsStreaming}"/>
                 </Grid>
 
-                <ctl:IconButton Grid.Column="1" Symbol="Refresh" Margin="3" Click="BtnReload_Click"/>
+                <ctl:IconButton Grid.Column="1" Margin="3" Click="IbnLoopType_Click"
+                                Symbol="{Binding Audio.CurrentPlaylist.Loop,
+                                  Converter={StaticResource loopIcoCon}}" />
+
+                <ToggleButton Grid.Column="2" Margin="3" 
+                              IsChecked="{Binding Audio.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}">
+                    <SymbolIcon Symbol="Shuffle"/>
+                </ToggleButton>
             </Grid>
 
             <Grid Grid.Row="1" Margin="5,0">
@@ -84,15 +92,6 @@
                         StepFrequency="0.01" Maximum="1" Value="{Binding Audio.Volume,Mode=TwoWay}"
                         ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
 
-                <ctl:IconButton Grid.Column="2" Margin="3" Click="IbnLoopType_Click"
-                                Symbol="{Binding Audio.CurrentPlaylist.Loop,
-                                  Converter={StaticResource loopIcoCon}}" />
-
-                <ToggleButton Grid.Column="3" Margin="3" 
-                              IsChecked="{Binding Audio.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}">
-                    <SymbolIcon Symbol="Shuffle"/>
-                </ToggleButton>
-
                 <ctl:IconButton Grid.Column="4" Symbol="Find" Margin="3" Click="IbnSearch_Click"/>
             </Grid>
 
@@ -104,7 +103,6 @@
                                           ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
             <con:MultipleInputs2Converter x:Name="micDoRemove" 
-                                          Input0="{Binding Audio.SourcePlaylist}"
                                           Input1="{Binding Audio.CurrentPlaylist}"
                                           Convert="MicDoRemove_Convert"/>
 
@@ -146,6 +144,44 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
+            <Grid Grid.Row="2" DataContext="{Binding Audio}">                
+                <con:MultipleInputs4Converter x:Name="micPlaylists"
+                                              Input0="{Binding SourcePlaylists.Count}"
+                                              Input1="{Binding Playlists.Count}"
+                                              Input2="{Binding CurrentPlaylist,Mode=TwoWay}"
+                                              ConvertRef="MicPlaylists_Convert"/>
+
+                <ListBox x:Name="lbxPlaylists" Margin="0,5" SelectionMode="Single"
+                         ItemsSource="{Binding ElementName=micPlaylists,Path=Output}"
+                         SelectedItem="{Binding ElementName=micPlaylists,Path=Input3,Mode=TwoWay}"
+                         Visibility="{Binding ElementName=atbPlaylists,Path=IsChecked,Converter={StaticResource visCon}}">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock FontWeight="SemiBold" FontSize="17"
+                                           TextWrapping="WrapWholeWords" Text="{Binding Name}"/>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Songs.Length}"/>
+                                    <TextBlock Text=" Song(s)"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+
             <Grid Grid.Row="3" Margin="5,1" DataContext="{Binding Audio.CurrentPlaylist}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -173,6 +209,7 @@
     <Page.BottomAppBar>
         <CommandBar Visibility="{Binding Service.Audio,Converter={StaticResource visCon}}">
             <CommandBar.PrimaryCommands>
+                <AppBarToggleButton x:Name="atbPlaylists" Icon="List" Label="Playlists"/>
                 <AppBarButton Icon="Previous" Label="Previous" Click="AbbPrevious_Click"/>
                 <AppBarButton Label="{Binding Service.Audio.PlayState,Converter={StaticResource isPlayPauseLabelCon}}"
                               Click="AbbPlayPause_Click">

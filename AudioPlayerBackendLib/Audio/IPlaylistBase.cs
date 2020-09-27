@@ -7,6 +7,7 @@ namespace AudioPlayerBackend.Audio
     public interface IPlaylistBase
     {
         event EventHandler<ValueChangedEventArgs<bool>> IsAllShuffleChanged;
+        event EventHandler<ValueChangedEventArgs<string>> NameChanged;
         event EventHandler<ValueChangedEventArgs<LoopType>> LoopChanged;
         event EventHandler<ValueChangedEventArgs<TimeSpan>> PositionChanged;
         event EventHandler<ValueChangedEventArgs<TimeSpan>> DurationChanged;
@@ -17,6 +18,8 @@ namespace AudioPlayerBackend.Audio
         Guid ID { get; }
 
         bool IsAllShuffle { get; set; }
+
+        string Name { get; set; }
 
         LoopType Loop { get; set; }
 

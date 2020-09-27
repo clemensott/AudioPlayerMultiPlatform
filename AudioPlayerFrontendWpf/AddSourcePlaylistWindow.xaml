@@ -1,0 +1,105 @@
+﻿<Window x:Class="AudioPlayerFrontend.AddSourcePlaylistWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AudioPlayerFrontend"
+        xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
+        xmlns:audio="clr-namespace:AudioPlayerBackend.Audio;assembly=AudioPlayerBackendLib"
+        mc:Ignorable="d"
+        Title="AddSourcePlaylistWindow" MinHeight="400" MinWidth="400" Height="450" Width="700">
+
+    <Window.Resources>
+        <con:FalsyConverter x:Key="invCon"/>
+        <con:VisibleCollapsedConverter x:Key="visCon"/>
+    </Window.Resources>
+
+    <Grid Margin="3">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Sources:" FontWeight="SemiBold" Margin="3,0"/>
+            <TextBox Grid.Row="1" Name="tbxSources" AcceptsReturn="True"/>
+        </Grid>
+
+        <Grid Grid.Row="1" Visibility="{Binding SourcePlaylists.Count,Converter={StaticResource visCon}}"
+              IsEnabled="{Binding ElementName=cbxNewPlaylist,Path=IsChecked,Converter={StaticResource invCon}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <ListBox Name="lbxPlaylists" SelectionMode="Single" Margin="3" ItemsSource="{Binding SourcePlaylists}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal">
+                <RadioButton Name="rbnAppend" Content="Append" GroupName="Action"
+                             IsChecked="True" Margin="5,3"/>
+                <RadioButton Content="Replace" GroupName="Action" Margin="5,3"/>
+            </StackPanel>
+        </Grid>
+
+        <CheckBox Grid.Row="2" x:Name="cbxNewPlaylist" Content="New Playlist" Margin="3,10,3,3"
+                  Visibility="{Binding SourcePlaylists.Count,Converter={StaticResource visCon}}"/>
+
+        <con:MultipleInputs2Converter x:Name="micNewPlaylist" 
+                                      Input0="{Binding SourcePlaylists.Count}"
+                                      Input1="{Binding ElementName=cbxNewPlaylist,Path=IsChecked}"
+                                      Convert="MicNewPlaylist_Convert"/>
+
+        <Grid Grid.Row="3" Name="gidNewPlaylist" Margin="3"
+              IsEnabled="{Binding ElementName=micNewPlaylist,Path=Output}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="Name:" FontWeight="SemiBold" Margin="3,0"/>
+            <TextBox Grid.Row="1" x:Name="tbxName" Margin="3,2" Text="{Binding Name,Mode=TwoWay}"/>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+                <ComboBox Margin="5,3" Width="130" SelectedValue="{Binding Loop,Mode=TwoWay}">
+                    <audio:LoopType>Next</audio:LoopType>
+                    <audio:LoopType>Stop</audio:LoopType>
+                    <audio:LoopType>CurrentPlaylist</audio:LoopType>
+                    <audio:LoopType>CurrentSong</audio:LoopType>
+                    <audio:LoopType>StopCurrentSong</audio:LoopType>
+                </ComboBox>
+
+                <CheckBox Grid.Row="2" Content="Is all shuffle" Margin="5,0"
+                          VerticalAlignment="Center" IsChecked="{Binding IsAllShuffle}"/>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="3">
+            <con:MultipleInputs3Converter x:Name="micOk"
+                                          Input0="{Binding ElementName=lbxPlaylists,Path=SelectedItem}"
+                                          Input1="{Binding ElementName=micNewPlaylist,Path=Output}"
+                                          Input2="{Binding ElementName=tbxName,Path=Text}"
+                                          Convert="MicOk_Convert"/>
+
+            <Button Grid.Column="3" Content="OK" Width="100" Margin="3"
+                    IsEnabled="{Binding ElementName=micOk,Path=Output}" Click="BtnOk_Click"/>
+            <Button Grid.Column="4" Content="Cancel" Width="100" 
+                    Margin="3" Click="BtnCancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

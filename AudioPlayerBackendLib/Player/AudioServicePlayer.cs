@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend.Audio;
+using StdOttStandard.Linq;
 using System;
 using System.Linq;
 using System.Threading;
@@ -11,7 +12,6 @@ namespace AudioPlayerBackend.Player
         private const int updateInterval = 100;
 
         private bool isSetCurrentSong;
-        private RequestSong? currentWannaSong, nextWannaSong;
         private readonly SemaphoreSlim setWannaSongSem;
         private readonly IAudioServicePlayerHelper helper;
         private readonly Timer timer;
@@ -48,7 +48,7 @@ namespace AudioPlayerBackend.Player
         {
             if (Reader == null ^ Service.CurrentPlaylist?.CurrentSong == null)
             {
-                await UpdateCurrentSong(Service.CurrentPlaylist?.WannaSong);
+                await UpdateCurrentSong();
             }
         }
 
@@ -75,11 +75,13 @@ namespace AudioPlayerBackend.Player
             if (service == null) return;
 
             service.CurrentPlaylistChanged += Service_CurrentPlaylistChanged;
+            service.SourcePlaylistsChanged += Service_SourcePlaylistsChanged;
             service.PlayStateChanged += Service_PlayStateChanged;
             service.VolumeChanged += Service_VolumeChanged;
-            service.SourcePlaylist.FileMediaSourcesChanged += SourcePlaylist_FileMediaSourcesChanged;
 
             Subscribe(service.CurrentPlaylist);
+
+            service.SourcePlaylists.ForEach(Subscribe);
         }
 
         private void Unsubscribe(IAudioServiceBase service)
@@ -87,11 +89,13 @@ namespace AudioPlayerBackend.Player
             if (service == null) return;
 
             service.CurrentPlaylistChanged -= Service_CurrentPlaylistChanged;
+            service.SourcePlaylistsChanged += Service_SourcePlaylistsChanged;
             service.PlayStateChanged -= Service_PlayStateChanged;
             service.VolumeChanged -= Service_VolumeChanged;
-            service.SourcePlaylist.FileMediaSourcesChanged -= SourcePlaylist_FileMediaSourcesChanged;
 
             Unsubscribe(service.CurrentPlaylist);
+
+            service.SourcePlaylists.ForEach(Unsubscribe);
         }
 
         private void Subscribe(IPlaylistBase playlist)
@@ -110,15 +114,39 @@ namespace AudioPlayerBackend.Player
             playlist.SongsChanged -= Playlist_SongsChanged;
         }
 
+        private void Subscribe(ISourcePlaylistBase playlist)
+        {
+            if (playlist != null) playlist.FileMediaSourcesChanged += Playlist_FileMediaSourcesChanged;
+        }
+
+        private void Unsubscribe(ISourcePlaylistBase playlist)
+        {
+            if (playlist != null) playlist.FileMediaSourcesChanged -= Playlist_FileMediaSourcesChanged;
+        }
+
         private async void Service_CurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
         {
             Unsubscribe(e.OldValue);
             Subscribe(e.NewValue);
 
-            e.OldValue.WannaSong = RequestSong.Get(e.OldValue.CurrentSong, e.OldValue.Position, e.OldValue.Duration);
+            if (e.OldValue != null)
+            {
+                e.OldValue.WannaSong = RequestSong.Get(e.OldValue.CurrentSong, e.OldValue.Position, e.OldValue.Duration);
+            }
 
             CheckCurrentSong(Service.CurrentPlaylist);
-            await UpdateCurrentSong(e.NewValue.WannaSong);
+            await UpdateCurrentSong();
+        }
+
+        private void Service_SourcePlaylistsChanged(object sender, ValueChangedEventArgs<ISourcePlaylistBase[]> e)
+        {
+            e.OldValue.ForEach(Unsubscribe);
+            e.NewValue.ForEach(Subscribe);
+
+            foreach (ISourcePlaylistBase playlist in e.NewValue.ToNotNull().Except(e.OldValue.ToNotNull()))
+            {
+                helper?.Update(playlist);
+            }
         }
 
         private void Service_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
@@ -133,14 +161,14 @@ namespace AudioPlayerBackend.Player
             Player.Volume = Service.Volume;
         }
 
-        private void SourcePlaylist_FileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
+        private void Playlist_FileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
         {
-            Service.SourcePlaylist.Reload();
+            helper.Reload((ISourcePlaylistBase)sender);
         }
 
         private async void Playlist_WannaSongChanged(object sender, ValueChangedEventArgs<RequestSong?> e)
         {
-            if (e.NewValue.HasValue) await UpdateCurrentSong(e.NewValue.Value);
+            if (e.NewValue.HasValue) await UpdateCurrentSong();
         }
 
         private void Playlist_SongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
@@ -150,36 +178,47 @@ namespace AudioPlayerBackend.Player
 
         private static void CheckCurrentSong(IPlaylistBase playlist)
         {
+            if (playlist == null) return;
+
             if (playlist.Songs == null || playlist.Songs.Length == 0) playlist.WannaSong = null;
             else if (!playlist.WannaSong.HasValue || !playlist.Songs.Contains(playlist.WannaSong.Value.Song))
             {
-                playlist.WannaSong = RequestSong.Get(playlist.Songs.First());
+                playlist.WannaSong = RequestSong.Start(playlist.Songs.First());
             }
         }
 
-        private async Task UpdateCurrentSong(RequestSong? wannaSong)
+        private Task UpdateCurrentSong()
         {
-            nextWannaSong = wannaSong;
-            await setWannaSongSem.WaitAsync();
+            IPlaylistBase currentPlaylist = Service.CurrentPlaylist;
+            RequestSong? wannaSong = currentPlaylist?.WannaSong;
 
-            if (nextWannaSong.Equals(wannaSong))
+            System.Diagnostics.Debug.WriteLine($"Update current song1: {wannaSong?.Song.Title ?? "none"} | {currentPlaylist != null}");
+
+            return Task.Run(async () =>
             {
-                StopTimer();
+                await setWannaSongSem.WaitAsync();
 
-                isSetCurrentSong = true;
-                currentWannaSong = wannaSong;
+                try
+                {
+                    if (currentPlaylist != Service.CurrentPlaylist || !wannaSong.Equals(currentPlaylist?.WannaSong)) return;
 
-                await Task.Factory.StartNew(SetWannaSongThreadSafe);
+                    StopTimer();
+                    isSetCurrentSong = true;
 
-                isSetCurrentSong = false;
+                    System.Diagnostics.Debug.WriteLine($"Update current song3: {wannaSong?.Song.Title ?? "none"} | {Service?.CurrentPlaylist != null}");
+                    SetWannaSongThreadSafe(currentPlaylist, wannaSong);
 
-                EnableTimer();
-            }
-
-            setWannaSongSem.Release();
+                    isSetCurrentSong = false;
+                    EnableTimer();
+                }
+                finally
+                {
+                    setWannaSongSem.Release();
+                }
+            });
         }
 
-        protected virtual void SetWannaSongThreadSafe()
+        protected virtual void SetWannaSongThreadSafe(IPlaylistBase currentPlaylist, RequestSong? wannaSong)
         {
             if (helper?.SetWannaSongThreadSafe != null)
             {
@@ -189,15 +228,16 @@ namespace AudioPlayerBackend.Player
 
             if (Reader != null)
             {
-                if (currentWannaSong.HasValue && currentWannaSong.Value.Song.FullPath == currentReaderPath)
+                if (wannaSong.HasValue && wannaSong.Value.Song.FullPath == currentReaderPath)
                 {
-                    if (Math.Abs((currentWannaSong.Value.Position - Reader.CurrentTime).TotalMilliseconds) > 200)
+                    if (wannaSong.Value.Position.HasValue &&
+                        wannaSong.Value.Position.Value != Reader.CurrentTime)
                     {
-                        Reader.CurrentTime = currentWannaSong.Value.Position;
+                        Reader.CurrentTime = wannaSong.Value.Position.Value;
                     }
 
-                    Service.CurrentPlaylist.CurrentSong = currentWannaSong.Value.Song;
-                    Service.CurrentPlaylist.Duration = Reader.TotalTime;
+                    currentPlaylist.CurrentSong = wannaSong.Value.Song;
+                    currentPlaylist.Duration = Reader.TotalTime;
                     return;
                 }
 
@@ -206,16 +246,16 @@ namespace AudioPlayerBackend.Player
 
             try
             {
-                if (currentWannaSong.HasValue)
+                if (wannaSong.HasValue)
                 {
-                    Service.CurrentPlaylist.CurrentSong = currentWannaSong.Value.Song;
-                    Player.Play(GetWaveProvider);
+                    currentPlaylist.CurrentSong = wannaSong.Value.Song;
+                    Player.Play(() => GetWaveProvider(currentPlaylist, wannaSong.Value));
                 }
                 else
                 {
                     Reader = null;
                     Service.AudioFormat = null;
-                    Service.CurrentPlaylist.CurrentSong = null;
+                    if (currentPlaylist != null) currentPlaylist.CurrentSong = null;
                 }
             }
             catch
@@ -225,18 +265,20 @@ namespace AudioPlayerBackend.Player
             }
         }
 
-        private IPositionWaveProvider GetWaveProvider()
+        private IPositionWaveProvider GetWaveProvider(IPlaylistBase currentPlaylist, RequestSong wannaSong)
         {
-            currentReaderPath = currentWannaSong.Value.Song.FullPath;
-            Reader = ToWaveProvider(CreateWaveProvider(currentWannaSong.Value.Song));
+            currentReaderPath = wannaSong.Song.FullPath;
+            Reader = ToWaveProvider(CreateWaveProvider(wannaSong.Song));
 
-            if (Reader.TotalTime == currentWannaSong.Value.Duration && Reader.TotalTime > currentWannaSong.Value.Position)
+            if (wannaSong.Position.HasValue &&
+                Reader.TotalTime == wannaSong.Duration &&
+                Reader.TotalTime > wannaSong.Position.Value)
             {
-                Reader.CurrentTime = currentWannaSong.Value.Position;
+                Reader.CurrentTime = wannaSong.Position.Value;
             }
-            
-            Service.CurrentPlaylist.Position = Reader.CurrentTime;
-            Service.CurrentPlaylist.Duration = Reader.TotalTime;
+
+            currentPlaylist.Position = Reader.CurrentTime;
+            currentPlaylist.Duration = Reader.TotalTime;
 
             return Reader;
         }
@@ -265,7 +307,7 @@ namespace AudioPlayerBackend.Player
 
         private void EnableTimer()
         {
-            if (!isSetCurrentSong && Service.CurrentPlaylist.CurrentSong.HasValue &&
+            if (!isSetCurrentSong && Service.CurrentPlaylist?.CurrentSong != null &&
                 Service.PlayState == PlaybackState.Playing) StartTimer();
             else StopTimer();
         }

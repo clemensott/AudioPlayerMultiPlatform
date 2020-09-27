@@ -60,9 +60,20 @@ namespace AudioPlayerBackend.Communication.Base
         {
             EnqueueRange(BitConverter.GetBytes(value));
         }
+
         public int DequeueInt()
         {
             return BitConverter.ToInt32(DequeueRange(sizeof(int)), 0);
+        }
+
+        public void Enqueue(long value)
+        {
+            EnqueueRange(BitConverter.GetBytes(value));
+        }
+
+        public long DequeueLong()
+        {
+            return BitConverter.ToInt64(DequeueRange(sizeof(long)), 0);
         }
 
         public float DequeueFloat()
@@ -124,7 +135,7 @@ namespace AudioPlayerBackend.Communication.Base
 
         public void Enqueue(Song? song)
         {
-            Enqueue(song, Enqueue);
+            EnqueueNullable(song, Enqueue);
         }
 
         public Song? DequeueNullableSong()
@@ -144,12 +155,12 @@ namespace AudioPlayerBackend.Communication.Base
 
         public void Enqueue(TimeSpan span)
         {
-            EnqueueRange(BitConverter.GetBytes(span.Ticks));
+            Enqueue(span.Ticks);
         }
 
         public TimeSpan DequeueTimeSpan()
         {
-            return TimeSpan.FromTicks(BitConverter.ToInt64(DequeueRange(8), 0));
+            return TimeSpan.FromTicks(DequeueLong());
         }
 
         public void Enqueue(WaveFormat format)
@@ -185,6 +196,16 @@ namespace AudioPlayerBackend.Communication.Base
             return new Guid(DequeueRange(16));
         }
 
+        public void Enqueue(Guid? guid)
+        {
+            EnqueueNullable(guid, Enqueue);
+        }
+
+        public Guid? DequeueNullableGuid()
+        {
+            return DequeueNullable(DequeueGuid);
+        }
+
         public void Enqueue(IEnumerable<Guid> guids)
         {
             Enqueue(guids, Enqueue);
@@ -198,14 +219,14 @@ namespace AudioPlayerBackend.Communication.Base
         public void Enqueue(RequestSong value)
         {
             Enqueue(value.Song);
-            Enqueue(value.Position);
+            EnqueueNullable(value.Position, Enqueue);
             Enqueue(value.Duration);
         }
 
         public RequestSong DequeueRequestSong()
         {
             Song song = DequeueSong();
-            TimeSpan position = DequeueTimeSpan();
+            TimeSpan? position = DequeueNullable(DequeueTimeSpan);
             TimeSpan duration = DequeueTimeSpan();
 
             return RequestSong.Get(song, position, duration);
@@ -213,7 +234,7 @@ namespace AudioPlayerBackend.Communication.Base
 
         public void Enqueue(RequestSong? value)
         {
-            Enqueue(value, Enqueue);
+            EnqueueNullable(value, Enqueue);
         }
 
         public RequestSong? DequeueNullableRequestSong()
@@ -221,11 +242,28 @@ namespace AudioPlayerBackend.Communication.Base
             return DequeueNullable(DequeueRequestSong);
         }
 
+        public void Enqueue(ISourcePlaylistBase playlist)
+        {
+            Enqueue((IPlaylistBase)playlist);
+            Enqueue(playlist.FileMediaSources);
+        }
+
+        public ISourcePlaylistBase DequeueSourcePlaylist(Func<Guid, ISourcePlaylistBase> createFunc)
+        {
+            ISourcePlaylistBase playlist = createFunc(DequeueGuid());
+
+            DequeuePlaylist(playlist);
+            playlist.FileMediaSources = DequeueStrings();
+
+            return playlist;
+        }
+
         public void Enqueue(IPlaylistBase playlist)
         {
             Enqueue(playlist.ID);
             Enqueue(playlist.CurrentSong);
             Enqueue(playlist.Songs);
+            Enqueue(playlist.Name);
             Enqueue(playlist.Duration);
             Enqueue(playlist.IsAllShuffle);
             Enqueue((int)playlist.Loop);
@@ -235,10 +273,14 @@ namespace AudioPlayerBackend.Communication.Base
 
         public IPlaylistBase DequeuePlaylist(Func<Guid, IPlaylistBase> createFunc)
         {
-            IPlaylistBase playlist = createFunc(DequeueGuid());
+            return DequeuePlaylist(createFunc(DequeueGuid()));
+        }
 
+        public IPlaylistBase DequeuePlaylist(IPlaylistBase playlist)
+        {
             playlist.CurrentSong = DequeueNullableSong();
             playlist.Songs = DequeueSongs();
+            playlist.Name = DequeueString();
             playlist.Duration = DequeueTimeSpan();
             playlist.IsAllShuffle = DequeueBool();
             playlist.Loop = (LoopType)DequeueInt();
@@ -246,6 +288,16 @@ namespace AudioPlayerBackend.Communication.Base
             playlist.WannaSong = DequeueNullableRequestSong();
 
             return playlist;
+        }
+
+        public void Enqueue(IEnumerable<ISourcePlaylistBase> playlists)
+        {
+            Enqueue(playlists, Enqueue);
+        }
+
+        public ISourcePlaylistBase[] DequeueSourcePlaylists(Func<Guid, ISourcePlaylistBase> createFunc)
+        {
+            return DequeueArray(() => DequeueSourcePlaylist(createFunc));
         }
 
         public void Enqueue(IEnumerable<IPlaylistBase> playlists)
@@ -258,7 +310,7 @@ namespace AudioPlayerBackend.Communication.Base
             return DequeueArray(() => DequeuePlaylist(createFunc));
         }
 
-        private void Enqueue<T>(T? value, Action<T> valueEnqueueAction) where T : struct
+        private void EnqueueNullable<T>(T? value, Action<T> valueEnqueueAction) where T : struct
         {
             Enqueue(value.HasValue);
 
@@ -270,48 +322,39 @@ namespace AudioPlayerBackend.Communication.Base
             return DequeueBool() ? (T?)itemDequeueFunc() : null;
         }
 
-        public void Enqueue(ISourcePlaylistBase playlist)
+        private void EnqueueClass<T>(T value, Action<T> valueEnqueueAction)
         {
-            Enqueue(playlist.CurrentSong);
-            Enqueue(playlist.Songs);
-            Enqueue(playlist.Duration);
-            Enqueue(playlist.IsAllShuffle);
-            Enqueue((int)playlist.Loop);
-            Enqueue(playlist.Position);
-            Enqueue(playlist.WannaSong);
-            Enqueue(playlist.FileMediaSources);
+            if (value == null) Enqueue(false);
+            else
+            {
+                Enqueue(true);
+                valueEnqueueAction(value);
+            }
         }
 
-        public void DequeueSourcePlaylist(ISourcePlaylistBase playlist)
+        private T DequeueOrDefault<T>(Func<T> itemDequeueFunc)
         {
-            playlist.CurrentSong = DequeueNullableSong();
-            playlist.Songs = DequeueSongs();
-            playlist.Duration = DequeueTimeSpan();
-            playlist.IsAllShuffle = DequeueBool();
-            playlist.Loop = (LoopType)DequeueInt();
-            playlist.Position = DequeueTimeSpan();
-            playlist.WannaSong = DequeueNullableRequestSong();
-            playlist.FileMediaSources = DequeueStrings();
+            return DequeueBool() ? itemDequeueFunc() : default(T);
         }
 
         public void Enqueue(IAudioServiceBase service)
         {
-            Enqueue(service.SourcePlaylist);
+            Enqueue(service.SourcePlaylists);
             Enqueue(service.Playlists);
-            Enqueue(service.CurrentPlaylist.ID);
+            Enqueue(service.CurrentPlaylist?.ID ?? Guid.Empty);
             Enqueue(service.Volume);
             Enqueue((int)service.PlayState);
         }
 
-        public void DequeueService(IAudioServiceBase service, Func<Guid, IPlaylistBase> createPlaylistFunc)
+        public void DequeueService(IAudioServiceBase service,
+            Func<Guid, ISourcePlaylistBase> createSourcePlaylistFunc, Func<Guid, IPlaylistBase> createPlaylistFunc)
         {
-            DequeueSourcePlaylist(service.SourcePlaylist);
+            service.SourcePlaylists = DequeueSourcePlaylists(createSourcePlaylistFunc);
             service.Playlists = DequeuePlaylists(createPlaylistFunc);
 
             Guid currentPlaylistId = DequeueGuid();
-            service.CurrentPlaylist = currentPlaylistId == Guid.Empty
-                ? service.SourcePlaylist
-                : service.Playlists.FirstOrDefault(p => p.ID == currentPlaylistId);
+            service.CurrentPlaylist = service.GetAllPlaylists()
+                .FirstOrDefault(p => p.ID == currentPlaylistId) ?? service.GetAllPlaylists().FirstOrDefault();
 
             service.Volume = DequeueFloat();
             service.PlayState = (PlaybackState)DequeueInt();

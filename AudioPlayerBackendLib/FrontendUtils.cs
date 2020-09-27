@@ -33,73 +33,80 @@ namespace AudioPlayerBackend
             if (!songs.Any()) return;
 
             IPlaylist currentPlaylist = service.CurrentPlaylist;
+            Song? currentSong = currentPlaylist?.CurrentSong;
 
-            if (service.Playlists.Length > 0)
+            if (service.Playlists.Count > 0)
             {
                 IPlaylist playlist = service.Playlists[0];
 
-                if (playlist.ID == currentPlaylist.ID)
+                if (playlist.ID == currentPlaylist?.ID)
                 {
                     if (prepend)
                     {
                         playlist.Songs = songs.Concat(playlist.Songs).Distinct().ToArray();
-                        playlist.WannaSong = RequestSong.Get(songs.First());
+                        playlist.WannaSong = RequestSong.Start(songs.First());
                     }
                     else playlist.Songs = playlist.Songs.Concat(songs).Distinct().ToArray();
                 }
                 else
                 {
-                    if (prepend || !currentPlaylist.CurrentSong.HasValue)
+                    if (prepend || !currentSong.HasValue)
                     {
                         playlist.Songs = songs.Distinct().ToArray();
-                        playlist.WannaSong = RequestSong.Get(songs.First());
+                        playlist.WannaSong = RequestSong.Start(songs.First());
 
                         service.CurrentPlaylist = playlist;
                     }
                     else
                     {
-                        playlist.Songs = songs.Insert(0, currentPlaylist.CurrentSong.Value).Distinct().ToArray();
-                        playlist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong.Value,
-                            currentPlaylist.Position, currentPlaylist.Duration);
+                        playlist.Songs = songs.Insert(0, currentSong.Value).Distinct().ToArray();
+                        playlist.WannaSong = RequestSong.Get(currentSong.Value, null, currentPlaylist.Duration);
 
                         service.CurrentPlaylist = playlist;
 
                         currentPlaylist.CurrentSong = currentPlaylist.Songs.Cast<Song?>()
-                            .NextOrDefault(currentPlaylist.CurrentSong).next;
+                            .NextOrDefault(currentSong).next;
                         currentPlaylist.Position = TimeSpan.Zero;
-                        currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong);
+                        currentPlaylist.WannaSong = RequestSong.Start(currentPlaylist.CurrentSong);
                     }
                 }
             }
             else
             {
-                IPlaylist playlist = new Playlist(helper);
-                playlist.Loop = LoopType.Next;
-                playlist.IsAllShuffle = true;
+                IPlaylist playlist = new Playlist(helper)
+                {
+                    Name = "Custom",
+                    Loop = LoopType.Next,
+                    IsAllShuffle = true
+                };
 
-                if (prepend || !currentPlaylist.CurrentSong.HasValue)
+                if (prepend || !currentSong.HasValue)
                 {
                     playlist.Songs = songs.ToArray();
-                    playlist.WannaSong = RequestSong.Get(songs.First());
+                    playlist.WannaSong = RequestSong.Start(songs.First());
 
-                    service.Playlists = service.Playlists.ConcatParams(playlist).Distinct().ToArray();
+                    service.Playlists.Add(playlist);
                     service.CurrentPlaylist = playlist;
                 }
                 else
                 {
-                    playlist.Songs = songs.Insert(0, currentPlaylist.CurrentSong.Value).ToArray();
-                    playlist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong.Value,
-                        currentPlaylist.Position, currentPlaylist.Duration);
+                    playlist.Songs = songs.Insert(0, currentSong.Value).ToArray();
+                    playlist.WannaSong = RequestSong.Get(currentSong.Value, null, currentPlaylist.Duration);
 
-                    service.Playlists = service.Playlists.ConcatParams(playlist).Distinct().ToArray();
+                    service.Playlists.Add(playlist);
                     service.CurrentPlaylist = playlist;
 
                     currentPlaylist.CurrentSong = currentPlaylist.Songs.Cast<Song?>()
-                        .NextOrDefault(currentPlaylist.CurrentSong).next;
+                        .NextOrDefault(currentSong).next;
                     currentPlaylist.Position = TimeSpan.Zero;
-                    currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong);
+                    currentPlaylist.WannaSong = RequestSong.Start(currentPlaylist.CurrentSong);
                 }
             }
+        }
+
+        public static ISourcePlaylist CreateSourcePlaylist()
+        {
+            return new SourcePlaylist(Guid.NewGuid());
         }
     }
 

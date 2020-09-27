@@ -1,4 +1,5 @@
 ﻿using StdOttStandard.Linq;
+using StdOttStandard.Linq.Sort;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,9 +10,9 @@ namespace AudioPlayerBackend.Audio
     {
         private static readonly Random ran = new Random();
 
-        public static IEnumerable<Song> GetShuffledSongs(IEnumerable<Song> songs)
+        public static IEnumerable<Song> GetShuffledSongs(IEnumerable<IPlaylistBase> playlists)
         {
-            return songs.OrderBy(s => ran.Next());
+            return playlists.SelectMany(p => p.Songs).Distinct().OrderBy(s => ran.Next());
         }
 
         public static bool GetIsSearching(string searchKey)
@@ -29,16 +30,16 @@ namespace AudioPlayerBackend.Audio
             return isAllShuffle ? allSongsShuffled : GetOrderedSongs(allSongsShuffled);
         }
 
-        public static IEnumerable<Song> GetSearchSongs(ISourcePlaylist playlist)
+        public static IEnumerable<Song> GetSearchSongs(IAudioService service)
         {
-            return GetSearchSongs(playlist.ShuffledSongs, playlist.IsSearchShuffle, playlist.SearchKey);
+            return GetSearchSongs(service.AllSongs, service.IsSearchShuffle, service.SearchKey);
         }
 
         public static IEnumerable<Song> GetSearchSongs(IEnumerable<Song> allSongsShuffled, bool isSearchShuffle, string searchKey)
         {
             if (!isSearchShuffle) return GetFilteredSongs(allSongsShuffled, searchKey);
 
-            return GetFilteredSongs(allSongsShuffled, searchKey).OrderBy(allSongsShuffled.IndexOf);
+            return GetFilteredSongs(allSongsShuffled, searchKey).HeapSort(allSongsShuffled.IndexOf);
         }
 
         private static IEnumerable<Song> GetFilteredSongs(IEnumerable<Song> allSongs, string searchKey)

@@ -14,7 +14,6 @@
         <con:EnumConverter x:Key="communicatorProtocolCon"/>
         <local:FloatNullableToFloatConverter x:Key="volCon"/>
         <local:FloatNullableToFloatConverter x:Key="clientVolCon"/>
-        <local:FilePathsToSingleStringConverter x:Key="pathsCon"/>
     </Page.Resources>
 
     <ScrollViewer>
@@ -117,23 +116,8 @@
             </StackPanel>
 
             <StackPanel Margin="3,10,3,3">
-                <TextBlock Text="Shuffle:" FontSize="17" FontWeight="Bold" Margin="5,0"/>
+                <TextBlock Text="Search:" FontSize="17" FontWeight="Bold" Margin="5,0"/>
                 <TextBox Margin="3" Text="{Binding SearchKey,Mode=TwoWay}"/>
-            </StackPanel>
-
-            <StackPanel Margin="3">
-                <TextBlock Text="Sources:" FontSize="17" FontWeight="Bold" Margin="5,3,3,3"/>
-            
-                <TextBox Grid.Row="1" AcceptsReturn="True" Margin="3,0" MinHeight="100"
-                         Text="{Binding MediaSources,Converter={StaticResource pathsCon},
-                           UpdateSourceTrigger=PropertyChanged}"/>
-
-                <StackPanel Orientation="Horizontal" Margin="5">
-                    <CheckBox Name="cbxIfNon" Content="Only use if none given"
-                                  IsChecked="{Binding IfNon,Mode=TwoWay}"/>
-                    <CheckBox Name="cbxReload" Content="Reload" Margin="10,0,0,0"
-                                  IsChecked="{Binding Reload,Mode=TwoWay}"/>
-                </StackPanel>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

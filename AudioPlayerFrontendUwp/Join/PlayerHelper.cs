@@ -87,5 +87,13 @@ namespace AudioPlayerFrontend.Join
 
             return await file.OpenAsync(FileAccessMode.Read);
         }
+
+        public void Reload(ISourcePlaylistBase playlist)
+        {
+        }
+
+        public void Update(ISourcePlaylistBase playlist)
+        {
+        }
     }
 }

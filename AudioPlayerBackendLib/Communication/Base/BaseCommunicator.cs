@@ -63,12 +63,15 @@ namespace AudioPlayerBackend.Communication.Base
             service.AudioDataChanged += OnServiceAudioDataChanged;
             service.AudioFormatChanged += OnServiceAudioFormatChanged;
             service.CurrentPlaylistChanged += OnServiceCurrentPlaylistChanged;
+            service.SourcePlaylistsChanged += OnServiceSourcePlaylistsChanged;
             service.PlaylistsChanged += OnServicePlaylistsChanged;
             service.PlayStateChanged += OnServicePlayStateChanged;
             service.VolumeChanged += OnServiceVolumeChanged;
+            service.IsSearchShuffleChanged += OnPlaylistIsSearchShuffleChanged;
+            service.SearchKeyChanged += OnPlaylistSearchKeyChanged;
 
-            Subscribe(service.SourcePlaylist);
-            Subscribe(service.Playlists);
+            service.SourcePlaylists.ForEach(Subscribe);
+            service.Playlists.ForEach(Subscribe);
         }
 
         protected void Unsubscribe(IAudioServiceBase service)
@@ -78,44 +81,33 @@ namespace AudioPlayerBackend.Communication.Base
             service.AudioDataChanged -= OnServiceAudioDataChanged;
             service.AudioFormatChanged -= OnServiceAudioFormatChanged;
             service.CurrentPlaylistChanged -= OnServiceCurrentPlaylistChanged;
+            service.SourcePlaylistsChanged -= OnServiceSourcePlaylistsChanged;
             service.PlaylistsChanged -= OnServicePlaylistsChanged;
             service.PlayStateChanged -= OnServicePlayStateChanged;
             service.VolumeChanged -= OnServiceVolumeChanged;
+            service.IsSearchShuffleChanged -= OnPlaylistIsSearchShuffleChanged;
+            service.SearchKeyChanged -= OnPlaylistSearchKeyChanged;
 
-            Unsubscribe(service.SourcePlaylist);
-            Unsubscribe(service.Playlists);
+            service.SourcePlaylists.ForEach(Unsubscribe);
+            service.Playlists.ForEach(Unsubscribe);
         }
 
-        private void Subscribe(ISourcePlaylistBase playlist)
+        protected void Subscribe(ISourcePlaylistBase playlist)
         {
             if (playlist == null) return;
 
             Subscribe((IPlaylistBase)playlist);
 
             playlist.FileMediaSourcesChanged += OnPlaylistFileMediaSourcesChanged;
-            playlist.IsSearchShuffleChanged += OnPlaylistIsSearchShuffleChanged;
-            playlist.SearchKeyChanged += OnPlaylistSearchKeyChanged;
         }
 
-        private void Unsubscribe(ISourcePlaylistBase playlist)
+        protected void Unsubscribe(ISourcePlaylistBase playlist)
         {
             if (playlist == null) return;
 
             Unsubscribe((IPlaylistBase)playlist);
 
             playlist.FileMediaSourcesChanged -= OnPlaylistFileMediaSourcesChanged;
-            playlist.IsSearchShuffleChanged -= OnPlaylistIsSearchShuffleChanged;
-            playlist.SearchKeyChanged -= OnPlaylistSearchKeyChanged;
-        }
-
-        private void Subscribe(IEnumerable<IPlaylistBase> playlists)
-        {
-            foreach (IPlaylistBase playlist in playlists.ToNotNull()) Subscribe(playlist);
-        }
-
-        private void Unsubscribe(IEnumerable<IPlaylistBase> playlists)
-        {
-            foreach (IPlaylistBase playlist in playlists.ToNotNull()) Unsubscribe(playlist);
         }
 
         protected void Subscribe(IPlaylistBase playlist)
@@ -126,6 +118,7 @@ namespace AudioPlayerBackend.Communication.Base
             playlist.DurationChanged += OnPlaylistDurationChanged;
             playlist.IsAllShuffleChanged += OnPlaylistIsAllShuffleChanged;
             playlist.LoopChanged += OnPlaylistLoopChanged;
+            playlist.NameChanged += OnPlaylistNameChanged;
             playlist.PositionChanged += OnPlaylistPositionChanged;
             playlist.WannaSongChanged += OnPlaylistWannaSongChanged;
             playlist.SongsChanged += OnPlaylistSongsChanged;
@@ -139,6 +132,7 @@ namespace AudioPlayerBackend.Communication.Base
             playlist.DurationChanged -= OnPlaylistDurationChanged;
             playlist.IsAllShuffleChanged -= OnPlaylistIsAllShuffleChanged;
             playlist.LoopChanged -= OnPlaylistLoopChanged;
+            playlist.NameChanged -= OnPlaylistNameChanged;
             playlist.PositionChanged -= OnPlaylistPositionChanged;
             playlist.WannaSongChanged -= OnPlaylistWannaSongChanged;
             playlist.SongsChanged -= OnPlaylistSongsChanged;
@@ -154,6 +148,10 @@ namespace AudioPlayerBackend.Communication.Base
         }
 
         protected virtual void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
+        {
+        }
+
+        protected virtual void OnServiceSourcePlaylistsChanged(object sender, ValueChangedEventArgs<ISourcePlaylistBase[]> e)
         {
         }
 
@@ -197,6 +195,10 @@ namespace AudioPlayerBackend.Communication.Base
         {
         }
 
+        protected virtual void OnPlaylistNameChanged(object sender, ValueChangedEventArgs<string> e)
+        {
+        }
+
         protected virtual void OnPlaylistPositionChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
         {
         }
@@ -207,6 +209,20 @@ namespace AudioPlayerBackend.Communication.Base
 
         protected virtual void OnPlaylistSongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
         {
+        }
+
+        protected static string GetPlaylistType(IPlaylistBase playlist)
+        {
+            switch (playlist)
+            {
+                case ISourcePlaylistBase _:
+                    return nameof(ISourcePlaylistBase);
+
+                case IPlaylistBase _:
+                    return nameof(IPlaylistBase);
+            }
+
+            return null;
         }
 
         protected void LockTopic(string topic, byte[] payload)

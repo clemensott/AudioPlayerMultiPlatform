@@ -243,6 +243,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AddSourcePlaylistWindow.xaml.cs">
+      <DependentUpon>AddSourcePlaylistWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="BuildOpenWindow.xaml.cs">
       <DependentUpon>BuildOpenWindow.xaml</DependentUpon>
     </Compile>
@@ -254,7 +257,6 @@
     <Compile Include="HotKeysBuilder.cs" />
     <Compile Include="HotKeys.cs" />
     <Compile Include="Join\AudioFileReader.cs" />
-    <Compile Include="Join\AudioServiceHelper.cs" />
     <Compile Include="Join\BufferedWaveProvider.cs" />
     <Compile Include="Join\Convert.cs" />
     <Compile Include="Join\IWaveProvider.cs" />
@@ -268,6 +270,10 @@
     <Compile Include="TimeSpanToSecondsConverter.cs" />
     <Compile Include="IsAudioStreamPlayerConverter.cs" />
     <Compile Include="ViewModels\ViewModel.cs" />
+    <Page Include="AddSourcePlaylistWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="BuildOpenWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

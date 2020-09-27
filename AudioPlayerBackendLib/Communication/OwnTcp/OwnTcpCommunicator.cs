@@ -18,27 +18,17 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         {
         }
 
-        //protected override void OnServiceAudioDataChanged(object sender, ValueChangedEventArgs<byte[]> e)
-        //{
-        //    await PublishAudioData();
-        //}
-
-        protected async Task PublishAudioData()
+        protected Task PublishAudioData()
         {
-            await SendAsync(nameof(Service.AudioData), Service.AudioData, true);
+            return SendAsync(nameof(Service.AudioData), Service.AudioData, true);
         }
 
-        //protected override void OnServiceAudioFormatChanged(object sender, ValueChangedEventArgs<WaveFormat> e)
-        //{
-        //    await PublishFormat();
-        //}
-
-        protected async Task PublishFormat()
+        protected Task PublishFormat()
         {
             ByteQueue data = new ByteQueue();
             if (Service.AudioFormat != null) data.Enqueue(Service.AudioFormat);
 
-            await SendAsync(nameof(Service.AudioFormat), data, false);
+            return SendAsync(nameof(Service.AudioFormat), data, false);
         }
 
         protected override async void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
@@ -46,12 +36,54 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishCurrentPlaylist();
         }
 
-        protected async Task PublishCurrentPlaylist()
+        protected Task PublishCurrentPlaylist()
         {
             ByteQueue data = new ByteQueue();
-            data.Enqueue(Service.CurrentPlaylist);
+            string playlistType = GetPlaylistType(Service.CurrentPlaylist);
+            data.Enqueue(playlistType);
 
-            await SendAsync(nameof(Service.CurrentPlaylist), data, false);
+            switch (playlistType)
+            {
+                case nameof(ISourcePlaylistBase):
+                    data.Enqueue((ISourcePlaylistBase)Service.CurrentPlaylist);
+                    break;
+
+                case nameof(IPlaylistBase):
+                    data.Enqueue(Service.CurrentPlaylist);
+                    break;
+            }
+
+            return SendAsync(nameof(Service.CurrentPlaylist), data, false);
+        }
+
+        protected override async void OnServiceSourcePlaylistsChanged(object sender, ValueChangedEventArgs<ISourcePlaylistBase[]> e)
+        {
+            List<IPlaylistBase> added = new List<IPlaylistBase>();
+
+            foreach (ISourcePlaylistBase playlist in e.OldValue.Except(e.NewValue))
+            {
+                Unsubscribe(playlist);
+                if (playlists.ContainsKey(playlist.ID)) playlists.Remove(playlist.ID);
+            }
+
+            foreach (ISourcePlaylistBase playlist in e.NewValue.Except(e.OldValue))
+            {
+                Subscribe(playlist);
+
+                added.Add(playlist);
+                playlists[playlist.ID] = playlist;
+            }
+
+            foreach (ISourcePlaylistBase playlist in e.NewValue)
+            {
+                playlists[playlist.ID] = playlist;
+            }
+
+            ByteQueue queue = new ByteQueue();
+            queue.Enqueue(added);
+            queue.Enqueue(e.NewValue.Select(p => p.ID));
+
+            await SendAsync(nameof(Service.SourcePlaylists), queue, false);
         }
 
         protected override async void OnServicePlaylistsChanged(object sender, ValueChangedEventArgs<IPlaylistBase[]> e)
@@ -89,12 +121,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishPlayState();
         }
 
-        protected async Task PublishPlayState()
+        protected Task PublishPlayState()
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue((int)Service.PlayState);
 
-            await SendAsync(nameof(Service.PlayState), data, false);
+            return SendAsync(nameof(Service.PlayState), data, false);
         }
 
         protected override async void OnServiceVolumeChanged(object sender, ValueChangedEventArgs<float> e)
@@ -102,16 +134,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishVolume();
         }
 
-        protected async Task PublishVolume()
+        protected Task PublishVolume()
         {
-            try
-            {
-                ByteQueue data = new ByteQueue();
-                data.Enqueue(Service.Volume);
+            ByteQueue data = new ByteQueue();
+            data.Enqueue(Service.Volume);
 
-                await SendAsync(nameof(Service.Volume), data, true);
-            }
-            catch { }
+            return SendAsync(nameof(Service.Volume), data, true);
         }
 
         protected override async void OnPlaylistFileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
@@ -119,12 +147,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishMediaSources((ISourcePlaylistBase)sender);
         }
 
-        protected async Task PublishMediaSources(ISourcePlaylistBase source)
+        protected Task PublishMediaSources(ISourcePlaylistBase source)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(source.FileMediaSources);
 
-            await SendAsync(source, nameof(source.FileMediaSources), data, false);
+            return SendAsync(source, nameof(source.FileMediaSources), data, false);
         }
 
         protected override async void OnPlaylistCurrentSongChanged(object sender, ValueChangedEventArgs<Song?> e)
@@ -132,12 +160,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishCurrentSong((IPlaylistBase)sender);
         }
 
-        protected async Task PublishCurrentSong(IPlaylistBase playlist)
+        protected Task PublishCurrentSong(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.CurrentSong);
 
-            await SendAsync(playlist, nameof(playlist.CurrentSong), data, false);
+            return SendAsync(playlist, nameof(playlist.CurrentSong), data, false);
         }
 
         protected override async void OnPlaylistDurationChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
@@ -145,12 +173,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishDuration((IPlaylistBase)sender);
         }
 
-        protected async Task PublishDuration(IPlaylistBase playlist)
+        protected Task PublishDuration(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.Duration);
 
-            await SendAsync(playlist, nameof(playlist.Duration), data, false);
+            return SendAsync(playlist, nameof(playlist.Duration), data, false);
         }
 
         protected override async void OnPlaylistIsAllShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
@@ -158,12 +186,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishIsAllShuffle((IPlaylistBase)sender);
         }
 
-        protected async Task PublishIsAllShuffle(IPlaylistBase playlist)
+        protected Task PublishIsAllShuffle(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.IsAllShuffle);
 
-            await SendAsync(playlist, nameof(playlist.IsAllShuffle), data, false);
+            return SendAsync(playlist, nameof(playlist.IsAllShuffle), data, false);
         }
 
         protected override async void OnPlaylistLoopChanged(object sender, ValueChangedEventArgs<LoopType> e)
@@ -171,12 +199,25 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishLoop((IPlaylistBase)sender);
         }
 
-        protected async Task PublishLoop(IPlaylistBase playlist)
+        protected Task PublishLoop(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue((int)playlist.Loop);
 
-            await SendAsync(playlist, nameof(playlist.Loop), data, false);
+            return SendAsync(playlist, nameof(playlist.Loop), data, false);
+        }
+
+        protected override async void OnPlaylistNameChanged(object sender, ValueChangedEventArgs<string> e)
+        {
+            await PublishName((IPlaylistBase)sender);
+        }
+
+        private Task PublishName(IPlaylistBase playlist)
+        {
+            ByteQueue data = new ByteQueue();
+            data.Enqueue(playlist.Name);
+
+            return SendAsync(playlist, nameof(playlist.Name), data, false);
         }
 
         protected override async void OnPlaylistPositionChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
@@ -184,12 +225,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishPosition((IPlaylistBase)sender);
         }
 
-        protected async Task PublishPosition(IPlaylistBase playlist)
+        protected Task PublishPosition(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.Position);
 
-            await SendAsync(playlist, nameof(playlist.Position), data, false);
+            return SendAsync(playlist, nameof(playlist.Position), data, false);
         }
 
         protected override async void OnPlaylistWannaSongChanged(object sender, ValueChangedEventArgs<RequestSong?> e)
@@ -197,12 +238,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishWannaSong((IPlaylistBase)sender);
         }
 
-        private async Task PublishWannaSong(IPlaylistBase playlist)
+        private Task PublishWannaSong(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.WannaSong);
 
-            await SendAsync(playlist, nameof(playlist.WannaSong), data, false);
+            return SendAsync(playlist, nameof(playlist.WannaSong), data, false);
         }
 
         protected override async void OnPlaylistSongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
@@ -210,12 +251,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await PublishSongs((IPlaylistBase)sender);
         }
 
-        protected async Task PublishSongs(IPlaylistBase playlist)
+        protected Task PublishSongs(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.Songs);
 
-            await SendAsync(playlist, nameof(playlist.Songs), data, false);
+            return SendAsync(playlist, nameof(playlist.Songs), data, false);
         }
 
         private Task SendAsync(IPlaylistBase playlist, string topic, byte[] payload, bool fireAndForget)
@@ -309,6 +350,10 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         {
             switch (topic)
             {
+                case nameof(Service.SourcePlaylists):
+                    HandleSourcePlaylistsTopic(data);
+                    break;
+
                 case nameof(Service.Playlists):
                     HandlePlaylistsTopic(data);
                     break;
@@ -331,6 +376,14 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                 case nameof(Service.Volume):
                     Service.Volume = data.DequeueFloat();
+                    break;
+
+                case nameof(Service.IsSearchShuffle):
+                    Service.IsSearchShuffle = data.DequeueBool();
+                    break;
+
+                case nameof(Service.SearchKey):
+                    Service.SearchKey = data.DequeueString();
                     break;
 
                 case cmdString:
@@ -375,6 +428,28 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             return true;
         }
 
+        private void HandleSourcePlaylistsTopic(ByteQueue data)
+        {
+            Dictionary<Guid, ISourcePlaylistBase> addPlaylists = data
+                    .DequeueSourcePlaylists(id => new SourcePlaylist(id, helper))
+                    .ToDictionary(p => p.ID);
+            Guid[] order = data.DequeueGuids();
+            ISourcePlaylistBase[] newPlaylists = new ISourcePlaylistBase[order.Length];
+
+            for (int i = 0; i < order.Length; i++)
+            {
+                ISourcePlaylistBase playlist;
+                Guid id = order[i];
+                if (addPlaylists.TryGetValue(id, out playlist))
+                {
+                    playlists[id] = newPlaylists[i] = playlist;
+                }
+                else newPlaylists[i] = (ISourcePlaylistBase)playlists[id];
+            }
+
+            Service.SourcePlaylists = newPlaylists;
+        }
+
         private void HandlePlaylistsTopic(ByteQueue data)
         {
             Dictionary<Guid, IPlaylistBase> addPlaylists = data
@@ -399,13 +474,23 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         private void HandleCurrentPlaylistTopic(ByteQueue data)
         {
-            IPlaylistBase existingPlaylist;
-            IPlaylistBase currentPlaylist = data.DequeuePlaylist(id => new Playlist(id, helper));
-
-            if (Service.SourcePlaylist.ID == currentPlaylist.ID)
+            IPlaylistBase currentPlaylist, existingPlaylist;
+            switch (data.DequeueString())
             {
-                Service.CurrentPlaylist = Service.SourcePlaylist;
+                case nameof(ISourcePlaylistBase):
+                    currentPlaylist = data.DequeueSourcePlaylist(id => new SourcePlaylist(id, helper));
+                    break;
+
+                case nameof(IPlaylistBase):
+                    currentPlaylist = data.DequeuePlaylist(id => new Playlist(id, helper));
+                    break;
+
+                default:
+                    currentPlaylist = null;
+                    break;
             }
+
+            if (currentPlaylist == null) Service.CurrentPlaylist = null;
             else if (playlists.TryGetValue(currentPlaylist.ID, out existingPlaylist))
             {
                 Service.CurrentPlaylist = existingPlaylist;
@@ -419,7 +504,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         private bool HandlePlaylistMessage(Guid id, string topic, ByteQueue data)
         {
-            IPlaylistBase playlist = GetPlaylist(id);
+            IPlaylistBase playlist = playlists[id];
             ISourcePlaylistBase source = playlist as ISourcePlaylistBase;
 
             switch (topic)
@@ -440,6 +525,10 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     playlist.Loop = (LoopType)data.DequeueInt();
                     break;
 
+                case nameof(playlist.Name):
+                    playlist.Name = data.DequeueString();
+                    break;
+
                 case nameof(playlist.Position):
                     playlist.Position = data.DequeueTimeSpan();
                     break;
@@ -452,14 +541,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     playlist.Songs = data.DequeueSongs();
                     break;
 
-                case nameof(source.IsSearchShuffle):
-                    source.IsSearchShuffle = data.DequeueBool();
-                    break;
-
-                case nameof(source.SearchKey):
-                    source.SearchKey = data.DequeueString();
-                    break;
-
                 case nameof(source.FileMediaSources):
                     source.FileMediaSources = data.DequeueStrings();
                     break;
@@ -469,11 +550,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
 
             return true;
-        }
-
-        private IPlaylistBase GetPlaylist(Guid id)
-        {
-            return id == Guid.Empty ? Service.SourcePlaylist : playlists[id];
         }
     }
 }

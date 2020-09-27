@@ -6,9 +6,9 @@ namespace AudioPlayerBackend.Data
 {
     public class AudioServiceData
     {
-        public int CurrentPlaylistIndex { get; set; }
+        public string CurrentPlaylistID { get; set; }
 
-        public PlaylistData SourcePlaylist { get; set; }
+        public SourcePlaylistData[] SourcePlaylists { get; set; }
 
         public PlaylistData[] Playlists { get; set; }
 
@@ -18,9 +18,9 @@ namespace AudioPlayerBackend.Data
 
         public AudioServiceData(IAudioServiceBase service)
         {
-            SourcePlaylist = new PlaylistData(service.SourcePlaylist);
+            SourcePlaylists = service.SourcePlaylists.Select(p => new SourcePlaylistData(p)).ToArray();
             Playlists = service.Playlists.Select(p => new PlaylistData(p)).ToArray();
-            CurrentPlaylistIndex = service.Playlists.IndexOf(service.CurrentPlaylist);
+            CurrentPlaylistID = service.CurrentPlaylist?.ID.ToString();
             Volume = service.Volume;
         }
     }

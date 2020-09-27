@@ -95,6 +95,8 @@ namespace AudioPlayerBackend.Communication.MQTT
                 if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishCurrentPlaylist();
                 if (statusToken?.IsEnded.HasValue == true) return;
+                await Task.WhenAll(Service.SourcePlaylists.Select(PublishPlaylist));
+                if (statusToken?.IsEnded.HasValue == true) return;
                 await Task.WhenAll(Service.Playlists.Select(PublishPlaylist));
                 if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishPlaylists();
@@ -108,13 +110,10 @@ namespace AudioPlayerBackend.Communication.MQTT
                 await PublishAudioData();
 
                 if (statusToken?.IsEnded.HasValue == true) return;
-                await PublishPlaylist(Service.SourcePlaylist);
+                await PublishIsSearchShuffle();
                 if (statusToken?.IsEnded.HasValue == true) return;
-                await PublishIsSearchShuffle(Service.SourcePlaylist);
+                await PublishSearchKey();
                 if (statusToken?.IsEnded.HasValue == true) return;
-                await PublishSearchKey(Service.SourcePlaylist);
-                if (statusToken?.IsEnded.HasValue == true) return;
-                await PublishMediaSources(Service.SourcePlaylist);
             }
             finally
             {
@@ -138,8 +137,6 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             LockTopic(rawTopic, payload);
 
-            System.Diagnostics.Debug.WriteLine("rawTopic1: " + rawTopic);
-
             try
             {
                 context.AcceptPublish = await HandleMessage(rawTopic, payload);
@@ -152,16 +149,12 @@ namespace AudioPlayerBackend.Communication.MQTT
                 await PublishDebug(e);
             }
 
-            System.Diagnostics.Debug.WriteLine("rawTopic2: " + rawTopic);
-
             UnlockTopic(rawTopic);
         }
 
         protected override Task SubscribeAsync(IPlaylistBase playlist)
         {
-            System.Diagnostics.Debug.WriteLine("SubscribeOrPublishAsync: " + playlist.ID);
             return Task.CompletedTask;
-            //await Task.WhenAll(Service.Playlists.Select(PublishPlaylist).ToArray());
         }
 
         protected override async Task PublishAsync(MqttApplicationMessage message)

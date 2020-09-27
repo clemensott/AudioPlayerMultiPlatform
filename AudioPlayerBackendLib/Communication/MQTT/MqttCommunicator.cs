@@ -24,6 +24,11 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             playlists.Clear();
 
+            foreach (IPlaylistBase playlist in (Service?.SourcePlaylists).ToNotNull())
+            {
+                await AddPlaylist(playlist);
+            }
+
             foreach (IPlaylistBase playlist in (Service?.Playlists).ToNotNull())
             {
                 await AddPlaylist(playlist);
@@ -39,7 +44,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected async Task PublishAudioData()
         {
-            await PublishAsync(nameof(Service.AudioData), Service.AudioData, MqttQualityOfServiceLevel.AtMostOnce);
+            await PublishServiceAsync(nameof(Service.AudioData), Service.AudioData, MqttQualityOfServiceLevel.AtMostOnce);
         }
 
         protected override async void OnServiceAudioFormatChanged(object sender, ValueChangedEventArgs<WaveFormat> e)
@@ -52,7 +57,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             ByteQueue data = new ByteQueue();
             if (Service.AudioFormat != null) data.Enqueue(Service.AudioFormat);
 
-            await PublishAsync(nameof(Service.AudioFormat), data);
+            await PublishServiceAsync(nameof(Service.AudioFormat), data);
         }
 
         protected override async void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
@@ -63,9 +68,39 @@ namespace AudioPlayerBackend.Communication.MQTT
         protected async Task PublishCurrentPlaylist()
         {
             ByteQueue data = new ByteQueue();
-            data.Enqueue(Service.CurrentPlaylist.ID);
+            data.Enqueue(GetPlaylistType(Service.CurrentPlaylist));
+            data.Enqueue(Service.CurrentPlaylist?.ID);
 
-            await Task.WhenAll(PublishAsync(nameof(Service.CurrentPlaylist), data), AddPlaylist(Service.CurrentPlaylist));
+            await Task.WhenAll(PublishServiceAsync(nameof(Service.CurrentPlaylist), data), AddPlaylist(Service.CurrentPlaylist));
+        }
+
+        protected override async void OnServiceSourcePlaylistsChanged(object sender, ValueChangedEventArgs<ISourcePlaylistBase[]> e)
+        {
+            foreach (IPlaylistBase playlist in e.NewValue.Except(e.OldValue))
+            {
+                Subscribe(playlist);
+            }
+
+            foreach (IPlaylistBase playlist in e.OldValue.Except(e.NewValue))
+            {
+                Unsubscribe(playlist);
+            }
+
+            await PublishSourcePlaylists();
+        }
+
+        protected async Task PublishSourcePlaylists()
+        {
+            ByteQueue data = new ByteQueue();
+            data.Enqueue(Service.SourcePlaylists.Select(p => p.ID));
+
+            if (IsTopicLocked(nameof(Service.SourcePlaylists), data)) return;
+
+            List<Task> tasks = new List<Task>();
+            tasks.Add(PublishServiceAsync(nameof(Service.SourcePlaylists), data));
+            tasks.AddRange(Service.SourcePlaylists.Select(AddPlaylist));
+
+            await Task.WhenAll(tasks);
         }
 
         protected override async void OnServicePlaylistsChanged(object sender, ValueChangedEventArgs<IPlaylistBase[]> e)
@@ -91,16 +126,29 @@ namespace AudioPlayerBackend.Communication.MQTT
             if (IsTopicLocked(nameof(Service.Playlists), data)) return;
 
             List<Task> tasks = new List<Task>();
-            tasks.Add(PublishAsync(nameof(Service.Playlists), data));
+            tasks.Add(PublishServiceAsync(nameof(Service.Playlists), data));
             tasks.AddRange(Service.Playlists.Select(AddPlaylist));
 
             await Task.WhenAll(tasks);
         }
 
-        protected async Task PublishPlaylist(IPlaylistBase playlist)
+        protected Task PublishPlaylist(IPlaylistBase playlist)
         {
-            await Task.WhenAll(PublishIsAllShuffle(playlist), PublishLoop(playlist), PublishPosition(playlist),
-                PublishDuration(playlist), PublishWannaSong(playlist), PublishSongs(playlist), PublishCurrentSong(playlist));
+            return Task.WhenAll(Publish());
+
+            IEnumerable<Task> Publish()
+            {
+                yield return PublishIsAllShuffle(playlist);
+                yield return PublishLoop(playlist);
+                yield return PublishName(playlist);
+                yield return PublishPosition(playlist);
+                yield return PublishDuration(playlist);
+                yield return PublishWannaSong(playlist);
+                yield return PublishSongs(playlist);
+                yield return PublishCurrentSong(playlist);
+
+                if (playlist is ISourcePlaylistBase source) yield return PublishMediaSources(source);
+            }
         }
 
         protected override async void OnServicePlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
@@ -113,7 +161,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             ByteQueue data = new ByteQueue();
             data.Enqueue((int)Service.PlayState);
 
-            await PublishAsync(nameof(Service.PlayState), data);
+            await PublishServiceAsync(nameof(Service.PlayState), data);
         }
 
         protected override async void OnServiceVolumeChanged(object sender, ValueChangedEventArgs<float> e)
@@ -128,7 +176,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                 ByteQueue data = new ByteQueue();
                 data.Enqueue(Service.Volume);
 
-                await PublishAsync(nameof(Service.Volume), data, MqttQualityOfServiceLevel.AtMostOnce);
+                await PublishServiceAsync(nameof(Service.Volume), data, MqttQualityOfServiceLevel.AtMostOnce);
             }
             catch { }
         }
@@ -143,35 +191,35 @@ namespace AudioPlayerBackend.Communication.MQTT
             ByteQueue data = new ByteQueue();
             data.Enqueue(source.FileMediaSources);
 
-            await PublishAsync(source, nameof(source.FileMediaSources), data);
+            await PublishPlaylistAsync(source, nameof(source.FileMediaSources), data);
         }
 
         protected override async void OnPlaylistIsSearchShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
         {
-            await PublishIsSearchShuffle((ISourcePlaylistBase)sender);
+            await PublishIsSearchShuffle();
         }
 
-        protected async Task PublishIsSearchShuffle(ISourcePlaylistBase playlist)
+        protected async Task PublishIsSearchShuffle()
         {
             return;
             ByteQueue data = new ByteQueue();
-            data.Enqueue(playlist.IsSearchShuffle);
+            data.Enqueue(Service.IsSearchShuffle);
 
-            await PublishAsync(playlist, nameof(playlist.IsSearchShuffle), data);
+            await PublishServiceAsync(nameof(Service.IsSearchShuffle), data);
         }
 
         protected override async void OnPlaylistSearchKeyChanged(object sender, ValueChangedEventArgs<string> e)
         {
-            await PublishSearchKey((ISourcePlaylistBase)sender);
+            await PublishSearchKey();
         }
 
-        protected async Task PublishSearchKey(ISourcePlaylistBase playlist)
+        protected async Task PublishSearchKey()
         {
             return;
             ByteQueue data = new ByteQueue();
-            data.Enqueue(playlist.SearchKey);
+            data.Enqueue(Service.SearchKey);
 
-            await PublishAsync(playlist, nameof(playlist.SearchKey), data);
+            await PublishServiceAsync(nameof(Service.SearchKey), data);
         }
 
         protected override async void OnPlaylistCurrentSongChanged(object sender, ValueChangedEventArgs<Song?> e)
@@ -179,12 +227,12 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishCurrentSong((IPlaylistBase)sender);
         }
 
-        protected async Task PublishCurrentSong(IPlaylistBase playlist)
+        protected Task PublishCurrentSong(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.CurrentSong);
 
-            await PublishAsync(playlist, nameof(playlist.CurrentSong), data);
+            return PublishPlaylistAsync(playlist, nameof(playlist.CurrentSong), data);
         }
 
         protected override async void OnPlaylistDurationChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
@@ -192,12 +240,12 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishDuration((IPlaylistBase)sender);
         }
 
-        protected async Task PublishDuration(IPlaylistBase playlist)
+        protected Task PublishDuration(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.Duration);
 
-            await PublishAsync(playlist, nameof(playlist.Duration), data);
+            return PublishPlaylistAsync(playlist, nameof(playlist.Duration), data);
         }
 
         protected override async void OnPlaylistIsAllShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
@@ -205,12 +253,12 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishIsAllShuffle((IPlaylistBase)sender);
         }
 
-        protected async Task PublishIsAllShuffle(IPlaylistBase playlist)
+        protected Task PublishIsAllShuffle(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.IsAllShuffle);
 
-            await PublishAsync(playlist, nameof(playlist.IsAllShuffle), data);
+            return PublishPlaylistAsync(playlist, nameof(playlist.IsAllShuffle), data);
         }
 
         protected override async void OnPlaylistLoopChanged(object sender, ValueChangedEventArgs<LoopType> e)
@@ -218,12 +266,25 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishLoop((IPlaylistBase)sender);
         }
 
-        protected async Task PublishLoop(IPlaylistBase playlist)
+        protected Task PublishLoop(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue((int)playlist.Loop);
 
-            await PublishAsync(playlist, nameof(playlist.Loop), data);
+            return PublishPlaylistAsync(playlist, nameof(playlist.Loop), data);
+        }
+
+        protected override async void OnPlaylistNameChanged(object sender, ValueChangedEventArgs<string> e)
+        {
+            await PublishName((IPlaylistBase)sender);
+        }
+
+        private Task PublishName(IPlaylistBase playlist)
+        {
+            ByteQueue data = new ByteQueue();
+            data.Enqueue(playlist.Name);
+
+            return PublishPlaylistAsync(playlist, nameof(playlist.Name), data);
         }
 
         protected override async void OnPlaylistPositionChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
@@ -231,12 +292,12 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishPosition((IPlaylistBase)sender);
         }
 
-        protected async Task PublishPosition(IPlaylistBase playlist)
+        protected Task PublishPosition(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.Position);
 
-            await PublishAsync(playlist, nameof(playlist.Position), data);
+            return PublishPlaylistAsync(playlist, nameof(playlist.Position), data);
         }
 
         protected override async void OnPlaylistWannaSongChanged(object sender, ValueChangedEventArgs<RequestSong?> e)
@@ -244,12 +305,12 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishWannaSong((IPlaylistBase)sender);
         }
 
-        private async Task PublishWannaSong(IPlaylistBase playlist)
+        private Task PublishWannaSong(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.WannaSong);
 
-            await PublishAsync(playlist, nameof(playlist.WannaSong), data, MqttQualityOfServiceLevel.AtMostOnce, false);
+            return PublishPlaylistAsync(playlist, nameof(playlist.WannaSong), data, MqttQualityOfServiceLevel.AtMostOnce, false);
         }
 
         protected override async void OnPlaylistSongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
@@ -257,30 +318,37 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishSongs((IPlaylistBase)sender);
         }
 
-        protected async Task PublishSongs(IPlaylistBase playlist)
+        protected Task PublishSongs(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
             data.Enqueue(playlist.Songs);
 
-            await PublishAsync(playlist, nameof(playlist.Songs), data);
+            return PublishPlaylistAsync(playlist, nameof(playlist.Songs), data);
         }
 
-        public override async Task SendCommand(string cmd)
+        public override Task SendCommand(string cmd)
         {
             byte[] payload = Encoding.UTF8.GetBytes(cmd);
 
-            await PublishAsync(cmdString, payload, MqttQualityOfServiceLevel.AtMostOnce, false);
+            return PublishServiceAsync(cmdString, payload, MqttQualityOfServiceLevel.AtMostOnce, false);
         }
 
-        private async Task PublishAsync(IPlaylistBase playlist, string topic, byte[] payload,
+        private Task PublishPlaylistAsync(IPlaylistBase playlist, string topic, byte[] payload,
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)
         {
-            await PublishAsync(playlist.ID + "." + topic, payload, qos, retain);
+            return PublishAsync($"{GetPlaylistType(playlist)}.{playlist.ID}.{topic}", payload, qos, retain);
+        }
+
+        private Task PublishServiceAsync(string topic, byte[] payload,
+            MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)
+        {
+            return PublishAsync($"{nameof(IAudioServiceBase)}.{topic}", payload, qos, retain);
         }
 
         private async Task PublishAsync(string topic, byte[] payload,
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = true)
         {
+            //System.Diagnostics.Debug.WriteLine("Topic: " + topic);
             await PublishAsync(new MqttApplicationMessage()
             {
                 Topic = topic,
@@ -326,26 +394,30 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected async Task<bool> HandleMessage(string rawTopic, byte[] payload)
         {
-            string topic;
-            Guid id;
+            System.Diagnostics.Debug.WriteLine("Handle message: " + rawTopic);
+            string[] parts = rawTopic.Split('.');
 
-            if (ContainsPlaylist(rawTopic, out topic, out id))
-            {
-                bool handled = await HandlePlaylistMessage(id, topic, payload);
+            if (parts.Length == 1) return false;
+            if (parts[0] == nameof(IAudioServiceBase)) return HandleServiceMessage(parts[1], payload);
 
-                InitList<string> initPlaylistList;
-                if (initPlaylistLists.TryGetValue(id, out initPlaylistList)) initPlaylistList?.Remove(rawTopic);
+            Guid id = Guid.Parse(parts[1]);
+            bool handled = await HandlePlaylistMessage(id, parts[2], payload, parts[0]);
 
-                return handled;
-            }
+            InitList<string> initPlaylistList;
+            if (initPlaylistLists.TryGetValue(id, out initPlaylistList)) initPlaylistList?.Remove(rawTopic);
 
-            return HandleServiceMessage(topic, payload);
+            return handled;
+
         }
 
         private bool HandleServiceMessage(string topic, ByteQueue data)
         {
             switch (topic)
             {
+                case nameof(Service.SourcePlaylists):
+                    HandleSourcePlaylistsTopic(data);
+                    break;
+
                 case nameof(Service.Playlists):
                     HandlePlaylistsTopic(data);
                     break;
@@ -368,6 +440,14 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 case nameof(Service.Volume):
                     Service.Volume = data.DequeueFloat();
+                    break;
+
+                case nameof(Service.IsSearchShuffle):
+                    Service.IsSearchShuffle = data.DequeueBool();
+                    break;
+
+                case nameof(Service.SearchKey):
+                    Service.SearchKey = data.DequeueString();
                     break;
 
                 case cmdString:
@@ -412,23 +492,30 @@ namespace AudioPlayerBackend.Communication.MQTT
             return true;
         }
 
+        private async void HandleSourcePlaylistsTopic(ByteQueue data)
+        {
+            Task<IPlaylistBase>[] tasks = data.DequeueGuids().Select(guid => GetInitPlaylist(guid, nameof(ISourcePlaylistBase))).ToArray();
+
+            Service.SourcePlaylists = (await Task.WhenAll(tasks)).Cast<ISourcePlaylistBase>().ToArray();
+        }
+
         private async void HandlePlaylistsTopic(ByteQueue data)
         {
-            Task<IPlaylistBase>[] tasks = data.DequeueGuids().Select(guid => GetInitPlaylist(guid)).ToArray();
+            Task<IPlaylistBase>[] tasks = data.DequeueGuids().Select(guid => GetInitPlaylist(guid, nameof(IPlaylistBase))).ToArray();
 
-            await Task.WhenAll(tasks);
-
-            Service.Playlists = tasks.Select(t => t.Result).ToArray();
+            Service.Playlists = (await Task.WhenAll(tasks)).ToArray();
         }
 
         private async void HandleCurrentPlaylistTopic(ByteQueue data)
         {
-            Service.CurrentPlaylist = await GetInitPlaylist(data.DequeueGuid());
+            string playlistType = data.DequeueString();
+            Guid? id = data.DequeueNullableGuid();
+            Service.CurrentPlaylist = await GetInitPlaylist(id, playlistType);
         }
 
-        private async Task<bool> HandlePlaylistMessage(Guid id, string topic, ByteQueue data)
+        private async Task<bool> HandlePlaylistMessage(Guid id, string topic, ByteQueue data, string playlistType)
         {
-            IPlaylistBase playlist = await GetPlaylist(id);
+            IPlaylistBase playlist = await GetPlaylist(id, playlistType);
             ISourcePlaylistBase source = playlist as ISourcePlaylistBase;
 
             switch (topic)
@@ -449,6 +536,10 @@ namespace AudioPlayerBackend.Communication.MQTT
                     playlist.Loop = (LoopType)data.DequeueInt();
                     break;
 
+                case nameof(playlist.Name):
+                    playlist.Name = data.DequeueString();
+                    break;
+
                 case nameof(playlist.Position):
                     playlist.Position = data.DequeueTimeSpan();
                     break;
@@ -459,14 +550,6 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 case nameof(playlist.Songs):
                     playlist.Songs = data.DequeueSongs();
-                    break;
-
-                case nameof(source.IsSearchShuffle):
-                    source.IsSearchShuffle = data.DequeueBool();
-                    break;
-
-                case nameof(source.SearchKey):
-                    source.SearchKey = data.DequeueString();
                     break;
 
                 case nameof(source.FileMediaSources):
@@ -495,14 +578,12 @@ namespace AudioPlayerBackend.Communication.MQTT
             return true;
         }
 
-        private async Task<IPlaylistBase> GetPlaylist(Guid id)
+        private async Task<IPlaylistBase> GetPlaylist(Guid id, string playlistType)
         {
-            if (id == Guid.Empty) return Service.SourcePlaylist;
-
             IPlaylistBase playlist;
             if (!playlists.TryGetValue(id, out playlist))
             {
-                playlist = new Playlist(id, helper);
+                playlist = CreatePlaylist(playlistType, id, helper);
 
                 await InitPlaylist(playlist, false);
             }
@@ -510,20 +591,34 @@ namespace AudioPlayerBackend.Communication.MQTT
             return playlist;
         }
 
-        private async Task<IPlaylistBase> GetInitPlaylist(Guid id)
+        private async Task<IPlaylistBase> GetInitPlaylist(Guid? id, string playlistType)
         {
             InitList<string> initPlaylistList;
             IPlaylistBase playlist;
 
-            if (id == Guid.Empty) return Service.SourcePlaylist;
-            if (initPlaylistLists.TryGetValue(id, out initPlaylistList)) await initPlaylistList.Task;
-            if (playlists.TryGetValue(id, out playlist)) return playlist;
+            if (id == null) return null;
+            if (initPlaylistLists.TryGetValue(id.Value, out initPlaylistList)) await initPlaylistList.Task;
+            if (playlists.TryGetValue(id.Value, out playlist)) return playlist;
 
-            playlist = new Playlist(id);
+            playlist = CreatePlaylist(playlistType, id.Value, helper);
 
             await InitPlaylist(playlist, true);
 
             return playlist;
+        }
+
+        private static IPlaylistBase CreatePlaylist(string playlistType, Guid id, INotifyPropertyChangedHelper helper)
+        {
+            switch (playlistType)
+            {
+                case nameof(ISourcePlaylistBase):
+                    return new SourcePlaylist(id, helper);
+
+                case nameof(IPlaylistBase):
+                    return new Playlist(id, helper);
+            }
+
+            throw new ArgumentException($"Type is not supported: {playlistType}", nameof(playlistType));
         }
 
         private async Task InitPlaylist(IPlaylistBase playlist, bool wait)
@@ -546,15 +641,17 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected static IEnumerable<string> GetTopics(IPlaylistBase playlist)
         {
-            string id = playlist.ID + ".";
+            string prefix = $"{GetPlaylistType(playlist)}.{ playlist.ID}.";
 
-            yield return id + nameof(playlist.CurrentSong);
-            yield return id + nameof(playlist.Songs);
-            yield return id + nameof(playlist.Duration);
-            yield return id + nameof(playlist.IsAllShuffle);
-            yield return id + nameof(playlist.Loop);
-            yield return id + nameof(playlist.Position);
-            yield return id + nameof(playlist.WannaSong);
+            yield return prefix + nameof(playlist.CurrentSong);
+            yield return prefix + nameof(playlist.Songs);
+            yield return prefix + nameof(playlist.Duration);
+            yield return prefix + nameof(playlist.IsAllShuffle);
+            yield return prefix + nameof(playlist.Loop);
+            yield return prefix + nameof(playlist.Name);
+            yield return prefix + nameof(playlist.Position);
+
+            if (playlist is ISourcePlaylistBase) yield return prefix + nameof(ISourcePlaylistBase.FileMediaSources);
         }
 
         private async Task AddPlaylist(IPlaylistBase playlist)
@@ -564,7 +661,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         private async Task AddPlaylist(IPlaylistBase playlist, bool publish)
         {
-            if (playlist.ID == Guid.Empty || playlists.ContainsKey(playlist.ID)) return;
+            if (playlist == null || playlists.ContainsKey(playlist.ID)) return;
 
             playlists.Add(playlist.ID, playlist);
 

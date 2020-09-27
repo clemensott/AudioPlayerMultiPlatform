@@ -108,7 +108,6 @@
     <Compile Include="Converter\IsIMqttAudioConverter.cs" />
     <Compile Include="Converter\LoopIconConverter.cs" />
     <Compile Include="Join\AudioFileReader.cs" />
-    <Compile Include="Join\AudioServiceHelper.cs" />
     <Compile Include="Join\BufferedWaveProvider.cs" />
     <Compile Include="Join\Convert.cs" />
     <Compile Include="Join\IWaveProvider.cs" />

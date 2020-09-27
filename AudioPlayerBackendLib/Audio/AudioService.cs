@@ -1,15 +1,21 @@
 ﻿using AudioPlayerBackend.Player;
 using StdOttStandard.Linq;
+using StdOttStandard.Linq.DataStructures.Observable;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Audio
 {
     public class AudioService : IAudioService
     {
+        public event EventHandler<ValueChangedEventArgs<bool>> IsSearchShuffleChanged;
+        public event EventHandler<ValueChangedEventArgs<string>> SearchKeyChanged;
         public event EventHandler<ValueChangedEventArgs<IPlaylistBase>> CurrentPlaylistChanged;
+        public event EventHandler<ValueChangedEventArgs<ISourcePlaylistBase[]>> SourcePlaylistsChanged;
         public event EventHandler<ValueChangedEventArgs<IPlaylistBase[]>> PlaylistsChanged;
         public event EventHandler<ValueChangedEventArgs<PlaybackState>> PlayStateChanged;
         public event EventHandler<ValueChangedEventArgs<float>> VolumeChanged;
@@ -17,12 +23,66 @@ namespace AudioPlayerBackend.Audio
         public event EventHandler<ValueChangedEventArgs<byte[]>> AudioDataChanged;
 
         private readonly INotifyPropertyChangedHelper helper;
+        private bool isSearchShuffle, isSearching, isUpdatingSourcePlaylists, isUpdatingPlaylists;
+        private string searchKey;
         private PlaybackState playState;
         private IPlaylist currentPlaylist;
-        private IPlaylist[] playlists;
+        private ISourcePlaylistBase[] sourcePlaylists;
+        private IPlaylistBase[] playlists;
         private WaveFormat audioFormat;
         private byte[] audioData;
         private float volume;
+        private IDictionary<ISourcePlaylist, IEnumerable<Song>> shuffledSongs;
+        private IEnumerable<Song> allSongs, searchSongs;
+
+        public bool IsSearching
+        {
+            get => isSearching;
+            private set
+            {
+                if (value == isSearching) return;
+
+                isSearching = value;
+                OnPropertyChanged(nameof(IsSearching));
+            }
+        }
+
+        public bool IsSearchShuffle
+        {
+            get => isSearchShuffle;
+            set
+            {
+                if (value == isSearchShuffle) return;
+
+                var args = new ValueChangedEventArgs<bool>(IsSearchShuffle, value);
+                isSearchShuffle = value;
+                IsSearchShuffleChanged?.Invoke(this, args);
+
+                OnPropertyChanged(nameof(IsSearchShuffle));
+
+                if (IsSearchShuffle) AllSongs = SongsService.GetShuffledSongs(SourcePlaylists).ToBuffer();
+                else SearchSongs = SongsService.GetSearchSongs(this).ToBuffer();
+            }
+        }
+
+        public string SearchKey
+        {
+            get => searchKey;
+            set
+            {
+                if (value == searchKey) return;
+
+                var args = new ValueChangedEventArgs<string>(SearchKey, value);
+                searchKey = value;
+                SearchKeyChanged?.Invoke(this, args);
+
+                OnPropertyChanged(nameof(SearchKey));
+
+                IsSearching = SongsService.GetIsSearching(SearchKey);
+
+                UpdateSearchSongs();
+            }
+        }
 
         public PlaybackState PlayState
         {
@@ -40,15 +100,11 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        public ISourcePlaylist SourcePlaylist { get; private set; }
-
         public IPlaylist CurrentPlaylist
         {
             get => currentPlaylist;
             set
             {
-                if (value == null) value = SourcePlaylist;
-
                 if (value == currentPlaylist) return;
 
                 var args = new ValueChangedEventArgs<IPlaylistBase>(CurrentPlaylist, value);
@@ -60,20 +116,9 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        public IPlaylist[] Playlists
-        {
-            get => playlists;
-            set
-            {
-                if (value == playlists) return;
+        public ObservableCollection<ISourcePlaylist> SourcePlaylists { get; }
 
-                var args = new ValueChangedEventArgs<IPlaylistBase[]>(Playlists, value);
-                playlists = value;
-                PlaylistsChanged?.Invoke(this, args);
-
-                OnPropertyChanged(nameof(Playlists));
-            }
-        }
+        public ObservableCollection<IPlaylist> Playlists { get; }
 
         public WaveFormat AudioFormat
         {
@@ -123,19 +168,197 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        ISourcePlaylistBase IAudioServiceBase.SourcePlaylist => SourcePlaylist;
-
         IPlaylistBase IAudioServiceBase.CurrentPlaylist { get => CurrentPlaylist; set => CurrentPlaylist = (IPlaylist)value; }
 
-        IPlaylistBase[] IAudioServiceBase.Playlists { get => Playlists; set => Playlists = value.Cast<IPlaylist>().ToArray(); }
+        ISourcePlaylistBase[] IAudioServiceBase.SourcePlaylists
+        {
+            get => sourcePlaylists;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
 
-        public AudioService(IAudioServiceHelper audioServiceHelper = null, INotifyPropertyChangedHelper notifyHelper = null)
+                if (value == sourcePlaylists) return;
+
+                var args = new ValueChangedEventArgs<ISourcePlaylistBase[]>(sourcePlaylists, value);
+                sourcePlaylists = value;
+
+                UpdateSourcePlaylists();
+                SourcePlaylistsChanged?.Invoke(this, args);
+
+                OnPropertyChanged(nameof(IAudioServiceBase.SourcePlaylists));
+            }
+        }
+
+        IPlaylistBase[] IAudioServiceBase.Playlists
+        {
+            get => playlists;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+
+                if (value == playlists) return;
+
+                var args = new ValueChangedEventArgs<IPlaylistBase[]>(playlists, value);
+                playlists = value;
+
+                UpdatePlaylists();
+                PlaylistsChanged?.Invoke(this, args);
+
+                OnPropertyChanged(nameof(IAudioServiceBase.Playlists));
+            }
+        }
+
+        public IEnumerable<Song> AllSongs
+        {
+            get => allSongs;
+            private set
+            {
+                if (ReferenceEquals(value, allSongs)) return;
+
+                allSongs = value.ToBuffer();
+                OnPropertyChanged(nameof(AllSongs));
+
+                SearchSongs = SongsService.GetSearchSongs(this);
+            }
+        }
+
+        public IEnumerable<Song> SearchSongs
+        {
+            get => searchSongs;
+            private set
+            {
+                if (ReferenceEquals(value, searchSongs)) return;
+
+                searchSongs = value.ToBuffer();
+                OnPropertyChanged(nameof(SearchSongs));
+            }
+        }
+
+        private IAudioServiceBase Base => this;
+
+        public AudioService(INotifyPropertyChangedHelper notifyHelper = null)
         {
             helper = notifyHelper;
             playState = PlaybackState.Stopped;
+            shuffledSongs = new Dictionary<ISourcePlaylist, IEnumerable<Song>>();
 
-            Playlists = new IPlaylist[0];
-            CurrentPlaylist = SourcePlaylist = new SourcePlaylist(audioServiceHelper);
+            SourcePlaylists = new ObservableCollection<ISourcePlaylist>();
+            Base.SourcePlaylists = new ISourcePlaylist[0];
+            SourcePlaylists.CollectionChanged += SourcePlaylists_CollectionChanged;
+            SourcePlaylists.AddedAny += SourcePlaylists_AddedAny;
+            SourcePlaylists.RemovedAny += SourcePlaylists_RemovedAny;
+
+            Playlists = new ObservableCollection<IPlaylist>();
+            Base.Playlists = new IPlaylist[0];
+            Playlists.CollectionChanged += Playlists_CollectionChanged;
+
+            AllSongs = new Song[0];
+        }
+
+        private void SourcePlaylists_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (isUpdatingSourcePlaylists) return;
+            try
+            {
+                isUpdatingSourcePlaylists = true;
+
+                Base.SourcePlaylists = SourcePlaylists.ToArray();
+            }
+            finally
+            {
+                isUpdatingSourcePlaylists = false;
+            }
+        }
+
+        private void UpdateSourcePlaylists()
+        {
+            if (isUpdatingSourcePlaylists) return;
+            try
+            {
+                isUpdatingSourcePlaylists = true;
+
+                for (int i = 0; i < sourcePlaylists.Length && i < SourcePlaylists.Count; i++)
+                {
+                    SourcePlaylists[i] = (ISourcePlaylist)sourcePlaylists[i];
+                }
+
+                SourcePlaylists.RemoveLastToCount<ISourcePlaylist>(sourcePlaylists.Length);
+
+                while (SourcePlaylists.Count < sourcePlaylists.Length)
+                {
+                    SourcePlaylists.Add((ISourcePlaylist)sourcePlaylists[SourcePlaylists.Count]);
+                }
+            }
+            finally
+            {
+                isUpdatingSourcePlaylists = false;
+            }
+        }
+
+        private void Playlists_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (isUpdatingPlaylists) return;
+            try
+            {
+                isUpdatingPlaylists = true;
+
+                Base.Playlists = Playlists.ToArray();
+            }
+            finally
+            {
+                isUpdatingPlaylists = false;
+            }
+        }
+
+        private void UpdatePlaylists()
+        {
+            if (isUpdatingPlaylists) return;
+            try
+            {
+                isUpdatingPlaylists = true;
+
+                for (int i = 0; i < playlists.Length && i < Playlists.Count; i++)
+                {
+                    Playlists[i] = (IPlaylist)playlists[i];
+                }
+
+                Playlists.RemoveLastToCount<IPlaylist>(playlists.Length);
+
+                while (Playlists.Count < playlists.Length)
+                {
+                    Playlists.Add((IPlaylist)playlists[Playlists.Count]);
+                }
+            }
+            finally
+            {
+                isUpdatingPlaylists = false;
+            }
+        }
+
+        private void SourcePlaylists_AddedAny(object sender, SingleChangeEventArgs<ISourcePlaylist> e)
+        {
+            e.Item.SongsChanged += SourcePlaylist_SongsChanged;
+            shuffledSongs[e.Item] = e.Item.Songs.Shuffle().ToBuffer();
+            UpdateAllSongs();
+        }
+
+        private void SourcePlaylists_RemovedAny(object sender, SingleChangeEventArgs<ISourcePlaylist> e)
+        {
+            e.Item.SongsChanged -= SourcePlaylist_SongsChanged;
+            shuffledSongs.Remove(e.Item);
+            UpdateAllSongs();
+        }
+
+        private void SourcePlaylist_SongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
+        {
+            ISourcePlaylist playlist = (ISourcePlaylist)sender;
+            shuffledSongs[playlist] = playlist.Songs.Shuffle().ToBuffer();
+            UpdateAllSongs();
+        }
+
+        private void UpdateAllSongs()
+        {
+            AllSongs = shuffledSongs.Values.SelectMany(s => s).ToBuffer();
         }
 
         protected virtual void OnPlayStateChanged() { }
@@ -150,39 +373,37 @@ namespace AudioPlayerBackend.Audio
 
         public void Continue()
         {
-            if (CurrentPlaylist.Loop == LoopType.CurrentSong)
+            IPlaylist currentPlaylist = CurrentPlaylist;
+            if (currentPlaylist == null) return;
+
+            if (currentPlaylist.Loop == LoopType.CurrentSong)
             {
-                CurrentPlaylist.WannaSong = RequestSong.Get(CurrentPlaylist.CurrentSong, TimeSpan.Zero);
+                currentPlaylist.WannaSong = RequestSong.Start(currentPlaylist.CurrentSong);
                 return;
             }
 
-            (Song? newCurrentSong, bool overflow) = SongsService.GetNextSong(CurrentPlaylist);
+            (Song? newCurrentSong, bool overflow) = SongsService.GetNextSong(currentPlaylist);
 
-            if (CurrentPlaylist.Loop == LoopType.StopCurrentSong)
+            if (currentPlaylist.Loop == LoopType.StopCurrentSong)
             {
                 PlayState = PlaybackState.Stopped;
-                ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
+                ChangeCurrentSongOrRestart(currentPlaylist, newCurrentSong);
             }
-            else if (CurrentPlaylist.Loop == LoopType.CurrentPlaylist || !overflow)
+            else if (currentPlaylist.Loop == LoopType.CurrentPlaylist || !overflow)
             {
-                ChangeCurrentSongOrRestart(CurrentPlaylist, newCurrentSong);
+                ChangeCurrentSongOrRestart(currentPlaylist, newCurrentSong);
             }
-            else if (CurrentPlaylist.Loop == LoopType.Next)
+            else if (currentPlaylist.Loop == LoopType.Next)
             {
-                CurrentPlaylist = GetAllPlaylists().Next(CurrentPlaylist).next;
+                CurrentPlaylist = this.GetAllPlaylists().Next(currentPlaylist).next;
+                ChangeCurrentSongOrRestart(currentPlaylist, newCurrentSong);
             }
-            else if (CurrentPlaylist.Loop == LoopType.Stop)
+            else if (currentPlaylist.Loop == LoopType.Stop)
             {
-                CurrentPlaylist = GetAllPlaylists().Next(CurrentPlaylist).next;
+                CurrentPlaylist = this.GetAllPlaylists().Next(currentPlaylist).next;
                 PlayState = PlaybackState.Stopped;
+                ChangeCurrentSongOrRestart(currentPlaylist, newCurrentSong);
             }
-        }
-
-        public IEnumerable<IPlaylist> GetAllPlaylists()
-        {
-            foreach (IPlaylist playlist in Playlists) yield return playlist;
-
-            yield return SourcePlaylist;
         }
 
         public void SetNextSong()
@@ -197,7 +418,15 @@ namespace AudioPlayerBackend.Audio
 
         private static void ChangeCurrentSongOrRestart(IPlaylistBase playlist, Song? newCurrentSong)
         {
-            playlist.WannaSong = RequestSong.Get(newCurrentSong);
+            playlist.WannaSong = RequestSong.Start(newCurrentSong);
+        }
+
+        private async void UpdateSearchSongs()
+        {
+            string searchKey = SearchKey;
+
+            Song[] searchSongs = await Task.Run(() => SongsService.GetSearchSongs(this).Take(50).ToArray());
+            if (searchKey == SearchKey) SearchSongs = searchSongs;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

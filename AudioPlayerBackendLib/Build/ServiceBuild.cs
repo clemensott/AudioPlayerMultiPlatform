@@ -153,11 +153,15 @@ namespace AudioPlayerBackend.Build
             {
                 while (true)
                 {
+                    CommunicatorToken.Reset();
+                    SyncToken.Reset();
+                    PlayerToken.Reset();
+                    CompleteToken.Reset();
+
                     try
                     {
                         State = BuildState.OpenCommunicator;
                         if (Communicator == null) Communicator = serviceBuilder.CreateCommunicator();
-                        else CommunicatorToken.Reset();
 
                         if (Communicator != null && !Communicator.IsOpen)
                         {
@@ -184,7 +188,7 @@ namespace AudioPlayerBackend.Build
                     {
                         SyncToken.Reset();
                         State = BuildState.SyncCommunicator;
-                        service = new AudioService(serviceBuilder.AudioServiceHelper, serviceBuilder.NotifyPropertyChangedHelper);
+                        service = new AudioService(serviceBuilder.NotifyPropertyChangedHelper);
 
                         if (Communicator != null)
                         {

@@ -20,6 +20,7 @@ namespace AudioPlayerFrontend
     {
         private bool fromSettingsPage;
         private ViewModel viewModel;
+        private IPlaylist[] allPlaylists;
 
         public MainPage()
         {
@@ -41,11 +42,6 @@ namespace AudioPlayerFrontend
                 await NavigateToSettingsPage();
             }
             else if (fromSettingsPage) await viewModel.Service.ConnectAsync();
-        }
-
-        private void BtnReload_Click(object sender, RoutedEventArgs e)
-        {
-            viewModel.Service.Audio?.SourcePlaylist.Reload();
         }
 
         private void IbnSearch_Click(object sender, RoutedEventArgs e)
@@ -115,9 +111,7 @@ namespace AudioPlayerFrontend
         /// <returns>Show remove IconButton on every Song (true) or not (false).</returns>
         private object MicDoRemove_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
-            IPlaylistBase sourcePlaylist = (IPlaylistBase)args.Input0;
-            IPlaylistBase currentPlaylist = (IPlaylistBase)args.Input1;
-            return !ReferenceEquals(args.Input0, args.Input1);
+            return !(args.Input1 is ISourcePlaylistBase);
         }
 
         private void IbnRemove_Click(object sender, RoutedEventArgs e)
@@ -128,6 +122,7 @@ namespace AudioPlayerFrontend
             if (service.CurrentPlaylist.Songs.All(s => s == song))
             {
                 service.Playlists.Remove(service.CurrentPlaylist);
+                /// TODO: Set correct playlist
             }
             else service.CurrentPlaylist.Songs = service.CurrentPlaylist.Songs.Where(s => s != song).ToArray();
         }
@@ -158,6 +153,19 @@ namespace AudioPlayerFrontend
             }
         }
 
+        private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
+        {
+            IPlaylist[] newAllPlaylists = (viewModel?.Service.Audio?.SourcePlaylists).ToNotNull()
+                .Concat((viewModel?.Service.Audio?.Playlists).ToNotNull()).ToArray();
+
+            if (!allPlaylists.BothNullOrSequenceEqual(newAllPlaylists)) allPlaylists = newAllPlaylists;
+
+            if (args.ChangedValueIndex == 3 && args.Input3 != null) args.Input2 = args.Input3;
+            else args.Input3 = args.Input2;
+
+            return allPlaylists;
+        }
+
         private void SplCurrentSong_Tapped(object sender, TappedRoutedEventArgs e)
         {
             Scroll();
@@ -182,7 +190,7 @@ namespace AudioPlayerFrontend
             Song? currentSong = (Song?)args.Input1;
             int index = (int)args.Input3;
 
-            if (args.ChangedValueIndex == 3 && index != -1) args.Input2 = RequestSong.Get(allSongs.ElementAt(index));
+            if (args.ChangedValueIndex == 3 && index != -1) args.Input2 = RequestSong.Start(allSongs.ElementAt(index));
             else if (!currentSong.HasValue) args.Input3 = -1;
             else args.Input3 = allSongs.IndexOf(currentSong.Value);
 

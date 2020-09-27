@@ -36,15 +36,16 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 isStreaming = value;
 
+                string prefix = nameof(IAudioServiceBase) + ".";
                 if (value)
                 {
-                    MqttClient.SubscribeAsync(nameof(Service.AudioFormat), MqttQualityOfServiceLevel.AtLeastOnce);
-                    MqttClient.SubscribeAsync(nameof(Service.AudioData), MqttQualityOfServiceLevel.AtMostOnce);
+                    MqttClient.SubscribeAsync(prefix + nameof(Service.AudioFormat), MqttQualityOfServiceLevel.AtLeastOnce);
+                    MqttClient.SubscribeAsync(prefix + nameof(Service.AudioData), MqttQualityOfServiceLevel.AtMostOnce);
                 }
                 else
                 {
-                    MqttClient.UnsubscribeAsync(nameof(Service.AudioData));
-                    MqttClient.UnsubscribeAsync(nameof(Service.AudioFormat));
+                    MqttClient.UnsubscribeAsync(prefix + nameof(Service.AudioData));
+                    MqttClient.UnsubscribeAsync(prefix + nameof(Service.AudioFormat));
                 }
 
                 OnPropertyChanged(nameof(IsStreaming));
@@ -167,7 +168,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 Subscribe(Service);
 
-                TopicFilter[] serviceTopics = GetTopicFilters().Concat(GetTopicFilters(Service.SourcePlaylist)).ToArray();
+                TopicFilter[] serviceTopics = GetTopicFilters().ToArray();
                 InitProps = new InitList<string>(serviceTopics.Select(t => t.Topic));
                 System.Diagnostics.Debug.WriteLine("Initlist: " + unsubscribe);
 
@@ -216,7 +217,6 @@ namespace AudioPlayerBackend.Communication.MQTT
             await MqttClient.UnsubscribeAsync(nameof(Service.AudioData));
 
             await Task.WhenAll(GetTopicFilters().Select(tf => MqttClient.UnsubscribeAsync(tf.Topic)));
-            await Task.WhenAll(GetTopicFilters(Service.SourcePlaylist).Select(tf => MqttClient.UnsubscribeAsync(tf.Topic)));
             await Task.WhenAll(GetTopicFilters(playlists.Values).Select(tf => MqttClient.UnsubscribeAsync(tf.Topic)));
         }
 
@@ -224,28 +224,12 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce;
 
-            yield return GetTopicFilter(nameof(Service.Playlists), qos);
-            yield return GetTopicFilter(nameof(Service.CurrentPlaylist), qos);
-            yield return GetTopicFilter(nameof(Service.PlayState), qos);
-            yield return GetTopicFilter(nameof(Service.Volume), qos);
-        }
-
-        private static IEnumerable<TopicFilter> GetTopicFilters(ISourcePlaylistBase playlist)
-        {
-            if (playlist == null) yield break;
-
-            string id = playlist.ID + ".";
-            const MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce;
-
-            yield return GetTopicFilter(id + nameof(playlist.CurrentSong), qos);
-            yield return GetTopicFilter(id + nameof(playlist.Songs), qos);
-            yield return GetTopicFilter(id + nameof(playlist.Duration), qos);
-            yield return GetTopicFilter(id + nameof(playlist.FileMediaSources), qos);
-            yield return GetTopicFilter(id + nameof(playlist.IsAllShuffle), qos);
-            //yield return GetTopicFilter(id + nameof(playlist.IsSearchShuffle), qos);
-            yield return GetTopicFilter(id + nameof(playlist.Loop), qos);
-            yield return GetTopicFilter(id + nameof(playlist.Position), qos);
-            //yield return GetTopicFilter(id + nameof(playlist.SearchKey), qos);
+            string prefix = nameof(IAudioServiceBase) + ".";
+            yield return GetTopicFilter(prefix + nameof(Service.SourcePlaylists), qos);
+            yield return GetTopicFilter(prefix + nameof(Service.Playlists), qos);
+            yield return GetTopicFilter(prefix + nameof(Service.CurrentPlaylist), qos);
+            yield return GetTopicFilter(prefix + nameof(Service.PlayState), qos);
+            yield return GetTopicFilter(prefix + nameof(Service.Volume), qos);
         }
 
         private static IEnumerable<TopicFilter> GetTopicFilters(IEnumerable<IPlaylistBase> playlists)
@@ -402,9 +386,10 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         protected override async Task SubscribeAsync(IPlaylistBase playlist)
         {
-            InitProps?.AddRange(GetTopicFilters(playlist).Select(tf => tf.Topic));
+            TopicFilter[] topicFilters = GetTopicFilters(playlist).ToArray();
+            InitProps?.AddRange(topicFilters.Select(tf => tf.Topic));
 
-            await MqttClient.SubscribeAsync(GetTopicFilters(playlist).ToArray());
+            await MqttClient.SubscribeAsync(topicFilters);
         }
 
         protected override async Task PublishAsync(MqttApplicationMessage message)

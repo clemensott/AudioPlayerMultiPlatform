@@ -29,6 +29,7 @@ namespace AudioPlayerFrontend
         private readonly ViewModel viewModel;
         private HotKeys hotKeys;
         private bool isChangingSelectedSongIndex;
+        private IPlaylist[] allPlaylists;
 
         public MainWindow()
         {
@@ -112,8 +113,7 @@ namespace AudioPlayerFrontend
         private async Task BuildAudioServiceAsync()
         {
             IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-            serviceBuilder.WithPlayer(new Player(-1, windowHandle))
-                .WithAudioServiceHelper(AudioServiceHelper.Current);
+            serviceBuilder.WithPlayer(new Player(-1, windowHandle));
 
             while (true)
             {
@@ -246,11 +246,11 @@ namespace AudioPlayerFrontend
                     break;
 
                 case Key.Escape:
-                    service.SourcePlaylist.SearchKey = string.Empty;
+                    service.SearchKey = string.Empty;
                     break;
 
                 case Key.Up:
-                    if (lbxSongs.Items.Count > 0 && viewModel.AudioServiceUI?.SourcePlaylist.IsSearching == true)
+                    if (lbxSongs.Items.Count > 0 && viewModel.AudioServiceUI?.IsSearching == true)
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
@@ -260,7 +260,7 @@ namespace AudioPlayerFrontend
                     break;
 
                 case Key.Down:
-                    if (lbxSongs.Items.Count > 0 && viewModel.AudioServiceUI?.SourcePlaylist.IsSearching == true)
+                    if (lbxSongs.Items.Count > 0 && viewModel.AudioServiceUI?.IsSearching == true)
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
@@ -273,11 +273,6 @@ namespace AudioPlayerFrontend
                     e.Handled = false;
                     break;
             }
-        }
-
-        private void Reload_Click(object sender, RoutedEventArgs e)
-        {
-            viewModel.Service?.AudioService.SourcePlaylist.Reload();
         }
 
         private void OnPrevious(object sender, EventArgs e)
@@ -349,7 +344,8 @@ namespace AudioPlayerFrontend
             if (viewModel.Service?.AudioService != null && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 string[] sources = (string[])e.Data.GetData(DataFormats.FileDrop);
-                viewModel.Service.AudioService.SourcePlaylist.FileMediaSources = sources;
+                Window addWindow = new AddSourcePlaylistWindow(sources, viewModel.Service.AudioService);
+                addWindow.ShowDialog();
             }
         }
 
@@ -427,17 +423,16 @@ namespace AudioPlayerFrontend
         {
             IEnumerable<Song> songs;
             IPlaylist currentPlaylist = viewModel.AudioServiceUI?.CurrentPlaylist;
-            IPlaylist sourcePlaylist = viewModel.AudioServiceUI?.SourcePlaylist;
-            bool isCurrentPlaylistSourcePlaylist = currentPlaylist?.ID == sourcePlaylist?.ID;
+            bool isCurrentPlaylistSourcePlaylist = currentPlaylist is ISourcePlaylist;
 
             if (!isSearching) songs = allSongs;
             else if (isCurrentPlaylistSourcePlaylist) songs = searchSongs;
             else songs = searchSongs.Except(allSongs);
 
-            if (changedInput == 6 && lbxIndex != -1 && isChangingSelectedSongIndex) ;
+            if (changedInput == 6 && lbxIndex != -1 && (isSearching || isChangingSelectedSongIndex)) ;
             else if (changedInput == 6 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))
             {
-                wannaSong = RequestSong.Get(songs.ElementAt(lbxIndex));
+                wannaSong = RequestSong.Start(songs.ElementAt(lbxIndex));
             }
             else if (!currentSong.HasValue) lbxIndex = -1;
             else if (songs.Contains(currentSong.Value)) lbxIndex = songs.IndexOf(currentSong.Value);
@@ -468,6 +463,16 @@ namespace AudioPlayerFrontend
             else args.Input3 = isSearching ? isSearchShuffle : isAllShuffle;
 
             return null;
+        }
+
+        private object MicPlaylists_Convert(object sender, MultiplesInputsConvert2EventArgs args)
+        {
+            IPlaylist[] newAllPlaylists = (viewModel?.AudioServiceUI?.SourcePlaylists).ToNotNull()
+                .Concat((viewModel?.AudioServiceUI?.Playlists).ToNotNull()).ToArray();
+
+            if (!allPlaylists.BothNullOrSequenceEqual(newAllPlaylists)) allPlaylists = newAllPlaylists;
+
+            return allPlaylists;
         }
 
         private void SldPosition_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

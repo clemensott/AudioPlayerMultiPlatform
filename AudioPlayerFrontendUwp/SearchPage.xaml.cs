@@ -34,7 +34,7 @@ namespace AudioPlayerFrontend
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, true, AudioServiceHelper.Current);
+            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, true, ServiceBuilderHelper.Current);
         }
 
         private void IbnAdd_Click(object sender, RoutedEventArgs e)
@@ -43,7 +43,7 @@ namespace AudioPlayerFrontend
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, AudioServiceHelper.Current);
+            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, ServiceBuilderHelper.Current);
         }
 
         private void IbnSelectAll_Click(object sender, RoutedEventArgs e)
@@ -52,12 +52,12 @@ namespace AudioPlayerFrontend
 
             IEnumerable<Song> songs = (IEnumerable<Song>)micSongs.Output;
 
-            service.Audio.AddSongsToFirstPlaylist(songs, AudioServiceHelper.Current);
+            service.Audio.AddSongsToFirstPlaylist(songs, ServiceBuilderHelper.Current);
         }
-        
+
         private void BtnClear_Click(object sender, RoutedEventArgs e)
         {
-            if (service.Audio.Playlists.Length > 0)
+            if (service.Audio.Playlists.Count > 0)
             {
                 service.Audio.Playlists[0].Songs = new Song[0];
             }
@@ -84,10 +84,10 @@ namespace AudioPlayerFrontend
 
             if (audio == null) return null;
 
-            IEnumerable<Song> viewSongs = audio.SourcePlaylist.IsSearching ?
-                audio.SourcePlaylist.SearchSongs : audio.SourcePlaylist.AllSongs;
+            IEnumerable<Song> viewSongs = audio.IsSearching ?
+                audio.SearchSongs : audio.AllSongs;
 
-            if (audio.CurrentPlaylist == audio.SourcePlaylist) return viewSongs;
+            if (audio.CurrentPlaylist is ISourcePlaylist) return viewSongs;
 
             return viewSongs.Except(audio.CurrentPlaylist.Songs);
         }
@@ -99,7 +99,7 @@ namespace AudioPlayerFrontend
 
         private object SicSongsCount_Convert(object sender, SingleInputsConvertEventArgs args)
         {
-            return ((Array)args.Input)?.Length ?? -1;
+            return ((IList<Song>)args.Input)?.Count ?? -1;
         }
 
         private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

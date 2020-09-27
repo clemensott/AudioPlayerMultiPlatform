@@ -16,16 +16,13 @@ namespace AudioPlayerBackend.Build
     public class ServiceBuilder : INotifyPropertyChanged
     {
         private readonly IServiceBuilderHelper helper;
-        private bool ifNon, reload;
         private bool? isAllShuffle, isSearchShuffle, play, isStreaming;
         private int serverPort;
         private int? clientPort;
-        private string searchKey, serverAddress, dataReadFile, dataWriteFile;
+        private string searchKey, serverAddress, dataFilePath;
         private float? volume;
-        private string[] mediaSources;
         private CommunicatorProtocol communicatorProtocol;
         private IWaveProviderPlayer player;
-        private IAudioServiceHelper audioServiceHelper;
         private INotifyPropertyChangedHelper notifyPropertyChangedHelper;
 
         public bool BuildStandalone { get; private set; }
@@ -43,30 +40,6 @@ namespace AudioPlayerBackend.Build
 
                 communicatorProtocol = value;
                 OnPropertyChanged(nameof(CommunicatorProtocol));
-            }
-        }
-
-        public bool IfNon
-        {
-            get => ifNon;
-            set
-            {
-                if (value == ifNon) return;
-
-                ifNon = value;
-                OnPropertyChanged(nameof(IfNon));
-            }
-        }
-
-        public bool Reload
-        {
-            get => reload;
-            set
-            {
-                if (value == reload) return;
-
-                reload = value;
-                OnPropertyChanged(nameof(Reload));
             }
         }
 
@@ -166,27 +139,15 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public string DataReadFile
+        public string DataFilePath
         {
-            get => dataReadFile;
+            get => dataFilePath;
             set
             {
-                if (value == dataReadFile) return;
+                if (value == dataFilePath) return;
 
-                dataReadFile = value;
-                OnPropertyChanged(nameof(DataReadFile));
-            }
-        }
-
-        public string DataWriteFile
-        {
-            get => dataWriteFile;
-            set
-            {
-                if (value == dataWriteFile) return;
-
-                dataWriteFile = value;
-                OnPropertyChanged(nameof(DataWriteFile));
+                dataFilePath = value;
+                OnPropertyChanged(nameof(DataFilePath));
             }
         }
 
@@ -202,18 +163,6 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public string[] MediaSources
-        {
-            get => mediaSources;
-            set
-            {
-                if (value.BothNullOrSequenceEqual(mediaSources)) return;
-
-                mediaSources = value;
-                OnPropertyChanged(nameof(MediaSources));
-            }
-        }
-
         public IWaveProviderPlayer Player
         {
             get => player;
@@ -223,18 +172,6 @@ namespace AudioPlayerBackend.Build
 
                 player = value;
                 OnPropertyChanged(nameof(Player));
-            }
-        }
-
-        public IAudioServiceHelper AudioServiceHelper
-        {
-            get => audioServiceHelper;
-            set
-            {
-                if (value == audioServiceHelper) return;
-
-                audioServiceHelper = value;
-                OnPropertyChanged(nameof(AudioServiceHelper));
             }
         }
 
@@ -263,19 +200,16 @@ namespace AudioPlayerBackend.Build
             Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 3, 2);
             Option serverOpt = new Option("s", "server", "Starts the app as server with the following port", false, 2, 2);
             Option sourcesOpt = new Option("m", "media-sources", "Files and directories to play", false, -1, 0);
-            Option ifNonOpt = new Option("i", "if-non", "If given the Media sources are only used if there are non", false, 0, 0);
-            Option reloadOpt = new Option("r", "reload", "Forces to reload", false, 0, 0);
             Option allShuffleOpt = Option.GetLongOnly("all-shuffle", "Shuffles all songs.", false, 0, 0);
             Option searchShuffleOpt = Option.GetLongOnly("search-shuffle", "Shuffles all songs.", false, 0, 0);
             Option searchKeyOpt = Option.GetLongOnly("search-key", "Shuffles all songs.", false, 1, 0);
             Option playOpt = new Option("p", "play", "Starts playback on startup", false, 0, 0);
             Option serviceVolOpt = new Option("v", "volume", "The volume of service (value between 0 and 1)", false, 1, 1);
             Option streamingOpt = Option.GetLongOnly("stream", "If given the audio is streamed to the client", false, 0, 0);
-            Option dataFileReadOpt = Option.GetLongOnly("data-file-read", "Filepath to where to read data from.", false, 1, 1);
-            Option dataFileWriteOpt = Option.GetLongOnly("data-file-write", "Filepath to where to write data from.", false, 1, 1);
+            Option dataFileOpt = new Option("d", "data-file", "Filepath to where to read and write data.", false, 1, 1);
 
-            Options options = new Options(sourcesOpt, ifNonOpt, reloadOpt, clientOpt, serverOpt, playOpt,
-                allShuffleOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileReadOpt, dataFileWriteOpt);
+            Options options = new Options(sourcesOpt, clientOpt, serverOpt, playOpt,
+                allShuffleOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileOpt);
             OptionParseResult result = options.Parse(args);
 
             if (result.TryGetFirstValidOptionParseds(serverOpt, out parsed))
@@ -294,38 +228,33 @@ namespace AudioPlayerBackend.Build
                 else WithClient(parsed.Values[1]);
             }
 
-            if (result.HasValidOptionParseds(sourcesOpt))
-            {
-                WithMediaSources(result.GetValidOptionParseds(sourcesOpt).SelectMany(p => p.Values).ToArray());
-            }
-
             if (result.TryGetFirstValidOptionParseds(allShuffleOpt, out parsed)) WithIsAllShuffle();
             if (result.TryGetFirstValidOptionParseds(searchShuffleOpt, out parsed)) WithIsSearchShuffle();
             if (result.TryGetFirstValidOptionParseds(searchKeyOpt, out parsed)) WithSearchKey(parsed.Values.FirstOrDefault());
-            if (result.HasValidOptionParseds(ifNonOpt)) WithSetMediaIfNon();
-            if (result.HasValidOptionParseds(reloadOpt)) WithReload();
             if (result.HasValidOptionParseds(playOpt)) WithPlay();
 
             if (result.TryGetFirstValidOptionParseds(serviceVolOpt, out parsed)) WithVolume(float.Parse(parsed.Values[0]));
 
             if (result.HasValidOptionParseds(streamingOpt)) WithIsStreaming();
 
-            if (result.TryGetFirstValidOptionParseds(dataFileReadOpt, out parsed)) DataReadFile = parsed.Values[0];
-            if (result.TryGetFirstValidOptionParseds(dataFileWriteOpt, out parsed)) DataWriteFile = parsed.Values[0];
+            if (result.TryGetFirstValidOptionParseds(dataFileOpt, out parsed)) DataFilePath = parsed.Values[0];
 
             return this;
         }
 
         public ServiceBuilder WithService(IAudioService service)
         {
-            return WithMediaSources(service.SourcePlaylist.FileMediaSources)
-                .WithIsAllShuffle(service.SourcePlaylist.IsAllShuffle)
-                .WithIsSearchShuffle(service.SourcePlaylist.IsSearchShuffle)
-                .WithSearchKey(service.SourcePlaylist.SearchKey)
+            return WithIsAllShuffle(GetSharedValueOrNull(service.GetAllPlaylists().Select(p => p.IsAllShuffle)))
+                .WithIsSearchShuffle(service.IsSearchShuffle)
+                .WithSearchKey(service.SearchKey)
                 //.WithPlay(service.PlayState == PlaybackState.Playing)
-                .WithReload(false)
-                .WithSetMediaIfNon(false)
                 .WithVolume(service.Volume);
+        }
+
+        private static bool? GetSharedValueOrNull(IEnumerable<bool> values)
+        {
+            bool[] distinctValues = values.ToNotNull().Distinct().ToArray();
+            return distinctValues.Length == 1 ? (bool?)distinctValues[0] : null;
         }
 
         public ServiceBuilder WithStandalone()
@@ -410,20 +339,6 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuilder WithMediaSources(string[] mediaSources)
-        {
-            MediaSources = mediaSources;
-
-            return this;
-        }
-
-        public ServiceBuilder WithSetMediaIfNon(bool value = true)
-        {
-            IfNon = value;
-
-            return this;
-        }
-
         public ServiceBuilder WithIsAllShuffle(bool? value = true)
         {
             IsAllShuffle = value;
@@ -441,13 +356,6 @@ namespace AudioPlayerBackend.Build
         public ServiceBuilder WithSearchKey(string value)
         {
             SearchKey = value;
-
-            return this;
-        }
-
-        public ServiceBuilder WithReload(bool value = true)
-        {
-            Reload = value;
 
             return this;
         }
@@ -476,13 +384,6 @@ namespace AudioPlayerBackend.Build
         public ServiceBuilder WithPlayer(IWaveProviderPlayer player)
         {
             Player = player;
-
-            return this;
-        }
-
-        public ServiceBuilder WithAudioServiceHelper(IAudioServiceHelper helper)
-        {
-            AudioServiceHelper = helper;
 
             return this;
         }
@@ -523,20 +424,25 @@ namespace AudioPlayerBackend.Build
 
         public ReadWriteAudioServiceData CompleteService(IAudioService service)
         {
-            bool setMediaSources = mediaSources != null && (!ifNon || !service.SourcePlaylist.FileMediaSources.ToNotNull().Any());
-            if (setMediaSources && !mediaSources.BothNullOrSequenceEqual(service.SourcePlaylist.FileMediaSources))
+            if (IsAllShuffle.HasValue)
             {
-                service.SourcePlaylist.FileMediaSources = mediaSources;
-            }
-            else if (reload) service.SourcePlaylist.Reload();
+                foreach (IPlaylist playlist in service.SourcePlaylists)
+                {
+                    playlist.IsAllShuffle = IsAllShuffle.Value;
+                }
 
-            if (IsAllShuffle.HasValue) service.SourcePlaylist.IsAllShuffle = IsAllShuffle.Value;
-            if (IsSearchShuffle.HasValue) service.SourcePlaylist.IsSearchShuffle = IsSearchShuffle.Value;
-            if (SearchKey != null) service.SourcePlaylist.SearchKey = SearchKey;
+                foreach (IPlaylist playlist in service.Playlists)
+                {
+                    playlist.IsAllShuffle = IsAllShuffle.Value;
+                }
+            }
+
+            if (IsSearchShuffle.HasValue) service.IsSearchShuffle = IsSearchShuffle.Value;
+            if (SearchKey != null) service.SearchKey = SearchKey;
             if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (volume.HasValue) service.Volume = volume.Value;
 
-            return new ReadWriteAudioServiceData(DataReadFile, DataWriteFile, service, NotifyPropertyChangedHelper);
+            return ReadWriteAudioServiceData.Start(DataFilePath, service, NotifyPropertyChangedHelper);
         }
 
         protected virtual MqttClientCommunicator CreateMqttClientCommunicator(string serverAddress, int? port)
@@ -577,18 +483,17 @@ namespace AudioPlayerBackend.Build
                 BuildServer = BuildServer,
                 BuildStandalone = BuildStandalone,
                 ClientPort = ClientPort,
-                IfNon = ifNon,
+                CommunicatorProtocol = CommunicatorProtocol,
                 IsAllShuffle = IsAllShuffle,
                 IsSearchShuffle = IsSearchShuffle,
                 IsStreaming = IsStreaming,
-                MediaSources = MediaSources?.ToArray(),
+                NotifyPropertyChangedHelper = NotifyPropertyChangedHelper,
                 Play = Play,
                 Player = Player,
-                Reload = Reload,
                 SearchKey = SearchKey,
                 ServerAddress = ServerAddress,
                 ServerPort = ServerPort,
-                Volume = Volume
+                Volume = Volume,
             };
         }
 

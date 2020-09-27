@@ -100,7 +100,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 Task receiveTask = Task.Run(() => ReceiveHandler(stream, waitDict, processQueue));
                 Task processTask = Task.Run(() => ProcessHandler(processQueue));
 
-                await SendCommand(syncCmd, false, TimeSpan.FromSeconds(10));
+                await SendCommand(syncCmd, false, TimeSpan.FromSeconds(10), statusToken.EndTask);
                 isSynced = true;
 
                 openTask = Task.WhenAll(publishTask, pingTask, receiveTask, processTask);
@@ -135,14 +135,28 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             await sendQueue.Enqueue(message);
         }
 
-        private async Task SendCommand(string cmd, bool fireAndForget, TimeSpan? timeout = null)
+        /// <summary>
+        /// Send a command and throws TimeoutException if time runs out or cancelTask finishes
+        /// </summary>
+        /// <param name="cmd">Text which is send to server</param>
+        /// <param name="fireAndForget">Don't wait for an answer</param>
+        /// <param name="timeout">Duration after which a TimeoutException is thrown if sending has not finished</param>
+        /// <param name="cancelTask">Task which causes a TimeoutException if it finishes before sending has finished</param>
+        /// <returns></returns>
+        private Task SendCommand(string cmd, bool fireAndForget, TimeSpan timeout, Task cancelTask)
+        {
+            return SendCommand(cmd, fireAndForget, Task.WhenAny(Task.Delay(timeout), cancelTask));
+        }
+
+        private async Task SendCommand(string cmd, bool fireAndForget, Task cancelTask = null)
         {
             if (!IsOpen) return;
 
             Task cmdTask = sendQueue.Enqueue(OwnTcpMessage.FromCommand(cmd, fireAndForget));
-            if (timeout.HasValue && timeout.Value >= TimeSpan.Zero)
+
+            if (cancelTask != null)
             {
-                await Task.WhenAny(cmdTask, Task.Delay(timeout.Value));
+                await Task.WhenAny(cmdTask, cancelTask).ConfigureAwait(false);
                 if (!cmdTask.IsCompleted) throw new TimeoutException($"Command ran in timout: {cmd}");
             }
             else await cmdTask.ConfigureAwait(false);
@@ -196,7 +210,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                     if (cancelTask.IsCompleted) return;
 
-                    await SendCommand(pingCmd, false, TimeSpan.FromSeconds(2));
+                    await SendCommand(pingCmd, false, TimeSpan.FromSeconds(2), cancelTask);
                 }
             }
             catch (Exception e)
@@ -235,7 +249,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                         case syncCmd:
                             ByteQueue data = message.Payload;
-                            data.DequeueService(Service, id => new Playlist(id, helper));
+                            data.DequeueService(Service, id => new SourcePlaylist(id, helper), id => new Playlist(id, helper));
                             waits[message.ID].SetValue(true);
                             waits.Remove(message.ID);
                             break;

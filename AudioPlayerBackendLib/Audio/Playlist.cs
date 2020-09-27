@@ -8,6 +8,7 @@ namespace AudioPlayerBackend.Audio
     public class Playlist : IPlaylist, IEquatable<Playlist>
     {
         private bool isAllShuffle;
+        private string name;
         private TimeSpan position, duration;
         private LoopType loop;
         private Song? currentSong;
@@ -17,6 +18,7 @@ namespace AudioPlayerBackend.Audio
         private readonly INotifyPropertyChangedHelper helper;
 
         public event EventHandler<ValueChangedEventArgs<bool>> IsAllShuffleChanged;
+        public event EventHandler<ValueChangedEventArgs<string>> NameChanged;
         public event EventHandler<ValueChangedEventArgs<LoopType>> LoopChanged;
         public event EventHandler<ValueChangedEventArgs<TimeSpan>> PositionChanged;
         public event EventHandler<ValueChangedEventArgs<TimeSpan>> DurationChanged;
@@ -36,6 +38,21 @@ namespace AudioPlayerBackend.Audio
                 var args = new ValueChangedEventArgs<bool>(IsAllShuffle, value);
                 isAllShuffle = value;
                 IsAllShuffleChanged?.Invoke(this, args);
+
+                OnIsAllShuffleChanged();
+            }
+        }
+
+        public string Name
+        {
+            get => name;
+            set
+            {
+                if (value == name) return;
+
+                var args = new ValueChangedEventArgs<string>(Name, value);
+                name = value;
+                NameChanged?.Invoke(this, args);
 
                 OnIsAllShuffleChanged();
             }
@@ -123,7 +140,11 @@ namespace AudioPlayerBackend.Audio
             get => songs;
             set
             {
-                if (value.BothNullOrSequenceEqual(songs)) return;
+                if (value == null) throw new ArgumentNullException(nameof(value));
+
+                if (value == songs) return;
+
+                for (int i = 0; i < value.Length; i++) value[i].Index = i;
 
                 var args = new ValueChangedEventArgs<Song[]>(Songs, value);
                 songs = value;
@@ -171,7 +192,7 @@ namespace AudioPlayerBackend.Audio
 
         private void ChangeCurrentSongOrRestart(Song? newCurrentSong)
         {
-            WannaSong = RequestSong.Get(newCurrentSong);
+            WannaSong = RequestSong.Start(newCurrentSong);
         }
 
         protected virtual void OnIsAllShuffleChanged()
@@ -179,6 +200,11 @@ namespace AudioPlayerBackend.Audio
             OnPropertyChanged(nameof(IsAllShuffle));
 
             AllSongs = SongsService.GetAllSongs(this).ToBuffer();
+        }
+
+        protected virtual void OnNameChanged()
+        {
+            OnPropertyChanged(nameof(Name));
         }
 
         protected virtual void OnLoopChanged()
@@ -240,20 +266,6 @@ namespace AudioPlayerBackend.Audio
                    Duration.Equals(other.Duration) &&
                    EqualityComparer<Song?>.Default.Equals(CurrentSong, other.CurrentSong) &&
                    EqualityComparer<Song[]>.Default.Equals(Songs, other.Songs);
-        }
-
-        public override int GetHashCode()
-        {
-            var hashCode = -1043069822;
-            hashCode = hashCode * -1521134295 + EqualityComparer<IEnumerable<Song>>.Default.GetHashCode(AllSongs);
-            hashCode = hashCode * -1521134295 + EqualityComparer<Guid>.Default.GetHashCode(ID);
-            hashCode = hashCode * -1521134295 + IsAllShuffle.GetHashCode();
-            hashCode = hashCode * -1521134295 + Loop.GetHashCode();
-            hashCode = hashCode * -1521134295 + EqualityComparer<TimeSpan>.Default.GetHashCode(Position);
-            hashCode = hashCode * -1521134295 + EqualityComparer<TimeSpan>.Default.GetHashCode(Duration);
-            hashCode = hashCode * -1521134295 + EqualityComparer<Song?>.Default.GetHashCode(CurrentSong);
-            hashCode = hashCode * -1521134295 + EqualityComparer<Song[]>.Default.GetHashCode(Songs);
-            return hashCode;
         }
 
         public static bool operator ==(Playlist playlist1, IPlaylistBase playlist2)

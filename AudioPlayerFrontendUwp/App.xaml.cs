@@ -40,9 +40,7 @@ namespace AudioPlayerFrontend
             this.Suspending += OnSuspending;
 
             serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
-            serviceBuilder
-                .WithAudioServiceHelper(AudioServiceHelper.Current)
-                .WithNotifyPropertyChangedHelper(ServiceBuilderHelper.Current);
+            serviceBuilder.WithNotifyPropertyChangedHelper(ServiceBuilderHelper.Current);
 
             Dispatcher dispatcher = new Dispatcher();
             ServiceHandler service = new ServiceHandler(dispatcher, serviceBuilder);
@@ -109,8 +107,6 @@ namespace AudioPlayerFrontend
                     catch (Exception exc)
                     {
                         System.Diagnostics.Debug.WriteLine("Loading service profile failed:\n" + exc);
-
-                        serviceBuilder.WithClient("nas-server", 1884);
                     }
 
                     rootFrame.Navigate(typeof(MainPage), viewModel);

@@ -12,10 +12,6 @@ namespace AudioPlayerFrontend
 
         public CommunicatorProtocol CommunicatorProtocol { get; set; }
 
-        public bool IfNon { get; set; }
-
-        public bool Reload { get; set; }
-
         public bool? IsAllShuffle { get; set; }
 
         public bool? IsSearchShuffle { get; set; }
@@ -36,16 +32,12 @@ namespace AudioPlayerFrontend
 
         public float? ClientVolume { get; set; }
 
-        public string[] MediaSources { get; set; }
-
         public ServiceProfile(ServiceBuilder sb)
         {
             BuildStandalone = sb.BuildStandalone;
             BuildServer = sb.BuildServer;
             BuildClient = sb.BuildClient;
             CommunicatorProtocol = sb.CommunicatorProtocol;
-            IfNon = sb.IfNon;
-            Reload = sb.Reload;
             IsAllShuffle = sb.IsAllShuffle;
             IsSearchShuffle = sb.IsSearchShuffle;
             Play = sb.Play;
@@ -55,7 +47,6 @@ namespace AudioPlayerFrontend
             SearchKey = sb.SearchKey;
             ServerAddress = sb.ServerAddress;
             Volume = sb.Volume;
-            MediaSources = sb.MediaSources;
             ClientVolume = null;
         }
 
@@ -66,8 +57,7 @@ namespace AudioPlayerFrontend
             else if (BuildClient) builder.WithClient(ServerAddress, ClientPort);
 
             builder.WithCommunicatorProtocol(CommunicatorProtocol)
-                .WithSetMediaIfNon(IfNon)
-                .WithReload(Reload).WithIsAllShuffle(IsAllShuffle)
+                .WithIsAllShuffle(IsAllShuffle)
                 .WithIsSearchShuffle(IsSearchShuffle)
                 .WithPlay(Play)
                 .WithIsStreaming(IsStreaming)
@@ -75,8 +65,7 @@ namespace AudioPlayerFrontend
                 .WithClientPort(ClientPort)
                 .WithSearchKey(SearchKey)
                 .WithServerAddress(ServerAddress)
-                .WithVolume(Volume)
-                .WithMediaSources(MediaSources);
+                .WithVolume(Volume);
         }
 
         public void FillServiceBuilderWithMinimum(ServiceBuilder builder)

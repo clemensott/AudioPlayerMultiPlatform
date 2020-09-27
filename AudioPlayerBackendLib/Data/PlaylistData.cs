@@ -7,6 +7,10 @@ namespace AudioPlayerBackend.Data
 {
     public class PlaylistData
     {
+        public string ID { get; set; }
+
+        public string Name { get; set; }
+
         public string CurrentSongPath { get; set; }
 
         public bool IsAllShuffle { get; set; }
@@ -23,18 +27,20 @@ namespace AudioPlayerBackend.Data
         [XmlIgnore]
         public TimeSpan Duration => new TimeSpan(DurationTicks);
 
-        public string[] Songs { get; set; }
+        public Song[] Songs { get; set; }
 
         public PlaylistData() { }
 
         public PlaylistData(IPlaylistBase playlist)
         {
+            ID = playlist.ID.ToString();
+            Name = playlist.Name;
             CurrentSongPath = playlist.CurrentSong?.FullPath ?? string.Empty;
             IsAllShuffle = playlist.IsAllShuffle;
             Loop = playlist.Loop;
             PositionTicks = playlist.Position.Ticks;
             DurationTicks = playlist.Duration.Ticks;
-            Songs = playlist.Songs.Select(s => s.FullPath).ToArray();
+            Songs = playlist.Songs.ToArray();
         }
     }
 }
