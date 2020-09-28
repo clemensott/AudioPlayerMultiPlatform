@@ -192,8 +192,6 @@ namespace AudioPlayerBackend.Player
             IPlaylistBase currentPlaylist = Service.CurrentPlaylist;
             RequestSong? wannaSong = currentPlaylist?.WannaSong;
 
-            System.Diagnostics.Debug.WriteLine($"Update current song1: {wannaSong?.Song.Title ?? "none"} | {currentPlaylist != null}");
-
             return Task.Run(async () =>
             {
                 await setWannaSongSem.WaitAsync();
@@ -205,7 +203,6 @@ namespace AudioPlayerBackend.Player
                     StopTimer();
                     isSetCurrentSong = true;
 
-                    System.Diagnostics.Debug.WriteLine($"Update current song3: {wannaSong?.Song.Title ?? "none"} | {Service?.CurrentPlaylist != null}");
                     SetWannaSongThreadSafe(currentPlaylist, wannaSong);
 
                     isSetCurrentSong = false;

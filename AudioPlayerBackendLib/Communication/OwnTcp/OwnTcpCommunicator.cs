@@ -58,7 +58,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         protected override async void OnServiceSourcePlaylistsChanged(object sender, ValueChangedEventArgs<ISourcePlaylistBase[]> e)
         {
-            List<IPlaylistBase> added = new List<IPlaylistBase>();
+            List<ISourcePlaylistBase> added = new List<ISourcePlaylistBase>();
 
             foreach (ISourcePlaylistBase playlist in e.OldValue.Except(e.NewValue))
             {

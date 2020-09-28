@@ -186,7 +186,6 @@ namespace AudioPlayerBackend.Build
 
                     try
                     {
-                        SyncToken.Reset();
                         State = BuildState.SyncCommunicator;
                         service = new AudioService(serviceBuilder.NotifyPropertyChangedHelper);
 
@@ -221,7 +220,6 @@ namespace AudioPlayerBackend.Build
 
                     try
                     {
-                        PlayerToken.Reset();
                         State = BuildState.CreatePlayer;
                         servicePlayer = serviceBuilder.CreateServicePlayer(service);
 

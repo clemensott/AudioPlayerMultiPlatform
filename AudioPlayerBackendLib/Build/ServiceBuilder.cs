@@ -484,6 +484,7 @@ namespace AudioPlayerBackend.Build
                 BuildStandalone = BuildStandalone,
                 ClientPort = ClientPort,
                 CommunicatorProtocol = CommunicatorProtocol,
+                DataFilePath = DataFilePath,
                 IsAllShuffle = IsAllShuffle,
                 IsSearchShuffle = IsSearchShuffle,
                 IsStreaming = IsStreaming,
