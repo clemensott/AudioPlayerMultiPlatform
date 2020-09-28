@@ -332,8 +332,6 @@ namespace AudioPlayerBackend.Player
                 Reader = null;
             }
 
-            Player?.Dispose();
-
             Unsubscribe(Service);
         }
     }
