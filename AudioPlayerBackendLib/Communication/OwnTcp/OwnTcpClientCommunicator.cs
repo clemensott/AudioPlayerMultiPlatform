@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Communication.Base;
-using StdOttStandard.Linq;
-using StdOttStandard.Linq.DataStructures;
 
 namespace AudioPlayerBackend.Communication.OwnTcp
 {
@@ -19,17 +14,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
     {
         private static readonly TimeSpan pingInterval = TimeSpan.FromSeconds(10);
 
-        private bool isSyncing, isSynced;
-        private TcpClient client;
-        private Dictionary<uint, OwnTcpSendMessage> waitDict;
-        private OwnTcpSendQueue sendQueue;
-        private SemaphoreSlim pingSem;
-        private AsyncQueue<OwnTcpMessage> processQueue;
-        private Task openTask;
+        private bool isSyncing;
+        private OwnTcpClientConnection connection;
 
         public override event EventHandler<DisconnectedEventArgs> Disconnected;
 
-        public override bool IsOpen => client?.Connected ?? false;
+        public override bool IsOpen => connection?.Client.Connected ?? false;
 
         public override string Name => $"TCP: {ServerAddress.Trim()} : {Port}";
 
@@ -50,19 +40,23 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
             try
             {
-                isSynced = false;
-
                 IPAddress address;
                 if (!IPAddress.TryParse(ServerAddress, out address)) address = await GetIpAddress(ServerAddress);
 
-                sendQueue = new OwnTcpSendQueue();
-                client = new TcpClient();
+                TcpClient client = new TcpClient();
                 await client.ConnectAsync(address, Port ?? -1);
+
+                connection = new OwnTcpClientConnection(client, helper);
+                connection.Disconnected += Connection_Disconnected;
             }
             catch
             {
-                client?.Dispose();
-                client = null;
+                if (connection != null)
+                {
+                    connection.Disconnected -= Connection_Disconnected;
+                    connection.Client.Dispose();
+                    connection = null;
+                }
                 throw;
             }
         }
@@ -88,28 +82,24 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             try
             {
                 isSyncing = true;
-                isSynced = false;
+                connection.IsSynced = false;
+                connection.Service = Service;
 
-                NetworkStream stream = client.GetStream();
-                waitDict = new Dictionary<uint, OwnTcpSendMessage>();
-                pingSem = new SemaphoreSlim(0);
-                processQueue = new AsyncQueue<OwnTcpMessage>();
+                Task publishTask = Task.Run(() => SendMessagesHandler(connection));
+                Task pingTask = Task.Run(() => SendPingsHandler(connection));
+                Task receiveTask = Task.Run(() => ReceiveHandler(connection));
+                Task processTask = Task.Run(() => ProcessHandler(connection));
 
-                Task publishTask = Task.Run(() => SendMessagesHandler(stream, sendQueue, waitDict));
-                Task pingTask = Task.Run(() => SendPingsHandler(sendQueue, pingSem));
-                Task receiveTask = Task.Run(() => ReceiveHandler(stream, waitDict, processQueue));
-                Task processTask = Task.Run(() => ProcessHandler(processQueue));
+                await connection.SendCommand(SyncCmd, false, TimeSpan.FromSeconds(10), statusToken.EndTask);
+                connection.IsSynced = true;
 
-                await SendCommand(syncCmd, false, TimeSpan.FromSeconds(10), statusToken.EndTask);
-                isSynced = true;
-
-                openTask = Task.WhenAll(publishTask, pingTask, receiveTask, processTask);
+                connection.Task = Task.WhenAll(publishTask, pingTask, receiveTask, processTask);
             }
             catch (Exception e)
             {
                 try
                 {
-                    await CloseAsync(e, true);
+                    await connection.CloseAsync(e, true);
                 }
                 catch { }
 
@@ -132,146 +122,120 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 Topic = cmdString,
                 Payload = payload,
             };
-            await sendQueue.Enqueue(message);
-        }
-
-        /// <summary>
-        /// Send a command and throws TimeoutException if time runs out or cancelTask finishes
-        /// </summary>
-        /// <param name="cmd">Text which is send to server</param>
-        /// <param name="fireAndForget">Don't wait for an answer</param>
-        /// <param name="timeout">Duration after which a TimeoutException is thrown if sending has not finished</param>
-        /// <param name="cancelTask">Task which causes a TimeoutException if it finishes before sending has finished</param>
-        /// <returns></returns>
-        private Task SendCommand(string cmd, bool fireAndForget, TimeSpan timeout, Task cancelTask)
-        {
-            return SendCommand(cmd, fireAndForget, Task.WhenAny(Task.Delay(timeout), cancelTask));
-        }
-
-        private async Task SendCommand(string cmd, bool fireAndForget, Task cancelTask = null)
-        {
-            if (!IsOpen) return;
-
-            Task cmdTask = sendQueue.Enqueue(OwnTcpMessage.FromCommand(cmd, fireAndForget));
-
-            if (cancelTask != null)
-            {
-                await Task.WhenAny(cmdTask, cancelTask).ConfigureAwait(false);
-                if (!cmdTask.IsCompleted) throw new TimeoutException($"Command ran in timout: {cmd}");
-            }
-            else await cmdTask.ConfigureAwait(false);
+            await connection.SendQueue.Enqueue(message);
         }
 
         protected override async Task SendAsync(string topic, byte[] payload, bool fireAndForget)
         {
             if (isSyncing || !IsOpen || IsTopicLocked(topic, payload)) return;
 
-            await sendQueue.Enqueue(OwnTcpMessage.FromData(topic, payload, fireAndForget));
+            await connection.SendQueue.Enqueue(OwnTcpMessage.FromData(topic, payload, fireAndForget));
         }
 
-        private async Task SendMessagesHandler(Stream stream,
-            OwnTcpSendQueue queue, IDictionary<uint, OwnTcpSendMessage> waits)
+        private static async Task SendMessagesHandler(OwnTcpClientConnection connection)
         {
             try
             {
                 uint count = 0;
-                while (!queue.IsEnded)
+                while (!connection.SendQueue.IsEnded)
                 {
-                    OwnTcpSendMessage send = queue.Dequeue();
-                    if (queue.IsEnded) break;
+                    OwnTcpSendMessage send = connection.SendQueue.Dequeue();
+                    if (connection.SendQueue.IsEnded) break;
 
                     send.Message.ID = count++;
 
-                    if (!send.Message.IsFireAndForget) waits.Add(send.Message.ID, send);
+                    if (!send.Message.IsFireAndForget) connection.Waits.Add(send.Message.ID, send);
 
                     byte[] data = GetBytes(send.Message).ToArray();
-                    await stream.WriteAsync(data, 0, data.Length);
-                    await stream.FlushAsync();
+                    await connection.Stream.WriteAsync(data, 0, data.Length);
+                    await connection.Stream.FlushAsync();
 
                     if (send.Message.IsFireAndForget) send.SetValue(true);
-                    if (send.Message.Topic == closeCmd) break;
+                    if (send.Message.Topic == CloseCmd) break;
                 }
             }
             catch (Exception e)
             {
-                await CloseAsync(new Exception("SendMessageHandler error", e), false);
+                await connection.CloseAsync(new Exception("SendMessageHandler error", e), false);
             }
         }
 
-        private async Task SendPingsHandler(OwnTcpSendQueue sendQueue, SemaphoreSlim pingSem)
+        private static async Task SendPingsHandler(OwnTcpClientConnection connection)
         {
-            Task cancelTask = pingSem.WaitAsync();
+            Task cancelTask = connection.PingSem.WaitAsync();
             try
             {
-                while (client?.Connected == true)
+                while (connection.Client?.Connected == true)
                 {
                     Task delayTask = Task.Delay(pingInterval);
                     await Task.WhenAny(delayTask, cancelTask);
 
                     if (cancelTask.IsCompleted) return;
 
-                    await SendCommand(pingCmd, false, TimeSpan.FromSeconds(2), cancelTask);
+                    await connection.SendCommand(PingCmd, false, TimeSpan.FromSeconds(2), cancelTask);
                 }
             }
             catch (Exception e)
             {
-                await CloseAsync(new Exception("ReceiveHandler error", e), false);
+                await connection.CloseAsync(new Exception("ReceiveHandler error", e), false);
             }
         }
 
-        private async Task ReceiveHandler(Stream stream,
-            Dictionary<uint, OwnTcpSendMessage> waits, AsyncQueue<OwnTcpMessage> queue)
+        private static async Task ReceiveHandler(OwnTcpClientConnection connection)
         {
             try
             {
-                while (client?.Connected == true)
+                while (connection.Client?.Connected == true)
                 {
-                    OwnTcpMessage message = await ReadMessage(stream);
-                    if (message == null || client?.Connected != true) break;
+                    OwnTcpMessage message = await connection.ReadMessage();
+                    if (message == null || connection.Client?.Connected != true) break;
 
                     switch (message.Topic)
                     {
-                        case anwserCmd:
+                        case AnwserCmd:
                             int code = BitConverter.ToInt32(message.Payload, 0);
 
                             if (code == 200)
                             {
-                                waits[message.ID].SetValue(true);
-                                waits.Remove(message.ID);
+                                connection.Waits[message.ID].SetValue(true);
+                                connection.Waits.Remove(message.ID);
                             }
-                            else await CloseAsync(new Exception("Negative Answer"), false);
+                            else await connection.CloseAsync(new Exception("Negative Answer"), false);
                             break;
 
-                        case closeCmd:
+                        case CloseCmd:
                             Exception e = new Exception("Server sent close");
-                            await CloseAsync(e, false);
+                            await connection.CloseAsync(e, false);
                             return;
 
-                        case syncCmd:
+                        case SyncCmd:
                             ByteQueue data = message.Payload;
-                            data.DequeueService(Service, id => new SourcePlaylist(id, helper), id => new Playlist(id, helper));
-                            waits[message.ID].SetValue(true);
-                            waits.Remove(message.ID);
+                            data.DequeueService(connection.Service,
+                                id => new SourcePlaylist(id, connection.Helper),
+                                id => new Playlist(id, connection.Helper));
+
+                            connection.Waits[message.ID].SetValue(true);
+                            connection.Waits.Remove(message.ID);
                             break;
 
                         default:
-                            if (isSynced) await queue.Enqueue(message);
+                            if (connection.IsSynced) await connection.ProcessQueue.Enqueue(message);
                             break;
                     }
                 }
             }
             catch (Exception e)
             {
-                await CloseAsync(new Exception("ReceiveHandler error", e), false);
+                await connection.CloseAsync(new Exception("ReceiveHandler error", e), false);
             }
         }
 
-        private async Task ProcessHandler(AsyncQueue<OwnTcpMessage> queue)
+        private async Task ProcessHandler(OwnTcpClientConnection connection)
         {
             while (true)
             {
-                (_, OwnTcpMessage item) = await queue.Dequeue().ConfigureAwait(false);
-                if (queue.IsEnd) break;
+                (_, OwnTcpMessage item) = await connection.ProcessQueue.Dequeue().ConfigureAwait(false);
+                if (connection.ProcessQueue.IsEnd) break;
 
                 try
                 {
@@ -282,12 +246,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     if (success) continue;
 
                     Exception e = new Exception($"Handle Message not successful. Topic: {item.Topic}");
-                    await CloseAsync(e, false);
+                    await connection.CloseAsync(e, false);
                 }
                 catch (Exception e)
                 {
                     e = new Exception($"Handle Message error. Topic: {item.Topic}", e);
-                    await CloseAsync(e, false);
+                    await connection.CloseAsync(e, false);
                     break;
                 }
                 finally
@@ -297,49 +261,30 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        public override Task CloseAsync()
+        private void Connection_Disconnected(object sender, DisconnectedEventArgs e)
         {
-            return CloseAsync(null, true);
+            Disconnected?.Invoke(this, e);
         }
 
-        private async Task CloseAsync(Exception e, bool awaitAll)
+        public override async Task CloseAsync()
         {
-            if (!isSynced) return;
-            isSynced = false;
+            if (connection == null) return;
 
-            if (e == null) await SendCommand(closeCmd, true).ConfigureAwait(false);
-
-            pingSem.Release();
-            sendQueue.End();
-
-            await processQueue.End().ConfigureAwait(false);
-
-            client?.Dispose();
-            client = null;
-
-            foreach (OwnTcpSendMessage message in waitDict?.Values.ToNotNull())
-            {
-                message.SetValue(false);
-            }
-
-            Task raiseTask = RaiseDisconnected();
-            if (awaitAll) await raiseTask.ConfigureAwait(false);
-
-            async Task RaiseDisconnected()
-            {
-                if (openTask != null) await openTask.ConfigureAwait(false);
-
-                Disconnected?.Invoke(this, new DisconnectedEventArgs(e == null, e));
-            }
+            connection.Disconnected -= Connection_Disconnected;
+            await connection.CloseAsync(null, true).ConfigureAwait(false);
+            connection = null;
         }
 
         public override void Dispose()
         {
+            if (connection == null) return;
             DisposeTask().Wait();
 
             async Task DisposeTask()
             {
-                await CloseAsync(null, false).ConfigureAwait(false);
+                connection.Disconnected -= Connection_Disconnected;
+                await connection.CloseAsync(null, false).ConfigureAwait(false);
+                connection = null;
             }
         }
     }

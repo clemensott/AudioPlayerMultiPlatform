@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +11,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 {
     public abstract class OwnTcpCommunicator : BaseCommunicator
     {
-        protected const string anwserCmd = "-ans", syncCmd = "-sync", pingCmd = "-ping", closeCmd = "-close";
+        public const string AnwserCmd = "-ans", SyncCmd = "-sync", PingCmd = "-ping", CloseCmd = "-close";
 
         protected OwnTcpCommunicator(INotifyPropertyChangedHelper helper = null) : base(helper)
         {
@@ -279,46 +278,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 .Concat(topicBytes)
                 .Concat(payloadLengthBytes)
                 .Concat(message.Payload ?? new byte[0]);
-        }
-
-        protected static async Task<OwnTcpMessage> ReadMessage(Stream stream)
-        {
-            byte[] idBytes = await ReadAsync(stream, sizeof(uint));
-            if (idBytes == null) return null;
-
-            uint id = BitConverter.ToUInt32(idBytes, 0);
-            bool fireAndForget = BitConverter.ToBoolean(await ReadAsync(stream, sizeof(bool)), 0);
-            int topicLength = BitConverter.ToInt32(await ReadAsync(stream, sizeof(int)), 0);
-            string topic = Encoding.UTF8.GetString(await ReadAsync(stream, topicLength));
-            int payloadLength = BitConverter.ToInt32(await ReadAsync(stream, sizeof(int)), 0);
-
-            byte[] payload;
-            if (payloadLength > 0) payload = await ReadAsync(stream, payloadLength);
-            else if (payloadLength == 0) payload = new byte[0];
-            else payload = null;
-
-            return new OwnTcpMessage()
-            {
-                IsFireAndForget = fireAndForget,
-                ID = id,
-                Topic = topic,
-                Payload = payload,
-            };
-        }
-
-        private static async Task<byte[]> ReadAsync(Stream stream, int count)
-        {
-            byte[] buffer = new byte[count];
-            int remainingCount = count;
-            do
-            {
-                int readCount = await stream.ReadAsync(buffer, count - remainingCount, remainingCount);
-                if (readCount == 0) return null;
-
-                remainingCount -= readCount;
-            } while (remainingCount > 0);
-
-            return buffer;
         }
 
         protected bool HandlerMessage(OwnTcpMessage message)

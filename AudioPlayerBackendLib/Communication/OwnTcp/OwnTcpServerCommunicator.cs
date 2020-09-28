@@ -16,7 +16,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
     {
         private bool isOpen;
         private readonly TcpListener listener;
-        private IList<OwnTcpConnection> connections;
+        private IList<OwnTcpServerConnection> connections;
         private AsyncQueue<OwnTcpSendMessage> processQueue;
         private Task openTask;
 
@@ -63,7 +63,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         {
             try
             {
-                connections = new List<OwnTcpConnection>();
+                connections = new List<OwnTcpServerConnection>();
                 processQueue = new AsyncQueue<OwnTcpSendMessage>();
 
                 openTask = Task.WhenAll(ProcessHandler(processQueue), NewConnectionsHandler(processQueue));
@@ -83,7 +83,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 {
                     TcpClient client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
                     OwnTcpSendQueue queue = new OwnTcpSendQueue();
-                    OwnTcpConnection connection = new OwnTcpConnection(client, queue);
+                    OwnTcpServerConnection connection = new OwnTcpServerConnection(client, queue);
 
                     connections.Add(connection);
 
@@ -98,7 +98,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        private async Task SendClientHandler(OwnTcpConnection connection)
+        private async Task SendClientHandler(OwnTcpServerConnection connection)
         {
             uint count = 0;
             try
@@ -123,28 +123,28 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        private async Task ReadClientHandler(OwnTcpConnection connection, AsyncQueue<OwnTcpSendMessage> processQueue)
+        private async Task ReadClientHandler(OwnTcpServerConnection connection, AsyncQueue<OwnTcpSendMessage> processQueue)
         {
             try
             {
                 while (connection.Client.Connected)
                 {
-                    OwnTcpMessage message = await ReadMessage(connection.Stream);
+                    OwnTcpMessage message = await connection.ReadMessage();
                     if (message == null || !connection.Client.Connected) break;
 
                     switch (message.Topic)
                     {
-                        case pingCmd:
+                        case PingCmd:
                             await SendAnswer(connection, message.ID, 200);
                             break;
 
-                        case syncCmd:
+                        case SyncCmd:
                             ByteQueue data = new ByteQueue();
                             data.Enqueue(Service);
-                            await SendMessageToClient(connection, syncCmd, message.ID, data);
+                            await SendMessageToClient(connection, SyncCmd, message.ID, data);
                             break;
 
-                        case closeCmd:
+                        case CloseCmd:
                             await CloseConnection(connection, false);
                             return;
 
@@ -173,18 +173,18 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        private static Task SendAnswer(OwnTcpConnection connection, uint id, int value)
+        private static Task SendAnswer(OwnTcpServerConnection connection, uint id, int value)
         {
-            return SendMessageToClient(connection, anwserCmd, id, BitConverter.GetBytes(value));
+            return SendMessageToClient(connection, AnwserCmd, id, BitConverter.GetBytes(value));
         }
 
-        private async Task CloseConnection(OwnTcpConnection connection, bool sendClose = true)
+        private async Task CloseConnection(OwnTcpServerConnection connection, bool sendClose = true)
         {
             if (!connections.Contains(connection)) return;
 
             try
             {
-                if (sendClose) await SendMessageToClient(connection, closeCmd, null).ConfigureAwait(false);
+                if (sendClose) await SendMessageToClient(connection, CloseCmd, null).ConfigureAwait(false);
             }
             catch { }
 
@@ -193,7 +193,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             connections.Remove(connection);
         }
 
-        private Task SendMessageToAllOtherClients(OwnTcpConnection srcConnection, string topic, byte[] payload)
+        private Task SendMessageToAllOtherClients(OwnTcpServerConnection srcConnection, string topic, byte[] payload)
         {
             return SendMessageToClients(connections.Where(c => c != srcConnection), topic, payload);
         }
@@ -203,11 +203,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             return SendMessageToClients(connections, topic, payload);
         }
 
-        private Task SendMessageToClients(IEnumerable<OwnTcpConnection> sendToConnections, string topic, byte[] payload)
+        private Task SendMessageToClients(IEnumerable<OwnTcpServerConnection> sendToConnections, string topic, byte[] payload)
         {
             return Task.WhenAll(sendToConnections.ToArray().Select(Send));
 
-            async Task Send(OwnTcpConnection connection)
+            async Task Send(OwnTcpServerConnection connection)
             {
                 try
                 {
@@ -220,12 +220,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        private static Task SendMessageToClient(OwnTcpConnection connection, string topic, byte[] payload)
+        private static Task SendMessageToClient(OwnTcpServerConnection connection, string topic, byte[] payload)
         {
             return SendMessageToClient(connection, topic, 0, payload);
         }
 
-        private static async Task SendMessageToClient(OwnTcpConnection connection,
+        private static async Task SendMessageToClient(OwnTcpServerConnection connection,
             string topic, uint id, byte[] payload = null)
         {
             if (!connection.Client.Connected) return;
@@ -275,7 +275,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         {
             if (!IsOpen) return;
 
-            foreach (OwnTcpConnection connection in connections.ToArray())
+            foreach (OwnTcpServerConnection connection in connections.ToArray())
             {
                 await CloseConnection(connection).ConfigureAwait(false);
             }
