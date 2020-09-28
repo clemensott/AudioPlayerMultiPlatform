@@ -9,7 +9,7 @@
         xmlns:audio="clr-namespace:AudioPlayerBackend.Audio;assembly=AudioPlayerBackendLib"
         mc:Ignorable="d"
         Title="Hotkey Music"
-        MinHeight="300" MinWidth="350"
+        MinHeight="300" MinWidth="450"
         Height="650" Width="625"
         AllowDrop="True" Drop="Window_Drop"
         Loaded="Window_Loaded"
@@ -35,21 +35,19 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <WrapPanel Margin="5,3"
-                   Visibility="{Binding AudioServiceUI,Converter={StaticResource visCon}}">
-            <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
-                <TextBlock Text="Search:" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                <TextBox Name="tbxSearch" HorizontalAlignment="Stretch" MinWidth="200"
-                         Text="{Binding AudioServiceUI.SearchKey,
-                           Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
-                         PreviewKeyDown="TbxSearch_PreviewKeyDown"/>
-            </StackPanel>
+        <Grid Margin="5,3"
+              Visibility="{Binding AudioServiceUI,Converter={StaticResource visCon}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center">
-                <TextBlock Text="Volume:" VerticalAlignment="Center" Margin="0,-3,5,0"/>
-                <Slider Maximum="1" Value="{Binding AudioServiceUI.Volume}" 
-                        Width="150" VerticalAlignment="Center"/>
-            </StackPanel>
+            <TextBlock Text="Search:" FontWeight="Bold" Margin="0,0,5,0" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Name="tbxSearch" HorizontalAlignment="Stretch"
+                     Text="{Binding AudioServiceUI.SearchKey,
+                     Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+                       PreviewKeyDown="TbxSearch_PreviewKeyDown"/>
 
             <con:MultipleInputs4Converter x:Name="micShuffle"
                                           Input0="{Binding AudioServiceUI.IsSearching}"
@@ -57,31 +55,21 @@
                                           Input2="{Binding AudioServiceUI.IsSearchShuffle,Mode=TwoWay}"
                                           ConvertRef="MicShuffle_ConvertRef"/>
 
-            <CheckBox Margin="5,3" Content="Shuffle" VerticalAlignment="Center"
+            <CheckBox Grid.Column="2" Margin="5,3" Content="Shuffle" VerticalAlignment="Center"
                       IsChecked="{Binding ElementName=micShuffle,Path=Input3,
                         Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
 
-            <ComboBox Margin="5,3" Width="130" 
-                      SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Loop,Mode=TwoWay}"
-                      Visibility="{Binding AudioServiceUI.CurrentPlaylist,Converter={StaticResource visCon}}">
-                <audio:LoopType>Next</audio:LoopType>
-                <audio:LoopType>Stop</audio:LoopType>
-                <audio:LoopType>CurrentPlaylist</audio:LoopType>
-                <audio:LoopType>CurrentSong</audio:LoopType>
-                <audio:LoopType>StopCurrentSong</audio:LoopType>
-            </ComboBox>
-
-            <StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center"
+            <!--<StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center"
                         Visibility="{Binding ServicePlayerUI,Converter={StaticResource isClientCon}}">
                 <CheckBox Content="Stream" VerticalAlignment="Center" HorizontalAlignment="Right"
                           Margin="0,0,5,0" IsChecked="{Binding CommunicatorUI.IsStreaming,Mode=TwoWay}"/>
                 <Slider Maximum="1" Value="{Binding ServicePlayerUI.Player.Volume}" Width="150" VerticalAlignment="Center"/>
-            </StackPanel>
-        </WrapPanel>
+            </StackPanel>-->
+        </Grid>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="150"/>
+                <ColumnDefinition Width="*" MinWidth="230"/>
                 <ColumnDefinition Width="5" />
                 <ColumnDefinition Width="Auto" MinWidth="190" />
             </Grid.ColumnDefinitions>
@@ -142,11 +130,34 @@
 
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <ListBox x:Name="lbxPlaylists" Margin="0,5" SelectionMode="Single"
+                <Grid Margin="3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Volume:" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <Slider Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0"
+                            Maximum="1" Value="{Binding AudioServiceUI.Volume}" />
+                </Grid>
+
+                <ComboBox Grid.Row="1" Margin="0,5,0,0"
+                          SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Loop,Mode=TwoWay}"
+                          Visibility="{Binding AudioServiceUI.CurrentPlaylist,Converter={StaticResource visCon}}">
+                    <audio:LoopType>Next</audio:LoopType>
+                    <audio:LoopType>Stop</audio:LoopType>
+                    <audio:LoopType>CurrentPlaylist</audio:LoopType>
+                    <audio:LoopType>CurrentSong</audio:LoopType>
+                    <audio:LoopType>StopCurrentSong</audio:LoopType>
+                </ComboBox>
+
+                <ListBox Grid.Row="2" x:Name="lbxPlaylists" Margin="0,5" SelectionMode="Single"
                          ItemsSource="{Binding ElementName=micPlaylists,Path=Output}"
                          SelectedItem="{Binding AudioServiceUI.CurrentPlaylist,Mode=TwoWay}">
                     <ListBox.ItemContainerStyle>
@@ -158,7 +169,7 @@
                         <DataTemplate>
                             <StackPanel Margin="0,3">
                                 <TextBlock FontWeight="SemiBold" FontSize="17"
-                                           TextWrapping="WrapWithOverflow" Text="{Binding Name}"/>
+                                           TextWrapping="Wrap" Text="{Binding Name}"/>
 
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Songs: "/>
@@ -169,7 +180,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
+                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
                     <CheckBox Margin="5" Content="Enable UI" VerticalAlignment="Center" 
                               IsChecked="{Binding IsUiEnabled,Mode=TwoWay}"/>
 

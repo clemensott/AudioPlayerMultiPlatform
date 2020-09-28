@@ -6,8 +6,8 @@ namespace AudioPlayerBackend.Build
 {
     public interface IServiceBuilderHelper : INotifyPropertyChangedHelper
     {
-        AudioStreamPlayer CreateAudioStreamPlayer(IWaveProviderPlayer player, IAudioService service);
+        AudioStreamPlayer CreateAudioStreamPlayer(IPlayer player, IAudioService service);
 
-        AudioServicePlayer CreateAudioServicePlayer(IWaveProviderPlayer player, IAudioService service);
+        AudioServicePlayer CreateAudioServicePlayer(IPlayer player, IAudioService service);
     }
 }

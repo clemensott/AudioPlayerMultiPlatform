@@ -12,26 +12,21 @@ namespace AudioPlayerBackend.Player
         private const int updateInterval = 100;
 
         private bool isSetCurrentSong;
-        private readonly SemaphoreSlim setWannaSongSem;
         private readonly IAudioServicePlayerHelper helper;
         private readonly Timer timer;
-        private ReadEventWaveProvider waveProvider;
-        private string currentReaderPath;
-
-        public IPositionWaveProvider Reader { get; private set; }
 
         public IAudioService Service { get; }
 
-        public IWaveProviderPlayer Player { get; }
+        public IPlayer Player { get; }
 
-        public AudioServicePlayer(IAudioService service, IWaveProviderPlayer player, IAudioServicePlayerHelper helper = null)
+        public AudioServicePlayer(IAudioService service, IPlayer player, IAudioServicePlayerHelper helper = null)
         {
-            setWannaSongSem = new SemaphoreSlim(1);
             Service = service;
             Player = player;
             this.helper = helper;
 
             player.PlayState = service.PlayState;
+            player.MediaOpened += Player_MediaOpened;
             player.PlaybackStopped += Player_PlaybackStopped;
 
             timer = new Timer(Timer_Elapsed, null, updateInterval, updateInterval);
@@ -46,26 +41,38 @@ namespace AudioPlayerBackend.Player
 
         private async void CheckUpdateCurrentSong()
         {
-            if (Reader == null ^ Service.CurrentPlaylist?.CurrentSong == null)
+            if (!Player.Source.HasValue ^ Service.CurrentPlaylist?.CurrentSong == null)
             {
                 await UpdateCurrentSong();
             }
         }
 
-        private void Player_PlaybackStopped(object sender, StoppedEventArgs e)
+        private void Player_MediaOpened(object sender, MediaOpenedEventArgs e)
+        {
+            IPlaylist currentPlaylist = Service.CurrentPlaylist;
+            if (currentPlaylist?.WannaSong?.Song != e.Source) return;
+
+            currentPlaylist.CurrentSong = e.Source;
+            currentPlaylist.Position = e.Position;
+            currentPlaylist.Duration = e.Duration;
+        }
+
+        private void Player_PlaybackStopped(object sender, PlaybackStoppedEventArgs e)
         {
             if (e.Exception == null && (Player.PlayState != PlaybackState.Stopped ||
-                Reader.CurrentTime >= Reader.TotalTime)) Service.Continue();
+                Player.Position >= Player.Duration)) Service.Continue();
         }
 
         private void Timer_Elapsed(object state)
         {
             try
             {
-                if (Reader != null && Service.CurrentPlaylist.Position.Seconds != Reader.CurrentTime.Seconds)
-                {
-                    Service.CurrentPlaylist.Position = Reader.CurrentTime;
-                }
+                if (!Player.Source.HasValue) return;
+
+                TimeSpan position = Service.CurrentPlaylist.Position;
+                if (Service.CurrentPlaylist.Position.Seconds == Player.Position.Seconds) return;
+
+                Service.CurrentPlaylist.Position = Player.Position;
             }
             catch { }
         }
@@ -187,119 +194,22 @@ namespace AudioPlayerBackend.Player
             }
         }
 
-        private Task UpdateCurrentSong()
+        private async Task UpdateCurrentSong()
         {
-            IPlaylistBase currentPlaylist = Service.CurrentPlaylist;
+            StopTimer();
+            isSetCurrentSong = true;
+
+            IPlaylist currentPlaylist = Service.CurrentPlaylist;
             RequestSong? wannaSong = currentPlaylist?.WannaSong;
+            await Player.Set(wannaSong);
 
-            return Task.Run(async () =>
+            if (currentPlaylist != null && currentPlaylist.WannaSong.Equals(wannaSong))
             {
-                await setWannaSongSem.WaitAsync();
-
-                try
-                {
-                    if (currentPlaylist != Service.CurrentPlaylist || !wannaSong.Equals(currentPlaylist?.WannaSong)) return;
-
-                    StopTimer();
-                    isSetCurrentSong = true;
-
-                    SetWannaSongThreadSafe(currentPlaylist, wannaSong);
-
-                    isSetCurrentSong = false;
-                    EnableTimer();
-                }
-                finally
-                {
-                    setWannaSongSem.Release();
-                }
-            });
-        }
-
-        protected virtual void SetWannaSongThreadSafe(IPlaylistBase currentPlaylist, RequestSong? wannaSong)
-        {
-            if (helper?.SetWannaSongThreadSafe != null)
-            {
-                helper.SetWannaSongThreadSafe(this);
-                return;
+                currentPlaylist.CurrentSong = wannaSong?.Song;
             }
 
-            if (Reader != null)
-            {
-                if (wannaSong.HasValue && wannaSong.Value.Song.FullPath == currentReaderPath)
-                {
-                    if (wannaSong.Value.Position.HasValue &&
-                        wannaSong.Value.Position.Value != Reader.CurrentTime)
-                    {
-                        Reader.CurrentTime = wannaSong.Value.Position.Value;
-                    }
-
-                    currentPlaylist.CurrentSong = wannaSong.Value.Song;
-                    currentPlaylist.Duration = Reader.TotalTime;
-                    return;
-                }
-
-                Player.Stop();
-            }
-
-            try
-            {
-                if (wannaSong.HasValue)
-                {
-                    currentPlaylist.CurrentSong = wannaSong.Value.Song;
-                    Player.Play(() => GetWaveProvider(currentPlaylist, wannaSong.Value));
-                }
-                else
-                {
-                    Reader = null;
-                    Service.AudioFormat = null;
-                    if (currentPlaylist != null) currentPlaylist.CurrentSong = null;
-                }
-            }
-            catch
-            {
-                Reader = null;
-                Service.AudioFormat = null;
-            }
-        }
-
-        private IPositionWaveProvider GetWaveProvider(IPlaylistBase currentPlaylist, RequestSong wannaSong)
-        {
-            currentReaderPath = wannaSong.Song.FullPath;
-            Reader = ToWaveProvider(CreateWaveProvider(wannaSong.Song));
-
-            if (wannaSong.Position.HasValue &&
-                Reader.TotalTime == wannaSong.Duration &&
-                Reader.TotalTime > wannaSong.Position.Value)
-            {
-                Reader.CurrentTime = wannaSong.Position.Value;
-            }
-
-            currentPlaylist.Position = Reader.CurrentTime;
-            currentPlaylist.Duration = Reader.TotalTime;
-
-            return Reader;
-        }
-
-        private IPositionWaveProvider ToWaveProvider(IPositionWaveProvider waveProvider)
-        {
-            if (this.waveProvider != null) this.waveProvider.ReadEvent -= WaveProvider_Read;
-
-            Service.AudioFormat = waveProvider.WaveFormat;
-
-            this.waveProvider = new ReadEventWaveProvider(waveProvider);
-            this.waveProvider.ReadEvent += WaveProvider_Read;
-
-            return this.waveProvider;
-        }
-
-        private void WaveProvider_Read(object sender, WaveProviderReadEventArgs e)
-        {
-            Task.Factory.StartNew(() => Service.AudioData = e.Buffer.Skip(e.Offset).Take(e.ReturnCount).ToArray());
-        }
-
-        protected virtual IPositionWaveProvider CreateWaveProvider(Song song)
-        {
-            return helper.CreateWaveProvider(song, Service);
+            isSetCurrentSong = false;
+            EnableTimer();
         }
 
         private void EnableTimer()
@@ -321,18 +231,12 @@ namespace AudioPlayerBackend.Player
 
         public void Dispose()
         {
+            Player.MediaOpened -= Player_MediaOpened;
             Player.PlaybackStopped -= Player_PlaybackStopped;
-            timer.Dispose();
-
-            Player?.Stop();
-
-            if (Reader != null)
-            {
-                Reader?.Dispose();
-                Reader = null;
-            }
-
             Unsubscribe(Service);
+
+            timer.Dispose();
+            Player.Stop();
         }
     }
 }

@@ -107,15 +107,10 @@
     <Compile Include="Converter\FloatNullableToFloatConverter.cs" />
     <Compile Include="Converter\IsIMqttAudioConverter.cs" />
     <Compile Include="Converter\LoopIconConverter.cs" />
-    <Compile Include="Join\AudioFileReader.cs" />
-    <Compile Include="Join\BufferedWaveProvider.cs" />
-    <Compile Include="Join\Convert.cs" />
-    <Compile Include="Join\IWaveProvider.cs" />
     <Compile Include="Join\NotifyPropertyChangedHelper.cs" />
     <Compile Include="Join\PlayerHelper.cs" />
     <Compile Include="Join\Player.cs" />
     <Compile Include="Join\ServiceBuilderHelper.cs" />
-    <Compile Include="Join\WaveProvider.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>

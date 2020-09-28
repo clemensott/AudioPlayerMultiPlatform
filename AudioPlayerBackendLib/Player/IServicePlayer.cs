@@ -7,6 +7,6 @@ namespace AudioPlayerBackend.Player
     {
         IAudioService Service { get; }
 
-        IWaveProviderPlayer Player { get; }
+        IPlayer Player { get; }
     }
 }

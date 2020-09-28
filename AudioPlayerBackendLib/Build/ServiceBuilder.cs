@@ -22,7 +22,7 @@ namespace AudioPlayerBackend.Build
         private string searchKey, serverAddress, dataFilePath;
         private float? volume;
         private CommunicatorProtocol communicatorProtocol;
-        private IWaveProviderPlayer player;
+        private IPlayer player;
         private INotifyPropertyChangedHelper notifyPropertyChangedHelper;
 
         public bool BuildStandalone { get; private set; }
@@ -163,7 +163,7 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public IWaveProviderPlayer Player
+        public IPlayer Player
         {
             get => player;
             set
@@ -381,7 +381,7 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuilder WithPlayer(IWaveProviderPlayer player)
+        public ServiceBuilder WithPlayer(IPlayer player)
         {
             Player = player;
 
@@ -465,12 +465,12 @@ namespace AudioPlayerBackend.Build
             return new OwnTcpServerCommunicator(port, NotifyPropertyChangedHelper);
         }
 
-        protected virtual AudioStreamPlayer CreateAudioStreamPlayer(IWaveProviderPlayer player, IAudioService service)
+        protected virtual AudioStreamPlayer CreateAudioStreamPlayer(IPlayer player, IAudioService service)
         {
             return helper.CreateAudioStreamPlayer(player, service);
         }
 
-        protected virtual AudioServicePlayer CreateAudioServicePlayer(IWaveProviderPlayer player, IAudioService service)
+        protected virtual AudioServicePlayer CreateAudioServicePlayer(IPlayer player, IAudioService service)
         {
             return helper.CreateAudioServicePlayer(player, service);
         }

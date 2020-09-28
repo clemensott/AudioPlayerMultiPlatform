@@ -105,8 +105,6 @@ namespace AudioPlayerBackend.Communication.MQTT
                 if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishVolume();
                 if (statusToken?.IsEnded.HasValue == true) return;
-                await PublishFormat();
-                if (statusToken?.IsEnded.HasValue == true) return;
                 await PublishAudioData();
 
                 if (statusToken?.IsEnded.HasValue == true) return;

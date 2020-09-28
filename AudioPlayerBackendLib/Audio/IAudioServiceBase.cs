@@ -10,7 +10,6 @@ namespace AudioPlayerBackend.Audio
         event EventHandler<ValueChangedEventArgs<IPlaylistBase[]>> PlaylistsChanged;
         event EventHandler<ValueChangedEventArgs<PlaybackState>> PlayStateChanged;
         event EventHandler<ValueChangedEventArgs<float>> VolumeChanged;
-        event EventHandler<ValueChangedEventArgs<WaveFormat>> AudioFormatChanged;
         event EventHandler<ValueChangedEventArgs<byte[]>> AudioDataChanged;
         event EventHandler<ValueChangedEventArgs<bool>> IsSearchShuffleChanged;
         event EventHandler<ValueChangedEventArgs<string>> SearchKeyChanged;
@@ -28,8 +27,6 @@ namespace AudioPlayerBackend.Audio
         PlaybackState PlayState { get; set; }
 
         float Volume { get; set; }
-
-        WaveFormat AudioFormat { get; set; }
 
         byte[] AudioData { get; set; }
     }

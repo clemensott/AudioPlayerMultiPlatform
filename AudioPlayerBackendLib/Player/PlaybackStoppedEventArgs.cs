@@ -2,11 +2,11 @@
 
 namespace AudioPlayerBackend.Player
 {
-  public  class StoppedEventArgs : EventArgs
+  public  class PlaybackStoppedEventArgs : EventArgs
     {
         public Exception Exception { get; private set; }
 
-        public StoppedEventArgs(Exception exception)
+        public PlaybackStoppedEventArgs(Exception exception)
         {
             Exception = exception;
         }

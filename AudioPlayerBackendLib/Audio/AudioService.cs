@@ -19,7 +19,6 @@ namespace AudioPlayerBackend.Audio
         public event EventHandler<ValueChangedEventArgs<IPlaylistBase[]>> PlaylistsChanged;
         public event EventHandler<ValueChangedEventArgs<PlaybackState>> PlayStateChanged;
         public event EventHandler<ValueChangedEventArgs<float>> VolumeChanged;
-        public event EventHandler<ValueChangedEventArgs<WaveFormat>> AudioFormatChanged;
         public event EventHandler<ValueChangedEventArgs<byte[]>> AudioDataChanged;
 
         private readonly INotifyPropertyChangedHelper helper;
@@ -29,7 +28,6 @@ namespace AudioPlayerBackend.Audio
         private IPlaylist currentPlaylist;
         private ISourcePlaylistBase[] sourcePlaylists;
         private IPlaylistBase[] playlists;
-        private WaveFormat audioFormat;
         private byte[] audioData;
         private float volume;
         private IDictionary<ISourcePlaylist, IEnumerable<Song>> shuffledSongs;
@@ -119,22 +117,6 @@ namespace AudioPlayerBackend.Audio
         public ObservableCollection<ISourcePlaylist> SourcePlaylists { get; }
 
         public ObservableCollection<IPlaylist> Playlists { get; }
-
-        public WaveFormat AudioFormat
-        {
-            get => audioFormat;
-            set
-            {
-                if (value == audioFormat) return;
-
-                var args = new ValueChangedEventArgs<WaveFormat>(AudioFormat, value);
-                audioFormat = value;
-                AudioFormatChanged?.Invoke(this, args);
-
-                OnFormatChanged();
-                OnPropertyChanged(nameof(AudioFormat));
-            }
-        }
 
         public byte[] AudioData
         {

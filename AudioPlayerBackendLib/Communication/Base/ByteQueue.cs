@@ -163,29 +163,6 @@ namespace AudioPlayerBackend.Communication.Base
             return TimeSpan.FromTicks(DequeueLong());
         }
 
-        public void Enqueue(WaveFormat format)
-        {
-            Enqueue(format.AverageBytesPerSecond);
-            Enqueue(format.BitsPerSample);
-            Enqueue(format.BlockAlign);
-            Enqueue(format.Channels);
-            Enqueue((ushort)format.Encoding);
-            Enqueue(format.SampleRate);
-        }
-
-        public WaveFormat DequeueWaveFormat()
-        {
-            int averageBytesPerSecond = DequeueInt();
-            int bitsPerSample = DequeueInt();
-            int blockAlign = DequeueInt();
-            int channels = DequeueInt();
-            WaveFormatEncoding encoding = (WaveFormatEncoding)DequeueUShort();
-            int sampleRate = DequeueInt();
-
-            return new WaveFormat(encoding, sampleRate,
-                channels, averageBytesPerSecond, blockAlign, bitsPerSample);
-        }
-
         public void Enqueue(Guid guid)
         {
             EnqueueRange(guid.ToByteArray());

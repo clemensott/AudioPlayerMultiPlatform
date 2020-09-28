@@ -61,7 +61,6 @@ namespace AudioPlayerBackend.Communication.Base
             if (service == null) return;
 
             service.AudioDataChanged += OnServiceAudioDataChanged;
-            service.AudioFormatChanged += OnServiceAudioFormatChanged;
             service.CurrentPlaylistChanged += OnServiceCurrentPlaylistChanged;
             service.SourcePlaylistsChanged += OnServiceSourcePlaylistsChanged;
             service.PlaylistsChanged += OnServicePlaylistsChanged;
@@ -79,7 +78,6 @@ namespace AudioPlayerBackend.Communication.Base
             if (service == null) return;
 
             service.AudioDataChanged -= OnServiceAudioDataChanged;
-            service.AudioFormatChanged -= OnServiceAudioFormatChanged;
             service.CurrentPlaylistChanged -= OnServiceCurrentPlaylistChanged;
             service.SourcePlaylistsChanged -= OnServiceSourcePlaylistsChanged;
             service.PlaylistsChanged -= OnServicePlaylistsChanged;
@@ -140,10 +138,6 @@ namespace AudioPlayerBackend.Communication.Base
 
 
         protected virtual void OnServiceAudioDataChanged(object sender, ValueChangedEventArgs<byte[]> e)
-        {
-        }
-
-        protected virtual void OnServiceAudioFormatChanged(object sender, ValueChangedEventArgs<WaveFormat> e)
         {
         }
 

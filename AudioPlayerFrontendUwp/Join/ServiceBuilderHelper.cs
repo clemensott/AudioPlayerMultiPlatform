@@ -20,12 +20,12 @@ namespace AudioPlayerFrontend.Join
 
         private ServiceBuilderHelper() { }
 
-        public AudioServicePlayer CreateAudioServicePlayer(IWaveProviderPlayer player, IAudioService service)
+        public AudioServicePlayer CreateAudioServicePlayer(IPlayer player, IAudioService service)
         {
             return new AudioServicePlayer(service, player, PlayerHelper.Current);
         }
 
-        public AudioStreamPlayer CreateAudioStreamPlayer(IWaveProviderPlayer player, IAudioService service)
+        public AudioStreamPlayer CreateAudioStreamPlayer(IPlayer player, IAudioService service)
         {
             return new AudioStreamPlayer(service, player, PlayerHelper.Current);
         }

@@ -39,13 +39,11 @@ namespace AudioPlayerBackend.Communication.MQTT
                 string prefix = nameof(IAudioServiceBase) + ".";
                 if (value)
                 {
-                    MqttClient.SubscribeAsync(prefix + nameof(Service.AudioFormat), MqttQualityOfServiceLevel.AtLeastOnce);
                     MqttClient.SubscribeAsync(prefix + nameof(Service.AudioData), MqttQualityOfServiceLevel.AtMostOnce);
                 }
                 else
                 {
                     MqttClient.UnsubscribeAsync(prefix + nameof(Service.AudioData));
-                    MqttClient.UnsubscribeAsync(prefix + nameof(Service.AudioFormat));
                 }
 
                 OnPropertyChanged(nameof(IsStreaming));
@@ -213,8 +211,7 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             if (Service == null || !IsOpen) return;
 
-            await MqttClient.UnsubscribeAsync(nameof(Service.AudioFormat));
-            await MqttClient.UnsubscribeAsync(nameof(Service.AudioData));
+            await MqttClient.UnsubscribeAsync($"{nameof(IAudioServiceBase)}.{nameof(Service.AudioData)}");
 
             await Task.WhenAll(GetTopicFilters().Select(tf => MqttClient.UnsubscribeAsync(tf.Topic)));
             await Task.WhenAll(GetTopicFilters(playlists.Values).Select(tf => MqttClient.UnsubscribeAsync(tf.Topic)));

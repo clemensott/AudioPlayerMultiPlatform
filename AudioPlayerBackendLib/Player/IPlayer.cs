@@ -1,18 +1,26 @@
 ﻿using AudioPlayerBackend.Audio;
 using System;
+using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Player
 {
-    public interface IPlayer
+    public interface IPlayer : IDisposable
     {
+        event EventHandler<MediaOpenedEventArgs> MediaOpened;
+        event EventHandler<PlaybackStoppedEventArgs> PlaybackStopped;
+
         PlaybackState PlayState { get; set; }
 
-        Song Source { get; set; }
+        TimeSpan Position { get; }
 
-        TimeSpan Position { get; set; }
+        TimeSpan Duration { get; }
 
-        TimeSpan Duration { get; set; }
+        Song? Source { get; }
 
         float Volume { get; set; }
+
+        Task Set(RequestSong? wanna);
+
+        Task Stop();
     }
 }

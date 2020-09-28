@@ -22,14 +22,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             return SendAsync(nameof(Service.AudioData), Service.AudioData, true);
         }
 
-        protected Task PublishFormat()
-        {
-            ByteQueue data = new ByteQueue();
-            if (Service.AudioFormat != null) data.Enqueue(Service.AudioFormat);
-
-            return SendAsync(nameof(Service.AudioFormat), data, false);
-        }
-
         protected override async void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
         {
             await PublishCurrentPlaylist();
@@ -323,10 +315,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                 case nameof(Service.CurrentPlaylist):
                     HandleCurrentPlaylistTopic(data);
-                    break;
-
-                case nameof(Service.AudioFormat):
-                    Service.AudioFormat = data.DequeueWaveFormat();
                     break;
 
                 case nameof(Service.PlayState):

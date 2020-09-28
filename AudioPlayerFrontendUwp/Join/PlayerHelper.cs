@@ -24,18 +24,6 @@ namespace AudioPlayerFrontend.Join
 
         private PlayerHelper() { }
 
-        public Action<IServicePlayer> SetWannaSongThreadSafe => null;
-
-        public IBufferedWaveProvider CreateBufferedWaveProvider(WaveFormat format, IAudioServiceBase service)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPositionWaveProvider CreateWaveProvider(Song song, IAudioService service)
-        {
-            throw new NotImplementedException();
-        }
-
         public IEnumerable<string> LoadFilePaths(string path, IAudioService service)
         {
             Task<IEnumerable<string>> task = Task.Run(() =>

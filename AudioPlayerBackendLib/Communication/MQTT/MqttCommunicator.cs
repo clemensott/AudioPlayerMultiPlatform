@@ -47,19 +47,6 @@ namespace AudioPlayerBackend.Communication.MQTT
             await PublishServiceAsync(nameof(Service.AudioData), Service.AudioData, MqttQualityOfServiceLevel.AtMostOnce);
         }
 
-        protected override async void OnServiceAudioFormatChanged(object sender, ValueChangedEventArgs<WaveFormat> e)
-        {
-            await PublishFormat();
-        }
-
-        protected async Task PublishFormat()
-        {
-            ByteQueue data = new ByteQueue();
-            if (Service.AudioFormat != null) data.Enqueue(Service.AudioFormat);
-
-            await PublishServiceAsync(nameof(Service.AudioFormat), data);
-        }
-
         protected override async void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
         {
             await PublishCurrentPlaylist();
@@ -428,10 +415,6 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                 case nameof(Service.CurrentPlaylist):
                     HandleCurrentPlaylistTopic(data);
-                    break;
-
-                case nameof(Service.AudioFormat):
-                    Service.AudioFormat = data.DequeueWaveFormat();
                     break;
 
                 case nameof(Service.PlayState):

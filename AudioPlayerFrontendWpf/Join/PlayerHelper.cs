@@ -25,19 +25,7 @@ namespace AudioPlayerFrontend.Join
 
         private PlayerHelper() { }
 
-        public Action<IServicePlayer> SetWannaSongThreadSafe => null;
-
         public Action<Action> InvokeDispatcher => null;
-
-        public IBufferedWaveProvider CreateBufferedWaveProvider(WaveFormat format, IAudioServiceBase service)
-        {
-            return new BufferedWaveProvider(format);
-        }
-
-        public IPositionWaveProvider CreateWaveProvider(Song song, IAudioService service)
-        {
-            return new AudioFileReader(song.FullPath);
-        }
 
         public void Reload(ISourcePlaylistBase playlist)
         {
