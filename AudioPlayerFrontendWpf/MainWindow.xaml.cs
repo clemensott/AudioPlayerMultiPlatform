@@ -120,8 +120,10 @@ namespace AudioPlayerFrontend
                 if (viewModel.Service?.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
 
                 ServiceBuild build = ServiceBuild.Build(serviceBuilder, TimeSpan.FromMilliseconds(500));
+                await Task.WhenAny(build.CompleteToken.ResultTask, Task.Delay(100));
 
-                if (ShowBuildOpenWindow(build) == false)
+                if (build.CompleteToken.IsEnded == BuildEndedType.Canceled ||
+                    (!build.CompleteToken.IsEnded.HasValue && ShowBuildOpenWindow(build) == false))
                 {
                     build.Cancel();
                     Close();
@@ -155,8 +157,10 @@ namespace AudioPlayerFrontend
 
                 ServiceBuild build = ServiceBuild.Open(viewModel.Service.Communicator, viewModel.Service.AudioService,
                     viewModel.Service.ServicePlayer, viewModel.Service.Data, TimeSpan.FromMilliseconds(500));
+                await Task.WhenAny(build.CompleteToken.ResultTask, Task.Delay(100));
 
-                if (ShowBuildOpenWindow(build) == false)
+                if (build.CompleteToken.IsEnded == BuildEndedType.Canceled ||
+                    (!build.CompleteToken.IsEnded.HasValue && ShowBuildOpenWindow(build) == false))
                 {
                     build.Cancel();
                     Close();
