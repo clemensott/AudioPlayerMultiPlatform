@@ -8,6 +8,7 @@ using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 using StdOttStandard.Converter.MultipleInputs;
+using StdOttUwp.BackPress;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
 
@@ -33,6 +34,20 @@ namespace AudioPlayerFrontend
 
             IEnumerable<string> frames = Frame.BackStack.Select(s => s.SourcePageType.FullName);
             tblFrameStack.Text = string.Join("\r\n", frames);
+
+            BackPressHandler.Current.BackPressed += BackPressHandler_BackPressed;
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+
+            BackPressHandler.Current.BackPressed += BackPressHandler_BackPressed;
+        }
+
+        private void BackPressHandler_BackPressed(object sender, BackPressEventArgs e)
+        {
+            e.Action = BackPressAction.Unhandled;
         }
 
         private object MicException_Convert(object sender, MultiplesInputsConvert4EventArgs args)

@@ -9,7 +9,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
-using StdOttUwp;
+using StdOttUwp.BackPress;
 using System.Threading.Tasks;
 using AudioPlayerFrontend.Background;
 using Windows.ApplicationModel.Background;
