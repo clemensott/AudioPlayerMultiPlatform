@@ -52,15 +52,20 @@ namespace AudioPlayerBackend.Player
             errorCount = 0;
 
             IPlaylist currentPlaylist = Service.CurrentPlaylist;
-            if (currentPlaylist?.WannaSong?.Song != e.Source) return;
+            if (currentPlaylist?.WannaSong?.Song == e.Source)
+            {
+                currentPlaylist.CurrentSong = e.Source;
+                currentPlaylist.Position = e.Position;
+                currentPlaylist.Duration = e.Duration;
+            }
 
-            currentPlaylist.CurrentSong = e.Source;
-            currentPlaylist.Position = e.Position;
-            currentPlaylist.Duration = e.Duration;
+            EnableTimer();
         }
 
         private void Player_PlaybackStopped(object sender, PlaybackStoppedEventArgs e)
         {
+            StopTimer();
+
             if (e.Exception != null) errorCount++;
 
             if (e.Exception != null || Player.PlayState != PlaybackState.Stopped ||
@@ -71,14 +76,15 @@ namespace AudioPlayerBackend.Player
         {
             try
             {
-                if (!Player.Source.HasValue) return;
+                if (!Player.Source.HasValue ||
+                    Player.Source != Service.CurrentPlaylist?.CurrentSong) return;
 
                 TimeSpan position = Service.CurrentPlaylist.Position;
                 if (Service.CurrentPlaylist.Position.Seconds == Player.Position.Seconds) return;
 
                 Service.CurrentPlaylist.Position = Player.Position;
             }
-            catch { }
+            catch(Exception e) { System.Diagnostics.Debug.WriteLine(e); }
         }
 
         private void Subscribe(IAudioService service)
@@ -214,7 +220,6 @@ namespace AudioPlayerBackend.Player
             }
 
             isSetCurrentSong = false;
-            EnableTimer();
         }
 
         private void EnableTimer()

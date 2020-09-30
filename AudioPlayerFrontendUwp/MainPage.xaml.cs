@@ -204,7 +204,7 @@ namespace AudioPlayerFrontend
         private void AudioPositionSlider_UserPositionChanged(object sender, TimeSpan e)
         {
             IPlaylist playlist = viewModel.Service.Audio?.CurrentPlaylist;
-            if (playlist != null) playlist.WannaSong = RequestSong.Get(playlist.CurrentSong, e);
+            if (playlist != null) playlist.WannaSong = RequestSong.Get(playlist.CurrentSong, e, playlist.Duration);
         }
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)

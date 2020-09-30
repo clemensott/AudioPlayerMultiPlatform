@@ -14,7 +14,6 @@ namespace AudioPlayerFrontend.Join
     {
         private PlaybackState playState;
         private RequestSong? wannaSong;
-        private Song? source;
         private readonly SemaphoreSlim sem;
         private readonly MediaPlayer player;
 
@@ -28,8 +27,10 @@ namespace AudioPlayerFrontend.Join
             get => playState;
             set
             {
+                PlaybackState oldState = playState;
                 playState = value;
-                ExecutePlayStateSafe();
+
+                HandlePlayStateChange(playState, oldState);
             }
         }
 
@@ -82,8 +83,8 @@ namespace AudioPlayerFrontend.Join
                 sender.PlaybackSession.Position = wannaSong.Value.Position.Value;
             }
 
-            ExecutePlayState();
             MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, wannaSong.Value.Song));
+            ExecutePlayState();
             sem.Release();
         }
 
@@ -106,10 +107,15 @@ namespace AudioPlayerFrontend.Join
 
         private async Task Set(RequestSong wanna)
         {
+            wannaSong = wanna;
+
             await sem.WaitAsync();
 
+            bool release = true;
             try
             {
+                if (PlayState == PlaybackState.Stopped || !wannaSong.Equals(wanna)) return;
+
                 if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)
                 {
                     if (wanna.Position.HasValue &&
@@ -121,6 +127,7 @@ namespace AudioPlayerFrontend.Join
                     ExecutePlayState();
                     return;
                 }
+                release = false;
             }
             catch (Exception e)
             {
@@ -129,14 +136,11 @@ namespace AudioPlayerFrontend.Join
             }
             finally
             {
-                sem.Release();
+                if (release) sem.Release();
             }
 
             try
             {
-                wannaSong = wanna;
-                Source = wanna.Song;
-
                 StorageFile file = await StorageFile.GetFileFromPathAsync(wanna.Song.FullPath);
                 player.Source = MediaSource.CreateFromStorageFile(file);
 
@@ -166,9 +170,17 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        public async void ExecutePlayStateSafe()
+        private async void HandlePlayStateChange(PlaybackState newState, PlaybackState oldState)
         {
             await sem.WaitAsync();
+
+            if (oldState == PlaybackState.Stopped && newState != PlaybackState.Stopped)
+            {
+                Task task = Set(wannaSong);
+                sem.Release();
+                await task;
+                return;
+            }
 
             try
             {
@@ -184,6 +196,12 @@ namespace AudioPlayerFrontend.Join
         {
             switch (PlayState)
             {
+                case PlaybackState.Stopped:
+                    if (player.Source != null) wannaSong = RequestSong.Get(Source, Position, Duration);
+                    player.Source = null;
+                    Source = null;
+                    break;
+
                 case PlaybackState.Playing:
                     player.Play();
                     break;
