@@ -87,15 +87,16 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public IServicePlayer Player
+        public IServicePlayer ServicePlayer
         {
             get => servicePlayer;
             private set
             {
                 if (value == servicePlayer) return;
 
+                IServicePlayer oldServicePlayer = servicePlayer;
                 servicePlayer = value;
-                OnPropertyChanged(nameof(Player));
+                OnPropertyChanged(nameof(ServicePlayer));
             }
         }
 
@@ -117,8 +118,13 @@ namespace AudioPlayerFrontend
                 Builder.DataFilePath = Builder.BuildClient ? null : dataFileName;
 
                 ICommunicator communicator = Communicator;
-                if (forceBuild || communicator == null) build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
-                else build.StartOpen(communicator, Audio, Player, buildResult.Data, TimeSpan.FromMilliseconds(200));
+                if (forceBuild || communicator == null)
+                {
+                    buildResult?.ServicePlayer?.Dispose();
+                    buildResult?.Data?.Dispose();
+                    build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
+                }
+                else build.StartOpen(communicator, Audio, ServicePlayer, buildResult.Data, TimeSpan.FromMilliseconds(200));
 
                 return ServiceOpenBuild.CompleteToken.EndTask;
             });
@@ -130,30 +136,35 @@ namespace AudioPlayerFrontend
 
             if (Communicator != null) Communicator.Disconnected -= Communicator_Disconnected;
 
-            Player oldPlayer = Player?.Player as Player;
+            Player oldPlayer = ServicePlayer?.Player as Player;
+
             ServiceBuildResult result = await build.CompleteToken.ResultTask;
 
             if (build != ServiceOpenBuild) return;
 
             Audio = result?.AudioService;
             Communicator = result?.Communicator;
-            Player = result?.ServicePlayer;
+            ServicePlayer = result?.ServicePlayer;
 
             buildResult = result;
 
             if (Communicator != null) Communicator.Disconnected += Communicator_Disconnected;
 
-            if (oldPlayer != null)
+            Player newPlayer = ServicePlayer?.Player as Player;
+            if (oldPlayer != newPlayer)
             {
-                oldPlayer.NextPressed += Player_NextPressed;
-                oldPlayer.PreviousPressed += Player_PreviousPressed;
-            }
+                if (oldPlayer != null)
+                {
+                    oldPlayer.NextPressed += Player_NextPressed;
+                    oldPlayer.PreviousPressed += Player_PreviousPressed;
+                    await oldPlayer.Stop();
+                }
 
-            Player newPlayer = Player?.Player as Player;
-            if (newPlayer != null)
-            {
-                newPlayer.NextPressed += Player_NextPressed;
-                newPlayer.PreviousPressed += Player_PreviousPressed;
+                if (newPlayer != null)
+                {
+                    newPlayer.NextPressed += Player_NextPressed;
+                    newPlayer.PreviousPressed += Player_PreviousPressed;
+                }
             }
         }
 

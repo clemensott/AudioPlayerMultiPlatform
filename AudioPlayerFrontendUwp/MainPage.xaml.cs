@@ -20,7 +20,6 @@ namespace AudioPlayerFrontend
 {
     public sealed partial class MainPage : Page
     {
-        private bool fromSettingsPage;
         private ViewModel viewModel;
         private readonly ObservableCollection<IPlaylist> allPlaylists;
 
@@ -33,9 +32,6 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            fromSettingsPage = e.NavigationMode == NavigationMode.Back &&
-                Frame.ForwardStack[0].SourcePageType == typeof(SettingsPage);
-
             DataContext = viewModel = (ViewModel)e.Parameter;
         }
 
@@ -45,7 +41,6 @@ namespace AudioPlayerFrontend
             {
                 await NavigateToSettingsPage();
             }
-            else if (fromSettingsPage) await viewModel.Service.ConnectAsync(true);
         }
 
         private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
@@ -250,14 +245,17 @@ namespace AudioPlayerFrontend
 
         private async Task NavigateToSettingsPage()
         {
-            await viewModel.Service.CloseAsync();
-
             AsyncResultS<ServiceBuilder> result = new AsyncResultS<ServiceBuilder>(viewModel.Service.Builder.Clone());
             Frame.Navigate(typeof(SettingsPage), result);
 
             ServiceBuilder newBuilder = await result.Task;
 
-            if (newBuilder != null) viewModel.Service.Builder = newBuilder;
+            if (newBuilder == null) return;
+
+            viewModel.Service.Builder = newBuilder;
+
+            await viewModel.Service.CloseAsync();
+            await viewModel.Service.ConnectAsync(true);
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)
