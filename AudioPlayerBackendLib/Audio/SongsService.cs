@@ -64,42 +64,42 @@ namespace AudioPlayerBackend.Audio
         #region Filtermethods
         private static bool CT(Song song, string searchKey)
         {
-            return song.Title.Contains(searchKey);
+            return song.Title?.Contains(searchKey) == true;
         }
 
         private static bool CA(Song song, string searchKey)
         {
-            return song.Artist.Contains(searchKey);
+            return song.Artist?.Contains(searchKey) == true;
         }
 
         private static bool CLT(Song song, string lowerSearchKey)
         {
-            return song.Title.ToLower().Contains(lowerSearchKey);
+            return song.Title?.ToLower().Contains(lowerSearchKey) == true;
         }
 
         private static bool CLA(Song song, string lowerSearchKey)
         {
-            return song.Artist.ToLower().Contains(lowerSearchKey);
+            return song.Artist?.ToLower().Contains(lowerSearchKey) == true;
         }
 
         private static int TI(Song song, string searchKey)
         {
-            return song.Title.IndexOf(searchKey);
+            return song.Title?.IndexOf(searchKey) ?? -1;
         }
 
         private static int AI(Song song, string searchKey)
         {
-            return song.Artist.IndexOf(searchKey);
+            return song.Artist?.IndexOf(searchKey) ?? -1;
         }
 
         private static int LTI(Song song, string lowerSearchKey)
         {
-            return song.Title.ToLower().IndexOf(lowerSearchKey);
+            return song.Title?.ToLower().IndexOf(lowerSearchKey) ?? -1;
         }
 
         private static int LAI(Song song, string lowerSearchKey)
         {
-            return song.Artist.ToLower().IndexOf(lowerSearchKey);
+            return song.Artist?.ToLower().IndexOf(lowerSearchKey) ?? -1;
         }
         #endregion
 
