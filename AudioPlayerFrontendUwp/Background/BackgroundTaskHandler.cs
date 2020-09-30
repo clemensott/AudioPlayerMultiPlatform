@@ -97,10 +97,8 @@ namespace AudioPlayerFrontend.Background
             }
         }
 
-        public List<DateTime> runTimes = new List<DateTime>(), closeTimes = new List<DateTime>();
         public async Task Run()
         {
-            runTimes.Add(DateTime.Now);
             IsRunning = true;
             ResetCloseTimer();
 
@@ -108,7 +106,6 @@ namespace AudioPlayerFrontend.Background
 
             await sem.WaitAsync();
             IsRunning = false;
-            closeTimes.Add(DateTime.Now);
             await Task.WhenAll(service.CloseAsync(), dispatcher.Stop());
         }
 

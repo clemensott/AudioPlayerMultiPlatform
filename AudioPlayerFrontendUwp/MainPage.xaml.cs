@@ -269,9 +269,7 @@ namespace AudioPlayerFrontend
 
             string message = $"Communicator: {viewModel.Service?.Communicator?.Name}\r\n" +
                 $"State: {viewModel.Service?.Communicator?.IsOpen}\r\n" +
-                $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}\r\n" +
-                $"Run: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current.runTimes.Join()}\r\n" +
-                $"Stop: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current.closeTimes.Join()}";
+                $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}";
             await new MessageDialog(message).ShowAsync();
         }
     }
