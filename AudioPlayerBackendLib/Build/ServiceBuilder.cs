@@ -23,7 +23,7 @@ namespace AudioPlayerBackend.Build
         private float? volume;
         private CommunicatorProtocol communicatorProtocol;
         private IPlayer player;
-        private INotifyPropertyChangedHelper notifyPropertyChangedHelper;
+        private ISourcePlaylistHelper sourcePlaylistHelper;
 
         public bool BuildStandalone { get; private set; }
 
@@ -175,15 +175,15 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public INotifyPropertyChangedHelper NotifyPropertyChangedHelper
+        public ISourcePlaylistHelper SourcePlaylistHelper
         {
-            get => notifyPropertyChangedHelper;
+            get => sourcePlaylistHelper;
             set
             {
-                if (value == notifyPropertyChangedHelper) return;
+                if (value == sourcePlaylistHelper) return;
 
-                notifyPropertyChangedHelper = value;
-                OnPropertyChanged(nameof(NotifyPropertyChangedHelper));
+                sourcePlaylistHelper = value;
+                OnPropertyChanged(nameof(SourcePlaylistHelper));
             }
         }
 
@@ -388,9 +388,9 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuilder WithNotifyPropertyChangedHelper(INotifyPropertyChangedHelper helper)
+        public ServiceBuilder WithNotifyPropertyChangedHelper(ISourcePlaylistHelper helper)
         {
-            NotifyPropertyChangedHelper = helper;
+            SourcePlaylistHelper = helper;
 
             return this;
         }
@@ -442,27 +442,27 @@ namespace AudioPlayerBackend.Build
             if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (volume.HasValue) service.Volume = volume.Value;
 
-            return ReadWriteAudioServiceData.Start(DataFilePath, service, NotifyPropertyChangedHelper);
+            return ReadWriteAudioServiceData.Start(DataFilePath, service);
         }
 
         protected virtual MqttClientCommunicator CreateMqttClientCommunicator(string serverAddress, int? port)
         {
-            return new MqttClientCommunicator(serverAddress, port, NotifyPropertyChangedHelper);
+            return new MqttClientCommunicator(serverAddress, port);
         }
 
         protected virtual MqttServerCommunicator CreateMqttServerCommunicator(int port)
         {
-            return new MqttServerCommunicator(port, NotifyPropertyChangedHelper);
+            return new MqttServerCommunicator(port);
         }
 
         protected virtual OwnTcpClientCommunicator CreateOwnTcpClientCommunicator(string serverAddress, int port)
         {
-            return new OwnTcpClientCommunicator(serverAddress, port, NotifyPropertyChangedHelper);
+            return new OwnTcpClientCommunicator(serverAddress, port);
         }
 
         protected virtual OwnTcpServerCommunicator CreateOwnTcpServerCommunicator(int port)
         {
-            return new OwnTcpServerCommunicator(port, NotifyPropertyChangedHelper);
+            return new OwnTcpServerCommunicator(port);
         }
 
         protected virtual AudioStreamPlayer CreateAudioStreamPlayer(IPlayer player, IAudioService service)
@@ -488,7 +488,7 @@ namespace AudioPlayerBackend.Build
                 IsAllShuffle = IsAllShuffle,
                 IsSearchShuffle = IsSearchShuffle,
                 IsStreaming = IsStreaming,
-                NotifyPropertyChangedHelper = NotifyPropertyChangedHelper,
+                SourcePlaylistHelper = SourcePlaylistHelper,
                 Play = Play,
                 Player = Player,
                 SearchKey = SearchKey,

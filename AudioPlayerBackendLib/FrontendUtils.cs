@@ -103,11 +103,6 @@ namespace AudioPlayerBackend
                 }
             }
         }
-
-        public static ISourcePlaylist CreateSourcePlaylist()
-        {
-            return new SourcePlaylist(Guid.NewGuid());
-        }
     }
 
     public static class Logs

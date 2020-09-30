@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Background;
 
@@ -57,11 +54,9 @@ namespace AudioPlayerFrontend.Background
             BackgroundTaskBuilder builder = new BackgroundTaskBuilder
             {
                 Name = applicationBackgroundTaskBuilderName,
-                IsNetworkRequested = true,
             };
 
             builder.SetTrigger(appTrigger);
-            builder.AddCondition(new SystemCondition(SystemConditionType.FreeNetworkAvailable));
 
             taskRegistration = builder.Register();
             Settings.Current.ApplicationBackgroundTaskRegistrationId = taskRegistration.TaskId;

@@ -22,6 +22,6 @@ namespace AudioPlayerBackend.Audio
 
         void SetPreviousSong();
 
-        void Continue();
+        void Continue(Song? currentSong);
     }
 }

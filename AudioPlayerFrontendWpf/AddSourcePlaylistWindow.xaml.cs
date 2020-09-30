@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
+using AudioPlayerFrontend.Join;
 using StdOttStandard.Converter.MultipleInputs;
 using StdOttStandard.Linq;
 
@@ -21,7 +22,7 @@ namespace AudioPlayerFrontend
             InitializeComponent();
 
             this.service = service;
-            newPlaylist = FrontendUtils.CreateSourcePlaylist();
+            newPlaylist = (ISourcePlaylist)service.CreateSourcePlaylist();
             newPlaylist.Loop = LoopType.CurrentPlaylist;
 
             try

@@ -1,5 +1,6 @@
 ﻿using AudioPlayerBackend.Audio;
 using StdOttStandard.Linq;
+using StdOttStandard.Linq.DataStructures.Observable;
 using System;
 using System.Linq;
 using System.Threading;
@@ -9,21 +10,20 @@ namespace AudioPlayerBackend.Player
 {
     public class AudioServicePlayer : IServicePlayer
     {
-        private const int updateInterval = 100;
+        private const int updateInterval = 100, maxErrorCount = 15;
 
         private bool isSetCurrentSong;
-        private readonly IAudioServicePlayerHelper helper;
+        private int errorCount;
         private readonly Timer timer;
 
         public IAudioService Service { get; }
 
         public IPlayer Player { get; }
 
-        public AudioServicePlayer(IAudioService service, IPlayer player, IAudioServicePlayerHelper helper = null)
+        public AudioServicePlayer(IAudioService service, IPlayer player)
         {
             Service = service;
             Player = player;
-            this.helper = helper;
 
             player.PlayState = service.PlayState;
             player.MediaOpened += Player_MediaOpened;
@@ -49,6 +49,8 @@ namespace AudioPlayerBackend.Player
 
         private void Player_MediaOpened(object sender, MediaOpenedEventArgs e)
         {
+            errorCount = 0;
+
             IPlaylist currentPlaylist = Service.CurrentPlaylist;
             if (currentPlaylist?.WannaSong?.Song != e.Source) return;
 
@@ -59,8 +61,10 @@ namespace AudioPlayerBackend.Player
 
         private void Player_PlaybackStopped(object sender, PlaybackStoppedEventArgs e)
         {
-            if (e.Exception == null && (Player.PlayState != PlaybackState.Stopped ||
-                Player.Position >= Player.Duration)) Service.Continue();
+            if (e.Exception != null) errorCount++;
+
+            if (e.Exception != null || Player.PlayState != PlaybackState.Stopped ||
+                Player.Position >= Player.Duration) Service.Continue(e.Song);
         }
 
         private void Timer_Elapsed(object state)
@@ -77,12 +81,13 @@ namespace AudioPlayerBackend.Player
             catch { }
         }
 
-        private void Subscribe(IAudioServiceBase service)
+        private void Subscribe(IAudioService service)
         {
             if (service == null) return;
 
             service.CurrentPlaylistChanged += Service_CurrentPlaylistChanged;
-            service.SourcePlaylistsChanged += Service_SourcePlaylistsChanged;
+            service.SourcePlaylists.AddedAny += SourcePlaylists_AddedAny;
+            service.SourcePlaylists.RemovedAny += SourcePlaylists_RemovedAny;
             service.PlayStateChanged += Service_PlayStateChanged;
             service.VolumeChanged += Service_VolumeChanged;
 
@@ -91,12 +96,13 @@ namespace AudioPlayerBackend.Player
             service.SourcePlaylists.ForEach(Subscribe);
         }
 
-        private void Unsubscribe(IAudioServiceBase service)
+        private void Unsubscribe(IAudioService service)
         {
             if (service == null) return;
 
             service.CurrentPlaylistChanged -= Service_CurrentPlaylistChanged;
-            service.SourcePlaylistsChanged += Service_SourcePlaylistsChanged;
+            service.SourcePlaylists.AddedAny -= SourcePlaylists_AddedAny;
+            service.SourcePlaylists.RemovedAny -= SourcePlaylists_RemovedAny;
             service.PlayStateChanged -= Service_PlayStateChanged;
             service.VolumeChanged -= Service_VolumeChanged;
 
@@ -105,7 +111,7 @@ namespace AudioPlayerBackend.Player
             service.SourcePlaylists.ForEach(Unsubscribe);
         }
 
-        private void Subscribe(IPlaylistBase playlist)
+        private void Subscribe(IPlaylist playlist)
         {
             if (playlist == null) return;
 
@@ -113,7 +119,7 @@ namespace AudioPlayerBackend.Player
             playlist.SongsChanged += Playlist_SongsChanged;
         }
 
-        private void Unsubscribe(IPlaylistBase playlist)
+        private void Unsubscribe(IPlaylist playlist)
         {
             if (playlist == null) return;
 
@@ -121,20 +127,20 @@ namespace AudioPlayerBackend.Player
             playlist.SongsChanged -= Playlist_SongsChanged;
         }
 
-        private void Subscribe(ISourcePlaylistBase playlist)
+        private void Subscribe(ISourcePlaylist playlist)
         {
             if (playlist != null) playlist.FileMediaSourcesChanged += Playlist_FileMediaSourcesChanged;
         }
 
-        private void Unsubscribe(ISourcePlaylistBase playlist)
+        private void Unsubscribe(ISourcePlaylist playlist)
         {
             if (playlist != null) playlist.FileMediaSourcesChanged -= Playlist_FileMediaSourcesChanged;
         }
 
         private async void Service_CurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
         {
-            Unsubscribe(e.OldValue);
-            Subscribe(e.NewValue);
+            Unsubscribe((IPlaylist)e.OldValue);
+            Subscribe((IPlaylist)e.NewValue);
 
             if (e.OldValue != null)
             {
@@ -145,15 +151,14 @@ namespace AudioPlayerBackend.Player
             await UpdateCurrentSong();
         }
 
-        private void Service_SourcePlaylistsChanged(object sender, ValueChangedEventArgs<ISourcePlaylistBase[]> e)
+        private void SourcePlaylists_AddedAny(object sender, SingleChangeEventArgs<ISourcePlaylist> e)
         {
-            e.OldValue.ForEach(Unsubscribe);
-            e.NewValue.ForEach(Subscribe);
+            Subscribe(e.Item);
+        }
 
-            foreach (ISourcePlaylistBase playlist in e.NewValue.ToNotNull().Except(e.OldValue.ToNotNull()))
-            {
-                helper?.Update(playlist);
-            }
+        private void SourcePlaylists_RemovedAny(object sender, SingleChangeEventArgs<ISourcePlaylist> e)
+        {
+            Unsubscribe(e.Item);
         }
 
         private void Service_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
@@ -168,9 +173,9 @@ namespace AudioPlayerBackend.Player
             Player.Volume = Service.Volume;
         }
 
-        private void Playlist_FileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
+        private async void Playlist_FileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
         {
-            helper.Reload((ISourcePlaylistBase)sender);
+            await ((ISourcePlaylist)sender).Reload();
         }
 
         private async void Playlist_WannaSongChanged(object sender, ValueChangedEventArgs<RequestSong?> e)
@@ -180,10 +185,10 @@ namespace AudioPlayerBackend.Player
 
         private void Playlist_SongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
         {
-            CheckCurrentSong((IPlaylistBase)sender);
+            CheckCurrentSong((IPlaylist)sender);
         }
 
-        private static void CheckCurrentSong(IPlaylistBase playlist)
+        private static void CheckCurrentSong(IPlaylist playlist)
         {
             if (playlist == null) return;
 

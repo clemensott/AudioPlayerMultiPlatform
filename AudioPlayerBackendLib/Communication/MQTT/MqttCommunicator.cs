@@ -16,7 +16,7 @@ namespace AudioPlayerBackend.Communication.MQTT
     {
         private readonly Dictionary<Guid, InitList<string>> initPlaylistLists = new Dictionary<Guid, InitList<string>>();
 
-        protected MqttCommunicator(INotifyPropertyChangedHelper helper = null) : base(helper)
+        protected MqttCommunicator()
         {
         }
 
@@ -566,7 +566,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             IPlaylistBase playlist;
             if (!playlists.TryGetValue(id, out playlist))
             {
-                playlist = CreatePlaylist(playlistType, id, helper);
+                playlist = CreatePlaylist(playlistType, id);
 
                 await InitPlaylist(playlist, false);
             }
@@ -583,22 +583,22 @@ namespace AudioPlayerBackend.Communication.MQTT
             if (initPlaylistLists.TryGetValue(id.Value, out initPlaylistList)) await initPlaylistList.Task;
             if (playlists.TryGetValue(id.Value, out playlist)) return playlist;
 
-            playlist = CreatePlaylist(playlistType, id.Value, helper);
+            playlist = CreatePlaylist(playlistType, id.Value);
 
             await InitPlaylist(playlist, true);
 
             return playlist;
         }
 
-        private static IPlaylistBase CreatePlaylist(string playlistType, Guid id, INotifyPropertyChangedHelper helper)
+        private IPlaylistBase CreatePlaylist(string playlistType, Guid id)
         {
             switch (playlistType)
             {
                 case nameof(ISourcePlaylistBase):
-                    return new SourcePlaylist(id, helper);
+                    return Service.CreateSourcePlaylist(id);
 
                 case nameof(IPlaylistBase):
-                    return new Playlist(id, helper);
+                    return Service.CreatePlaylist(id);
             }
 
             throw new ArgumentException($"Type is not supported: {playlistType}", nameof(playlistType));

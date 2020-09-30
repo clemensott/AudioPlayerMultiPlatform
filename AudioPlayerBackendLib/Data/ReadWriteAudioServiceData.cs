@@ -14,23 +14,21 @@ namespace AudioPlayerBackend.Data
     {
         private static readonly Random rnd = new Random();
 
-        private readonly INotifyPropertyChangedHelper helper;
         private readonly string path;
         private SemaphoreSlim saveSem;
         private bool disposed;
 
         public IAudioServiceBase Service { get; }
 
-        private ReadWriteAudioServiceData(string path, IAudioServiceBase service, INotifyPropertyChangedHelper helper)
+        private ReadWriteAudioServiceData(string path, IAudioServiceBase service)
         {
             this.path = path;
             Service = service;
-            this.helper = helper;
         }
 
-        public static ReadWriteAudioServiceData Start(string path, IAudioServiceBase service, INotifyPropertyChangedHelper helper = null)
+        public static ReadWriteAudioServiceData Start(string path, IAudioServiceBase service)
         {
-            ReadWriteAudioServiceData dataService = new ReadWriteAudioServiceData(path, service, helper);
+            ReadWriteAudioServiceData dataService = new ReadWriteAudioServiceData(path, service);
             dataService.Init();
             return dataService;
         }
@@ -156,7 +154,7 @@ namespace AudioPlayerBackend.Data
             {
                 Guid id = Guid.Parse(playlistData.ID);
                 ISourcePlaylistBase playlist = Service.SourcePlaylists
-                    .FirstOrDefault(s => s.ID == id) ?? new SourcePlaylist(id, helper);
+                    .FirstOrDefault(s => s.ID == id) ?? Service.CreateSourcePlaylist(id);
 
                 MergePlaylist(playlist, playlistData);
 
@@ -169,7 +167,7 @@ namespace AudioPlayerBackend.Data
             {
                 Guid id = Guid.Parse(playlistData.ID);
                 IPlaylistBase playlist = Service.Playlists
-                    .FirstOrDefault(s => s.ID == id) ?? new Playlist(id, helper);
+                    .FirstOrDefault(s => s.ID == id) ?? Service.CreatePlaylist(id);
 
                 playlistData.Songs = playlistData.Songs.Where(s => allSongs.ContainsKey(s.FullPath)).ToArray();
 
@@ -248,7 +246,11 @@ namespace AudioPlayerBackend.Data
             Unsubscribe();
             disposed = true;
 
-            if (!string.IsNullOrWhiteSpace(path)) Save();
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(path)) Save();
+            }
+            catch { }
         }
     }
 }

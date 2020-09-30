@@ -1,6 +1,6 @@
 ﻿namespace AudioPlayerBackend.Communication
 {
-    interface IClientCommunicator
+    public interface IClientCommunicator
     {
         int? Port { get; }
 

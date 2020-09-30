@@ -13,6 +13,7 @@ using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
 using StdOttStandard.Converter.MultipleInputs;
 using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 
 namespace AudioPlayerFrontend
 {
@@ -20,10 +21,12 @@ namespace AudioPlayerFrontend
     {
         private bool fromSettingsPage;
         private ViewModel viewModel;
-        private IPlaylist[] allPlaylists;
+        private readonly ObservableCollection<IPlaylist> allPlaylists;
 
         public MainPage()
         {
+            allPlaylists = new ObservableCollection<IPlaylist>();
+
             this.InitializeComponent();
         }
 
@@ -44,6 +47,34 @@ namespace AudioPlayerFrontend
             else if (fromSettingsPage) await viewModel.Service.ConnectAsync();
         }
 
+        private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
+        {
+            IPlaylist[] newAllPlaylists = (viewModel?.Service.Audio?.SourcePlaylists).ToNotNull()
+                .Concat((viewModel?.Service.Audio?.Playlists).ToNotNull()).ToArray();
+
+            for (int i = allPlaylists.Count - 1; i >= 0; i--)
+            {
+                if (!newAllPlaylists.Contains(allPlaylists[i])) allPlaylists.RemoveAt(i);
+            }
+
+            foreach ((int newIndex, IPlaylist playlist) in newAllPlaylists.WithIndex())
+            {
+                int oldIndex = allPlaylists.IndexOf(playlist);
+                if (oldIndex == -1) allPlaylists.Insert(newIndex, playlist);
+                else if (oldIndex != newIndex) allPlaylists.Move(oldIndex, newIndex);
+            }
+
+            if (args.ChangedValueIndex == 3 && args.Input3 != null) args.Input2 = args.Input3;
+            else args.Input3 = args.Input2;
+
+            return allPlaylists;
+        }
+
+        private object MicViewPlaylists_Convert(object sender, MultiplesInputsConvert2EventArgs args)
+        {
+            return true.Equals(args.Input0) || args.Input1 == null;
+        }
+
         private void IbnSearch_Click(object sender, RoutedEventArgs e)
         {
             if (viewModel.Service.Audio != null) Frame.Navigate(typeof(SearchPage), viewModel.Service);
@@ -54,53 +85,10 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
-        private void AudioPositionSlider_UserPositionChanged(object sender, TimeSpan e)
-        {
-            IPlaylist playlist = viewModel.Service.Audio?.CurrentPlaylist;
-            if (playlist != null) playlist.WannaSong = RequestSong.Get(playlist.CurrentSong, e);
-        }
-
         private void Scroll()
         {
             if (lbxSongs.SelectedItem != null) lbxSongs.ScrollIntoView(lbxSongs.SelectedItem);
             else if (lbxSongs.Items.Count > 0) lbxSongs.ScrollIntoView(lbxSongs.Items[0]);
-        }
-
-        private void AbbPrevious_Click(object sender, RoutedEventArgs e)
-        {
-            viewModel.Service.Audio?.SetPreviousSong();
-        }
-
-        private void AbbPlayPause_Click(object sender, RoutedEventArgs e)
-        {
-            IAudioService service = viewModel.Service.Audio;
-
-            if (service == null) return;
-
-            service.PlayState = service.PlayState == PlaybackState.Playing
-                ? PlaybackState.Paused
-                : PlaybackState.Playing;
-        }
-
-        private void AbbNext_Click(object sender, RoutedEventArgs e)
-        {
-            viewModel.Service.Audio?.SetNextSong();
-        }
-
-        private async void AbbSettings_Click(object sender, RoutedEventArgs e)
-        {
-            if (viewModel.Service.Audio != null)
-            {
-                viewModel.Service.Builder.WithService(viewModel.Service.Audio);
-            }
-
-            await NavigateToSettingsPage();
-        }
-
-        private async Task NavigateToSettingsPage()
-        {
-            await viewModel.Service.CloseAsync();
-            Frame.Navigate(typeof(SettingsPage), viewModel.Service.Builder);
         }
 
         /// <summary>
@@ -112,6 +100,32 @@ namespace AudioPlayerFrontend
         private object MicDoRemove_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
             return !(args.Input1 is ISourcePlaylistBase);
+        }
+
+        /// <summary>
+        /// Handles user input and programmatic changes for viewed songs and selected song
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args">Input0: CurrentPlaylist.AllSongs, Input1: CurrentPlaylist.CurrentSong, Input2: CurrentPlaylist.WannaSong, Input3: lbxSongs.SelectedIndex</param>
+        /// <returns>The list of Songs to view on UI.</returns>
+        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert4EventArgs args)
+        {
+            if (args.Input0 == null)
+            {
+                args.Input3 = -1;
+                return null;
+            }
+            if (args.ChangedValueIndex == 2) return args.Input0;
+
+            IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input0;
+            Song? currentSong = (Song?)args.Input1;
+            int index = (int)args.Input3;
+
+            if (args.ChangedValueIndex == 3 && index != -1) args.Input2 = RequestSong.Start(allSongs.ElementAt(index));
+            else if (!currentSong.HasValue) args.Input3 = -1;
+            else args.Input3 = allSongs.IndexOf(currentSong.Value);
+
+            return allSongs;
         }
 
         private void IbnRemove_Click(object sender, RoutedEventArgs e)
@@ -153,17 +167,9 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
+        private void LbxPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            IPlaylist[] newAllPlaylists = (viewModel?.Service.Audio?.SourcePlaylists).ToNotNull()
-                .Concat((viewModel?.Service.Audio?.Playlists).ToNotNull()).ToArray();
-
-            if (!allPlaylists.BothNullOrSequenceEqual(newAllPlaylists)) allPlaylists = newAllPlaylists;
-
-            if (args.ChangedValueIndex == 3 && args.Input3 != null) args.Input2 = args.Input3;
-            else args.Input3 = args.Input2;
-
-            return allPlaylists;
+            atbPlaylists.IsChecked = false;
         }
 
         private void SplCurrentSong_Tapped(object sender, TappedRoutedEventArgs e)
@@ -171,35 +177,80 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
-        /// <summary>
-        /// Handles user input and programmatic changes for viewed songs and selected song
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="args">Input0: CurrentPlaylist.AllSongs, Input1: CurrentPlaylist.CurrentSong, Input2: CurrentPlaylist.WannaSong, Input3: lbxSongs.SelectedIndex</param>
-        /// <returns>The list of Songs to view on UI.</returns>
-        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert4EventArgs args)
+        private async void AbbUpdatePlaylistsAndSongs_Click(object sender, RoutedEventArgs e)
         {
-            if (args.Input0 == null)
+            try
             {
-                args.Input3 = -1;
-                return null;
+                viewModel.IsUpdatingPlaylists = true;
+                await UpdateHelper.Update(viewModel.Service.Audio);
+                Settings.Current.LastUpdatedData = DateTime.Now;
             }
-            if (args.ChangedValueIndex == 2) return args.Input0;
+            finally
+            {
+                viewModel.IsUpdatingPlaylists = false;
+            }
+        }
 
-            IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input0;
-            Song? currentSong = (Song?)args.Input1;
-            int index = (int)args.Input3;
+        private async void AbbUReloadPlaylistsAndSongs_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                viewModel.IsUpdatingPlaylists = true;
+                await UpdateHelper.Reload(viewModel.Service.Audio);
+                Settings.Current.LastUpdatedData = DateTime.Now;
+            }
+            finally
+            {
+                viewModel.IsUpdatingPlaylists = false;
+            }
+        }
 
-            if (args.ChangedValueIndex == 3 && index != -1) args.Input2 = RequestSong.Start(allSongs.ElementAt(index));
-            else if (!currentSong.HasValue) args.Input3 = -1;
-            else args.Input3 = allSongs.IndexOf(currentSong.Value);
-
-            return allSongs;
+        private void AudioPositionSlider_UserPositionChanged(object sender, TimeSpan e)
+        {
+            IPlaylist playlist = viewModel.Service.Audio?.CurrentPlaylist;
+            if (playlist != null) playlist.WannaSong = RequestSong.Get(playlist.CurrentSong, e);
         }
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
             await NavigateToSettingsPage();
+        }
+
+        private void AbbPrevious_Click(object sender, RoutedEventArgs e)
+        {
+            viewModel.Service.Audio?.SetPreviousSong();
+        }
+
+        private void AbbPlayPause_Click(object sender, RoutedEventArgs e)
+        {
+            IAudioService service = viewModel.Service.Audio;
+
+            if (service == null) return;
+
+            service.PlayState = service.PlayState == PlaybackState.Playing
+                ? PlaybackState.Paused
+                : PlaybackState.Playing;
+        }
+
+        private void AbbNext_Click(object sender, RoutedEventArgs e)
+        {
+            viewModel.Service.Audio?.SetNextSong();
+        }
+
+        private async void AbbSettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (viewModel.Service.Audio != null)
+            {
+                viewModel.Service.Builder.WithService(viewModel.Service.Audio);
+            }
+
+            await NavigateToSettingsPage();
+        }
+
+        private async Task NavigateToSettingsPage()
+        {
+            await viewModel.Service.CloseAsync();
+            Frame.Navigate(typeof(SettingsPage), viewModel.Service.Builder);
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)
@@ -214,8 +265,6 @@ namespace AudioPlayerFrontend
             string message = $"Communicator: {viewModel.Service?.Communicator?.Name}\r\n" +
                 $"State: {viewModel.Service?.Communicator?.IsOpen}\r\n" +
                 $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}\r\n" +
-                $"Close: {viewModel.Service.closeTimes.Join()}\r\n" +
-                $"Disconnect: {viewModel.Service.disconnectTimes.Join()}\r\n" +
                 $"Run: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current.runTimes.Join()}\r\n" +
                 $"Stop: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current.closeTimes.Join()}";
             await new MessageDialog(message).ShowAsync();

@@ -15,6 +15,7 @@ using AudioPlayerFrontend.Background;
 using Windows.ApplicationModel.Background;
 using StdOttStandard.Dispatch;
 using System.ComponentModel;
+using AudioPlayerBackend.Communication;
 
 namespace AudioPlayerFrontend
 {
@@ -24,6 +25,7 @@ namespace AudioPlayerFrontend
     sealed partial class App : Application
     {
         private const string serviceProfileFilename = "serviceProfile.xml";
+        private readonly TimeSpan autoUpdateInverval = TimeSpan.FromDays(1);
 
         public static DateTime CreateTime = DateTime.MinValue;
         private static readonly XmlSerializer serializer = new XmlSerializer(typeof(ServiceProfile));
@@ -40,7 +42,8 @@ namespace AudioPlayerFrontend
             this.Suspending += OnSuspending;
 
             serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
-            serviceBuilder.WithNotifyPropertyChangedHelper(ServiceBuilderHelper.Current);
+            serviceBuilder.WithPlayer(new Player())
+                .WithNotifyPropertyChangedHelper(SourcePlaylistHelper.Current);
 
             Dispatcher dispatcher = new Dispatcher();
             ServiceHandler service = new ServiceHandler(dispatcher, serviceBuilder);
@@ -101,7 +104,6 @@ namespace AudioPlayerFrontend
                         StringReader reader = new StringReader(xmlText);
 
                         ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
-                        profile.ToClient();
                         profile.FillServiceBuilderWithMinimum(serviceBuilder);
                     }
                     catch (Exception exc)
@@ -117,6 +119,28 @@ namespace AudioPlayerFrontend
             }
 
             await buildTask;
+
+            if (viewModel.Service.IsClient || viewModel.IsUpdatingPlaylists) return;
+
+            try
+            {
+                viewModel.IsUpdatingPlaylists = true;
+
+                if (DateTime.Now - Settings.Current.LastUpdatedData > autoUpdateInverval)
+                {
+                    await UpdateHelper.Update(viewModel.Service.Audio);
+                    Settings.Current.LastUpdatedData = DateTime.Now;
+                }
+                else
+                {
+                    await UpdateHelper.UpdatePlaylists(viewModel.Service.Audio);
+                }
+            }
+            catch { }
+            finally
+            {
+                viewModel.IsUpdatingPlaylists = false;
+            }
         }
 
         /// <summary>
@@ -163,9 +187,11 @@ namespace AudioPlayerFrontend
         private void Service_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             ServiceHandler service = (ServiceHandler)sender;
-            if (e.PropertyName == nameof(ServiceHandler.ServiceOpenBuild) && service.ServiceOpenBuild != null)
+            ServiceBuild build = service.ServiceOpenBuild;
+
+            if (e.PropertyName == nameof(ServiceHandler.ServiceOpenBuild) && build != null)
             {
-                rootFrame.Navigate(typeof(BuildOpenPage), service.ServiceOpenBuild);
+                rootFrame.Navigate(typeof(BuildOpenPage), build);
             }
         }
 

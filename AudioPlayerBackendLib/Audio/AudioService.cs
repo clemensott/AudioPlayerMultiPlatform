@@ -21,7 +21,7 @@ namespace AudioPlayerBackend.Audio
         public event EventHandler<ValueChangedEventArgs<float>> VolumeChanged;
         public event EventHandler<ValueChangedEventArgs<byte[]>> AudioDataChanged;
 
-        private readonly INotifyPropertyChangedHelper helper;
+        private readonly ISourcePlaylistHelper helper;
         private bool isSearchShuffle, isSearching, isUpdatingSourcePlaylists, isUpdatingPlaylists;
         private string searchKey;
         private PlaybackState playState;
@@ -218,9 +218,9 @@ namespace AudioPlayerBackend.Audio
 
         private IAudioServiceBase Base => this;
 
-        public AudioService(INotifyPropertyChangedHelper notifyHelper = null)
+        public AudioService(ISourcePlaylistHelper helper = null)
         {
-            helper = notifyHelper;
+            this.helper = helper;
             playState = PlaybackState.Stopped;
             shuffledSongs = new Dictionary<ISourcePlaylist, IEnumerable<Song>>();
 
@@ -353,7 +353,7 @@ namespace AudioPlayerBackend.Audio
 
         protected virtual void OnServiceVolumeChanged() { }
 
-        public void Continue()
+        public void Continue(Song? currentSong = null)
         {
             IPlaylist currentPlaylist = CurrentPlaylist;
             if (currentPlaylist == null) return;
@@ -364,7 +364,7 @@ namespace AudioPlayerBackend.Audio
                 return;
             }
 
-            (Song? newCurrentSong, bool overflow) = SongsService.GetNextSong(currentPlaylist);
+            (Song? newCurrentSong, bool overflow) = SongsService.GetNextSong(currentPlaylist, currentSong);
 
             if (currentPlaylist.Loop == LoopType.StopCurrentSong)
             {
@@ -400,7 +400,7 @@ namespace AudioPlayerBackend.Audio
 
         private static void ChangeCurrentSongOrRestart(IPlaylistBase playlist, Song? newCurrentSong)
         {
-            playlist.WannaSong = RequestSong.Start(newCurrentSong);
+            if (playlist != null) playlist.WannaSong = RequestSong.Start(newCurrentSong);
         }
 
         private async void UpdateSearchSongs()
@@ -421,6 +421,26 @@ namespace AudioPlayerBackend.Audio
             else Raise();
 
             void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
+
+        public ISourcePlaylistBase CreateSourcePlaylist()
+        {
+            return CreateSourcePlaylist(Guid.NewGuid());
+        }
+
+        public ISourcePlaylistBase CreateSourcePlaylist(Guid id)
+        {
+            return new SourcePlaylist(id, helper);
+        }
+
+        public IPlaylistBase CreatePlaylist()
+        {
+            return CreatePlaylist(Guid.NewGuid());
+        }
+
+        public IPlaylistBase CreatePlaylist(Guid id)
+        {
+            return new Playlist(id, helper);
         }
     }
 }

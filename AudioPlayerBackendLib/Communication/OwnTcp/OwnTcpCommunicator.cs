@@ -13,7 +13,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
     {
         public const string AnwserCmd = "-ans", SyncCmd = "-sync", PingCmd = "-ping", CloseCmd = "-close";
 
-        protected OwnTcpCommunicator(INotifyPropertyChangedHelper helper = null) : base(helper)
+        protected OwnTcpCommunicator()
         {
         }
 
@@ -378,7 +378,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         private void HandleSourcePlaylistsTopic(ByteQueue data)
         {
             Dictionary<Guid, ISourcePlaylistBase> addPlaylists = data
-                    .DequeueSourcePlaylists(id => new SourcePlaylist(id, helper))
+                    .DequeueSourcePlaylists(Service.CreateSourcePlaylist)
                     .ToDictionary(p => p.ID);
             Guid[] order = data.DequeueGuids();
             ISourcePlaylistBase[] newPlaylists = new ISourcePlaylistBase[order.Length];
@@ -400,7 +400,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         private void HandlePlaylistsTopic(ByteQueue data)
         {
             Dictionary<Guid, IPlaylistBase> addPlaylists = data
-                    .DequeuePlaylists(id => new Playlist(id, helper))
+                    .DequeuePlaylists(Service.CreatePlaylist)
                     .ToDictionary(p => p.ID);
             Guid[] order = data.DequeueGuids();
             IPlaylistBase[] newPlaylists = new IPlaylistBase[order.Length];
@@ -425,11 +425,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             switch (data.DequeueString())
             {
                 case nameof(ISourcePlaylistBase):
-                    currentPlaylist = data.DequeueSourcePlaylist(id => new SourcePlaylist(id, helper));
+                    currentPlaylist = data.DequeueSourcePlaylist(Service.CreateSourcePlaylist);
                     break;
 
                 case nameof(IPlaylistBase):
-                    currentPlaylist = data.DequeuePlaylist(id => new Playlist(id, helper));
+                    currentPlaylist = data.DequeuePlaylist(Service.CreatePlaylist);
                     break;
 
                 default:

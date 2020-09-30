@@ -180,21 +180,6 @@ namespace AudioPlayerBackend.Audio
             Songs = new Song[0];
         }
 
-        public void SetNextSong()
-        {
-            ChangeCurrentSongOrRestart(SongsService.GetNextSong(this).song);
-        }
-
-        public void SetPreviousSong()
-        {
-            ChangeCurrentSongOrRestart(SongsService.GetPreviousSong(this).song);
-        }
-
-        private void ChangeCurrentSongOrRestart(Song? newCurrentSong)
-        {
-            WannaSong = RequestSong.Start(newCurrentSong);
-        }
-
         protected virtual void OnIsAllShuffleChanged()
         {
             OnPropertyChanged(nameof(IsAllShuffle));

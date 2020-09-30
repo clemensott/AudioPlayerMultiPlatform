@@ -12,12 +12,27 @@ namespace AudioPlayerFrontend
 {
     class ServiceHandler : INotifyPropertyChanged
     {
+        private const string dataFileName = "data.xml";
+
         private readonly Dispatcher dispatcher;
+        private bool isClient;
         private ServiceBuild serviceOpenBuild;
         private ServiceBuildResult buildResult;
         private IAudioService audioService;
         private ICommunicator communicator;
         private IServicePlayer servicePlayer;
+
+        public bool IsClient
+        {
+            get => isClient;
+            set
+            {
+                if (value == isClient) return;
+
+                isClient = value;
+                OnPropertyChanged(nameof(IsClient));
+            }
+        }
 
         public ServiceBuild ServiceOpenBuild
         {
@@ -55,6 +70,7 @@ namespace AudioPlayerFrontend
                 communicator = value;
                 OnPropertyChanged(nameof(Communicator));
 
+                IsClient = value is IClientCommunicator;
             }
         }
 
@@ -87,6 +103,8 @@ namespace AudioPlayerFrontend
                 ServiceBuild build = ServiceOpenBuild;
                 if (build == null) return Task.CompletedTask;
 
+                Builder.DataFilePath = Builder.BuildClient ? null : dataFileName;
+
                 ICommunicator communicator = Communicator;
                 if (communicator == null) build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
                 else build.StartOpen(communicator, Audio, Player, buildResult.Data, TimeSpan.FromMilliseconds(200));
@@ -101,6 +119,7 @@ namespace AudioPlayerFrontend
 
             if (Communicator != null) Communicator.Disconnected -= Communicator_Disconnected;
 
+            Player oldPlayer = Player?.Player as Player;
             ServiceBuildResult result = await build.CompleteToken.ResultTask;
 
             if (build != ServiceOpenBuild) return;
@@ -112,22 +131,43 @@ namespace AudioPlayerFrontend
             buildResult = result;
 
             if (Communicator != null) Communicator.Disconnected += Communicator_Disconnected;
+
+            if (oldPlayer != null)
+            {
+                oldPlayer.NextPressed += Player_NextPressed;
+                oldPlayer.PreviousPressed += Player_PreviousPressed;
+            }
+
+            Player newPlayer = Player?.Player as Player;
+            if (newPlayer != null)
+            {
+                newPlayer.NextPressed += Player_NextPressed;
+                newPlayer.PreviousPressed += Player_PreviousPressed;
+            }
         }
 
-        public System.Collections.Generic.List<string> disconnectTimes = new System.Collections.Generic.List<string>();
+        private void Player_NextPressed(object sender, HandledEventArgs e)
+        {
+            Audio?.SetNextSong();
+            e.Handled = true;
+        }
+
+        private void Player_PreviousPressed(object sender, HandledEventArgs e)
+        {
+            Audio?.SetPreviousSong();
+            e.Handled = true;
+        }
+
         private async void Communicator_Disconnected(object sender, DisconnectedEventArgs e)
         {
-            disconnectTimes.Add($"{DateTime.Now} | {e.OnDisconnect} | {e.Exception?.Message ?? "<no error"}");
             if (e.OnDisconnect) return;
 
             await CloseAsync();
             await ConnectAsync();
         }
 
-        public System.Collections.Generic.List<DateTime> closeTimes = new System.Collections.Generic.List<DateTime>();
         public async Task CloseAsync()
         {
-            closeTimes.Add(DateTime.Now);
             ServiceOpenBuild?.Cancel();
             ServiceOpenBuild = null;
             await (Communicator?.CloseAsync() ?? Task.CompletedTask);

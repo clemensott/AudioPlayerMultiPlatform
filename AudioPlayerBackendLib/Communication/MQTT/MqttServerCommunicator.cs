@@ -21,7 +21,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
         public override string Name => "MQTT Server: " + Port;
 
-        public MqttServerCommunicator(int port, INotifyPropertyChangedHelper helper = null) : base(helper)
+        public MqttServerCommunicator(int port)
         {
             server = new MqttFactory().CreateMqttServer();
 

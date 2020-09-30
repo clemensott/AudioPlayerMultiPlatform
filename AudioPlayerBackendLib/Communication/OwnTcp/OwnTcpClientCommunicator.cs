@@ -27,8 +27,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public int? Port { get; }
 
-        public OwnTcpClientCommunicator(string serverAddress, int port, INotifyPropertyChangedHelper helper = null)
-            : base(helper)
+        public OwnTcpClientCommunicator(string serverAddress, int port)
         {
             ServerAddress = serverAddress;
             Port = port;
@@ -46,7 +45,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 TcpClient client = new TcpClient();
                 await client.ConnectAsync(address, Port ?? -1);
 
-                connection = new OwnTcpClientConnection(client, helper);
+                connection = new OwnTcpClientConnection(client);
                 connection.Disconnected += Connection_Disconnected;
             }
             catch
@@ -181,7 +180,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        private static async Task ReceiveHandler(OwnTcpClientConnection connection)
+        private async Task ReceiveHandler(OwnTcpClientConnection connection)
         {
             try
             {
@@ -210,9 +209,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                         case SyncCmd:
                             ByteQueue data = message.Payload;
-                            data.DequeueService(connection.Service,
-                                id => new SourcePlaylist(id, connection.Helper),
-                                id => new Playlist(id, connection.Helper));
+                            data.DequeueService(connection.Service, Service.CreateSourcePlaylist, Service.CreatePlaylist);
 
                             connection.Waits[message.ID].SetValue(true);
                             connection.Waits.Remove(message.ID);

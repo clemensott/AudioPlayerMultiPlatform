@@ -108,19 +108,20 @@ namespace AudioPlayerBackend.Audio
             return allSongs.OrderBy(s => s.Title).ThenBy(s => s.Artist);
         }
 
-        public static (Song? song, bool overflow) GetNextSong(IPlaylistBase playlist)
+        public static (Song? song, bool overflow) GetNextSong(IPlaylistBase playlist, Song? currentSong = null)
         {
-            if (!playlist.CurrentSong.HasValue) return (null, false);
+            if (!currentSong.HasValue) currentSong = playlist?.CurrentSong;
+            if (!currentSong.HasValue) return (null, false);
 
             (Song next, bool found, bool overflow) = GetAllSongs(playlist)
-                .NextOrDefault(playlist.CurrentSong.Value);
+                .NextOrDefault(currentSong.Value);
 
             return (found ? (Song?)next : null, overflow);
         }
 
         public static (Song? song, bool underflow) GetPreviousSong(IPlaylistBase playlist)
         {
-            if (!playlist.CurrentSong.HasValue) return (null, false);
+            if (!(playlist?.CurrentSong).HasValue) return (null, false);
 
             (Song next, bool found, bool underflow) = GetAllSongs(playlist)
                 .PreviousOrDefault(playlist.CurrentSong.Value);

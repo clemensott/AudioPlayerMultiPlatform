@@ -69,7 +69,7 @@ namespace AudioPlayerFrontend.Join
 
                     ExecutePlayState();
                 }
-                else PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(e.Exception));
+                else PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(Source, e.Exception));
             }
             finally
             {
@@ -79,8 +79,11 @@ namespace AudioPlayerFrontend.Join
 
         public Task Set(RequestSong? wanna)
         {
-            if (!wanna.HasValue) return Stop();
+            return wanna.HasValue ? Set(wanna.Value) : Stop();
+        }
 
+        private Task Set(RequestSong wanna)
+        {
             wannaSong = wanna;
 
             return Task.Run(async () =>
@@ -90,7 +93,7 @@ namespace AudioPlayerFrontend.Join
                 {
                     if (!wannaSong.Equals(wanna)) return;
 
-                    await HandleRequestSong(wanna.Value);
+                    await HandleRequestSong(wanna);
                 }
                 finally
                 {
@@ -103,13 +106,14 @@ namespace AudioPlayerFrontend.Join
         {
             if (waveProvider != null)
             {
-                if (wanna.Song.FullPath == Source?.FullPath)
+                if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)
                 {
                     if (wanna.Position.HasValue &&
                         wanna.Position.Value != waveProvider.CurrentTime)
                     {
                         waveProvider.CurrentTime = wanna.Position.Value;
                     }
+                    Source = wanna.Song;
                     return;
                 }
 
@@ -148,18 +152,26 @@ namespace AudioPlayerFrontend.Join
 
         private void Init(RequestSong wanna)
         {
-            waveProvider = new NAudio.Wave.AudioFileReader(wanna.Song.FullPath);
-            Source = wanna.Song;
-
-            if (wanna.Position.HasValue && wanna.Duration == waveProvider.TotalTime)
+            try
             {
-                waveProvider.CurrentTime = wanna.Position.Value;
+                waveProvider = new NAudio.Wave.AudioFileReader(wanna.Song.FullPath);
+                Source = wanna.Song;
+
+                if (wanna.Position.HasValue && wanna.Duration == waveProvider.TotalTime)
+                {
+                    waveProvider.CurrentTime = wanna.Position.Value;
+                }
+
+                waveOut.Init(waveProvider);
+                ExecutePlayState();
+
+                MediaOpened?.Invoke(this, new MediaOpenedEventArgs(waveProvider.CurrentTime, waveProvider.TotalTime, wanna.Song));
             }
-
-            waveOut.Init(waveProvider);
-            ExecutePlayState();
-
-            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(waveProvider.CurrentTime, waveProvider.TotalTime, wanna.Song));
+            catch (Exception e)
+            {
+                DisposeWaveProvider();
+                PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wanna.Song, e));
+            }
         }
 
         public async Task Stop()

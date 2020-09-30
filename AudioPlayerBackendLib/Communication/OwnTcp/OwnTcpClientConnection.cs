@@ -23,15 +23,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public IAudioServiceBase Service { get; set; }
 
-        public INotifyPropertyChangedHelper Helper { get; }
-
-        public OwnTcpClientConnection(TcpClient client, INotifyPropertyChangedHelper helper) : base(client)
+        public OwnTcpClientConnection(TcpClient client) : base(client)
         {
             Waits = new Dictionary<uint, OwnTcpSendMessage>();
             ProcessQueue = new AsyncQueue<OwnTcpMessage>();
             PingSem = new SemaphoreSlim(0);
-
-            Helper = helper;
         }
 
         /// <summary>

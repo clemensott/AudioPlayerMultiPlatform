@@ -105,6 +105,9 @@ namespace AudioPlayerFrontend
 
             if (result.TryGetFirstValidOptionParseds(disableUiOpt, out _)) viewModel.IsUiEnabled = false;
 
+            IntPtr windowHandle = new WindowInteropHelper(this).Handle;
+            serviceBuilder.WithPlayer(new Player(-1, windowHandle));
+
             await BuildAudioServiceAsync();
 
             BuildHotKeys();
@@ -112,12 +115,6 @@ namespace AudioPlayerFrontend
 
         private async Task BuildAudioServiceAsync()
         {
-            if (serviceBuilder.Player == null)
-            {
-                IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-                serviceBuilder.WithPlayer(new Player(-1, windowHandle));
-            }
-
             while (true)
             {
                 if (viewModel.Service?.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
@@ -134,14 +131,29 @@ namespace AudioPlayerFrontend
                     return;
                 }
 
-                viewModel.Service = await build.CompleteToken.ResultTask;
+                ServiceBuildResult result = await build.CompleteToken.ResultTask;
+                viewModel.Service = result;
 
                 if (build.CompleteToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
-                else if (build.CompleteToken.IsEnded is BuildEndedType.Successful)
+                else if (build.CompleteToken.IsEnded != BuildEndedType.Successful) continue;
+
+                if (build.Communicator != null) build.Communicator.Disconnected += Communicator_Disconnected;
+
+                await Task.Run(async () =>
                 {
-                    if (build.Communicator != null) build.Communicator.Disconnected += Communicator_Disconnected;
-                    break;
-                }
+                    await Task.WhenAll(result.AudioService.SourcePlaylists.Select(p => p.Update()));
+
+                    IDictionary<string, Song> allSongs = result.AudioService.SourcePlaylists
+                        .SelectMany(p => p.Songs).Distinct().ToDictionary(s => s.FullPath);
+
+                    foreach (IPlaylist playlist in result.AudioService.Playlists)
+                    {
+                        Song song = new Song();
+                        playlist.Songs = playlist.Songs
+                            .Where(s => allSongs.TryGetValue(s.FullPath, out song)).Select(_ => song).ToArray();
+                    }
+                });
+                break;
             }
         }
 

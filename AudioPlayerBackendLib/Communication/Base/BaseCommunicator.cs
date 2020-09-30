@@ -15,7 +15,6 @@ namespace AudioPlayerBackend.Communication.Base
         protected const string cmdString = "Command";
 
         private bool isSyncing;
-        protected readonly INotifyPropertyChangedHelper helper;
         private readonly Dictionary<string, byte[]> receivingDict = new Dictionary<string, byte[]>();
         protected readonly Dictionary<Guid, IPlaylistBase> playlists = new Dictionary<Guid, IPlaylistBase>();
 
@@ -39,9 +38,8 @@ namespace AudioPlayerBackend.Communication.Base
 
         public IAudioServiceBase Service { get; protected set; }
 
-        protected BaseCommunicator(INotifyPropertyChangedHelper helper)
+        protected BaseCommunicator()
         {
-            this.helper = helper;
         }
 
         public abstract Task OpenAsync(BuildStatusToken statusToken);

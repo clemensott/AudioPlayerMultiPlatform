@@ -28,7 +28,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public override string Name => "TCP Server: " + Port;
 
-        public OwnTcpServerCommunicator(int port, INotifyPropertyChangedHelper helper = null) : base(helper)
+        public OwnTcpServerCommunicator(int port)
         {
             Port = port;
             listener = new TcpListener(IPAddress.Any, Port);

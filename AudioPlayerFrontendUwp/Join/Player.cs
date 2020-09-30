@@ -1,38 +1,206 @@
 ﻿using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Player;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Windows.Media;
+using Windows.Media.Core;
+using Windows.Media.Playback;
+using Windows.Storage;
 
 namespace AudioPlayerFrontend.Join
 {
     class Player : IPlayer
     {
-        public PlaybackState PlayState { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
-        public TimeSpan Position => throw new NotImplementedException();
-
-        public TimeSpan Duration => throw new NotImplementedException();
-
-        public Song? Source => throw new NotImplementedException();
-
-        public float Volume { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        private PlaybackState playState;
+        private RequestSong? wannaSong;
+        private Song? source;
+        private readonly SemaphoreSlim sem;
+        private readonly MediaPlayer player;
 
         public event EventHandler<PlaybackStoppedEventArgs> PlaybackStopped;
         public event EventHandler<MediaOpenedEventArgs> MediaOpened;
+        public event EventHandler<HandledEventArgs> NextPressed;
+        public event EventHandler<HandledEventArgs> PreviousPressed;
 
-        public void Dispose()
+        public PlaybackState PlayState
         {
-            throw new NotImplementedException();
+            get => playState;
+            set
+            {
+                playState = value;
+                ExecutePlayStateSafe();
+            }
+        }
+
+        public TimeSpan Position => player.PlaybackSession.Position;
+
+        public TimeSpan Duration => player.PlaybackSession.NaturalDuration;
+
+        public Song? Source { get; private set; }
+
+        public float Volume { get => (float)player.Volume; set => player.Volume = value; }
+
+        public SystemMediaTransportControls SMTC => player.SystemMediaTransportControls;
+
+        public Player()
+        {
+            sem = new SemaphoreSlim(1);
+            player = new MediaPlayer();
+            player.MediaOpened += Player_MediaOpened;
+            player.MediaFailed += Player_MediaFailed;
+            player.MediaEnded += Player_MediaEnded;
+
+            player.CommandManager.IsEnabled = true;
+            player.CommandManager.NextBehavior.EnablingRule = MediaCommandEnablingRule.Always;
+            player.CommandManager.PreviousBehavior.EnablingRule = MediaCommandEnablingRule.Always;
+            player.CommandManager.NextReceived += CommandManager_NextReceived;
+            player.CommandManager.PreviousReceived += CommandManager_PreviousReceived;
+        }
+
+        private void CommandManager_NextReceived(MediaPlaybackCommandManager sender, MediaPlaybackCommandManagerNextReceivedEventArgs args)
+        {
+            HandledEventArgs subArgs = new HandledEventArgs(args.Handled);
+            NextPressed?.Invoke(this, subArgs);
+
+            args.Handled = subArgs.Handled;
+        }
+
+        private void CommandManager_PreviousReceived(MediaPlaybackCommandManager sender, MediaPlaybackCommandManagerPreviousReceivedEventArgs args)
+        {
+            HandledEventArgs subArgs = new HandledEventArgs(args.Handled);
+            PreviousPressed?.Invoke(this, subArgs);
+
+            args.Handled = subArgs.Handled;
+        }
+
+        private void Player_MediaOpened(MediaPlayer sender, object args)
+        {
+            Source = wannaSong.Value.Song;
+            if (wannaSong.Value.Position.HasValue && wannaSong.Value.Duration == sender.PlaybackSession.NaturalDuration)
+            {
+                sender.PlaybackSession.Position = wannaSong.Value.Position.Value;
+            }
+
+            ExecutePlayState();
+            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, wannaSong.Value.Song));
+            sem.Release();
+        }
+
+        private void Player_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+        {
+            Source = null;
+            PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wannaSong?.Song, args.ExtendedErrorCode));
+            sem.Release();
+        }
+
+        private void Player_MediaEnded(MediaPlayer sender, object args)
+        {
+            PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(Source));
         }
 
         public Task Set(RequestSong? wanna)
         {
-            throw new NotImplementedException();
+            return wanna.HasValue ? Set(wanna.Value) : Stop();
         }
 
-        public Task Stop()
+        private async Task Set(RequestSong wanna)
         {
-            throw new NotImplementedException();
+            await sem.WaitAsync();
+
+            try
+            {
+                if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)
+                {
+                    if (wanna.Position.HasValue &&
+                        wanna.Position.Value != Position)
+                    {
+                        player.PlaybackSession.Position = wanna.Position.Value;
+                    }
+                    Source = wanna.Song;
+                    ExecutePlayState();
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                Source = null;
+                PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wanna.Song, e));
+            }
+            finally
+            {
+                sem.Release();
+            }
+
+            try
+            {
+                wannaSong = wanna;
+                Source = wanna.Song;
+
+                StorageFile file = await StorageFile.GetFileFromPathAsync(wanna.Song.FullPath);
+                player.Source = MediaSource.CreateFromStorageFile(file);
+
+                await SMTC.DisplayUpdater.CopyFromFileAsync(MediaPlaybackType.Music, file);
+                SMTC.DisplayUpdater.Update();
+            }
+            catch (Exception e)
+            {
+                Source = null;
+                PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wanna.Song, e));
+                sem.Release();
+            }
+        }
+
+        public async Task Stop()
+        {
+            await sem.WaitAsync();
+
+            try
+            {
+                player.Source = null;
+                Source = null;
+            }
+            finally
+            {
+                sem.Release();
+            }
+        }
+
+        public async void ExecutePlayStateSafe()
+        {
+            await sem.WaitAsync();
+
+            try
+            {
+                ExecutePlayState();
+            }
+            finally
+            {
+                sem.Release();
+            }
+        }
+
+        public void ExecutePlayState()
+        {
+            switch (PlayState)
+            {
+                case PlaybackState.Playing:
+                    player.Play();
+                    break;
+
+                case PlaybackState.Paused:
+                    player.Pause();
+                    break;
+            }
+        }
+
+        public void Dispose()
+        {
+            player.MediaOpened -= Player_MediaOpened;
+            player.MediaFailed -= Player_MediaFailed;
+            player.MediaEnded -= Player_MediaEnded;
+
+            player.Dispose();
         }
     }
 }

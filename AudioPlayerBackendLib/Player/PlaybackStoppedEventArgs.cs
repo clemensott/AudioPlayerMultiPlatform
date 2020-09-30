@@ -1,13 +1,22 @@
-﻿using System;
+﻿using AudioPlayerBackend.Audio;
+using System;
 
 namespace AudioPlayerBackend.Player
 {
   public  class PlaybackStoppedEventArgs : EventArgs
     {
-        public Exception Exception { get; private set; }
+        public Song? Song { get; }
 
-        public PlaybackStoppedEventArgs(Exception exception)
+        public Exception Exception { get;  }
+
+        public PlaybackStoppedEventArgs(Song? song)
         {
+            Song = song;
+        }
+
+        public PlaybackStoppedEventArgs(Song? song, Exception exception)
+        {
+            Song = song;
             Exception = exception;
         }
     }

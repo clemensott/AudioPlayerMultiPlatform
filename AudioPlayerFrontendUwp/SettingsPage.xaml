@@ -35,7 +35,7 @@
                     <RadioButton x:Name="rbnStandalone" Content="Standalone" 
                                  GroupName="Communicator" Margin="2"
                                  IsChecked="{Binding BuildStandalone,Mode=OneWay}"
-                                 Checked="RbnStandalone_Checked" Visibility="Collapsed"/>
+                                 Checked="RbnStandalone_Checked"/>
                     <RadioButton x:Name="rbnServer" Content="Server" 
                                  GroupName="Communicator" Margin="2"
                                  IsChecked="{Binding BuildServer,Mode=OneWay}"
@@ -78,9 +78,11 @@
 
                 <StackPanel Orientation="Horizontal">
                     <RadioButton Content="Own TCP" Margin="2" HorizontalAlignment="Left" GroupName="CommunicatorProtocol"
+                                 IsEnabled="{Binding ElementName=rbnStandalone,Path=IsChecked,Converter={StaticResource inverter}}"
                                  IsChecked="{Binding CommunicatorProtocol,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
                                    Converter={StaticResource communicatorProtocolCon},ConverterParameter=OwnTCP}"/>
                     <RadioButton Content="Mqtt" Margin="2" HorizontalAlignment="Left" GroupName="CommunicatorProtocol"
+                                 IsEnabled="{Binding ElementName=rbnStandalone,Path=IsChecked,Converter={StaticResource inverter}}"
                                  IsChecked="{Binding CommunicatorProtocol,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
                                    Converter={StaticResource communicatorProtocolCon},ConverterParameter=MQTT}"/>
                 </StackPanel>

@@ -187,7 +187,7 @@ namespace AudioPlayerBackend.Build
                     try
                     {
                         State = BuildState.SyncCommunicator;
-                        service = new AudioService(serviceBuilder.NotifyPropertyChangedHelper);
+                        service = new AudioService(serviceBuilder.SourcePlaylistHelper);
 
                         if (Communicator != null)
                         {

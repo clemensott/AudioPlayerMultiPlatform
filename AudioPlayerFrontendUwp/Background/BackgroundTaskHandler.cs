@@ -80,7 +80,7 @@ namespace AudioPlayerFrontend.Background
             Subscribe(audio);
 
             SetPlayState(audio.PlayState);
-            DisplayCurrentSong(audio.CurrentPlaylist.CurrentSong);
+            DisplayCurrentSong(audio.CurrentPlaylist?.CurrentSong);
         }
 
         private void Subscribe(IAudioService audio)
@@ -105,12 +105,12 @@ namespace AudioPlayerFrontend.Background
 
         private void Subscribe(IPlaylistBase currentPlaylist)
         {
-            currentPlaylist.CurrentSongChanged += CurrentPlaylist_CurrentSongChanged;
+            if (currentPlaylist != null) currentPlaylist.CurrentSongChanged += CurrentPlaylist_CurrentSongChanged;
         }
 
         private void Unsubscribe(IPlaylistBase currentPlaylist)
         {
-            currentPlaylist.CurrentSongChanged -= CurrentPlaylist_CurrentSongChanged;
+            if (currentPlaylist != null) currentPlaylist.CurrentSongChanged -= CurrentPlaylist_CurrentSongChanged;
         }
 
         private void Audio_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
