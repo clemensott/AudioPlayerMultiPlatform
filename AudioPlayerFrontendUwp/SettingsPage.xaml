@@ -67,7 +67,7 @@
                         <TextBox Grid.Column="1" Grid.Row="0" Name="tbxServerAddress" Margin="3,3,0,0"
                                  Text="{Binding ServerAddress,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"/>
-                        <TextBox Grid.Column="1" Grid.Row="1" Name="tbxPort" Text=""
+                        <TextBox Grid.Column="1" Grid.Row="1" Name="tbxPort" Text="" InputScope="Number"
                                  Margin="3,3,0,0" TextChanged="TbxPort_TextChanged"/>
                     </Grid>
                 </ContentControl>
@@ -128,6 +128,7 @@
         <CommandBar>
             <CommandBar.PrimaryCommands>
                 <AppBarButton Icon="Accept" Label="OK" Click="AbbOk_Click"/>
+                <AppBarButton Icon="Cancel" Label="Cancel" Click="AbbCancel_Click"/>
             </CommandBar.PrimaryCommands>
         </CommandBar>
     </Page.BottomAppBar>

@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend.Build;
+using StdOttStandard.AsyncResult;
 using StdOttUwp.Converters;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -17,6 +18,7 @@ namespace AudioPlayerFrontend
         private IntConverter serverPortConverter;
         private IntNullableConverter clientPortConverter;
         private ServiceBuilder serviceBuilder;
+        private AsyncResultS<ServiceBuilder> result;
 
         public ServiceBuilder ServiceBuilder
         {
@@ -51,7 +53,15 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            if (e.Parameter is ServiceBuilder) ServiceBuilder = (ServiceBuilder)e.Parameter;
+            result = (AsyncResultS<ServiceBuilder>)e.Parameter;
+            ServiceBuilder = result.Input;
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+
+            if (!result.HasResult) result.SetValue(null);
         }
 
         private void RbnStandalone_Checked(object sender, RoutedEventArgs e)
@@ -68,7 +78,6 @@ namespace AudioPlayerFrontend
 
         private void RbnClient_Checked(object sender, RoutedEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("RbnClient_Checked");
             tbxPort.Text = clientPortConverter.Text;
 
             ServiceBuilder?.WithClient(tbxServerAddress.Text, clientPortConverter.Value);
@@ -108,6 +117,12 @@ namespace AudioPlayerFrontend
         }
 
         private void AbbOk_Click(object sender, RoutedEventArgs e)
+        {
+            result.SetValue(serviceBuilder);
+            Frame.GoBack();
+        }
+
+        private void AbbCancel_Click(object sender, RoutedEventArgs e)
         {
             Frame.GoBack();
         }

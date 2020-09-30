@@ -16,6 +16,7 @@ namespace AudioPlayerFrontend
 
         private readonly Dispatcher dispatcher;
         private bool isClient;
+        private ServiceBuilder builder;
         private ServiceBuild serviceOpenBuild;
         private ServiceBuildResult buildResult;
         private IAudioService audioService;
@@ -31,6 +32,18 @@ namespace AudioPlayerFrontend
 
                 isClient = value;
                 OnPropertyChanged(nameof(IsClient));
+            }
+        }
+
+        public ServiceBuilder Builder
+        {
+            get => builder;
+            set
+            {
+                if (value == builder) return;
+
+                builder = value;
+                OnPropertyChanged(nameof(Builder));
             }
         }
 
@@ -85,8 +98,6 @@ namespace AudioPlayerFrontend
                 OnPropertyChanged(nameof(Player));
             }
         }
-
-        public ServiceBuilder Builder { get; }
 
         public ServiceHandler(Dispatcher dispatcher, ServiceBuilder builder)
         {

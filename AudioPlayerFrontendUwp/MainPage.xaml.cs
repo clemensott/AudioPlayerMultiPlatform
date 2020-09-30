@@ -14,6 +14,7 @@ using AudioPlayerBackend.Build;
 using StdOttStandard.Converter.MultipleInputs;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
+using StdOttStandard.AsyncResult;
 
 namespace AudioPlayerFrontend
 {
@@ -250,7 +251,13 @@ namespace AudioPlayerFrontend
         private async Task NavigateToSettingsPage()
         {
             await viewModel.Service.CloseAsync();
-            Frame.Navigate(typeof(SettingsPage), viewModel.Service.Builder);
+
+            AsyncResultS<ServiceBuilder> result = new AsyncResultS<ServiceBuilder>(viewModel.Service.Builder.Clone());
+            Frame.Navigate(typeof(SettingsPage), result);
+
+            ServiceBuilder newBuilder = await result.Task;
+
+            if (newBuilder != null) viewModel.Service.Builder = newBuilder;
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)

@@ -56,7 +56,8 @@ namespace AudioPlayerFrontend
             else if (BuildServer) builder.WithServer(ServerPort);
             else if (BuildClient) builder.WithClient(ServerAddress, ClientPort);
 
-            builder.WithCommunicatorProtocol(CommunicatorProtocol)
+            builder
+                .WithCommunicatorProtocol(CommunicatorProtocol)
                 .WithIsAllShuffle(IsAllShuffle)
                 .WithIsSearchShuffle(IsSearchShuffle)
                 .WithPlay(Play)
@@ -66,25 +67,6 @@ namespace AudioPlayerFrontend
                 .WithSearchKey(SearchKey)
                 .WithServerAddress(ServerAddress)
                 .WithVolume(Volume);
-        }
-
-        public void FillServiceBuilderWithMinimum(ServiceBuilder builder)
-        {
-            if (BuildStandalone) builder.WithStandalone();
-            else if (BuildServer) builder.WithServer(ServerPort);
-            else if (BuildClient) builder.WithClient(ServerAddress, ClientPort);
-
-            builder.WithCommunicatorProtocol(CommunicatorProtocol);
-        }
-
-        public void ToClient()
-        {
-            if (BuildClient) return;
-
-            BuildServer = BuildStandalone = false;
-            BuildClient = true;
-
-            if (ClientPort == null) ClientPort = 1884;
         }
     }
 }

@@ -15,7 +15,6 @@ using AudioPlayerFrontend.Background;
 using Windows.ApplicationModel.Background;
 using StdOttStandard.Dispatch;
 using System.ComponentModel;
-using AudioPlayerBackend.Communication;
 
 namespace AudioPlayerFrontend
 {
@@ -30,7 +29,6 @@ namespace AudioPlayerFrontend
         public static DateTime CreateTime = DateTime.MinValue;
         private static readonly XmlSerializer serializer = new XmlSerializer(typeof(ServiceProfile));
 
-        private readonly ServiceBuilder serviceBuilder;
         private readonly ViewModel viewModel;
         private Frame rootFrame;
 
@@ -41,7 +39,7 @@ namespace AudioPlayerFrontend
             this.InitializeComponent();
             this.Suspending += OnSuspending;
 
-            serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
+            ServiceBuilder serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
             serviceBuilder.WithPlayer(new Player())
                 .WithNotifyPropertyChangedHelper(SourcePlaylistHelper.Current);
 
@@ -104,7 +102,7 @@ namespace AudioPlayerFrontend
                         StringReader reader = new StringReader(xmlText);
 
                         ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
-                        profile.FillServiceBuilderWithMinimum(serviceBuilder);
+                        profile.FillServiceBuilder(viewModel.Service.Builder);
                     }
                     catch (Exception exc)
                     {
@@ -168,7 +166,7 @@ namespace AudioPlayerFrontend
 
             try
             {
-                ServiceProfile profile = new ServiceProfile(serviceBuilder);
+                ServiceProfile profile = new ServiceProfile(viewModel.Service.Builder);
                 StringWriter writer = new StringWriter();
                 serializer.Serialize(writer, profile);
 
