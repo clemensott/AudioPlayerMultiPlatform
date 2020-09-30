@@ -236,7 +236,8 @@
                             MouseLeftButtonDown="StpCurrentSong_MouseLeftButtonDown"
                             MouseRightButtonUp="StackPanel_MouseRightButtonUp">
                     <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Margin="10,0,0,0" Text="{Binding Title}"/>
-                    <TextBlock TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0" Text="{Binding Artist}"/>
+                    <TextBlock TextWrapping="Wrap" FontStyle="Italic" Margin="10,0,0,0" Text="{Binding Artist}"
+                               Visibility="{Binding Artist,Converter={StaticResource visCon}}"/>
                 </StackPanel>
             </Grid>
         </Grid>

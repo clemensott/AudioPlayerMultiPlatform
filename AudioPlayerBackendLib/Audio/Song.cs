@@ -6,7 +6,7 @@ namespace AudioPlayerBackend.Audio
 {
     public struct Song : IEquatable<Song>
     {
-        private const string seperator = " - ", unkownArtist = "Unkown";
+        private const string seperator = " - ";
 
         public int Index { get; set; }
 
@@ -30,7 +30,7 @@ namespace AudioPlayerBackend.Audio
             }
             else
             {
-                Artist = unkownArtist;
+                Artist = null;
                 Title = fileName;
             }
 

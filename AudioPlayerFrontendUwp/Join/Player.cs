@@ -145,6 +145,14 @@ namespace AudioPlayerFrontend.Join
                 player.Source = MediaSource.CreateFromStorageFile(file);
 
                 await SMTC.DisplayUpdater.CopyFromFileAsync(MediaPlaybackType.Music, file);
+                if (string.IsNullOrWhiteSpace(SMTC.DisplayUpdater.MusicProperties.Title))
+                {
+                    SMTC.DisplayUpdater.MusicProperties.Title = wanna.Song.Title ?? string.Empty;
+                }
+                if (string.IsNullOrWhiteSpace(SMTC.DisplayUpdater.MusicProperties.Artist))
+                {
+                    SMTC.DisplayUpdater.MusicProperties.Artist = wanna.Song.Artist ?? string.Empty;
+                }
                 SMTC.DisplayUpdater.Update();
             }
             catch (Exception e)

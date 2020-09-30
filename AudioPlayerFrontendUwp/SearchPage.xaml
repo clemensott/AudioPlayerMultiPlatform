@@ -52,7 +52,8 @@
                                       Convert="MicSongs_Convert"/>
 
         <ListBox Grid.Row="2" Grid.ColumnSpan="5" Margin="0,5" HorizontalAlignment="Stretch"
-                 ItemsSource="{Binding ElementName=micSongs,Path=Output}" SelectionChanged="ListBox_SelectionChanged">
+                 ItemsSource="{Binding ElementName=micSongs,Path=Output}" 
+                 SelectionChanged="ListBox_SelectionChanged">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -77,7 +78,8 @@
                                    VerticalAlignment="Center" Text="{Binding Index}"/>
 
                         <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding Title}"/>
-                        <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Artist}" FontStyle="Italic"/>
+                        <TextBlock Grid.Column="2" Grid.Row="1" FontStyle="Italic"
+                                   Text="{Binding Artist,TargetNullValue=&lt;Unkown&gt;}"/>
 
                         <StackPanel Grid.Column="3" Grid.RowSpan="2" Orientation="Horizontal">
                             <ctl:IconButton Symbol="Play" Background="Transparent" 
