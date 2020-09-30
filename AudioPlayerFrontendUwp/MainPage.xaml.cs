@@ -44,7 +44,7 @@ namespace AudioPlayerFrontend
             {
                 await NavigateToSettingsPage();
             }
-            else if (fromSettingsPage) await viewModel.Service.ConnectAsync();
+            else if (fromSettingsPage) await viewModel.Service.ConnectAsync(true);
         }
 
         private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)

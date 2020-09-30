@@ -94,7 +94,7 @@ namespace AudioPlayerFrontend
             Builder = builder;
         }
 
-        public Task ConnectAsync()
+        public Task ConnectAsync(bool forceBuild)
         {
             ServiceOpenBuild = new ServiceBuild();
 
@@ -106,7 +106,7 @@ namespace AudioPlayerFrontend
                 Builder.DataFilePath = Builder.BuildClient ? null : dataFileName;
 
                 ICommunicator communicator = Communicator;
-                if (communicator == null) build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
+                if (forceBuild || communicator == null) build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
                 else build.StartOpen(communicator, Audio, Player, buildResult.Data, TimeSpan.FromMilliseconds(200));
 
                 return ServiceOpenBuild.CompleteToken.EndTask;
@@ -163,7 +163,7 @@ namespace AudioPlayerFrontend
             if (e.OnDisconnect) return;
 
             await CloseAsync();
-            await ConnectAsync();
+            await ConnectAsync(false);
         }
 
         public async Task CloseAsync()

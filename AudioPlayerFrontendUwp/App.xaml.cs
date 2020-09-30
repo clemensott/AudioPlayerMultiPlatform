@@ -112,7 +112,7 @@ namespace AudioPlayerFrontend
                     }
 
                     rootFrame.Navigate(typeof(MainPage), viewModel);
-                    buildTask = viewModel.Service.ConnectAsync();
+                    buildTask = viewModel.Service.ConnectAsync(true);
                 }
                 // Sicherstellen, dass das aktuelle Fenster aktiv ist
                 Window.Current.Activate();
@@ -198,7 +198,7 @@ namespace AudioPlayerFrontend
         private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
             if (!BackgroundTaskHandler.Current.IsRunning) await BackgroundTaskHelper.Current.Start();
-            if (viewModel.Service.Communicator?.IsOpen == false) await viewModel.Service.ConnectAsync();
+            if (viewModel.Service.Communicator?.IsOpen == false) await viewModel.Service.ConnectAsync(false);
         }
 
         protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)
