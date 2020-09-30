@@ -141,21 +141,23 @@ namespace AudioPlayerFrontend
                 else if (build.CompleteToken.IsEnded != BuildEndedType.Successful) continue;
 
                 if (build.Communicator != null) build.Communicator.Disconnected += Communicator_Disconnected;
-
-                await Task.Run(async () =>
+                else
                 {
-                    await Task.WhenAll(result.AudioService.SourcePlaylists.Select(p => p.Update()));
-
-                    IDictionary<string, Song> allSongs = result.AudioService.SourcePlaylists
-                        .SelectMany(p => p.Songs).Distinct().ToDictionary(s => s.FullPath);
-
-                    foreach (IPlaylist playlist in result.AudioService.Playlists)
+                    await Task.Run(async () =>
                     {
-                        Song song = new Song();
-                        playlist.Songs = playlist.Songs
-                            .Where(s => allSongs.TryGetValue(s.FullPath, out song)).Select(_ => song).ToArray();
-                    }
-                });
+                        await Task.WhenAll(result.AudioService.SourcePlaylists.Select(p => p.Update()));
+
+                        IDictionary<string, Song> allSongs = result.AudioService.SourcePlaylists
+                            .SelectMany(p => p.Songs).Distinct().ToDictionary(s => s.FullPath);
+
+                        foreach (IPlaylist playlist in result.AudioService.Playlists)
+                        {
+                            Song song = new Song();
+                            playlist.Songs = playlist.Songs
+                                .Where(s => allSongs.TryGetValue(s.FullPath, out song)).Select(_ => song).ToArray();
+                        }
+                    });
+                }
                 break;
             }
         }
