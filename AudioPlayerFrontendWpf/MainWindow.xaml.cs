@@ -19,6 +19,7 @@ using AudioPlayerBackend.Build;
 using StdOttFramework.RestoreWindow;
 using StdOttStandard.Converter.MultipleInputs;
 using AudioPlayerBackend.Communication;
+using System.Collections.ObjectModel;
 
 namespace AudioPlayerFrontend
 {
@@ -29,10 +30,12 @@ namespace AudioPlayerFrontend
         private readonly ViewModel viewModel;
         private HotKeys hotKeys;
         private bool isChangingSelectedSongIndex;
-        private IPlaylist[] allPlaylists;
+        private readonly ObservableCollection<IPlaylist> allPlaylists;
 
         public MainWindow()
         {
+            allPlaylists = new ObservableCollection<IPlaylist>();
+
             InitializeComponent();
 
             RestoreWindowHandler.Activate(this, RestoreWindowSettings.GetDefault());
@@ -485,12 +488,25 @@ namespace AudioPlayerFrontend
             return null;
         }
 
-        private object MicPlaylists_Convert(object sender, MultiplesInputsConvert2EventArgs args)
+        private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
         {
-            IPlaylist[] newAllPlaylists = (viewModel?.AudioServiceUI?.SourcePlaylists).ToNotNull()
-                .Concat((viewModel?.AudioServiceUI?.Playlists).ToNotNull()).ToArray();
+            IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)args.Input0).ToNotNull()
+                .Concat(((IEnumerable<IPlaylist>)args.Input1).ToNotNull()).ToArray();
 
-            if (!allPlaylists.BothNullOrSequenceEqual(newAllPlaylists)) allPlaylists = newAllPlaylists;
+            for (int i = allPlaylists.Count - 1; i >= 0; i--)
+            {
+                if (!newAllPlaylists.Contains(allPlaylists[i])) allPlaylists.RemoveAt(i);
+            }
+
+            foreach ((int newIndex, IPlaylist playlist) in newAllPlaylists.WithIndex())
+            {
+                int oldIndex = allPlaylists.IndexOf(playlist);
+                if (oldIndex == -1) allPlaylists.Insert(newIndex, playlist);
+                else if (oldIndex != newIndex) allPlaylists.Move(oldIndex, newIndex);
+            }
+
+            if (args.ChangedValueIndex == 3 && args.Input3 != null) args.Input2 = args.Input3;
+            else args.Input3 = args.Input2;
 
             return allPlaylists;
         }

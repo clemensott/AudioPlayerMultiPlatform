@@ -45,8 +45,8 @@ namespace AudioPlayerFrontend
 
         private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
         {
-            IPlaylist[] newAllPlaylists = (viewModel?.Service.Audio?.SourcePlaylists).ToNotNull()
-                .Concat((viewModel?.Service.Audio?.Playlists).ToNotNull()).ToArray();
+            IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)args.Input0).ToNotNull()
+                .Concat(((IEnumerable<IPlaylist>)args.Input1).ToNotNull()).ToArray();
 
             for (int i = allPlaylists.Count - 1; i >= 0; i--)
             {

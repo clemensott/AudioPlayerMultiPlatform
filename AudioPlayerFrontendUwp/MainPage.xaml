@@ -48,8 +48,8 @@
 
         <con:MultipleInputs4Converter x:Name="micPlaylists"
                                       DataContext="{Binding Service.Audio}"
-                                      Input0="{Binding SourcePlaylists.Count}"
-                                      Input1="{Binding Playlists.Count}"
+                                      Input0="{Binding SourcePlaylists}"
+                                      Input1="{Binding Playlists}"
                                       Input2="{Binding CurrentPlaylist,Mode=TwoWay}"
                                       ConvertRef="MicPlaylists_Convert"/>
 
