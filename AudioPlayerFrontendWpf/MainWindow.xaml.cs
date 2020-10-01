@@ -20,6 +20,7 @@ using StdOttFramework.RestoreWindow;
 using StdOttStandard.Converter.MultipleInputs;
 using AudioPlayerBackend.Communication;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 
 namespace AudioPlayerFrontend
 {
@@ -492,25 +493,46 @@ namespace AudioPlayerFrontend
 
         private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
         {
-            IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)args.Input0).ToNotNull()
-                .Concat(((IEnumerable<IPlaylist>)args.Input1).ToNotNull()).ToArray();
-
-            for (int i = allPlaylists.Count - 1; i >= 0; i--)
+            if (args.ChangedValueIndex == 0)
             {
-                if (!newAllPlaylists.Contains(allPlaylists[i])) allPlaylists.RemoveAt(i);
+                if (args.OldValue is INotifyCollectionChanged oldList) oldList.CollectionChanged -= OnCollectionChanged;
+                if (args.Input0 is INotifyCollectionChanged newList) newList.CollectionChanged += OnCollectionChanged;
+            }
+            else if (args.ChangedValueIndex == 1)
+            {
+                if (args.OldValue is INotifyCollectionChanged oldList) oldList.CollectionChanged -= OnCollectionChanged;
+                if (args.Input1 is INotifyCollectionChanged newList) newList.CollectionChanged += OnCollectionChanged;
             }
 
-            foreach ((int newIndex, IPlaylist playlist) in newAllPlaylists.WithIndex())
-            {
-                int oldIndex = allPlaylists.IndexOf(playlist);
-                if (oldIndex == -1) allPlaylists.Insert(newIndex, playlist);
-                else if (oldIndex != newIndex) allPlaylists.Move(oldIndex, newIndex);
-            }
+            UpdateAllPlaylists();
 
             if (args.ChangedValueIndex == 3 && args.Input3 != null) args.Input2 = args.Input3;
             else args.Input3 = args.Input2;
 
             return allPlaylists;
+
+            void OnCollectionChanged(object s, NotifyCollectionChangedEventArgs e)
+            {
+                UpdateAllPlaylists();
+            }
+
+            void UpdateAllPlaylists()
+            {
+                IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)args.Input0).ToNotNull()
+                .Concat(((IEnumerable<IPlaylist>)args.Input1).ToNotNull()).ToArray();
+
+                for (int i = allPlaylists.Count - 1; i >= 0; i--)
+                {
+                    if (!newAllPlaylists.Contains(allPlaylists[i])) allPlaylists.RemoveAt(i);
+                }
+
+                foreach ((int newIndex, IPlaylist playlist) in newAllPlaylists.WithIndex())
+                {
+                    int oldIndex = allPlaylists.IndexOf(playlist);
+                    if (oldIndex == -1) allPlaylists.Insert(newIndex, playlist);
+                    else if (oldIndex != newIndex) allPlaylists.Move(oldIndex, newIndex);
+                }
+            }
         }
 
         private void SldPosition_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
