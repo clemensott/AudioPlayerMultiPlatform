@@ -16,6 +16,10 @@ using System.Threading.Tasks;
 using System.Collections.ObjectModel;
 using StdOttStandard.AsyncResult;
 using System.Collections.Specialized;
+using Windows.UI.Xaml.Controls.Primitives;
+using StdOttUwp;
+using AudioPlayerBackend;
+using StdOttUwp.Converters;
 
 namespace AudioPlayerFrontend
 {
@@ -46,6 +50,8 @@ namespace AudioPlayerFrontend
 
         private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
         {
+            MultipleInputs4Converter converter = (MultipleInputs4Converter)sender;
+
             if (args.ChangedValueIndex == 0)
             {
                 if (args.OldValue is INotifyCollectionChanged oldList) oldList.CollectionChanged -= OnCollectionChanged;
@@ -71,8 +77,8 @@ namespace AudioPlayerFrontend
 
             void UpdateAllPlaylists()
             {
-                IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)args.Input0).ToNotNull()
-                .Concat(((IEnumerable<IPlaylist>)args.Input1).ToNotNull()).ToArray();
+                IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)converter.Input0).ToNotNull()
+                    .Concat(((IEnumerable<IPlaylist>)converter.Input1).ToNotNull()).ToArray();
 
                 for (int i = allPlaylists.Count - 1; i >= 0; i--)
                 {
@@ -188,6 +194,78 @@ namespace AudioPlayerFrontend
         private void LbxPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             atbPlaylists.IsChecked = false;
+        }
+
+        private void GidPlaylistItem_Holding(object sender, HoldingRoutedEventArgs e)
+        {
+            FlyoutBase.ShowAttachedFlyout(sender as FrameworkElement);
+        }
+
+        private void GidPlaylistItem_RightTapped(object sender, RightTappedRoutedEventArgs e)
+        {
+            FlyoutBase.ShowAttachedFlyout(sender as FrameworkElement);
+        }
+
+        private object MicPlaylistUpdateable_Convert(object sender, MultiplesInputsConvert2EventArgs args)
+        {
+            return args.Input0 is ISourcePlaylist && false.Equals(args.Input1);
+        }
+
+        private async void MfiUpdateSongs_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                viewModel.IsUpdatingPlaylists = true;
+                await UwpUtils.GetDataContext<ISourcePlaylist>(sender).Update();
+
+            }
+            catch (Exception exc)
+            {
+                await DialogUtils.ShowSafeAsync(exc.Message, "Update songs error");
+            }
+            finally
+            {
+                viewModel.IsUpdatingPlaylists = false;
+            }
+        }
+
+        private async void MfiReloadSongs_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                viewModel.IsUpdatingPlaylists = true;
+                await UwpUtils.GetDataContext<ISourcePlaylist>(sender).Reload();
+
+            }
+            catch (Exception exc)
+            {
+                await DialogUtils.ShowSafeAsync(exc.Message, "Reload songs error");
+            }
+            finally
+            {
+                viewModel.IsUpdatingPlaylists = false;
+            }
+        }
+
+        private void MfiRemixSongs_Click(object sender, RoutedEventArgs e)
+        {
+            IPlaylist playlist = UwpUtils.GetDataContext<IPlaylist>(sender);
+            playlist.Songs = playlist.Songs.Shuffle().ToArray();
+        }
+
+        private void MfiRemovePlaylist_Click(object sender, RoutedEventArgs e)
+        {
+            IPlaylist playlist = UwpUtils.GetDataContext<IPlaylist>(sender);
+            IAudioService service = viewModel.Service.Audio;
+
+            if (service.CurrentPlaylist == playlist)
+            {
+                service.CurrentPlaylist = service.GetAllPlaylists().Where(p => p != playlist).Any() ?
+                    service.GetAllPlaylists().Next(playlist).next : null;
+            }
+
+            if (playlist is ISourcePlaylist) service.SourcePlaylists.Remove((ISourcePlaylist)playlist);
+            else service.Playlists.Remove(playlist);
         }
 
         private void SplCurrentSong_Tapped(object sender, TappedRoutedEventArgs e)

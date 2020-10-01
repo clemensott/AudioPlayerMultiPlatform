@@ -66,6 +66,7 @@ namespace AudioPlayerFrontend
             if ((bool)micNewPlaylist.Output)
             {
                 newPlaylist.FileMediaSources = sources;
+                newPlaylist.Update();
                 service.SourcePlaylists.Add(newPlaylist);
                 service.CurrentPlaylist = newPlaylist;
             }

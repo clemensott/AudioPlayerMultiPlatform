@@ -113,8 +113,8 @@
                                        Margin="5,0" Text="{Binding Index}"/>
 
                             <TextBlock Grid.Column="2" Grid.Row="0" TextWrapping="Wrap" Text="{Binding Title}"/>
-                            <TextBlock Grid.Column="2" Grid.Row="1" FontStyle="Italic"
-                                       TextWrapping="Wrap" Text="{Binding Artist}"/>
+                            <TextBlock Grid.Column="2" Grid.Row="1" TextWrapping="Wrap" FontStyle="Italic"
+                                       Text="{Binding Artist,TargetNullValue=&lt;Unkown&gt;}"/>
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -169,14 +169,25 @@
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="0,3">
+
+                            <StackPanel Margin="0,3" Loaded="SplPlaylistItem_Loaded">
                                 <TextBlock FontWeight="SemiBold" FontSize="17"
-                                           TextWrapping="Wrap" Text="{Binding Name}"/>
+                                               TextWrapping="Wrap" Text="{Binding Name}"/>
 
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Songs: "/>
                                     <TextBlock Text="{Binding Songs.Length}"/>
                                 </StackPanel>
+
+                                <StackPanel.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Name="mimReloadSongs" Header="Reload songs"
+                                                  Visibility="Collapsed" Click="MimReloadSongs_Click"/>
+                                        <Separator Name="sprUpdatePlaylist" Visibility="Collapsed"/>
+                                        <MenuItem Header="Remix songs" Click="MimRemixSongs_Click"/>
+                                        <MenuItem Header="Remove" Click="MimRemovePlaylist_Click"/>
+                                    </ContextMenu>
+                                </StackPanel.ContextMenu>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -231,7 +242,8 @@
                                 Converter={StaticResource ResourceKey=isPlayingCon}}" />
                 <Button Grid.Column="2" Content="Next" Width="75" Click="OnNext"/>
 
-                <StackPanel Grid.Column="3" DataContext="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
+                <StackPanel Grid.Column="3" VerticalAlignment="Center"
+                            DataContext="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
                             Visibility="{Binding Converter={StaticResource visCon}}"
                             MouseLeftButtonDown="StpCurrentSong_MouseLeftButtonDown"
                             MouseRightButtonUp="StackPanel_MouseRightButtonUp">

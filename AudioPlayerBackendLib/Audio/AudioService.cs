@@ -259,16 +259,16 @@ namespace AudioPlayerBackend.Audio
             {
                 isUpdatingSourcePlaylists = true;
 
-                for (int i = 0; i < sourcePlaylists.Length && i < SourcePlaylists.Count; i++)
+                for (int i = SourcePlaylists.Count - 1; i >= 0; i--)
                 {
-                    SourcePlaylists[i] = (ISourcePlaylist)sourcePlaylists[i];
+                    if (!sourcePlaylists.Contains(SourcePlaylists[i])) SourcePlaylists.RemoveAt(i);
                 }
 
-                SourcePlaylists.RemoveLastToCount<ISourcePlaylist>(sourcePlaylists.Length);
-
-                while (SourcePlaylists.Count < sourcePlaylists.Length)
+                foreach ((int newIndex, ISourcePlaylistBase playlist) in sourcePlaylists.WithIndex())
                 {
-                    SourcePlaylists.Add((ISourcePlaylist)sourcePlaylists[SourcePlaylists.Count]);
+                    int oldIndex = SourcePlaylists.IndexOf(playlist);
+                    if (oldIndex == -1) SourcePlaylists.Insert(newIndex, (ISourcePlaylist)playlist);
+                    else if (oldIndex != newIndex) SourcePlaylists.Move(oldIndex, newIndex);
                 }
             }
             finally
@@ -299,16 +299,16 @@ namespace AudioPlayerBackend.Audio
             {
                 isUpdatingPlaylists = true;
 
-                for (int i = 0; i < playlists.Length && i < Playlists.Count; i++)
+                for (int i = Playlists.Count - 1; i >= 0; i--)
                 {
-                    Playlists[i] = (IPlaylist)playlists[i];
+                    if (!playlists.Contains(Playlists[i])) Playlists.RemoveAt(i);
                 }
 
-                Playlists.RemoveLastToCount<IPlaylist>(playlists.Length);
-
-                while (Playlists.Count < playlists.Length)
+                foreach ((int newIndex, IPlaylistBase playlist) in playlists.WithIndex())
                 {
-                    Playlists.Add((IPlaylist)playlists[Playlists.Count]);
+                    int oldIndex = Playlists.IndexOf(playlist);
+                    if (oldIndex == -1) Playlists.Insert(newIndex, (IPlaylist)playlist);
+                    else if (oldIndex != newIndex) Playlists.Move(oldIndex, newIndex);
                 }
             }
             finally

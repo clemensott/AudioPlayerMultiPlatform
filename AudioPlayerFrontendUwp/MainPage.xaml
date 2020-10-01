@@ -45,6 +45,7 @@
         </Grid.RowDefinitions>
 
         <con:SingleInputConverter x:Name="sicIsUpdating" Output="{Binding IsUpdatingPlaylists}"/>
+        <con:SingleInputConverter x:Name="sicIsClient" Output="{Binding Service.IsClient}"/>
 
         <con:MultipleInputs4Converter x:Name="micPlaylists"
                                       DataContext="{Binding Service.Audio}"
@@ -179,11 +180,15 @@
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid>
+                            <Grid Holding="GidPlaylistItem_Holding" RightTapped="GidPlaylistItem_RightTapped">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
+                                
+                                <con:MultipleInputs2Converter x:Name="micPlaylistUpdateable" Input0="{Binding}" 
+                                                              Input1="{Binding ElementName=sicIsClient,Path=Output}"
+                                                              Convert="MicPlaylistUpdateable_Convert"/>
 
                                 <TextBlock FontWeight="SemiBold" FontSize="17"
                                            TextWrapping="WrapWholeWords" Text="{Binding Name}"/>
@@ -192,6 +197,22 @@
                                     <TextBlock Text="{Binding Songs.Length}"/>
                                     <TextBlock Text=" Song(s)"/>
                                 </StackPanel>
+
+                                <FlyoutBase.AttachedFlyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Text="Update songs" Icon="Refresh" Click="MfiUpdateSongs_Click"
+                                                        IsEnabled="{Binding ElementName=sicIsUpdating,Path=Output,Converter={StaticResource invertCon}}"
+                                                        Visibility="{Binding ElementName=micPlaylistUpdateable,Path=Output,Converter={StaticResource visCon}}"/>
+                                        <MenuFlyoutItem Text="Reload songs" Icon="Refresh" Click="MfiReloadSongs_Click"
+                                                        IsEnabled="{Binding ElementName=sicIsUpdating,Path=Output,Converter={StaticResource invertCon}}"
+                                                        Visibility="{Binding ElementName=micPlaylistUpdateable,Path=Output,Converter={StaticResource visCon}}"/>
+                                        <MenuFlyoutSeparator Visibility="{Binding ElementName=micPlaylistUpdateable,Path=Output,Converter={StaticResource visCon}}"/>
+                                        <MenuFlyoutItem Text="Remix songs" Icon="Shuffle" Click="MfiRemixSongs_Click"
+                                                        IsEnabled="{Binding ElementName=sicIsUpdating,Path=Output,Converter={StaticResource invertCon}}"/>
+                                        <MenuFlyoutItem Text="Remove" Icon="Delete" Click="MfiRemovePlaylist_Click"
+                                                        IsEnabled="{Binding ElementName=sicIsUpdating,Path=Output,Converter={StaticResource invertCon}}"/>
+                                    </MenuFlyout>
+                                </FlyoutBase.AttachedFlyout>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

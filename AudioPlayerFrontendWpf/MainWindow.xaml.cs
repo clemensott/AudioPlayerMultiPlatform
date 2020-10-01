@@ -21,6 +21,9 @@ using StdOttStandard.Converter.MultipleInputs;
 using AudioPlayerBackend.Communication;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using StdOttFramework;
+using System.Globalization;
+using StdOttFramework.Converters;
 
 namespace AudioPlayerFrontend
 {
@@ -142,7 +145,7 @@ namespace AudioPlayerFrontend
                 else if (build.CompleteToken.IsEnded != BuildEndedType.Successful) continue;
 
                 if (build.Communicator != null) build.Communicator.Disconnected += Communicator_Disconnected;
-                else
+                if (!(build.Communicator is IClientCommunicator))
                 {
                     await Task.Run(async () =>
                     {
@@ -493,6 +496,8 @@ namespace AudioPlayerFrontend
 
         private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
         {
+            MultipleInputs4Converter converter = (MultipleInputs4Converter)sender;
+
             if (args.ChangedValueIndex == 0)
             {
                 if (args.OldValue is INotifyCollectionChanged oldList) oldList.CollectionChanged -= OnCollectionChanged;
@@ -518,8 +523,8 @@ namespace AudioPlayerFrontend
 
             void UpdateAllPlaylists()
             {
-                IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)args.Input0).ToNotNull()
-                .Concat(((IEnumerable<IPlaylist>)args.Input1).ToNotNull()).ToArray();
+                IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)converter.Input0).ToNotNull()
+                    .Concat(((IEnumerable<IPlaylist>)converter.Input1).ToNotNull()).ToArray();
 
                 for (int i = allPlaylists.Count - 1; i >= 0; i--)
                 {
@@ -533,6 +538,52 @@ namespace AudioPlayerFrontend
                     else if (oldIndex != newIndex) allPlaylists.Move(oldIndex, newIndex);
                 }
             }
+        }
+
+        private void SplPlaylistItem_Loaded(object sender, RoutedEventArgs e)
+        {
+            FrameworkElement element = (FrameworkElement)sender;
+            bool isPlaylistUpdateable = element.DataContext is ISourcePlaylist &&
+                !(viewModel.Service.Communicator is IClientCommunicator);
+
+            if (!isPlaylistUpdateable) return;
+
+            foreach (FrameworkElement item in element.ContextMenu.Items.OfType<FrameworkElement>())
+            {
+                switch (item.Name)
+                {
+                    case "mimReloadSongs":
+                    case "sprUpdatePlaylist":
+                        item.Visibility = Visibility.Visible;
+                        break;
+                }
+            }
+        }
+
+        private async void MimReloadSongs_Click(object sender, RoutedEventArgs e)
+        {
+            await FrameworkUtils.GetDataContext<ISourcePlaylist>(sender).Reload();
+        }
+
+        private void MimRemixSongs_Click(object sender, RoutedEventArgs e)
+        {
+            IPlaylist playlist = FrameworkUtils.GetDataContext<IPlaylist>(sender);
+            playlist.Songs = playlist.Songs.Shuffle().ToArray();
+        }
+
+        private void MimRemovePlaylist_Click(object sender, RoutedEventArgs e)
+        {
+            IPlaylist playlist = FrameworkUtils.GetDataContext<IPlaylist>(sender);
+            IAudioService service = viewModel.Service.AudioService;
+
+            if (service.CurrentPlaylist == playlist)
+            {
+                service.CurrentPlaylist = service.GetAllPlaylists().Where(p => p != playlist).Any() ?
+                    service.GetAllPlaylists().Next(playlist).next : null;
+            }
+
+            if (playlist is ISourcePlaylist) service.SourcePlaylists.Remove((ISourcePlaylist)playlist);
+            else service.Playlists.Remove(playlist);
         }
 
         private void SldPosition_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
