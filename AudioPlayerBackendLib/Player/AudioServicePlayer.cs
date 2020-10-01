@@ -74,6 +74,11 @@ namespace AudioPlayerBackend.Player
 
         private void Timer_Elapsed(object state)
         {
+            UpdatePosition();
+        }
+
+        private void UpdatePosition()
+        {
             try
             {
                 if (!Player.Source.HasValue ||
@@ -84,7 +89,10 @@ namespace AudioPlayerBackend.Player
 
                 Service.CurrentPlaylist.Position = Player.Position;
             }
-            catch(Exception e) { System.Diagnostics.Debug.WriteLine(e); }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine(e);
+            }
         }
 
         private void Subscribe(IAudioService service)
@@ -220,6 +228,8 @@ namespace AudioPlayerBackend.Player
             }
 
             isSetCurrentSong = false;
+
+            EnableTimer();
         }
 
         private void EnableTimer()
@@ -227,6 +237,8 @@ namespace AudioPlayerBackend.Player
             if (!isSetCurrentSong && Service.CurrentPlaylist?.CurrentSong != null &&
                 Service.PlayState == PlaybackState.Playing) StartTimer();
             else StopTimer();
+
+            UpdatePosition();
         }
 
         private void StartTimer()
