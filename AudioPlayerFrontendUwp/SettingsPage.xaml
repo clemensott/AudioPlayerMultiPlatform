@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:con="using:StdOttUwp.Converters"
+    xmlns:audio="using:AudioPlayerBackend.Audio"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
@@ -14,6 +15,10 @@
         <con:EnumConverter x:Key="communicatorProtocolCon"/>
         <local:FloatNullableToFloatConverter x:Key="volCon"/>
         <local:FloatNullableToFloatConverter x:Key="clientVolCon"/>
+
+        <con:ValueConverter x:Key="shuffleCon"
+                            ConvertEvent="ShuffleConverter_ConvertEvent"
+                            ConvertBackEvent="ShuffleConverter_ConvertBackEvent"/>
     </Page.Resources>
 
     <ScrollViewer>
@@ -89,11 +94,31 @@
             </StackPanel>
 
             <StackPanel Margin="3,10,3,3" VerticalAlignment="Center">
-                <TextBlock Text="Shuffle:" FontSize="17" FontWeight="Bold" Margin="5,0"/>
+                <TextBlock Text="Shuffle:" FontSize="17" FontWeight="Bold" Margin="5,3"/>
 
-                <CheckBox Content="Shuffle all songs" Margin="3"
-                          IsChecked="{Binding IsAllShuffle,Mode=TwoWay}"
-                          RightTapped="CbxAllShuffle_RightTapped"/>
+                <ComboBox Width="150" Margin="3" HorizontalAlignment="Left" SelectedValuePath="DataContext"
+                          SelectedValue="{Binding Shuffle,Mode=TwoWay,Converter={StaticResource shuffleCon},ConverterParameter=none}">
+                    <ComboBoxItem DataContext="none">None</ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:OrderType>ByTitleAndArtist</audio:OrderType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Title and Artist</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:OrderType>ByPath</audio:OrderType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>File path</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:OrderType>Custom</audio:OrderType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Shuffle</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                </ComboBox>
+                
                 <CheckBox Content="Shuffle search songs" Margin="3"
                           IsChecked="{Binding IsSearchShuffle,Mode=TwoWay}"
                           RightTapped="CbxSearchShuffle_RightTapped"/>

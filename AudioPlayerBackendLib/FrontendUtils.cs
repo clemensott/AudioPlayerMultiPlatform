@@ -77,7 +77,7 @@ namespace AudioPlayerBackend
                 {
                     Name = "Custom",
                     Loop = LoopType.Next,
-                    IsAllShuffle = true
+                    Shuffle = OrderType.Custom
                 };
 
                 if (prepend || !currentSong.HasValue)

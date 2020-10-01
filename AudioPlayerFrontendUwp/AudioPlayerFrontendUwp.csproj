@@ -106,6 +106,7 @@
     <Compile Include="Converter\FilePathsToSingleStringConverter.cs" />
     <Compile Include="Converter\FloatNullableToFloatConverter.cs" />
     <Compile Include="Converter\IsIMqttAudioConverter.cs" />
+    <Compile Include="Converter\OrderIconConverter.cs" />
     <Compile Include="Converter\LoopIconConverter.cs" />
     <Compile Include="Join\HandledEventArgs.cs" />
     <Compile Include="Join\NotifyPropertyChangedHelper.cs" />

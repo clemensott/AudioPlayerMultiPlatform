@@ -5,8 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AudioPlayerFrontend"
         xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
+        xmlns:audio="clr-namespace:AudioPlayerBackend.Audio;assembly=AudioPlayerBackendLib"
         mc:Ignorable="d"
-        Title="SettingsWindow" MinHeight="310" MinWidth="400" Height="350" Width="700">
+        Title="SettingsWindow" MinHeight="400" MinWidth="400" Height="450" Width="700">
 
     <Window.Resources>
         <con:FalsyConverter x:Key="inverter"/>
@@ -31,10 +32,12 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Orientation="Horizontal">
                         <StackPanel VerticalAlignment="Center" Margin="0,0,0,5">
+                            <TextBlock Text="Mode:" FontWeight="Bold" Margin="3,0"/>
                             <RadioButton x:Name="rbnStandalone" Content="Standalone" GroupName="Mode"
                                          IsChecked="{Binding BuildStandalone,Mode=OneWay}"
                                          Margin="5,5,0,0" Checked="RbnStandalone_Checked"/>
@@ -71,7 +74,7 @@
                     </StackPanel>
 
                     <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="3">
-                        <TextBlock Text="Protocol:" FontWeight="SemiBold" Margin="3,0"/>
+                        <TextBlock Text="Protocol:" FontWeight="Bold" Margin="3,0"/>
 
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Content="Own TCP" Margin="2" HorizontalAlignment="Left" GroupName="Protocol"
@@ -83,24 +86,47 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="3,10,3,3" VerticalAlignment="Center">
-                        <CheckBox Content="Shuffle all songs" Margin="3"
-                                  IsChecked="{Binding IsAllShuffle,Mode=TwoWay}"
-                                  MouseRightButtonUp="CbxAllShuffle_MouseRightButtonUp"/>
-                        <CheckBox Content="Shuffle search songs" Margin="3"
-                                  IsChecked="{Binding IsSearchShuffle,Mode=TwoWay}"
-                                  MouseRightButtonUp="CbxSearchShuffle_MouseRightButtonUp"/>
+                    <StackPanel Grid.Row="2" Margin="3,10,3,3">
+                        <TextBlock Text="Volume:" FontWeight="Bold" VerticalAlignment="Center" Margin="3,0"/>
+                        <Slider Maximum="1" Width="300" Margin="3,0,0,0" HorizontalAlignment="Left"
+                                Value="{Binding Volume,Mode=TwoWay,Converter={StaticResource volCon}}"
+                                MouseRightButtonUp="SldVolume_MouseRightButtonUp"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="3">
+                    <StackPanel Grid.Row="3" Margin="3,10,3,3" VerticalAlignment="Center">
+                        <TextBlock Text="Shuffle type:" FontWeight="Bold" Margin="3,0" VerticalAlignment="Center"/>
+                        <ComboBox Width="130" Margin="3" HorizontalAlignment="Left" SelectedValuePath="DataContext"
+                                  SelectedValue="{Binding Shuffle,Mode=TwoWay}">
+                            <ComboBoxItem>None</ComboBoxItem>
+                            <ComboBoxItem>
+                                <ComboBoxItem.DataContext>
+                                    <audio:OrderType>ByTitleAndArtist</audio:OrderType>
+                                </ComboBoxItem.DataContext>
+                                <ComboBoxItem.Content>Title and Artist</ComboBoxItem.Content>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <ComboBoxItem.DataContext>
+                                    <audio:OrderType>ByPath</audio:OrderType>
+                                </ComboBoxItem.DataContext>
+                                <ComboBoxItem.Content>File path</ComboBoxItem.Content>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <ComboBoxItem.DataContext>
+                                    <audio:OrderType>Custom</audio:OrderType>
+                                </ComboBoxItem.DataContext>
+                                <ComboBoxItem.Content>Shuffle</ComboBoxItem.Content>
+                            </ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="3">
+                        <CheckBox Content="Shuffle search songs" Margin="3,0" VerticalAlignment="Center"
+                                  IsChecked="{Binding IsSearchShuffle,Mode=TwoWay}"
+                                  MouseRightButtonUp="CbxSearchShuffle_MouseRightButtonUp"/>
+
                         <CheckBox Name="cbxPlay" Content="Play" Margin="3,0"
                                   VerticalAlignment="Center" IsChecked="{Binding Play,Mode=TwoWay}"
                                   MouseRightButtonUp="CbxPlay_MouseRightButtonUp"/>
-
-                        <TextBlock Text="Volume:" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        <Slider Maximum="1" Width="100" Margin="3,0,0,0"
-                                Value="{Binding Volume,Mode=TwoWay,Converter={StaticResource volCon}}"
-                                MouseRightButtonUp="SldVolume_MouseRightButtonUp"/>
 
                         <CheckBox Content="Stream to client:" VerticalAlignment="Center" Margin="10,0,0,0"
                                   IsChecked="{Binding IsStreaming,Mode=TwoWay}"
@@ -108,8 +134,8 @@
                                   MouseRightButtonUp="CbxStreaming_MouseRightButtonUp"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="4" Margin="3,10,3,10">
-                        <TextBlock Text="Serach:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="3,2"/>
+                    <StackPanel Grid.Row="5" Margin="3,10,3,10">
+                        <TextBlock Text="Serach:" VerticalAlignment="Center" FontWeight="Bold" Margin="3,2"/>
                         <TextBox Grid.Column="1" Text="{Binding SearchKey,Mode=TwoWay}"/>
                     </StackPanel>
                 </Grid>

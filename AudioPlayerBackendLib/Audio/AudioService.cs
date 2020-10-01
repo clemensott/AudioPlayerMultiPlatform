@@ -58,8 +58,8 @@ namespace AudioPlayerBackend.Audio
 
                 OnPropertyChanged(nameof(IsSearchShuffle));
 
-                if (IsSearchShuffle) AllSongs = SongsService.GetShuffledSongs(SourcePlaylists).ToBuffer();
-                else SearchSongs = SongsService.GetSearchSongs(this).ToBuffer();
+                if (IsSearchShuffle) AllSongs = SongsHelper.GetShuffledSongs(SourcePlaylists).ToBuffer();
+                else SearchSongs = SongsHelper.GetSearchSongs(this).ToBuffer();
             }
         }
 
@@ -76,7 +76,7 @@ namespace AudioPlayerBackend.Audio
 
                 OnPropertyChanged(nameof(SearchKey));
 
-                IsSearching = SongsService.GetIsSearching(SearchKey);
+                IsSearching = SongsHelper.GetIsSearching(SearchKey);
 
                 UpdateSearchSongs();
             }
@@ -200,7 +200,7 @@ namespace AudioPlayerBackend.Audio
                 allSongs = value.ToBuffer();
                 OnPropertyChanged(nameof(AllSongs));
 
-                SearchSongs = SongsService.GetSearchSongs(this);
+                SearchSongs = SongsHelper.GetSearchSongs(this);
             }
         }
 
@@ -364,7 +364,7 @@ namespace AudioPlayerBackend.Audio
                 return;
             }
 
-            (Song? newCurrentSong, bool overflow) = SongsService.GetNextSong(currentPlaylist, currentSong);
+            (Song? newCurrentSong, bool overflow) = SongsHelper.GetNextSong(currentPlaylist, currentSong);
 
             if (currentPlaylist.Loop == LoopType.StopCurrentSong)
             {
@@ -390,12 +390,12 @@ namespace AudioPlayerBackend.Audio
 
         public void SetNextSong()
         {
-            ChangeCurrentSongOrRestart(CurrentPlaylist, SongsService.GetNextSong(CurrentPlaylist).song);
+            ChangeCurrentSongOrRestart(CurrentPlaylist, SongsHelper.GetNextSong(CurrentPlaylist).song);
         }
 
         public void SetPreviousSong()
         {
-            ChangeCurrentSongOrRestart(CurrentPlaylist, SongsService.GetPreviousSong(CurrentPlaylist).song);
+            ChangeCurrentSongOrRestart(CurrentPlaylist, SongsHelper.GetPreviousSong(CurrentPlaylist).song);
         }
 
         private static void ChangeCurrentSongOrRestart(IPlaylistBase playlist, Song? newCurrentSong)
@@ -407,7 +407,7 @@ namespace AudioPlayerBackend.Audio
         {
             string searchKey = SearchKey;
 
-            Song[] searchSongs = await Task.Run(() => SongsService.GetSearchSongs(this).Take(50).ToArray());
+            Song[] searchSongs = await Task.Run(() => SongsHelper.GetSearchSongs(this).Take(50).ToArray());
             if (searchKey == SearchKey) SearchSongs = searchSongs;
         }
 

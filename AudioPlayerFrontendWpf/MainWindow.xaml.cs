@@ -22,7 +22,6 @@ using AudioPlayerBackend.Communication;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using StdOttFramework;
-using System.Globalization;
 using StdOttFramework.Converters;
 
 namespace AudioPlayerFrontend
@@ -469,29 +468,6 @@ namespace AudioPlayerFrontend
             else lbxIndex = -1;
 
             return songs;
-        }
-
-        private object MicShuffle_ConvertRef(object sender, MultiplesInputsConvert4EventArgs args)
-        {
-            if (args.Input0 == null || args.Input1 == null || args.Input2 == null)
-            {
-                args.Input3 = false;
-                return null;
-            }
-
-            bool isSearching = (bool)args.Input0;
-            bool isAllShuffle = (bool)args.Input1;
-            bool isSearchShuffle = (bool)args.Input2;
-            bool? isShuffle = (bool?)args.Input3;
-
-            if (args.ChangedValueIndex == 3 && isShuffle.HasValue)
-            {
-                if (isSearching) args.Input2 = isShuffle;
-                else args.Input1 = isShuffle;
-            }
-            else args.Input3 = isSearching ? isSearchShuffle : isAllShuffle;
-
-            return null;
         }
 
         private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)

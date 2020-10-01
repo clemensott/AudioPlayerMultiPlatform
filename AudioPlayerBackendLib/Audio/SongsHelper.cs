@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace AudioPlayerBackend.Audio
 {
-    static class SongsService
+    static class SongsHelper
     {
         private static readonly Random ran = new Random();
 
@@ -22,12 +22,24 @@ namespace AudioPlayerBackend.Audio
 
         public static IEnumerable<Song> GetAllSongs(IPlaylistBase playlist)
         {
-            return GetAllSongs(playlist.Songs, playlist.IsAllShuffle);
+            return GetAllSongs(playlist.Songs, playlist.Shuffle);
         }
 
-        public static IEnumerable<Song> GetAllSongs(IEnumerable<Song> allSongsShuffled, bool isAllShuffle)
+        public static IEnumerable<Song> GetAllSongs(IEnumerable<Song> allSongsShuffled, OrderType shuffle)
         {
-            return isAllShuffle ? allSongsShuffled : GetOrderedSongs(allSongsShuffled);
+            switch (shuffle)
+            {
+                case OrderType.ByTitleAndArtist:
+                    return allSongsShuffled.OrderBy(s => s.Title).ThenBy(s => s.Artist);
+
+                case OrderType.ByPath:
+                    return allSongsShuffled.OrderBy(s => s.FullPath);
+                    
+                case OrderType.Custom:
+                    return allSongsShuffled;
+            }
+
+            throw new ArgumentException("Type is not implemented: " + shuffle, nameof(shuffle));
         }
 
         public static IEnumerable<Song> GetSearchSongs(IAudioService service)
@@ -102,11 +114,6 @@ namespace AudioPlayerBackend.Audio
             return song.Artist?.ToLower().IndexOf(lowerSearchKey) ?? -1;
         }
         #endregion
-
-        private static IEnumerable<Song> GetOrderedSongs(IEnumerable<Song> allSongs)
-        {
-            return allSongs.OrderBy(s => s.Title).ThenBy(s => s.Artist);
-        }
 
         public static (Song? song, bool overflow) GetNextSong(IPlaylistBase playlist, Song? currentSong = null)
         {

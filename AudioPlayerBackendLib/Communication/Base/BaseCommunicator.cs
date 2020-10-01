@@ -112,7 +112,7 @@ namespace AudioPlayerBackend.Communication.Base
 
             playlist.CurrentSongChanged += OnPlaylistCurrentSongChanged;
             playlist.DurationChanged += OnPlaylistDurationChanged;
-            playlist.IsAllShuffleChanged += OnPlaylistIsAllShuffleChanged;
+            playlist.ShuffleChanged += OnPlaylistShuffleChanged;
             playlist.LoopChanged += OnPlaylistLoopChanged;
             playlist.NameChanged += OnPlaylistNameChanged;
             playlist.PositionChanged += OnPlaylistPositionChanged;
@@ -126,7 +126,7 @@ namespace AudioPlayerBackend.Communication.Base
 
             playlist.CurrentSongChanged -= OnPlaylistCurrentSongChanged;
             playlist.DurationChanged -= OnPlaylistDurationChanged;
-            playlist.IsAllShuffleChanged -= OnPlaylistIsAllShuffleChanged;
+            playlist.ShuffleChanged -= OnPlaylistShuffleChanged;
             playlist.LoopChanged -= OnPlaylistLoopChanged;
             playlist.NameChanged -= OnPlaylistNameChanged;
             playlist.PositionChanged -= OnPlaylistPositionChanged;
@@ -179,7 +179,7 @@ namespace AudioPlayerBackend.Communication.Base
         {
         }
 
-        protected virtual void OnPlaylistIsAllShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
+        protected virtual void OnPlaylistShuffleChanged(object sender, ValueChangedEventArgs<OrderType> e)
         {
         }
 

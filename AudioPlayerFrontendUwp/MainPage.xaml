@@ -33,6 +33,7 @@
         <con:FalsyConverter x:Key="invertCon"/>
 
         <local:LoopIconConverter x:Key="loopIcoCon" />
+        <local:OrderIconConverter x:Key="shuffleIcoCon" />
 
         <x:Int32 x:Key="negativeOne">-1</x:Int32>
         <Visibility x:Key="collapsed">Collapsed</Visibility>
@@ -95,11 +96,9 @@
                                 Symbol="{Binding Audio.CurrentPlaylist.Loop,Converter={StaticResource loopIcoCon}}"
                                 Visibility="{Binding Audio.CurrentPlaylist,Converter={StaticResource visCon}}"/>
 
-                <ToggleButton Grid.Column="2" Margin="3" 
-                              IsChecked="{Binding Audio.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}"
-                              Visibility="{Binding Audio.CurrentPlaylist,Converter={StaticResource visCon}}">
-                    <SymbolIcon Symbol="Shuffle"/>
-                </ToggleButton>
+                <ctl:IconButton Grid.Column="2" Margin="3" Click="IbnOrderType_Click"
+                                Symbol="{Binding Audio.CurrentPlaylist.Shuffle,Converter={StaticResource shuffleIcoCon}}"
+                                Visibility="{Binding Audio.CurrentPlaylist,Converter={StaticResource visCon}}"/>
 
                 <ctl:IconButton Grid.Column="3" Symbol="Find" Margin="3" Click="IbnSearch_Click"/>
             </Grid>

@@ -23,6 +23,7 @@
         <local:IsAudioStreamPlayerConverter x:Key="isClientCon"/>
 
         <con:VisibleCollapsedConverter x:Key="visCon"/>
+        <con:CollapsedVisibleConverter x:Key="colCon"/>
 
         <sys:Int32 x:Key="negativeOne">-1</sys:Int32>
         <sys:String x:Key="emptyString">empty</sys:String>
@@ -36,7 +37,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Margin="5,3"
+        <Grid Margin="3"
               Visibility="{Binding AudioServiceUI,Converter={StaticResource visCon}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -45,22 +46,41 @@
             </Grid.ColumnDefinitions>
 
             <TextBlock Text="Search:" FontWeight="Bold" Margin="0,0,5,0" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="1" Name="tbxSearch" HorizontalAlignment="Stretch"
-                     Text="{Binding AudioServiceUI.SearchKey,
-                     Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
-                       PreviewKeyDown="TbxSearch_PreviewKeyDown"/>
+            <TextBox Grid.Column="1" Name="tbxSearch" Margin="0,3" HorizontalAlignment="Stretch"
+                     VerticalAlignment="Center" Text="{Binding AudioServiceUI.SearchKey,
+                       Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+                     PreviewKeyDown="TbxSearch_PreviewKeyDown"/>
 
-            <con:MultipleInputs4Converter x:Name="micShuffle"
-                                          Input0="{Binding AudioServiceUI.IsSearching}"
-                                          Input1="{Binding AudioServiceUI.CurrentPlaylist.IsAllShuffle,Mode=TwoWay}"
-                                          Input2="{Binding AudioServiceUI.IsSearchShuffle,Mode=TwoWay}"
-                                          ConvertRef="MicShuffle_ConvertRef"/>
+            <Grid Grid.Column="2" Margin="5,0,0,0" Width="110"
+                  Visibility="{Binding AudioServiceUI.CurrentPlaylist,
+                    Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
+                <ComboBox SelectedValuePath="DataContext"
+                          SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Shuffle,Mode=TwoWay}"
+                          Visibility="{Binding AudioServiceUI.IsSearching,Converter={StaticResource colCon}}">
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:OrderType>ByTitleAndArtist</audio:OrderType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Title and Artist</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:OrderType>ByPath</audio:OrderType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>File path</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:OrderType>Custom</audio:OrderType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Shuffle</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                </ComboBox>
 
-            <CheckBox Grid.Column="2" Margin="5,3" Content="Shuffle" VerticalAlignment="Center"
-                      IsChecked="{Binding ElementName=micShuffle,Path=Input3,
-                        Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
-                      Visibility="{Binding AudioServiceUI.CurrentPlaylist,
-                        Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}"/>
+                <CheckBox Margin="5,0" Content="Shuffle" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          IsChecked="{Binding AudioServiceUI.IsSearchShuffle,Mode=TwoWay}"
+                          Visibility="{Binding AudioServiceUI.IsSearching,Converter={StaticResource visCon}}"/>
+            </Grid>
 
             <!--<StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center"
                         Visibility="{Binding ServicePlayerUI,Converter={StaticResource isClientCon}}">
@@ -147,15 +167,40 @@
                             Maximum="1" Value="{Binding AudioServiceUI.Volume}" />
                 </Grid>
 
-                <ComboBox Grid.Row="1" Margin="0,5,0,0"
+                <ComboBox Grid.Row="1" Margin="0,5,0,0" SelectedValuePath="DataContext"
                           SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Loop,Mode=TwoWay}"
                           Visibility="{Binding AudioServiceUI.CurrentPlaylist,
                             Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
-                    <audio:LoopType>Next</audio:LoopType>
-                    <audio:LoopType>Stop</audio:LoopType>
-                    <audio:LoopType>CurrentPlaylist</audio:LoopType>
-                    <audio:LoopType>CurrentSong</audio:LoopType>
-                    <audio:LoopType>StopCurrentSong</audio:LoopType>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>Next</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Next playlist</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>Stop</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Next playlist and stop</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>CurrentPlaylist</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Repeat playlist</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>CurrentSong</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Repeat current song</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>StopCurrentSong</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Next song and stop</ComboBoxItem.Content>
+                    </ComboBoxItem>
                 </ComboBox>
 
                 <con:MultipleInputs4Converter x:Name="micPlaylists"

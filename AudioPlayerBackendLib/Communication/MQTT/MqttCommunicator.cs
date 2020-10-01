@@ -125,7 +125,7 @@ namespace AudioPlayerBackend.Communication.MQTT
 
             IEnumerable<Task> Publish()
             {
-                yield return PublishIsAllShuffle(playlist);
+                yield return PublishShuffle(playlist);
                 yield return PublishLoop(playlist);
                 yield return PublishName(playlist);
                 yield return PublishPosition(playlist);
@@ -235,17 +235,17 @@ namespace AudioPlayerBackend.Communication.MQTT
             return PublishPlaylistAsync(playlist, nameof(playlist.Duration), data);
         }
 
-        protected override async void OnPlaylistIsAllShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
+        protected override async void OnPlaylistShuffleChanged(object sender, ValueChangedEventArgs<OrderType> e)
         {
-            await PublishIsAllShuffle((IPlaylistBase)sender);
+            await PublishShuffle((IPlaylistBase)sender);
         }
 
-        protected Task PublishIsAllShuffle(IPlaylistBase playlist)
+        protected Task PublishShuffle(IPlaylistBase playlist)
         {
             ByteQueue data = new ByteQueue();
-            data.Enqueue(playlist.IsAllShuffle);
+            data.Enqueue((int)playlist.Shuffle);
 
-            return PublishPlaylistAsync(playlist, nameof(playlist.IsAllShuffle), data);
+            return PublishPlaylistAsync(playlist, nameof(playlist.Shuffle), data);
         }
 
         protected override async void OnPlaylistLoopChanged(object sender, ValueChangedEventArgs<LoopType> e)
@@ -511,8 +511,8 @@ namespace AudioPlayerBackend.Communication.MQTT
                     playlist.Duration = data.DequeueTimeSpan();
                     break;
 
-                case nameof(playlist.IsAllShuffle):
-                    playlist.IsAllShuffle = data.DequeueBool();
+                case nameof(playlist.Shuffle):
+                    playlist.Shuffle = (OrderType)data.DequeueInt();
                     break;
 
                 case nameof(playlist.Loop):
@@ -629,7 +629,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             yield return prefix + nameof(playlist.CurrentSong);
             yield return prefix + nameof(playlist.Songs);
             yield return prefix + nameof(playlist.Duration);
-            yield return prefix + nameof(playlist.IsAllShuffle);
+            yield return prefix + nameof(playlist.Shuffle);
             yield return prefix + nameof(playlist.Loop);
             yield return prefix + nameof(playlist.Name);
             yield return prefix + nameof(playlist.Position);

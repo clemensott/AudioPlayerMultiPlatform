@@ -242,7 +242,7 @@ namespace AudioPlayerBackend.Communication.Base
             Enqueue(playlist.Songs);
             Enqueue(playlist.Name);
             Enqueue(playlist.Duration);
-            Enqueue(playlist.IsAllShuffle);
+            Enqueue((int)playlist.Shuffle);
             Enqueue((int)playlist.Loop);
             Enqueue(playlist.Position);
             Enqueue(playlist.WannaSong);
@@ -259,7 +259,7 @@ namespace AudioPlayerBackend.Communication.Base
             playlist.Songs = DequeueSongs();
             playlist.Name = DequeueString();
             playlist.Duration = DequeueTimeSpan();
-            playlist.IsAllShuffle = DequeueBool();
+            playlist.Shuffle = (OrderType)DequeueInt();
             playlist.Loop = (LoopType)DequeueInt();
             playlist.Position = DequeueTimeSpan();
             playlist.WannaSong = DequeueNullableRequestSong();

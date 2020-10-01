@@ -1,6 +1,8 @@
-﻿using AudioPlayerBackend.Build;
+﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Build;
 using StdOttStandard.AsyncResult;
 using StdOttUwp.Converters;
+using System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -64,6 +66,16 @@ namespace AudioPlayerFrontend
             if (!result.HasResult) result.SetValue(null);
         }
 
+        private object ShuffleConverter_ConvertEvent(object value, Type targetType, object parameter, string language)
+        {
+            return value ?? parameter;
+        }
+
+        private object ShuffleConverter_ConvertBackEvent(object value, Type targetType, object parameter, string language)
+        {
+            return parameter.Equals(value) ? (OrderType?)null : (OrderType)value;
+        }
+
         private void RbnStandalone_Checked(object sender, RoutedEventArgs e)
         {
             ServiceBuilder?.WithStandalone();
@@ -93,7 +105,7 @@ namespace AudioPlayerFrontend
 
         private void CbxAllShuffle_RightTapped(object sender, RightTappedRoutedEventArgs e)
         {
-            if (ServiceBuilder != null) ServiceBuilder.IsAllShuffle = null;
+            if (ServiceBuilder != null) ServiceBuilder.Shuffle = null;
         }
 
         private void CbxSearchShuffle_RightTapped(object sender, RightTappedRoutedEventArgs e)

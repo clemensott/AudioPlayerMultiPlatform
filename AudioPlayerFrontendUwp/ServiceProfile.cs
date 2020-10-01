@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.Build;
+﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Build;
 
 namespace AudioPlayerFrontend
 {
@@ -12,7 +13,7 @@ namespace AudioPlayerFrontend
 
         public CommunicatorProtocol CommunicatorProtocol { get; set; }
 
-        public bool? IsAllShuffle { get; set; }
+        public int? Shuffle { get; set; }
 
         public bool? IsSearchShuffle { get; set; }
 
@@ -38,7 +39,7 @@ namespace AudioPlayerFrontend
             BuildServer = sb.BuildServer;
             BuildClient = sb.BuildClient;
             CommunicatorProtocol = sb.CommunicatorProtocol;
-            IsAllShuffle = sb.IsAllShuffle;
+            Shuffle = (int?)sb.Shuffle;
             IsSearchShuffle = sb.IsSearchShuffle;
             Play = sb.Play;
             IsStreaming = sb.IsStreaming;
@@ -58,7 +59,7 @@ namespace AudioPlayerFrontend
 
             builder
                 .WithCommunicatorProtocol(CommunicatorProtocol)
-                .WithIsAllShuffle(IsAllShuffle)
+                .WithShuffle((OrderType?)Shuffle)
                 .WithIsSearchShuffle(IsSearchShuffle)
                 .WithPlay(Play)
                 .WithIsStreaming(IsStreaming)

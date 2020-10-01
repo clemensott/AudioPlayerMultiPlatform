@@ -40,7 +40,8 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <ListBox Name="lbxPlaylists" SelectionMode="Single" Margin="3" ItemsSource="{Binding SourcePlaylists}">
+            <ListBox Name="lbxPlaylists" SelectionMode="Single" Margin="3"
+                     MaxHeight="100" ItemsSource="{Binding SourcePlaylists}">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Name}"/>
@@ -76,16 +77,61 @@
             <TextBox Grid.Row="1" x:Name="tbxName" Margin="3,2" Text="{Binding Name,Mode=TwoWay}"/>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
-                <ComboBox Margin="5,3" Width="130" SelectedValue="{Binding Loop,Mode=TwoWay}">
-                    <audio:LoopType>Next</audio:LoopType>
-                    <audio:LoopType>Stop</audio:LoopType>
-                    <audio:LoopType>CurrentPlaylist</audio:LoopType>
-                    <audio:LoopType>CurrentSong</audio:LoopType>
-                    <audio:LoopType>StopCurrentSong</audio:LoopType>
+                <ComboBox Margin="5,3" Width="130" SelectedValuePath="DataContext"
+                          SelectedValue="{Binding Shuffle,Mode=TwoWay}">
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:OrderType>ByTitleAndArtist</audio:OrderType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Title and Artist</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:OrderType>ByPath</audio:OrderType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>File path</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:OrderType>Custom</audio:OrderType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Shuffle</ComboBoxItem.Content>
+                    </ComboBoxItem>
                 </ComboBox>
 
-                <CheckBox Grid.Row="2" Content="Is all shuffle" Margin="5,0"
-                          VerticalAlignment="Center" IsChecked="{Binding IsAllShuffle}"/>
+                <ComboBox Margin="5,3" Width="140" SelectedValuePath="DataContext"
+                          SelectedValue="{Binding Loop,Mode=TwoWay}">
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>Next</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Next playlist</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>Stop</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Next playlist and stop</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>CurrentPlaylist</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Repeat playlist</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>CurrentSong</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Repeat current song</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                    <ComboBoxItem>
+                        <ComboBoxItem.DataContext>
+                            <audio:LoopType>StopCurrentSong</audio:LoopType>
+                        </ComboBoxItem.DataContext>
+                        <ComboBoxItem.Content>Next song and stop</ComboBoxItem.Content>
+                    </ComboBoxItem>
+                </ComboBox>
             </StackPanel>
         </Grid>
 

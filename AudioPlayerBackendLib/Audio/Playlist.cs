@@ -7,18 +7,18 @@ namespace AudioPlayerBackend.Audio
 {
     public class Playlist : IPlaylist, IEquatable<Playlist>
     {
-        private bool isAllShuffle;
         private string name;
-        private TimeSpan position, duration;
+        private OrderType shuffle;
         private LoopType loop;
+        private TimeSpan position, duration;
         private Song? currentSong;
         private RequestSong? wannaSong;
         private Song[] songs;
         private IEnumerable<Song> allSongs;
         private readonly INotifyPropertyChangedHelper helper;
 
-        public event EventHandler<ValueChangedEventArgs<bool>> IsAllShuffleChanged;
         public event EventHandler<ValueChangedEventArgs<string>> NameChanged;
+        public event EventHandler<ValueChangedEventArgs<OrderType>> ShuffleChanged;
         public event EventHandler<ValueChangedEventArgs<LoopType>> LoopChanged;
         public event EventHandler<ValueChangedEventArgs<TimeSpan>> PositionChanged;
         public event EventHandler<ValueChangedEventArgs<TimeSpan>> DurationChanged;
@@ -27,21 +27,6 @@ namespace AudioPlayerBackend.Audio
         public event EventHandler<ValueChangedEventArgs<Song[]>> SongsChanged;
 
         public Guid ID { get; }
-
-        public bool IsAllShuffle
-        {
-            get => isAllShuffle;
-            set
-            {
-                if (value == isAllShuffle) return;
-
-                var args = new ValueChangedEventArgs<bool>(IsAllShuffle, value);
-                isAllShuffle = value;
-                IsAllShuffleChanged?.Invoke(this, args);
-
-                OnIsAllShuffleChanged();
-            }
-        }
 
         public string Name
         {
@@ -54,7 +39,22 @@ namespace AudioPlayerBackend.Audio
                 name = value;
                 NameChanged?.Invoke(this, args);
 
-                OnIsAllShuffleChanged();
+                OnNameChanged();
+            }
+        }
+
+        public OrderType Shuffle
+        {
+            get => shuffle;
+            set
+            {
+                if (value == shuffle) return;
+
+                var args = new ValueChangedEventArgs<OrderType>(Shuffle, value);
+                shuffle = value;
+                ShuffleChanged?.Invoke(this, args);
+
+                OnShuffleChanged();
             }
         }
 
@@ -180,11 +180,11 @@ namespace AudioPlayerBackend.Audio
             Songs = new Song[0];
         }
 
-        protected virtual void OnIsAllShuffleChanged()
+        protected virtual void OnShuffleChanged()
         {
-            OnPropertyChanged(nameof(IsAllShuffle));
+            OnPropertyChanged(nameof(Shuffle));
 
-            AllSongs = SongsService.GetAllSongs(this).ToBuffer();
+            AllSongs = SongsHelper.GetAllSongs(this).ToBuffer();
         }
 
         protected virtual void OnNameChanged()
@@ -216,7 +216,7 @@ namespace AudioPlayerBackend.Audio
         {
             OnPropertyChanged(nameof(Songs));
 
-            AllSongs = SongsService.GetAllSongs(this).ToBuffer();
+            AllSongs = SongsHelper.GetAllSongs(this).ToBuffer();
         }
 
         protected virtual void OnAllSongsChanged()
@@ -245,7 +245,7 @@ namespace AudioPlayerBackend.Audio
         {
             return other != null &&
                    ID.Equals(other.ID) &&
-                   IsAllShuffle == other.IsAllShuffle &&
+                   Shuffle == other.Shuffle &&
                    Loop == other.Loop &&
                    Position.Equals(other.Position) &&
                    Duration.Equals(other.Duration) &&

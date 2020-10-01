@@ -16,7 +16,8 @@ namespace AudioPlayerBackend.Build
     public class ServiceBuilder : INotifyPropertyChanged
     {
         private readonly IServiceBuilderHelper helper;
-        private bool? isAllShuffle, isSearchShuffle, play, isStreaming;
+        private bool? isSearchShuffle, play, isStreaming;
+        private OrderType? shuffle;
         private int serverPort;
         private int? clientPort;
         private string searchKey, serverAddress, dataFilePath;
@@ -43,18 +44,6 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public bool? IsAllShuffle
-        {
-            get => isAllShuffle;
-            set
-            {
-                if (value == isAllShuffle) return;
-
-                isAllShuffle = value;
-                OnPropertyChanged(nameof(IsAllShuffle));
-            }
-        }
-
         public bool? IsSearchShuffle
         {
             get => isSearchShuffle;
@@ -64,6 +53,18 @@ namespace AudioPlayerBackend.Build
 
                 isSearchShuffle = value;
                 OnPropertyChanged(nameof(IsSearchShuffle));
+            }
+        }
+
+        public OrderType? Shuffle
+        {
+            get => shuffle;
+            set
+            {
+                if (value == shuffle) return;
+
+                shuffle = value;
+                OnPropertyChanged(nameof(Shuffle));
             }
         }
 
@@ -200,7 +201,7 @@ namespace AudioPlayerBackend.Build
             Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 3, 2);
             Option serverOpt = new Option("s", "server", "Starts the app as server with the following port", false, 2, 2);
             Option sourcesOpt = new Option("m", "media-sources", "Files and directories to play", false, -1, 0);
-            Option allShuffleOpt = Option.GetLongOnly("all-shuffle", "Shuffles all songs.", false, 0, 0);
+            Option orderSongsOpt = Option.GetLongOnly("order", "Order type for all playlists.", false, 1);
             Option searchShuffleOpt = Option.GetLongOnly("search-shuffle", "Shuffles all songs.", false, 0, 0);
             Option searchKeyOpt = Option.GetLongOnly("search-key", "Shuffles all songs.", false, 1, 0);
             Option playOpt = new Option("p", "play", "Starts playback on startup", false, 0, 0);
@@ -209,7 +210,7 @@ namespace AudioPlayerBackend.Build
             Option dataFileOpt = new Option("d", "data-file", "Filepath to where to read and write data.", false, 1, 1);
 
             Options options = new Options(sourcesOpt, clientOpt, serverOpt, playOpt,
-                allShuffleOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileOpt);
+                orderSongsOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileOpt);
             OptionParseResult result = options.Parse(args);
 
             if (result.TryGetFirstValidOptionParseds(serverOpt, out parsed))
@@ -228,7 +229,7 @@ namespace AudioPlayerBackend.Build
                 else WithClient(parsed.Values[1]);
             }
 
-            if (result.TryGetFirstValidOptionParseds(allShuffleOpt, out parsed)) WithIsAllShuffle();
+            if (result.TryGetFirstValidOptionParseds(orderSongsOpt, out parsed)) WithShuffle((OrderType)Enum.Parse(typeof(OrderType), parsed.Values[0]));
             if (result.TryGetFirstValidOptionParseds(searchShuffleOpt, out parsed)) WithIsSearchShuffle();
             if (result.TryGetFirstValidOptionParseds(searchKeyOpt, out parsed)) WithSearchKey(parsed.Values.FirstOrDefault());
             if (result.HasValidOptionParseds(playOpt)) WithPlay();
@@ -244,17 +245,17 @@ namespace AudioPlayerBackend.Build
 
         public ServiceBuilder WithService(IAudioService service)
         {
-            return WithIsAllShuffle(GetSharedValueOrNull(service.GetAllPlaylists().Select(p => p.IsAllShuffle)))
+            return WithShuffle(GetSharedValueOrNull(service.GetAllPlaylists().Select(p => p.Shuffle)))
                 .WithIsSearchShuffle(service.IsSearchShuffle)
                 .WithSearchKey(service.SearchKey)
                 //.WithPlay(service.PlayState == PlaybackState.Playing)
                 .WithVolume(service.Volume);
         }
 
-        private static bool? GetSharedValueOrNull(IEnumerable<bool> values)
+        private static T? GetSharedValueOrNull<T>(IEnumerable<T> values) where T : struct
         {
-            bool[] distinctValues = values.ToNotNull().Distinct().ToArray();
-            return distinctValues.Length == 1 ? (bool?)distinctValues[0] : null;
+            T[] distinctValues = values.ToNotNull().Distinct().ToArray();
+            return distinctValues.Length == 1 ? (T?)distinctValues[0] : null;
         }
 
         public ServiceBuilder WithStandalone()
@@ -339,9 +340,9 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuilder WithIsAllShuffle(bool? value = true)
+        public ServiceBuilder WithShuffle(OrderType? value)
         {
-            IsAllShuffle = value;
+            Shuffle = value;
 
             return this;
         }
@@ -424,23 +425,23 @@ namespace AudioPlayerBackend.Build
 
         public ReadWriteAudioServiceData CompleteService(IAudioService service)
         {
-            if (IsAllShuffle.HasValue)
+            if (Shuffle.HasValue)
             {
                 foreach (IPlaylist playlist in service.SourcePlaylists)
                 {
-                    playlist.IsAllShuffle = IsAllShuffle.Value;
+                    playlist.Shuffle = Shuffle.Value;
                 }
 
                 foreach (IPlaylist playlist in service.Playlists)
                 {
-                    playlist.IsAllShuffle = IsAllShuffle.Value;
+                    playlist.Shuffle = Shuffle.Value;
                 }
             }
 
             if (IsSearchShuffle.HasValue) service.IsSearchShuffle = IsSearchShuffle.Value;
             if (SearchKey != null) service.SearchKey = SearchKey;
-            if (play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
-            if (volume.HasValue) service.Volume = volume.Value;
+            if (Play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
+            if (Volume.HasValue) service.Volume = volume.Value;
 
             return ReadWriteAudioServiceData.Start(DataFilePath, service);
         }
@@ -485,7 +486,7 @@ namespace AudioPlayerBackend.Build
                 ClientPort = ClientPort,
                 CommunicatorProtocol = CommunicatorProtocol,
                 DataFilePath = DataFilePath,
-                IsAllShuffle = IsAllShuffle,
+                Shuffle = Shuffle,
                 IsSearchShuffle = IsSearchShuffle,
                 IsStreaming = IsStreaming,
                 SourcePlaylistHelper = SourcePlaylistHelper,

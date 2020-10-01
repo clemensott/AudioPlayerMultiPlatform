@@ -13,7 +13,7 @@ namespace AudioPlayerBackend.Data
 
         public string CurrentSongPath { get; set; }
 
-        public bool IsAllShuffle { get; set; }
+        public OrderType Shuffle { get; set; }
 
         public LoopType Loop { get; set; }
 
@@ -36,7 +36,7 @@ namespace AudioPlayerBackend.Data
             ID = playlist.ID.ToString();
             Name = playlist.Name;
             CurrentSongPath = playlist.CurrentSong?.FullPath ?? string.Empty;
-            IsAllShuffle = playlist.IsAllShuffle;
+            Shuffle = playlist.Shuffle;
             Loop = playlist.Loop;
             PositionTicks = playlist.Position.Ticks;
             DurationTicks = playlist.Duration.Ticks;

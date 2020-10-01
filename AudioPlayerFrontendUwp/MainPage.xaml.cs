@@ -99,11 +99,6 @@ namespace AudioPlayerFrontend
             return true.Equals(args.Input0) || args.Input1 == null;
         }
 
-        private void IbnSearch_Click(object sender, RoutedEventArgs e)
-        {
-            if (viewModel.Service.Audio != null) Frame.Navigate(typeof(SearchPage), viewModel.Service);
-        }
-
         private void LbxSongs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             Scroll();
@@ -192,6 +187,29 @@ namespace AudioPlayerFrontend
                     viewModel.Service.Audio.CurrentPlaylist.Loop = LoopType.Next;
                     break;
             }
+        }
+
+        private void IbnOrderType_Click(object sender, RoutedEventArgs e)
+        {
+            switch (viewModel.Service.Audio?.CurrentPlaylist.Shuffle)
+            {
+                case OrderType.ByTitleAndArtist:
+                    viewModel.Service.Audio.CurrentPlaylist.Shuffle = OrderType.ByPath;
+                    break;
+
+                case OrderType.ByPath:
+                    viewModel.Service.Audio.CurrentPlaylist.Shuffle = OrderType.Custom;
+                    break;
+
+                case OrderType.Custom:
+                    viewModel.Service.Audio.CurrentPlaylist.Shuffle = OrderType.ByTitleAndArtist;
+                    break;
+            }
+        }
+
+        private void IbnSearch_Click(object sender, RoutedEventArgs e)
+        {
+            if (viewModel.Service.Audio != null) Frame.Navigate(typeof(SearchPage), viewModel.Service);
         }
 
         private void LbxPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e)

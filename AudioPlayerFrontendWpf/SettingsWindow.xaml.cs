@@ -94,7 +94,7 @@ namespace AudioPlayerFrontend
 
         private void CbxAllShuffle_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            ServiceBuilder.IsAllShuffle = null;
+            ServiceBuilder.Shuffle = null;
         }
 
         private void CbxSearchShuffle_MouseRightButtonUp(object sender, MouseButtonEventArgs e)

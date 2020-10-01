@@ -94,7 +94,7 @@ namespace AudioPlayerBackend.Data
             if (playlist == null) return;
 
             playlist.CurrentSongChanged += Save;
-            playlist.IsAllShuffleChanged += Save;
+            playlist.ShuffleChanged += Save;
             playlist.LoopChanged += Save;
             playlist.DurationChanged += Save;
             playlist.SongsChanged += Save;
@@ -105,7 +105,7 @@ namespace AudioPlayerBackend.Data
             if (playlist == null) return;
 
             playlist.CurrentSongChanged -= Save;
-            playlist.IsAllShuffleChanged -= Save;
+            playlist.ShuffleChanged -= Save;
             playlist.LoopChanged -= Save;
             playlist.DurationChanged -= Save;
             playlist.SongsChanged -= Save;
@@ -192,7 +192,7 @@ namespace AudioPlayerBackend.Data
 
         private static void MergePlaylist(IPlaylistBase playlist, PlaylistData data)
         {
-            playlist.IsAllShuffle = data.IsAllShuffle;
+            playlist.Shuffle = data.Shuffle;
             playlist.Loop = data.Loop;
             playlist.Name = data.Name;
             playlist.Songs = data.Songs;
