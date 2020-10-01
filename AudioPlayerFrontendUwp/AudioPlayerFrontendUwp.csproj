@@ -104,7 +104,6 @@
       <DependentUpon>BuildOpenPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Converter\FilePathsToSingleStringConverter.cs" />
-    <Compile Include="Converter\FloatNullableToFloatConverter.cs" />
     <Compile Include="Converter\IsIMqttAudioConverter.cs" />
     <Compile Include="Converter\OrderIconConverter.cs" />
     <Compile Include="Converter\LoopIconConverter.cs" />

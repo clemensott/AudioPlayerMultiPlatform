@@ -1,8 +1,10 @@
 ﻿using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
 using StdOttStandard.AsyncResult;
+using StdOttStandard.Converter.MultipleInputs;
 using StdOttUwp.Converters;
 using System;
+using System.Threading.Tasks;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -38,6 +40,9 @@ namespace AudioPlayerFrontend
                 else if (value.BuildClient) tbxPort.Text = clientPortConverter.Text;
 
                 DataContext = serviceBuilder = value;
+
+                if (!serviceBuilder.IsSearchShuffle.HasValue) cbxSearchShuffle.IsChecked = null;
+                if (!serviceBuilder.Play.HasValue) cbxPlay.IsChecked = null;
             }
         }
 
@@ -56,7 +61,7 @@ namespace AudioPlayerFrontend
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             result = (AsyncResultS<ServiceBuilder>)e.Parameter;
-            ServiceBuilder = result.Input;
+            serviceBuilder = result.Input;
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -66,9 +71,15 @@ namespace AudioPlayerFrontend
             if (!result.HasResult) result.SetValue(null);
         }
 
+        private void Page_Loaded(object sender, RoutedEventArgs e)
+        {
+            ServiceBuilder = serviceBuilder;
+        }
+
         private object ShuffleConverter_ConvertEvent(object value, Type targetType, object parameter, string language)
         {
-            return value ?? parameter;
+            if (value == null) return parameter;
+            return (int)value;
         }
 
         private object ShuffleConverter_ConvertBackEvent(object value, Type targetType, object parameter, string language)
@@ -103,24 +114,34 @@ namespace AudioPlayerFrontend
             ServiceBuilder.ClientPort = clientPortConverter.ConvertBack(tbxPort.Text);
         }
 
-        private void CbxAllShuffle_RightTapped(object sender, RightTappedRoutedEventArgs e)
+        private async void Cbx_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
         {
-            if (ServiceBuilder != null) ServiceBuilder.Shuffle = null;
+            await Task.Delay(50);
+            if (ServiceBuilder != null) ((CheckBox)sender).IsChecked = null;
         }
 
-        private void CbxSearchShuffle_RightTapped(object sender, RightTappedRoutedEventArgs e)
+        private object MicVolume_ConvertRef(object sender, MultiplesInputsConvert3EventArgs args)
         {
-            if (ServiceBuilder != null) ServiceBuilder.IsSearchShuffle = null;
-        }
+            if (args.Input2 == null) args.Input2 = 1;
 
-        private void CbxPlay_RightTapped(object sender, RightTappedRoutedEventArgs e)
-        {
-            if (ServiceBuilder != null) cbxPlay.IsChecked = ServiceBuilder.Play = null;
-        }
+            switch (args.ChangedValueIndex)
+            {
+                case 0:
+                    if (args.Input0 is float)
+                    {
+                        args.Input1 = true;
+                        args.Input2 = args.Input0;
+                    }
+                    else args.Input1 = false;
+                    break;
 
-        private void SldVolume_RightTapped(object sender, RightTappedRoutedEventArgs e)
-        {
-            if (ServiceBuilder != null) ServiceBuilder.Volume = null;
+                case 1:
+                case 2:
+                    args.Input0 = true.Equals(args.Input1) ? args.Input2 : null;
+                    break;
+            }
+
+            return null;
         }
 
         private void CbxStreaming_RightTapped(object sender, RightTappedRoutedEventArgs e)
@@ -137,6 +158,12 @@ namespace AudioPlayerFrontend
         private void AbbCancel_Click(object sender, RoutedEventArgs e)
         {
             Frame.GoBack();
+        }
+
+        private void CbxPlay_Holding(object sender, HoldingRoutedEventArgs e)
+        {
+            if (ServiceBuilder != null) cbxPlay.IsChecked = ServiceBuilder.Play = null;
+            e.Handled = true;
         }
     }
 }

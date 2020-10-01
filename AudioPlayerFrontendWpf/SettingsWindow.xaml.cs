@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AudioPlayerBackend.Build;
+using StdOttStandard.Converter.MultipleInputs;
 
 namespace AudioPlayerFrontend
 {
@@ -45,13 +46,9 @@ namespace AudioPlayerFrontend
 
             if (serviceBuilder.BuildServer) tbxPort.Text = serverPortConverter.Convert(serviceBuilder.ServerPort);
             else if (serviceBuilder.BuildClient) tbxPort.Text = clientPortConverter.Convert(serviceBuilder.ClientPort);
-            else tbxPort.Text = "1884";
 
-            if (string.IsNullOrWhiteSpace(ServiceBuilder.ServerAddress))
-            {
-                tbxServerAddress.Text = ServiceBuilder.ServerAddress = "127.0.0.1";
-            }
-            else tbxServerAddress.Text = serviceBuilder.ServerAddress;
+            if (!serviceBuilder.IsSearchShuffle.HasValue) cbxSearchShuffle.IsChecked = null;
+            if (!serviceBuilder.Play.HasValue) cbxPlay.IsChecked = null;
         }
 
         private void RbnStandalone_Checked(object sender, RoutedEventArgs e)
@@ -77,14 +74,34 @@ namespace AudioPlayerFrontend
             ServiceBuilder.ClientPort = clientPortConverter.ConvertBack(tbxPort.Text);
         }
 
+        private object MicVolume_ConvertRef(object sender, MultiplesInputsConvert3EventArgs args)
+        {
+            if (args.Input1 == null) args.Input1 = false;
+            if (args.Input2 == null) args.Input2 = 1d;
+
+            switch (args.ChangedValueIndex)
+            {
+                case 0:
+                    if (args.Input0 is float)
+                    {
+                        args.Input1 = true;
+                        args.Input2 = (double)(float)args.Input0;
+                    }
+                    else args.Input1 = false;
+                    break;
+
+                case 1:
+                case 2:
+                    args.Input0 = true.Equals(args.Input1) ? (float?)(double)args.Input2 : null;
+                    break;
+            }
+
+            return null;
+        }
+
         private void CbxPlay_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             cbxPlay.IsChecked = ServiceBuilder.Play = null;
-        }
-
-        private void SldVolume_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            ServiceBuilder.Volume = null;
         }
 
         private void CbxStreaming_MouseRightButtonUp(object sender, MouseButtonEventArgs e)

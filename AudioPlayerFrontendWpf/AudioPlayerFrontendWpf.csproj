@@ -250,7 +250,6 @@
       <DependentUpon>BuildOpenWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="FilePathsToSingleStringConverter.cs" />
-    <Compile Include="FloatNullableToFloatConverter.cs" />
     <Compile Include="HotKeyBox.xaml.cs">
       <DependentUpon>HotKeyBox.xaml</DependentUpon>
     </Compile>

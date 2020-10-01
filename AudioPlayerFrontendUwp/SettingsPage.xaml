@@ -8,13 +8,13 @@
     xmlns:con="using:StdOttUwp.Converters"
     xmlns:audio="using:AudioPlayerBackend.Audio"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    Loaded="Page_Loaded">
 
     <Page.Resources>
+        <local:VolumeToolTipConverter x:Key="volTooTipCon"/>
         <con:FalsyConverter x:Key="inverter"/>
         <con:EnumConverter x:Key="communicatorProtocolCon"/>
-        <local:FloatNullableToFloatConverter x:Key="volCon"/>
-        <local:FloatNullableToFloatConverter x:Key="clientVolCon"/>
 
         <con:ValueConverter x:Key="shuffleCon"
                             ConvertEvent="ShuffleConverter_ConvertEvent"
@@ -119,27 +119,33 @@
                     </ComboBoxItem>
                 </ComboBox>
                 
-                <CheckBox Content="Shuffle search songs" Margin="3"
+                <CheckBox Name="cbxSearchShuffle" Content="Shuffle search songs" Margin="3"
                           IsChecked="{Binding IsSearchShuffle,Mode=TwoWay}"
-                          RightTapped="CbxSearchShuffle_RightTapped"/>
+                          DoubleTapped="Cbx_DoubleTapped"/>
             </StackPanel>
 
             <StackPanel Margin="3">
-                <TextBlock Text="Volume:" FontSize="17" FontWeight="Bold" Margin="5,0"/>
-                <Slider Grid.Column="2" Maximum="1" Margin="5,0,5,-5"
-                            Value="{Binding Volume,Mode=TwoWay,Converter={StaticResource volCon}}"
-                            RightTapped="SldVolume_RightTapped"/>
+                <con:MultipleInputs3Converter x:Name="micVolume"
+                                              Input0="{Binding Volume,Mode=TwoWay}"
+                                              ConvertRef="MicVolume_ConvertRef"/>
+
+                <CheckBox x:Name="cbxVolume" IsChecked="{Binding ElementName=micVolume,Path=Input1,Mode=TwoWay}">
+                    <TextBlock Text="Volume:" FontSize="17" FontWeight="Bold" Margin="5,0"/>
+                </CheckBox>
+                <Slider Grid.Column="2" Maximum="1" Margin="5,0,5,-5" StepFrequency="0.01" SnapsTo="StepValues"
+                        IsEnabled="{Binding ElementName=micVolume,Path=Input1}"
+                        Value="{Binding ElementName=micVolume,Path=Input2,Mode=TwoWay,Converter={StaticResource volCon}}"
+                        ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Margin="5,0,3,3">
-                <CheckBox Name="cbxPlay" Content="Play" 
-                          Margin="3" IsChecked="{Binding Play,Mode=TwoWay}"
-                          RightTapped="CbxPlay_RightTapped"/>
+                <CheckBox Name="cbxPlay" Content="Play" Margin="3"
+                          IsChecked="{Binding Play,Mode=TwoWay}"
+                          DoubleTapped="Cbx_DoubleTapped"/>
 
-                <CheckBox Content="Stream to client:" Margin="3"
+                <CheckBox Content="Stream to client:" Margin="3" Visibility="Collapsed"
                           IsChecked="{Binding IsStreaming,Mode=TwoWay}"
-                          IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"
-                          RightTapped="CbxStreaming_RightTapped"/>
+                          IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"/>
             </StackPanel>
 
             <StackPanel Margin="3,10,3,3">
