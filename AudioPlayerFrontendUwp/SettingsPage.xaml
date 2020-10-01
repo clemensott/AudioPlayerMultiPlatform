@@ -134,7 +134,7 @@
                 </CheckBox>
                 <Slider Grid.Column="2" Maximum="1" Margin="5,0,5,-5" StepFrequency="0.01" SnapsTo="StepValues"
                         IsEnabled="{Binding ElementName=micVolume,Path=Input1}"
-                        Value="{Binding ElementName=micVolume,Path=Input2,Mode=TwoWay,Converter={StaticResource volCon}}"
+                        Value="{Binding ElementName=micVolume,Path=Input2,Mode=TwoWay}"
                         ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
             </StackPanel>
 
