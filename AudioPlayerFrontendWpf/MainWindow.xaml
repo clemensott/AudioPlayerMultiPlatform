@@ -164,7 +164,8 @@
 
                     <TextBlock Text="Volume:" FontWeight="Bold" HorizontalAlignment="Center"/>
                     <Slider Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0"
-                            Maximum="1" Value="{Binding AudioServiceUI.Volume}" />
+                            Maximum="1" SmallChange="0.05" LargeChange="0.2"
+                            Value="{Binding AudioServiceUI.Volume}" />
                 </Grid>
 
                 <ComboBox Grid.Row="1" Margin="0,5,0,0" SelectedValuePath="DataContext"

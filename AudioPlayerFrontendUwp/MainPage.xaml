@@ -103,14 +103,14 @@
                 <ctl:IconButton Grid.Column="3" Symbol="Find" Margin="3" Click="IbnSearch_Click"/>
             </Grid>
 
-            <Grid Grid.Row="1"
+            <Grid Grid.Row="1" Margin="10,0"
                   Visibility="{Binding IsClient,Converter={StaticResource visCon}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Text="Volume:" VerticalAlignment="Center" Margin="3,3,5,0"/>
+                <TextBlock Text="Volume:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,3,5,0"/>
                 <Slider Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,-12" SnapsTo="StepValues"
                         StepFrequency="0.01" Maximum="1" Value="{Binding Audio.Volume,Mode=TwoWay}"
                         ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
