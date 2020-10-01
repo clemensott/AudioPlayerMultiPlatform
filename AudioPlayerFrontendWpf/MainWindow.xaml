@@ -26,6 +26,7 @@
 
         <sys:Int32 x:Key="negativeOne">-1</sys:Int32>
         <sys:String x:Key="emptyString">empty</sys:String>
+        <Visibility x:Key="collapsed">Collapsed</Visibility>
     </Window.Resources>
 
     <Grid Margin="5">
@@ -57,7 +58,9 @@
 
             <CheckBox Grid.Column="2" Margin="5,3" Content="Shuffle" VerticalAlignment="Center"
                       IsChecked="{Binding ElementName=micShuffle,Path=Input3,
-                        Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
+                        Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+                      Visibility="{Binding AudioServiceUI.CurrentPlaylist,
+                        Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}"/>
 
             <!--<StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center"
                         Visibility="{Binding ServicePlayerUI,Converter={StaticResource isClientCon}}">
@@ -131,7 +134,9 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Grid Margin="3">
+                <Grid Margin="3"
+                      Visibility="{Binding AudioServiceUI,
+                        Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -144,7 +149,8 @@
 
                 <ComboBox Grid.Row="1" Margin="0,5,0,0"
                           SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Loop,Mode=TwoWay}"
-                          Visibility="{Binding AudioServiceUI.CurrentPlaylist,Converter={StaticResource visCon}}">
+                          Visibility="{Binding AudioServiceUI.CurrentPlaylist,
+                            Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
                     <audio:LoopType>Next</audio:LoopType>
                     <audio:LoopType>Stop</audio:LoopType>
                     <audio:LoopType>CurrentPlaylist</audio:LoopType>
