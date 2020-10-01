@@ -16,6 +16,7 @@ using Windows.ApplicationModel.Background;
 using StdOttStandard.Dispatch;
 using System.ComponentModel;
 using AudioPlayerBackend.Communication;
+using Windows.Foundation;
 
 namespace AudioPlayerFrontend
 {
@@ -32,6 +33,7 @@ namespace AudioPlayerFrontend
 
         private readonly ViewModel viewModel;
         private Frame rootFrame;
+        private bool canceledBuild;
 
         public App()
         {
@@ -39,6 +41,9 @@ namespace AudioPlayerFrontend
 
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+            this.UnhandledException += OnUnhandledException;
+            this.EnteredBackground += OnEnteredBackground;
+            this.LeavingBackground += OnLeavingBackground;
 
             ServiceBuilder serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
             serviceBuilder.WithPlayer(new Player())
@@ -50,12 +55,9 @@ namespace AudioPlayerFrontend
 
             viewModel = new ViewModel(service);
             BackgroundTaskHandler.Current = new BackgroundTaskHandler(dispatcher, service);
-
-            UnhandledException += App_UnhandledException;
-            LeavingBackground += Application_LeavingBackground;
         }
 
-        private void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             Settings.Current.SetUnhandledException(e.Exception);
         }
@@ -194,10 +196,29 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
+        private async void OnEnteredBackground(object sender, EnteredBackgroundEventArgs e)
+        {
+            ServiceBuild build = viewModel.Service.ServiceOpenBuild;
+            if (build?.CompleteToken.IsEnded.HasValue != false) return;
+
+            Deferral deferral = e.GetDeferral();
+
+            try
+            {
+                await viewModel.Service.CloseAsync();
+                canceledBuild = true;
+            }
+            finally
+            {
+                deferral.Complete();
+            }
+        }
+
+        private async void OnLeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
             if (!BackgroundTaskHandler.Current.IsRunning) await BackgroundTaskHelper.Current.Start();
-            if (viewModel.Service.Communicator?.IsOpen == false) await viewModel.Service.ConnectAsync(false);
+            if (canceledBuild && viewModel.Service.ServiceOpenBuild == null) await viewModel.Service.ConnectAsync(true);
+            else if (viewModel.Service.Communicator?.IsOpen == false) await viewModel.Service.ConnectAsync(false);
         }
 
         protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)

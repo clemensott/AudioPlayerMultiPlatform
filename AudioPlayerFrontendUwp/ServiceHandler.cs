@@ -133,13 +133,11 @@ namespace AudioPlayerFrontend
 
         private async void SetBuildResult(ServiceBuild build)
         {
-            if (build == null) return;
-
             if (Communicator != null) Communicator.Disconnected -= Communicator_Disconnected;
 
             Player oldPlayer = ServicePlayer?.Player as Player;
 
-            ServiceBuildResult result = await build.CompleteToken.ResultTask;
+            ServiceBuildResult result = await (build?.CompleteToken.ResultTask ?? Task.FromResult<ServiceBuildResult>(null));
 
             if (build != ServiceOpenBuild) return;
 
