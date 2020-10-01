@@ -15,6 +15,7 @@ using AudioPlayerFrontend.Background;
 using Windows.ApplicationModel.Background;
 using StdOttStandard.Dispatch;
 using System.ComponentModel;
+using AudioPlayerBackend.Communication;
 
 namespace AudioPlayerFrontend
 {
@@ -88,7 +89,7 @@ namespace AudioPlayerFrontend
                 Window.Current.Content = rootFrame;
             }
 
-            Task buildTask = Task.CompletedTask;
+            Task<ServiceBuildResult> buildTask = Task.FromResult<ServiceBuildResult>(null);
 
             if (e.PrelaunchActivated == false)
             {
@@ -116,9 +117,9 @@ namespace AudioPlayerFrontend
                 Window.Current.Activate();
             }
 
-            await buildTask;
+            ServiceBuildResult result = await buildTask;
 
-            if (viewModel.Service.IsClient || viewModel.IsUpdatingPlaylists) return;
+            if (result?.Communicator is IClientCommunicator || viewModel.IsUpdatingPlaylists) return;
 
             try
             {
@@ -126,12 +127,12 @@ namespace AudioPlayerFrontend
 
                 if (DateTime.Now - Settings.Current.LastUpdatedData > autoUpdateInverval)
                 {
-                    await UpdateHelper.Update(viewModel.Service.Audio);
+                    await UpdateHelper.Update(result.AudioService);
                     Settings.Current.LastUpdatedData = DateTime.Now;
                 }
                 else
                 {
-                    await UpdateHelper.UpdatePlaylists(viewModel.Service.Audio);
+                    await UpdateHelper.UpdatePlaylists(result.AudioService);
                 }
             }
             catch { }

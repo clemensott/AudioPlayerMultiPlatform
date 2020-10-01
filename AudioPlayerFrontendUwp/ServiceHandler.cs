@@ -106,14 +106,13 @@ namespace AudioPlayerFrontend
             Builder = builder;
         }
 
-        public Task ConnectAsync(bool forceBuild)
+        public async Task<ServiceBuildResult> ConnectAsync(bool forceBuild)
         {
-            ServiceOpenBuild = new ServiceBuild();
+            ServiceBuild build = ServiceOpenBuild = new ServiceBuild();
 
-            return dispatcher.Run(() =>
+            await dispatcher.Run(() =>
             {
-                ServiceBuild build = ServiceOpenBuild;
-                if (build == null) return Task.CompletedTask;
+                if (build != ServiceOpenBuild) return Task.CompletedTask;
 
                 Builder.DataFilePath = Builder.BuildClient ? null : dataFileName;
 
@@ -126,8 +125,10 @@ namespace AudioPlayerFrontend
                 }
                 else build.StartOpen(communicator, Audio, ServicePlayer, buildResult.Data, TimeSpan.FromMilliseconds(200));
 
-                return ServiceOpenBuild.CompleteToken.EndTask;
+                return build.CompleteToken.EndTask;
             });
+
+            return build == ServiceOpenBuild ? await build.CompleteToken.ResultTask : null;
         }
 
         private async void SetBuildResult(ServiceBuild build)
@@ -199,7 +200,12 @@ namespace AudioPlayerFrontend
 
         private void OnPropertyChanged(string name)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            ServiceBuilderHelper.Current.InvokeDispatcher(Raise);
+
+            void Raise()
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            };
         }
     }
 }
