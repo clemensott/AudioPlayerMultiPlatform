@@ -156,13 +156,16 @@ namespace AudioPlayerFrontend
         {
             Song song = (Song)((FrameworkElement)sender).DataContext;
             IAudioService service = viewModel.Service.Audio;
+            IPlaylist playlist = service.CurrentPlaylist;
 
-            if (service.CurrentPlaylist.Songs.All(s => s == song))
+            if (playlist.Songs.All(s => s == song))
             {
-                service.Playlists.Remove(service.CurrentPlaylist);
-                /// TODO: Set correct playlist
+                service.CurrentPlaylist = service.GetAllPlaylists().Where(p => p != playlist).Any() ?
+                    service.GetAllPlaylists().Next(playlist).next : null;
+
+                service.Playlists.Remove(playlist);
             }
-            else service.CurrentPlaylist.Songs = service.CurrentPlaylist.Songs.Where(s => s != song).ToArray();
+            else playlist.Songs = playlist.Songs.Where(s => s != song).ToArray();
         }
 
         private void IbnLoopType_Click(object sender, RoutedEventArgs e)
