@@ -120,7 +120,7 @@
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid Margin="3" Background="LightGray">
+                        <Grid Margin="3">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="5"/>
@@ -273,8 +273,8 @@
                 <TextBlock Grid.Column="0" Margin="5,0" VerticalAlignment="Center"
                            Text="{Binding Position,Converter={StaticResource timeTextCon}}"/>
                 <Slider Grid.Column="1" Minimum="0" VerticalAlignment="Center" IsMoveToPointEnabled="True"
-                        Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"
                         Value="{Binding Position,Mode=OneWay,Converter={StaticResource timeSecCon}}"
+                        Maximum="{Binding Duration,Converter={StaticResource timeSecCon}}"
                         ValueChanged="SldPosition_ValueChanged"/>
                 <TextBlock Grid.Column="2" Margin="5,0" VerticalAlignment="Center"
                            Text="{Binding Duration,Converter={StaticResource timeTextCon}}"/>

@@ -564,10 +564,13 @@ namespace AudioPlayerFrontend
 
         private void SldPosition_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
+            Slider slider = (Slider)sender;
             TimeSpan position = TimeSpan.FromSeconds(e.NewValue);
+            TimeSpan duration = TimeSpan.FromSeconds(slider.Maximum);
             IPlaylistBase currentPlaylist = viewModel.AudioServiceUI?.CurrentPlaylist;
 
-            if (currentPlaylist != null && currentPlaylist.CurrentSong.HasValue && currentPlaylist.Position != position)
+            if (currentPlaylist != null && currentPlaylist.CurrentSong.HasValue &&
+                currentPlaylist.Duration == duration && currentPlaylist.Position != position)
             {
                 currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong, position);
             }
