@@ -21,15 +21,19 @@ namespace AudioPlayerFrontend.Join
         public event EventHandler<MediaOpenedEventArgs> MediaOpened;
         public event EventHandler<HandledEventArgs> NextPressed;
         public event EventHandler<HandledEventArgs> PreviousPressed;
+        public event EventHandler<ValueChangedEventArgs<PlaybackState>> PlayStateChanged;
 
         public PlaybackState PlayState
         {
             get => playState;
             set
             {
+                PlaybackState oldState = playState;
                 playState = value;
 
                 HandlePlayStateChange();
+
+                PlayStateChanged?.Invoke(this, new ValueChangedEventArgs<PlaybackState>(oldState, value));
             }
         }
 
@@ -50,6 +54,7 @@ namespace AudioPlayerFrontend.Join
             player.MediaOpened += Player_MediaOpened;
             player.MediaFailed += Player_MediaFailed;
             player.MediaEnded += Player_MediaEnded;
+            player.CurrentStateChanged += Player_CurrentStateChanged;
 
             player.CommandManager.IsEnabled = true;
             player.CommandManager.NextBehavior.EnablingRule = MediaCommandEnablingRule.Always;
@@ -97,6 +102,14 @@ namespace AudioPlayerFrontend.Join
         private void Player_MediaEnded(MediaPlayer sender, object args)
         {
             PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(Source));
+        }
+
+        private void Player_CurrentStateChanged(MediaPlayer sender, object args)
+        {
+            PlaybackState newState = sender.PlaybackSession.PlaybackState == MediaPlaybackState.Playing ?
+                PlaybackState.Playing : PlaybackState.Paused;
+
+            if (newState != PlayState) PlayState = newState;
         }
 
         public Task Set(RequestSong? wanna)

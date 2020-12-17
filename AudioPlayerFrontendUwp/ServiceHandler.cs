@@ -154,8 +154,9 @@ namespace AudioPlayerFrontend
             {
                 if (oldPlayer != null)
                 {
-                    oldPlayer.NextPressed += Player_NextPressed;
-                    oldPlayer.PreviousPressed += Player_PreviousPressed;
+                    oldPlayer.NextPressed -= Player_NextPressed;
+                    oldPlayer.PreviousPressed -= Player_PreviousPressed;
+                    oldPlayer.PlayStateChanged -= Player_PlayStateChanged;
                     await oldPlayer.Stop();
                 }
 
@@ -163,6 +164,7 @@ namespace AudioPlayerFrontend
                 {
                     newPlayer.NextPressed += Player_NextPressed;
                     newPlayer.PreviousPressed += Player_PreviousPressed;
+                    newPlayer.PlayStateChanged += Player_PlayStateChanged;
                 }
             }
         }
@@ -177,6 +179,11 @@ namespace AudioPlayerFrontend
         {
             Audio?.SetPreviousSong();
             e.Handled = true;
+        }
+
+        private void Player_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
+        {
+            if (Audio != null) Audio.PlayState = e.NewValue;
         }
 
         private async void Communicator_Disconnected(object sender, DisconnectedEventArgs e)
