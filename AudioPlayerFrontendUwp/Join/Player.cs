@@ -27,10 +27,9 @@ namespace AudioPlayerFrontend.Join
             get => playState;
             set
             {
-                PlaybackState oldState = playState;
                 playState = value;
 
-                HandlePlayStateChange(playState, oldState);
+                HandlePlayStateChange();
             }
         }
 
@@ -114,7 +113,7 @@ namespace AudioPlayerFrontend.Join
             bool release = true;
             try
             {
-                if (PlayState == PlaybackState.Stopped || !wannaSong.Equals(wanna)) return;
+                if (!wannaSong.Equals(wanna)) return;
 
                 if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)
                 {
@@ -178,17 +177,9 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        private async void HandlePlayStateChange(PlaybackState newState, PlaybackState oldState)
+        private async void HandlePlayStateChange()
         {
             await sem.WaitAsync();
-
-            if (oldState == PlaybackState.Stopped && newState != PlaybackState.Stopped)
-            {
-                Task task = Set(wannaSong);
-                sem.Release();
-                await task;
-                return;
-            }
 
             try
             {
@@ -204,12 +195,6 @@ namespace AudioPlayerFrontend.Join
         {
             switch (PlayState)
             {
-                case PlaybackState.Stopped:
-                    if (player.Source != null) wannaSong = RequestSong.Get(Source, Position, Duration);
-                    player.Source = null;
-                    Source = null;
-                    break;
-
                 case PlaybackState.Playing:
                     player.Play();
                     break;

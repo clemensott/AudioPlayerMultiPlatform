@@ -66,10 +66,7 @@ namespace AudioPlayerBackend.Player
         {
             StopTimer();
 
-            if (e.Exception != null) errorCount++;
-
-            if (e.Exception != null || Player.PlayState != PlaybackState.Stopped ||
-                Player.Position >= Player.Duration) Service.Continue(e.Song);
+            if ((e.Exception != null && ++errorCount < 10) || Player.Position >= Player.Duration) Service.Continue(e.Song);
         }
 
         private void Timer_Elapsed(object state)

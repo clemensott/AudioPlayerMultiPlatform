@@ -26,7 +26,7 @@ namespace AudioPlayerFrontend.Join
                 PlaybackState oldState = playState;
                 playState = value;
 
-                HandlePlayStateChange(playState, oldState);
+                HandlePlayStateChange();
             }
         }
 
@@ -61,7 +61,7 @@ namespace AudioPlayerFrontend.Join
                 {
                     stop = false;
                     DisposeWaveProvider();
-                    await Init(nextWannaSong.Value);
+                    Init(nextWannaSong.Value);
                     nextWannaSong = null;
                 }
                 else if (stop)
@@ -90,8 +90,6 @@ namespace AudioPlayerFrontend.Join
 
             try
             {
-                if (PlayState == PlaybackState.Stopped) return;
-
                 await Task.Run(async () =>
                 {
                     if (!wannaSong.Equals(wanna)) return;
@@ -138,7 +136,7 @@ namespace AudioPlayerFrontend.Join
             await stopSem.WaitAsync();
             try
             {
-                if (stopped) await Init(wanna);
+                if (stopped) Init(wanna);
                 else
                 {
                     DisposeWaveProvider();
@@ -153,7 +151,7 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        private async Task Init(RequestSong wanna)
+        private void Init(RequestSong wanna)
         {
             try
             {
@@ -166,7 +164,7 @@ namespace AudioPlayerFrontend.Join
                 }
 
                 waveOut.Init(waveProvider);
-                await ExecutePlayState();
+                ExecutePlayState();
 
                 MediaOpened?.Invoke(this, new MediaOpenedEventArgs(waveProvider.CurrentTime, waveProvider.TotalTime, wanna.Song));
             }
@@ -196,21 +194,13 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        private async void HandlePlayStateChange(PlaybackState newState, PlaybackState oldState)
+        private async void HandlePlayStateChange()
         {
             await handleSem.WaitAsync();
 
-            if (oldState == PlaybackState.Stopped && newState != PlaybackState.Stopped)
-            {
-                Task task = Set(wannaSong);
-                handleSem.Release();
-                await task;
-                return;
-            }
-
             try
             {
-                await ExecutePlayState();
+                ExecutePlayState();
             }
             finally
             {
@@ -218,17 +208,12 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        private async Task ExecutePlayState()
+        private void ExecutePlayState()
         {
             if (stop || waveProvider == null) return;
 
             switch (PlayState)
             {
-                case PlaybackState.Stopped:
-                    wannaSong = RequestSong.Get(Source, Position, Duration);
-                    await Stop();
-                    break;
-
                 case PlaybackState.Playing:
                     waveOut.Play();
                     stopped = false;

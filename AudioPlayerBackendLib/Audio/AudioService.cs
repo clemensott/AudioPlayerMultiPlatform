@@ -221,7 +221,7 @@ namespace AudioPlayerBackend.Audio
         public AudioService(ISourcePlaylistHelper helper = null)
         {
             this.helper = helper;
-            playState = PlaybackState.Stopped;
+            playState = PlaybackState.Paused;
             shuffledSongs = new Dictionary<ISourcePlaylist, IEnumerable<Song>>();
 
             SourcePlaylists = new ObservableCollection<ISourcePlaylist>();
@@ -368,7 +368,7 @@ namespace AudioPlayerBackend.Audio
 
             if (currentPlaylist.Loop == LoopType.StopCurrentSong)
             {
-                PlayState = PlaybackState.Stopped;
+                PlayState = PlaybackState.Paused;
                 ChangeCurrentSongOrRestart(currentPlaylist, newCurrentSong);
             }
             else if (currentPlaylist.Loop == LoopType.CurrentPlaylist || !overflow)
@@ -383,7 +383,7 @@ namespace AudioPlayerBackend.Audio
             else if (currentPlaylist.Loop == LoopType.Stop)
             {
                 CurrentPlaylist = this.GetAllPlaylists().Next(currentPlaylist).next;
-                PlayState = PlaybackState.Stopped;
+                PlayState = PlaybackState.Paused;
                 ChangeCurrentSongOrRestart(currentPlaylist, newCurrentSong);
             }
         }

@@ -382,7 +382,6 @@ namespace AudioPlayerBackend.Build
 
             if (SendPlayState == PlaybackState.Playing) await Communicator.PlaySong();
             else if (SendPlayState == PlaybackState.Paused) await Communicator.PauseSong();
-            else if (SendPlayState == PlaybackState.Stopped) await Communicator.StopSong();
             else if (SendToggle)
             {
                 await Communicator.ToggleSong();
@@ -423,7 +422,6 @@ namespace AudioPlayerBackend.Build
             {
                 if (state == PlaybackState.Playing) await Communicator.PlaySong();
                 else if (state == PlaybackState.Paused) await Communicator.PauseSong();
-                else if (state == PlaybackState.Stopped) await Communicator.StopSong();
             }
         }
 
