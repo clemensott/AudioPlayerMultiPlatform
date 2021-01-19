@@ -85,6 +85,7 @@ namespace AudioPlayerBackend.Player
                 if (Service.CurrentPlaylist.Position.Seconds == Player.Position.Seconds) return;
 
                 Service.CurrentPlaylist.Position = Player.Position;
+                Service.CurrentPlaylist.Duration = Player.Duration;
             }
             catch (Exception e)
             {

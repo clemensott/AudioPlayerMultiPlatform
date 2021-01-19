@@ -54,6 +54,8 @@ namespace AudioPlayerBackend
                     {
                         playlist.Songs = songs.Distinct().ToArray();
                         playlist.WannaSong = RequestSong.Start(songs.First());
+                        playlist.Duration = currentPlaylist.Duration;
+                        playlist.Position = currentPlaylist.Position;
 
                         service.CurrentPlaylist = playlist;
                     }
@@ -84,6 +86,8 @@ namespace AudioPlayerBackend
                 {
                     playlist.Songs = songs.ToArray();
                     playlist.WannaSong = RequestSong.Start(songs.First());
+                    playlist.Duration = currentPlaylist.Duration;
+                    playlist.Position = currentPlaylist.Position;
 
                     service.Playlists.Add(playlist);
                     service.CurrentPlaylist = playlist;
