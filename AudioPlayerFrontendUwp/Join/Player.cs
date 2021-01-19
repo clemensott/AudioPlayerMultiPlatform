@@ -54,13 +54,14 @@ namespace AudioPlayerFrontend.Join
             player.MediaOpened += Player_MediaOpened;
             player.MediaFailed += Player_MediaFailed;
             player.MediaEnded += Player_MediaEnded;
-            player.CurrentStateChanged += Player_CurrentStateChanged;
 
             player.CommandManager.IsEnabled = true;
             player.CommandManager.NextBehavior.EnablingRule = MediaCommandEnablingRule.Always;
             player.CommandManager.PreviousBehavior.EnablingRule = MediaCommandEnablingRule.Always;
             player.CommandManager.NextReceived += CommandManager_NextReceived;
             player.CommandManager.PreviousReceived += CommandManager_PreviousReceived;
+            player.CommandManager.PlayReceived += CommandManager_PlayReceived;
+            player.CommandManager.PauseReceived += CommandManager_PauseReceived;
         }
 
         private void CommandManager_NextReceived(MediaPlaybackCommandManager sender, MediaPlaybackCommandManagerNextReceivedEventArgs args)
@@ -77,6 +78,18 @@ namespace AudioPlayerFrontend.Join
             PreviousPressed?.Invoke(this, subArgs);
 
             args.Handled = subArgs.Handled;
+        }
+
+        private void CommandManager_PlayReceived(MediaPlaybackCommandManager sender, MediaPlaybackCommandManagerPlayReceivedEventArgs args)
+        {
+            PlayState = PlaybackState.Playing;
+            args.Handled = true;
+        }
+
+        private void CommandManager_PauseReceived(MediaPlaybackCommandManager sender, MediaPlaybackCommandManagerPauseReceivedEventArgs args)
+        {
+            PlayState = PlaybackState.Paused;
+            args.Handled = true;
         }
 
         private void Player_MediaOpened(MediaPlayer sender, object args)
@@ -102,14 +115,6 @@ namespace AudioPlayerFrontend.Join
         private void Player_MediaEnded(MediaPlayer sender, object args)
         {
             PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(Source));
-        }
-
-        private void Player_CurrentStateChanged(MediaPlayer sender, object args)
-        {
-            PlaybackState newState = sender.PlaybackSession.PlaybackState == MediaPlaybackState.Playing ?
-                PlaybackState.Playing : PlaybackState.Paused;
-
-            if (newState != PlayState) PlayState = newState;
         }
 
         public Task Set(RequestSong? wanna)
