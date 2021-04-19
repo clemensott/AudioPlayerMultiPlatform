@@ -238,7 +238,6 @@ namespace AudioPlayerFrontend
             {
                 viewModel.IsUpdatingPlaylists = true;
                 await UwpUtils.GetDataContext<ISourcePlaylist>(sender).Update();
-
             }
             catch (Exception exc)
             {
@@ -256,7 +255,6 @@ namespace AudioPlayerFrontend
             {
                 viewModel.IsUpdatingPlaylists = true;
                 await UwpUtils.GetDataContext<ISourcePlaylist>(sender).Reload();
-
             }
             catch (Exception exc)
             {

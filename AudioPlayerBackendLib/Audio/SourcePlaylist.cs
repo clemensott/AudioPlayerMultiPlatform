@@ -38,50 +38,56 @@ namespace AudioPlayerBackend.Audio
 
         public async Task Update()
         {
-            IEnumerable<string> allFiles = await (helper?.FetchFiles ?? FetchFiles)(FileMediaSources);
-            Dictionary<string, string> dict = allFiles.Distinct().ToDictionary(f => f);
             List<Song> songs = Songs.ToList();
-
-            for (int i = songs.Count - 1; i >= 0; i--)
+            Songs = await Task.Run(async () =>
             {
-                if (dict.ContainsKey(songs[i].FullPath)) dict.Remove(songs[i].FullPath);
-                else songs.RemoveAt(i);
-            }
+                IEnumerable<string> allFiles = await (helper?.FetchFiles ?? FetchFiles)(FileMediaSources);
+                Dictionary<string, string> dict = allFiles.Distinct().ToDictionary(f => f);
 
-            foreach (Task<Song?> task in dict.Keys.Select(helper?.CreateSong ?? CreateSong))
-            {
-                Song? song = await task;
-                if (song.HasValue) songs.Insert(ran.Next(songs.Count + 1), song.Value);
-            }
+                for (int i = songs.Count - 1; i >= 0; i--)
+                {
+                    if (dict.ContainsKey(songs[i].FullPath)) dict.Remove(songs[i].FullPath);
+                    else songs.RemoveAt(i);
+                }
 
-            Songs = songs.ToArray();
+                foreach (Task<Song?> task in dict.Keys.Select(helper?.CreateSong ?? CreateSong))
+                {
+                    Song? song = await task;
+                    if (song.HasValue) songs.Insert(ran.Next(songs.Count + 1), song.Value);
+                }
+
+                return songs.ToArray();
+            });
         }
 
         public async Task Reload()
         {
-            IEnumerable<string> allFiles = await (helper?.FetchFiles ?? FetchFiles)(FileMediaSources);
-            IEnumerable<Song?> allSongs = await Task.WhenAll(allFiles.Distinct().Select(helper?.CreateSong ?? CreateSong));
-            Dictionary<string, Song> loadedSongs = allSongs.Where(s => s.HasValue)
-                .Select(s => s.Value).Distinct().ToDictionary(s => s.FullPath);
             List<Song> songs = Songs.ToList();
-
-            for (int i = songs.Count - 1; i >= 0; i--)
+            Songs = await Task.Run(async () =>
             {
-                Song loadedSong;
-                if (loadedSongs.TryGetValue(songs[i].FullPath, out loadedSong))
+                IEnumerable<string> allFiles = await (helper?.FetchFiles ?? FetchFiles)(FileMediaSources);
+                IEnumerable<Song?> allSongs = await Task.WhenAll(allFiles.Distinct().Select(helper?.CreateSong ?? CreateSong));
+                Dictionary<string, Song> loadedSongs = allSongs.Where(s => s.HasValue)
+                    .Select(s => s.Value).Distinct().ToDictionary(s => s.FullPath);
+
+                for (int i = songs.Count - 1; i >= 0; i--)
                 {
-                    songs[i] = loadedSong;
-                    loadedSongs.Remove(songs[i].FullPath);
+                    Song loadedSong;
+                    if (loadedSongs.TryGetValue(songs[i].FullPath, out loadedSong))
+                    {
+                        songs[i] = loadedSong;
+                        loadedSongs.Remove(songs[i].FullPath);
+                    }
+                    else songs.RemoveAt(i);
                 }
-                else songs.RemoveAt(i);
-            }
 
-            foreach (Song song in loadedSongs.Values)
-            {
-                songs.Insert(ran.Next(songs.Count + 1), song);
-            }
+                foreach (Song song in loadedSongs.Values)
+                {
+                    songs.Insert(ran.Next(songs.Count + 1), song);
+                }
 
-            Songs = songs.ToArray();
+                return songs.ToArray();
+            });
         }
 
         private static Task<IEnumerable<string>> FetchFiles(string[] sources)

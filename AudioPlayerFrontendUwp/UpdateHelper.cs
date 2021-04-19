@@ -109,6 +109,8 @@ namespace AudioPlayerFrontend
                 }
                 else paths = new string[] { folder.Path };
 
+                if (paths.Length == 0) continue;
+
                 int currentIndex;
                 if (service.SourcePlaylists.TryIndexOf(p => HasSameSource(p, paths), out currentIndex))
                 {

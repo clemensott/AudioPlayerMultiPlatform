@@ -26,13 +26,16 @@ namespace AudioPlayerFrontend
     sealed partial class App : Application
     {
         private const string serviceProfileFilename = "serviceProfile.xml";
-        private readonly TimeSpan autoUpdateInverval = TimeSpan.FromDays(1);
+        private readonly TimeSpan autoUpdateInverval = TimeSpan.FromDays(1),
+            autoUpdatePlaylistsInterval = TimeSpan.FromHours(1);
 
         private static readonly XmlSerializer serializer = new XmlSerializer(typeof(ServiceProfile));
 
         private readonly ViewModel viewModel;
+        private readonly TaskCompletionSource<bool> launchCompletionSource;
         private Frame rootFrame;
         private bool canceledBuild;
+        private DateTime lastAutoUpdatePlaylists;
 
         public App()
         {
@@ -52,6 +55,7 @@ namespace AudioPlayerFrontend
             service.PropertyChanged += Service_PropertyChanged;
 
             viewModel = new ViewModel(service);
+            launchCompletionSource = new TaskCompletionSource<bool>();
             BackgroundTaskHandler.Current = new BackgroundTaskHandler(dispatcher, service);
         }
 
@@ -89,21 +93,22 @@ namespace AudioPlayerFrontend
                 Window.Current.Content = rootFrame;
             }
 
-            Task<ServiceBuildResult> buildTask = Task.FromResult<ServiceBuildResult>(null);
-
             if (e.PrelaunchActivated == false)
             {
                 if (rootFrame.Content == null)
                 {
                     try
                     {
-                        StorageFile file =
-                            await ApplicationData.Current.LocalFolder.GetFileAsync(serviceProfileFilename);
-                        string xmlText = await FileIO.ReadTextAsync(file);
-                        StringReader reader = new StringReader(xmlText);
+                        IStorageItem item =
+                            await ApplicationData.Current.LocalFolder.TryGetItemAsync(serviceProfileFilename);
+                        if (item is StorageFile)
+                        {
+                            string xmlText = await FileIO.ReadTextAsync((StorageFile)item);
+                            StringReader reader = new StringReader(xmlText);
 
-                        ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
-                        profile.FillServiceBuilder(viewModel.Service.Builder);
+                            ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
+                            profile.FillServiceBuilder(viewModel.Service.Builder);
+                        }
                     }
                     catch (Exception exc)
                     {
@@ -111,35 +116,12 @@ namespace AudioPlayerFrontend
                     }
 
                     rootFrame.Navigate(typeof(MainPage), viewModel);
-                    buildTask = viewModel.Service.ConnectAsync(true);
                 }
                 // Sicherstellen, dass das aktuelle Fenster aktiv ist
                 Window.Current.Activate();
             }
 
-            ServiceBuildResult result = await buildTask;
-
-            if (result?.Communicator is IClientCommunicator || viewModel.IsUpdatingPlaylists) return;
-
-            try
-            {
-                viewModel.IsUpdatingPlaylists = true;
-
-                if (DateTime.Now - Settings.Current.LastUpdatedData > autoUpdateInverval)
-                {
-                    await UpdateHelper.Update(result.AudioService);
-                    Settings.Current.LastUpdatedData = DateTime.Now;
-                }
-                else
-                {
-                    await UpdateHelper.UpdatePlaylists(result.AudioService);
-                }
-            }
-            catch { }
-            finally
-            {
-                viewModel.IsUpdatingPlaylists = false;
-            }
+            launchCompletionSource.TrySetResult(true);
         }
 
         /// <summary>
@@ -216,10 +198,46 @@ namespace AudioPlayerFrontend
         private async void OnLeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
             if (!BackgroundTaskHandler.Current.IsRunning) await BackgroundTaskHelper.Current.Start();
-            if (canceledBuild && viewModel.Service.ServiceOpenBuild == null) await viewModel.Service.ConnectAsync(true);
+
+            await launchCompletionSource.Task;
+
+            ServiceBuildResult result;
+            if (canceledBuild && viewModel.Service.ServiceOpenBuild == null)
+            {
+                result = await viewModel.Service.ConnectAsync(true);
+            }
             else if (viewModel.Service.Audio == null || viewModel.Service.Communicator?.IsOpen == false)
             {
-                await viewModel.Service.ConnectAsync(false);
+                result = await viewModel.Service.ConnectAsync(false);
+            }
+            else return;
+
+            if (result?.Communicator is IClientCommunicator || viewModel.IsUpdatingPlaylists) return;
+
+            try
+            {
+                viewModel.IsUpdatingPlaylists = true;
+
+                if (Settings.Current.LastUpdatedData > lastAutoUpdatePlaylists)
+                {
+                    lastAutoUpdatePlaylists = Settings.Current.LastUpdatedData;
+                }
+
+                if (DateTime.Now - Settings.Current.LastUpdatedData > autoUpdateInverval)
+                {
+                    await UpdateHelper.Update(result.AudioService);
+                    Settings.Current.LastUpdatedData = DateTime.Now;
+                }
+                else if (DateTime.Now - lastAutoUpdatePlaylists > autoUpdatePlaylistsInterval)
+                {
+                    await UpdateHelper.UpdatePlaylists(result.AudioService);
+                    lastAutoUpdatePlaylists = DateTime.Now;
+                }
+            }
+            catch { }
+            finally
+            {
+                viewModel.IsUpdatingPlaylists = false;
             }
         }
 
