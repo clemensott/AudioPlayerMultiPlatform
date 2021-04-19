@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend;
+using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Player;
@@ -205,7 +206,9 @@ namespace AudioPlayerFrontend
 
         private void OnPropertyChanged(string name)
         {
-            ServiceBuilderHelper.Current.InvokeDispatcher(Raise);
+            IInvokeDispatcherHelper dispatcher = ServiceBuilderHelper.Current.Dispatcher;
+            if (dispatcher == null) Raise();
+            else dispatcher.InvokeDispatcher(Raise);
 
             void Raise()
             {

@@ -108,7 +108,7 @@
     <Compile Include="Converter\OrderIconConverter.cs" />
     <Compile Include="Converter\LoopIconConverter.cs" />
     <Compile Include="Join\HandledEventArgs.cs" />
-    <Compile Include="Join\NotifyPropertyChangedHelper.cs" />
+    <Compile Include="Join\InvokeDispatcherHelper.cs" />
     <Compile Include="Join\PlayerHelper.cs" />
     <Compile Include="Join\Player.cs" />
     <Compile Include="Join\ServiceBuilderHelper.cs" />

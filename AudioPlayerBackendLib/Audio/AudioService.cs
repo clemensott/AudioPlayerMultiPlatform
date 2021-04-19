@@ -417,7 +417,7 @@ namespace AudioPlayerBackend.Audio
         {
             if (PropertyChanged == null) return;
 
-            if (helper?.InvokeDispatcher != null) helper.InvokeDispatcher(Raise);
+            if (helper?.Dispatcher != null) helper.Dispatcher.InvokeDispatcher(Raise);
             else Raise();
 
             void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -440,7 +440,7 @@ namespace AudioPlayerBackend.Audio
 
         public IPlaylistBase CreatePlaylist(Guid id)
         {
-            return new Playlist(id, helper);
+            return new Playlist(id, helper?.Dispatcher);
         }
     }
 }

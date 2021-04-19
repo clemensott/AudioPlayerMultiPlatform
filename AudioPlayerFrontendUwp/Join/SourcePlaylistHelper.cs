@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend;
+using AudioPlayerBackend.Audio;
 using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using Windows.Storage.FileProperties;
 
 namespace AudioPlayerFrontend.Join
 {
-    class SourcePlaylistHelper : NotifyPropertyChangedHelper, ISourcePlaylistHelper
+    class SourcePlaylistHelper : ISourcePlaylistHelper
     {
         private static SourcePlaylistHelper instance;
 
@@ -23,6 +24,8 @@ namespace AudioPlayerFrontend.Join
                 return instance;
             }
         }
+
+        public IInvokeDispatcherHelper Dispatcher { get; } = new InvokeDispatcherHelper();
 
         public Func<string[], Task<IEnumerable<string>>> FetchFiles => async sources =>
         {
@@ -71,11 +74,5 @@ namespace AudioPlayerFrontend.Join
                 return null;
             }
         };
-
-        private SourcePlaylistHelper()
-        {
-        }
-
-
     }
 }

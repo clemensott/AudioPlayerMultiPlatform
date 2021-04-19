@@ -2,7 +2,7 @@
 
 namespace AudioPlayerFrontend.Join
 {
-    class PlayerHelper : NotifyPropertyChangedHelper, IAudioStreamHelper
+    class PlayerHelper : InvokeDispatcherHelper, IAudioStreamHelper
     {
         private static PlayerHelper instance;
 

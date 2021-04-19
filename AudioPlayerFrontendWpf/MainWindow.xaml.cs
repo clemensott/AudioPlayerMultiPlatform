@@ -43,7 +43,7 @@ namespace AudioPlayerFrontend
 
             RestoreWindowHandler.Activate(this, RestoreWindowSettings.GetDefault());
 
-            serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
+            serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper());
             hotKeysBuilder = new HotKeysBuilder();
 
             DataContext = viewModel = new ViewModel();
@@ -112,7 +112,8 @@ namespace AudioPlayerFrontend
             if (result.TryGetFirstValidOptionParseds(disableUiOpt, out _)) viewModel.IsUiEnabled = false;
 
             IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-            serviceBuilder.WithPlayer(new Player(-1, windowHandle));
+            serviceBuilder.WithPlayer(new Player(-1, windowHandle))
+                .WithCommunicatorHelper(new InvokeDispatcherHelper(Dispatcher));
 
             await BuildAudioServiceAsync();
 

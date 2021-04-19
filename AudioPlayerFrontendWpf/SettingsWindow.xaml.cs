@@ -21,15 +21,6 @@ namespace AudioPlayerFrontend
 
         public HotKeysBuilder HotKeysBuilder { get; private set; }
 
-        public SettingsWindow() : this(new ServiceBuilder(ServiceBuilderHelper.Current), new HotKeysBuilder())
-        {
-        }
-
-        public SettingsWindow(IAudioService service, HotKeys hotKeys)
-            : this(new ServiceBuilder(ServiceBuilderHelper.Current).WithService(service), new HotKeysBuilder().WithHotKeys(hotKeys))
-        {
-        }
-
         public SettingsWindow(ServiceBuilder serviceBuilder, HotKeysBuilder hotKeysBuilder)
         {
             InitializeComponent();

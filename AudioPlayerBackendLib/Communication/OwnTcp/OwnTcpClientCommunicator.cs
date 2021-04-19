@@ -16,6 +16,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         private bool isSyncing;
         private OwnTcpClientConnection connection;
+        private readonly IInvokeDispatcherHelper helper;
 
         public override event EventHandler<DisconnectedEventArgs> Disconnected;
 
@@ -27,10 +28,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public int? Port { get; }
 
-        public OwnTcpClientCommunicator(string serverAddress, int port)
+        public OwnTcpClientCommunicator(string serverAddress, int port, IInvokeDispatcherHelper helper)
         {
             ServerAddress = serverAddress;
             Port = port;
+            this.helper = helper;
         }
 
         public override async Task OpenAsync(BuildStatusToken statusToken)
@@ -89,7 +91,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 Task receiveTask = Task.Run(() => ReceiveHandler(connection));
                 Task processTask = Task.Run(() => ProcessHandler(connection));
 
-                await connection.SendCommand(SyncCmd, false, TimeSpan.FromSeconds(10), statusToken.EndTask);
+                await connection.SendCommand(SyncCmd, false, TimeSpan.FromSeconds(1000), statusToken.EndTask);
                 connection.IsSynced = true;
 
                 connection.Task = Task.WhenAll(publishTask, pingTask, receiveTask, processTask);
@@ -209,7 +211,10 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                         case SyncCmd:
                             ByteQueue data = message.Payload;
-                            data.DequeueService(connection.Service, Service.CreateSourcePlaylist, Service.CreatePlaylist);
+                            void syncAction() => data.DequeueService(connection.Service, Service.CreateSourcePlaylist, Service.CreatePlaylist);
+
+                            if (helper == null) syncAction();
+                            else await helper.InvokeDispatcher(syncAction);
 
                             connection.Waits[message.ID].SetValue(true);
                             connection.Waits.Remove(message.ID);
@@ -238,7 +243,9 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 {
                     LockTopic(item.Topic, item.Payload);
 
-                    bool success = HandlerMessage(item);
+                    bool handleAction() => HandlerMessage(item);
+                    bool success = helper == null ?
+                        handleAction() : await helper.InvokeDispatcher(handleAction);
 
                     if (success) continue;
 

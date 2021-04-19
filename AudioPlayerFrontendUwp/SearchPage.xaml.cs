@@ -1,6 +1,5 @@
 ﻿using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Windows.UI.Xaml;
@@ -34,7 +33,7 @@ namespace AudioPlayerFrontend
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, true, ServiceBuilderHelper.Current);
+            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, true, ServiceBuilderHelper.Current.Dispatcher);
         }
 
         private void IbnAdd_Click(object sender, RoutedEventArgs e)
@@ -43,7 +42,7 @@ namespace AudioPlayerFrontend
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, ServiceBuilderHelper.Current);
+            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, ServiceBuilderHelper.Current.Dispatcher);
         }
 
         private void IbnSelectAll_Click(object sender, RoutedEventArgs e)
@@ -52,7 +51,7 @@ namespace AudioPlayerFrontend
 
             IEnumerable<Song> songs = (IEnumerable<Song>)micSongs.Output;
 
-            service.Audio.AddSongsToFirstPlaylist(songs, ServiceBuilderHelper.Current);
+            service.Audio.AddSongsToFirstPlaylist(songs, ServiceBuilderHelper.Current.Dispatcher);
         }
 
         private void BtnClear_Click(object sender, RoutedEventArgs e)

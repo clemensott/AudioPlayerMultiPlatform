@@ -48,6 +48,12 @@ namespace AudioPlayerFrontend
             get => new DateTime(GetValue<long>(nameof(UnhandledExceptionTime)));
         }
 
+        public DateTime SuspendTime
+        {
+            get => new DateTime(GetValue<long>(nameof(SuspendTime)));
+            set => SetValue(nameof(SuspendTime), value.Ticks);
+        }
+
         private Settings() : base(ApplicationData.Current.LocalSettings)
         {
         }

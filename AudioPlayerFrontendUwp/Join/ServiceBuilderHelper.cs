@@ -1,10 +1,11 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend;
+using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend.Join
 {
-    class ServiceBuilderHelper : NotifyPropertyChangedHelper, IServiceBuilderHelper
+    class ServiceBuilderHelper : IServiceBuilderHelper
     {
         private static ServiceBuilderHelper instance;
 
@@ -17,6 +18,8 @@ namespace AudioPlayerFrontend.Join
                 return instance;
             }
         }
+
+        public IInvokeDispatcherHelper Dispatcher { get; } = new InvokeDispatcherHelper();
 
         private ServiceBuilderHelper() { }
 

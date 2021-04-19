@@ -28,7 +28,6 @@ namespace AudioPlayerFrontend
         private const string serviceProfileFilename = "serviceProfile.xml";
         private readonly TimeSpan autoUpdateInverval = TimeSpan.FromDays(1);
 
-        public static DateTime CreateTime = DateTime.MinValue;
         private static readonly XmlSerializer serializer = new XmlSerializer(typeof(ServiceProfile));
 
         private readonly ViewModel viewModel;
@@ -37,8 +36,6 @@ namespace AudioPlayerFrontend
 
         public App()
         {
-            CreateTime = DateTime.Now;
-
             this.InitializeComponent();
             this.Suspending += OnSuspending;
             this.UnhandledException += OnUnhandledException;
@@ -47,7 +44,8 @@ namespace AudioPlayerFrontend
 
             ServiceBuilder serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
             serviceBuilder.WithPlayer(new Player())
-                .WithNotifyPropertyChangedHelper(SourcePlaylistHelper.Current);
+                .WithSourcePlaylistHelper(SourcePlaylistHelper.Current)
+                .WithCommunicatorHelper(SourcePlaylistHelper.Current.Dispatcher);
 
             Dispatcher dispatcher = new Dispatcher();
             ServiceHandler service = new ServiceHandler(dispatcher, serviceBuilder);
@@ -163,6 +161,7 @@ namespace AudioPlayerFrontend
         /// <param name="e">Details zur Anhalteanforderung.</param>
         private async void OnSuspending(object sender, SuspendingEventArgs e)
         {
+            Settings.Current.SuspendTime = DateTime.Now;
             SuspendingDeferral deferral = e.SuspendingOperation.GetDeferral();
 
             BackgroundTaskHandler.Current.Stop();

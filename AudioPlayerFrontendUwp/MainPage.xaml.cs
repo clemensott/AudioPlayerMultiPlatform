@@ -381,7 +381,7 @@ namespace AudioPlayerFrontend
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)
         {
-            await new MessageDialog(App.CreateTime.ToString(CultureInfo.InvariantCulture), "CreateTime").ShowAsync();
+            await new MessageDialog(Settings.Current.SuspendTime.ToString(CultureInfo.InvariantCulture), "SuspendTime").ShowAsync();
 
             string exceptionText = Settings.Current.UnhandledExceptionText ?? "<null>";
             DateTime time = Settings.Current.UnhandledExceptionTime;

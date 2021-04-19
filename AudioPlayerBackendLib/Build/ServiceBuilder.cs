@@ -25,6 +25,7 @@ namespace AudioPlayerBackend.Build
         private CommunicatorProtocol communicatorProtocol;
         private IPlayer player;
         private ISourcePlaylistHelper sourcePlaylistHelper;
+        private IInvokeDispatcherHelper communicatorHelper;
 
         public bool BuildStandalone { get; private set; }
 
@@ -185,6 +186,18 @@ namespace AudioPlayerBackend.Build
 
                 sourcePlaylistHelper = value;
                 OnPropertyChanged(nameof(SourcePlaylistHelper));
+            }
+        }
+
+        public IInvokeDispatcherHelper CommunicatorHelper
+        {
+            get => communicatorHelper;
+            set
+            {
+                if (value == communicatorHelper) return;
+
+                communicatorHelper = value;
+                OnPropertyChanged(nameof(CommunicatorHelper));
             }
         }
 
@@ -389,9 +402,16 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuilder WithNotifyPropertyChangedHelper(ISourcePlaylistHelper helper)
+        public ServiceBuilder WithSourcePlaylistHelper(ISourcePlaylistHelper helper)
         {
             SourcePlaylistHelper = helper;
+
+            return this;
+        }
+
+        public ServiceBuilder WithCommunicatorHelper(IInvokeDispatcherHelper helper)
+        {
+            CommunicatorHelper = helper;
 
             return this;
         }
@@ -458,7 +478,7 @@ namespace AudioPlayerBackend.Build
 
         protected virtual OwnTcpClientCommunicator CreateOwnTcpClientCommunicator(string serverAddress, int port)
         {
-            return new OwnTcpClientCommunicator(serverAddress, port);
+            return new OwnTcpClientCommunicator(serverAddress, port, communicatorHelper);
         }
 
         protected virtual OwnTcpServerCommunicator CreateOwnTcpServerCommunicator(int port)
@@ -505,7 +525,7 @@ namespace AudioPlayerBackend.Build
         {
             if (PropertyChanged == null) return;
 
-            if (helper?.InvokeDispatcher != null) helper.InvokeDispatcher(Raise);
+            if (helper?.Dispatcher != null) helper.Dispatcher.InvokeDispatcher(Raise);
             else Raise();
 
             void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Windows.Threading;
+using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
@@ -7,21 +8,12 @@ namespace AudioPlayerFrontend.Join
 {
     class ServiceBuilderHelper : IServiceBuilderHelper
     {
-        private static ServiceBuilderHelper instance;
-
-        public static ServiceBuilderHelper Current
+        public ServiceBuilderHelper(Dispatcher dispatcher = null)
         {
-            get
-            {
-                if (instance == null) instance = new ServiceBuilderHelper();
-
-                return instance;
-            }
+            if (dispatcher != null) Dispatcher = new InvokeDispatcherHelper(dispatcher);
         }
 
-        private ServiceBuilderHelper() { }
-
-        public Action<Action> InvokeDispatcher => null;
+        public IInvokeDispatcherHelper Dispatcher { get; }
 
         public AudioServicePlayer CreateAudioServicePlayer(IPlayer player, IAudioService service)
         {

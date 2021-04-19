@@ -31,7 +31,7 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        public SourcePlaylist(Guid id, ISourcePlaylistHelper helper = null) : base(id, helper)
+        public SourcePlaylist(Guid id, ISourcePlaylistHelper helper = null) : base(id, helper?.Dispatcher)
         {
             this.helper = helper;
         }

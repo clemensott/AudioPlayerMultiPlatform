@@ -20,13 +20,13 @@ namespace AudioPlayerBackend
         }
 
         public static void AddSongsToFirstPlaylist(this IAudioService service,
-            IEnumerable<Song> songs, INotifyPropertyChangedHelper helper)
+            IEnumerable<Song> songs, IInvokeDispatcherHelper helper)
         {
             AddSongsToFirstPlaylist(service, songs, false, helper);
         }
 
         public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs,
-            bool prepend, INotifyPropertyChangedHelper helper)
+            bool prepend, IInvokeDispatcherHelper helper)
         {
             songs = songs as Song[] ?? songs.ToArray();
 

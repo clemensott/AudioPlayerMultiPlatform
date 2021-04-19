@@ -15,7 +15,7 @@ namespace AudioPlayerBackend.Audio
         private RequestSong? wannaSong;
         private Song[] songs;
         private IEnumerable<Song> allSongs;
-        private readonly INotifyPropertyChangedHelper helper;
+        private readonly IInvokeDispatcherHelper helper;
 
         public event EventHandler<ValueChangedEventArgs<string>> NameChanged;
         public event EventHandler<ValueChangedEventArgs<OrderType>> ShuffleChanged;
@@ -166,11 +166,11 @@ namespace AudioPlayerBackend.Audio
             }
         }
 
-        public Playlist(INotifyPropertyChangedHelper helper = null) : this(Guid.NewGuid(), helper)
+        public Playlist(IInvokeDispatcherHelper helper = null) : this(Guid.NewGuid(), helper)
         {
         }
 
-        public Playlist(Guid id, INotifyPropertyChangedHelper helper = null)
+        public Playlist(Guid id, IInvokeDispatcherHelper helper = null)
         {
             this.helper = helper;
 
@@ -230,7 +230,7 @@ namespace AudioPlayerBackend.Audio
         {
             if (PropertyChanged == null) return;
 
-            if (helper?.InvokeDispatcher != null) helper.InvokeDispatcher(Raise);
+            if (helper != null) helper.InvokeDispatcher(Raise);
             else Raise();
 
             void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
