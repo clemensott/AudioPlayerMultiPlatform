@@ -217,7 +217,10 @@ namespace AudioPlayerFrontend
         {
             if (!BackgroundTaskHandler.Current.IsRunning) await BackgroundTaskHelper.Current.Start();
             if (canceledBuild && viewModel.Service.ServiceOpenBuild == null) await viewModel.Service.ConnectAsync(true);
-            else if (viewModel.Service.Communicator?.IsOpen == false) await viewModel.Service.ConnectAsync(false);
+            else if (viewModel.Service.Audio == null || viewModel.Service.Communicator?.IsOpen == false)
+            {
+                await viewModel.Service.ConnectAsync(false);
+            }
         }
 
         protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)
