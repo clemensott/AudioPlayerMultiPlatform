@@ -114,7 +114,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     await connection.Stream.WriteAsync(data, 0, data.Length);
                     await connection.Stream.FlushAsync();
 
-                    send.SetValue(true);
+                    send.SetResult(true);
                 }
             }
             catch (Exception e)
@@ -253,11 +253,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     LockTopic(item.Message.Topic, item.Message.Payload);
 
                     bool success = HandlerMessage(item.Message);
-                    item.SetValue(success);
+                    item.SetResult(success);
                 }
                 catch (Exception e)
                 {
-                    item.ThrowException(e);
+                    item.SetException(e);
                 }
                 finally
                 {

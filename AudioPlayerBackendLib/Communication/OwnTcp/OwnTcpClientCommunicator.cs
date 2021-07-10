@@ -151,7 +151,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     await connection.Stream.WriteAsync(data, 0, data.Length);
                     await connection.Stream.FlushAsync();
 
-                    if (send.Message.IsFireAndForget) send.SetValue(true);
+                    if (send.Message.IsFireAndForget) send.SetResult(true);
                     if (send.Message.Topic == CloseCmd) break;
                 }
             }
@@ -198,7 +198,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                             if (code == 200)
                             {
-                                connection.Waits[message.ID].SetValue(true);
+                                connection.Waits[message.ID].SetResult(true);
                                 connection.Waits.Remove(message.ID);
                             }
                             else await connection.CloseAsync(new Exception("Negative Answer"), false);
@@ -216,7 +216,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                             if (helper == null) syncAction();
                             else await helper.InvokeDispatcher(syncAction);
 
-                            connection.Waits[message.ID].SetValue(true);
+                            connection.Waits[message.ID].SetResult(true);
                             connection.Waits.Remove(message.ID);
                             break;
 

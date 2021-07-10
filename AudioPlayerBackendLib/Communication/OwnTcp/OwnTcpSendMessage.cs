@@ -1,8 +1,8 @@
-﻿using StdOttStandard.AsyncResult;
+﻿using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Communication.OwnTcp
 {
-    class OwnTcpSendMessage : AsyncResult<bool>
+    class OwnTcpSendMessage : TaskCompletionSource<bool>
     {
         public OwnTcpMessage Message { get; set; }
 
