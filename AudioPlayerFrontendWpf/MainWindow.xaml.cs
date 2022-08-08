@@ -43,7 +43,7 @@ namespace AudioPlayerFrontend
 
             RestoreWindowHandler.Activate(this, RestoreWindowSettings.GetDefault());
 
-            serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper());
+            serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper(Dispatcher));
             hotKeysBuilder = new HotKeysBuilder();
 
             DataContext = viewModel = new ViewModel();

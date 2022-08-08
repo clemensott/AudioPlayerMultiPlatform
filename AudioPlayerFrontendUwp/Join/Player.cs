@@ -87,7 +87,7 @@ namespace AudioPlayerFrontend.Join
         }
 
         private void CommandManager_PauseReceived(MediaPlaybackCommandManager sender, MediaPlaybackCommandManagerPauseReceivedEventArgs args)
-        {
+        {   
             PlayState = PlaybackState.Paused;
             args.Handled = true;
         }

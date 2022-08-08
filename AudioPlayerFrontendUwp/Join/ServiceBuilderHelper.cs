@@ -25,7 +25,7 @@ namespace AudioPlayerFrontend.Join
 
         public AudioServicePlayer CreateAudioServicePlayer(IPlayer player, IAudioService service)
         {
-            return new AudioServicePlayer(service, player);
+            return new AudioServicePlayer(service, player, Dispatcher);
         }
 
         public AudioStreamPlayer CreateAudioStreamPlayer(IPlayer player, IAudioService service)

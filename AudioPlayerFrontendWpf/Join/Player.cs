@@ -1,19 +1,22 @@
 ﻿using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Player;
+using Microsoft.Win32;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace AudioPlayerFrontend.Join
 {
     class Player : IPlayer
     {
-        private bool stop, stopped;
-        private RequestSong? wannaSong, nextWannaSong;
-        private NAudio.Wave.WaveStream waveProvider;
+        private RequestSong? wannaSong;
         private PlaybackState playState;
-        private readonly NAudio.Wave.WaveOut waveOut;
-        private readonly SemaphoreSlim stopSem, handleSem;
+        private readonly MediaElement mediaElement;
+        private readonly SemaphoreSlim handleSem;
+        private TimeSpan lastPosition;
 
         public event EventHandler<MediaOpenedEventArgs> MediaOpened;
         public event EventHandler<PlaybackStoppedEventArgs> PlaybackStopped;
@@ -30,50 +33,96 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        public float Volume { get => waveOut.Volume; set => waveOut.Volume = value; }
+        public float Volume { get => (float)mediaElement.Volume; set => mediaElement.Volume = value; }
 
-        public TimeSpan Position => waveProvider?.CurrentTime ?? TimeSpan.Zero;
+        public TimeSpan Position
+        {
+            get
+            {
+                TimeSpan current = mediaElement.Position;
+                if (current > TimeSpan.Zero) lastPosition = current;
+                return current;
+            }
+        }
 
-        public TimeSpan Duration => waveProvider?.TotalTime ?? TimeSpan.Zero;
+        public TimeSpan Duration => mediaElement.NaturalDuration.HasTimeSpan ? mediaElement.NaturalDuration.TimeSpan : TimeSpan.Zero;
 
         public Song? Source { get; private set; }
 
         public Player(int deviceNumber = -1, IntPtr? windowHandle = null)
         {
-            stop = false;
-            stopped = true;
-            stopSem = new SemaphoreSlim(1);
             handleSem = new SemaphoreSlim(1);
 
-            waveOut = windowHandle.HasValue ? new NAudio.Wave.WaveOut(windowHandle.Value) : new NAudio.Wave.WaveOut();
-            waveOut.DeviceNumber = deviceNumber;
-            waveOut.PlaybackStopped += WaveOut_PlaybackStopped;
+            mediaElement = new MediaElement()
+            {
+                LoadedBehavior = MediaState.Manual,
+                UnloadedBehavior = MediaState.Manual,
+            };
+            mediaElement.MediaOpened += MediaElement_MediaOpened;
+            mediaElement.MediaEnded += MediaElement_MediaEnded;
+            mediaElement.MediaFailed += MediaElement_MediaFailed;
+
+            SystemEvents.PowerModeChanged += OnPowerChange;
         }
 
-        private async void WaveOut_PlaybackStopped(object sender, NAudio.Wave.StoppedEventArgs e)
+        private void MediaElement_MediaOpened(object sender, RoutedEventArgs e)
         {
-            await stopSem.WaitAsync();
-            try
+            Source = wannaSong.Value.Song;
+            if (wannaSong.Value.Position.HasValue && mediaElement.NaturalDuration.HasTimeSpan &&
+                wannaSong.Value.Duration == mediaElement.NaturalDuration.TimeSpan)
             {
-                stopped = true;
-
-                if (nextWannaSong.HasValue)
-                {
-                    stop = false;
-                    DisposeWaveProvider();
-                    Init(nextWannaSong.Value);
-                    nextWannaSong = null;
-                }
-                else if (stop)
-                {
-                    stop = false;
-                    DisposeWaveProvider();
-                }
-                else PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(Source, e.Exception));
+                SetPosition(wannaSong.Value.Position.Value);
             }
-            finally
+            else lastPosition = Position;
+
+            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, wannaSong.Value.Song));
+            ExecutePlayState();
+            handleSem.Release();
+        }
+
+        private void SetPosition(TimeSpan pos)
+        {
+            if (PlayState == PlaybackState.Paused)
             {
-                stopSem.Release();
+                mediaElement.IsMuted = true;
+                mediaElement.Play();
+            }
+
+            mediaElement.Position = pos;
+            lastPosition = pos;
+
+            if (PlayState == PlaybackState.Paused)
+            {
+                mediaElement.Pause();
+                mediaElement.IsMuted = false;
+            }
+        }
+
+        private void MediaElement_MediaFailed(object sender, ExceptionRoutedEventArgs e)
+        {
+            Source = null;
+            PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wannaSong?.Song, e.ErrorException));
+            handleSem.Release();
+        }
+
+        private void MediaElement_MediaEnded(object sender, RoutedEventArgs e)
+        {
+            PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(Source));
+        }
+
+        private async void OnPowerChange(object sender, PowerModeChangedEventArgs e)
+        {
+            AudioPlayerBackend.Logs.Log($"OnPowerChange1: {e.Mode} | {PlayState} | {lastPosition} | {Position}");
+            if (e.Mode == PowerModes.Resume && PlayState == PlaybackState.Playing && Source != null)
+            {
+                if (handleSem.CurrentCount == 0) handleSem.Release();
+                RequestSong restartRequest = RequestSong.Get(Source.Value, lastPosition, Duration);
+                await Stop();
+                await Set(restartRequest);
+            }
+            else if (e.Mode == PowerModes.Suspend && Position > TimeSpan.Zero)
+            {
+                lastPosition = Position;
             }
         }
 
@@ -88,109 +137,58 @@ namespace AudioPlayerFrontend.Join
 
             await handleSem.WaitAsync();
 
+            bool release = true;
             try
             {
-                await Task.Run(async () =>
-                {
-                    if (!wannaSong.Equals(wanna)) return;
+                if (!wannaSong.Equals(wanna)) return;
 
-                    await HandleRequestSong(wanna);
-                });
-            }
-            finally
-            {
-                handleSem.Release();
-            }
-        }
-
-        private async Task HandleRequestSong(RequestSong wanna)
-        {
-            if (waveProvider != null)
-            {
                 if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)
                 {
                     if (wanna.Position.HasValue &&
-                        wanna.Position.Value != waveProvider.CurrentTime)
+                        wanna.Position.Value != Position)
                     {
-                        waveProvider.CurrentTime = wanna.Position.Value;
+                        SetPosition(wanna.Position.Value);
                     }
                     Source = wanna.Song;
+                    ExecutePlayState();
                     return;
                 }
-
-                await Stop();
-            }
-
-            try
-            {
-                await BeginInit(wanna);
-            }
-            catch
-            {
-                DisposeWaveProvider();
-            }
-        }
-
-        private async Task BeginInit(RequestSong wanna)
-        {
-            await stopSem.WaitAsync();
-            try
-            {
-                if (stopped) Init(wanna);
-                else
-                {
-                    DisposeWaveProvider();
-
-                    nextWannaSong = wanna;
-                    waveOut.Stop();
-                }
-            }
-            finally
-            {
-                stopSem.Release();
-            }
-        }
-
-        private void Init(RequestSong wanna)
-        {
-            try
-            {
-                waveProvider = new NAudio.Wave.AudioFileReader(wanna.Song.FullPath);
-                Source = wanna.Song;
-
-                if (wanna.Position.HasValue && wanna.Duration == waveProvider.TotalTime)
-                {
-                    waveProvider.CurrentTime = wanna.Position.Value;
-                }
-
-                waveOut.Init(waveProvider);
-                ExecutePlayState();
-
-                MediaOpened?.Invoke(this, new MediaOpenedEventArgs(waveProvider.CurrentTime, waveProvider.TotalTime, wanna.Song));
+                release = false;
             }
             catch (Exception e)
             {
-                DisposeWaveProvider();
+                Source = null;
                 PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wanna.Song, e));
+            }
+            finally
+            {
+                if (release) handleSem.Release();
+            }
+
+            try
+            {
+                mediaElement.Source = new Uri(wanna.Song.FullPath);
+            }
+            catch (Exception e)
+            {
+                Source = null;
+                PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wanna.Song, e));
+                handleSem.Release();
             }
         }
 
         public async Task Stop()
         {
-            await stopSem.WaitAsync();
+            await handleSem.WaitAsync();
             try
             {
-                if (!stopped)
-                {
-                    stop = true;
-                    nextWannaSong = null;
-                    waveOut.Stop();
-                }
-                else DisposeWaveProvider();
+                mediaElement.Source = null;
+                Source = null;
+                lastPosition = TimeSpan.Zero;
             }
             finally
             {
-                stopSem.Release();
+                handleSem.Release();
             }
         }
 
@@ -210,34 +208,25 @@ namespace AudioPlayerFrontend.Join
 
         private void ExecutePlayState()
         {
-            if (stop || waveProvider == null) return;
-
             switch (PlayState)
             {
                 case PlaybackState.Playing:
-                    waveOut.Play();
-                    stopped = false;
+                    mediaElement.Play();
                     break;
 
                 case PlaybackState.Paused:
-                    waveOut.Pause();
-                    stopped = waveOut.PlaybackState == NAudio.Wave.PlaybackState.Stopped;
+                    mediaElement.Pause();
                     break;
             }
         }
 
-        private void DisposeWaveProvider()
-        {
-            waveProvider?.Dispose();
-            waveProvider = null;
-            Source = null;
-        }
-
         public void Dispose()
         {
-            DisposeWaveProvider();
+            mediaElement.MediaOpened -= MediaElement_MediaOpened;
+            mediaElement.MediaFailed -= MediaElement_MediaFailed;
+            mediaElement.MediaEnded -= MediaElement_MediaEnded;
 
-            waveOut.Dispose();
+            mediaElement.Close();
         }
     }
 }

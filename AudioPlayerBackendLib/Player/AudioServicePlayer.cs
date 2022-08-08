@@ -20,10 +20,13 @@ namespace AudioPlayerBackend.Player
 
         public IPlayer Player { get; }
 
-        public AudioServicePlayer(IAudioService service, IPlayer player)
+        public IInvokeDispatcherHelper Dispatcher { get; }
+
+        public AudioServicePlayer(IAudioService service, IPlayer player, IInvokeDispatcherHelper dispatcher)
         {
             Service = service;
             Player = player;
+            Dispatcher = dispatcher;
 
             player.PlayState = service.PlayState;
             player.MediaOpened += Player_MediaOpened;
@@ -71,7 +74,7 @@ namespace AudioPlayerBackend.Player
 
         private void Timer_Elapsed(object state)
         {
-            UpdatePosition();
+            Dispatcher.InvokeDispatcher(UpdatePosition);
         }
 
         private void UpdatePosition()
