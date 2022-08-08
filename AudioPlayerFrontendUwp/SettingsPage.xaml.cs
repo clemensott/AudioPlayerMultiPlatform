@@ -1,6 +1,6 @@
 ﻿using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
-using StdOttStandard.AsyncResult;
+using StdOttStandard.TaskCompletionSources;
 using StdOttStandard.Converter.MultipleInputs;
 using StdOttUwp.Converters;
 using System;
@@ -22,7 +22,7 @@ namespace AudioPlayerFrontend
         private IntConverter serverPortConverter;
         private IntNullableConverter clientPortConverter;
         private ServiceBuilder serviceBuilder;
-        private AsyncResultS<ServiceBuilder> result;
+        private TaskCompletionSourceS<ServiceBuilder> result;
 
         public ServiceBuilder ServiceBuilder
         {
@@ -60,7 +60,7 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            result = (AsyncResultS<ServiceBuilder>)e.Parameter;
+            result = (TaskCompletionSourceS<ServiceBuilder>)e.Parameter;
             serviceBuilder = result.Input;
         }
 
@@ -68,7 +68,7 @@ namespace AudioPlayerFrontend
         {
             base.OnNavigatedFrom(e);
 
-            if (!result.HasResult) result.SetValue(null);
+            if (!result.Task.IsCompleted) result.SetResult(null);
         }
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
@@ -151,7 +151,7 @@ namespace AudioPlayerFrontend
 
         private void AbbOk_Click(object sender, RoutedEventArgs e)
         {
-            result.SetValue(serviceBuilder);
+            result.SetResult(serviceBuilder);
             Frame.GoBack();
         }
 

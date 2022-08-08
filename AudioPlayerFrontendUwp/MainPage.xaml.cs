@@ -14,7 +14,7 @@ using AudioPlayerBackend.Build;
 using StdOttStandard.Converter.MultipleInputs;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
-using StdOttStandard.AsyncResult;
+using StdOttStandard.TaskCompletionSources;
 using System.Collections.Specialized;
 using Windows.UI.Xaml.Controls.Primitives;
 using StdOttUwp;
@@ -364,7 +364,7 @@ namespace AudioPlayerFrontend
 
         private async Task NavigateToSettingsPage()
         {
-            AsyncResultS<ServiceBuilder> result = new AsyncResultS<ServiceBuilder>(viewModel.Service.Builder.Clone());
+            TaskCompletionSourceS<ServiceBuilder> result = new TaskCompletionSourceS<ServiceBuilder>(viewModel.Service.Builder.Clone());
             Frame.Navigate(typeof(SettingsPage), result);
 
             ServiceBuilder newBuilder = await result.Task;
