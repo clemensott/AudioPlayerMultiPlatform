@@ -113,9 +113,11 @@ namespace AudioPlayerBackend
     {
         private static readonly StringBuilder builder = new StringBuilder();
 
-        public static void Log(string text)
+        public static void Log(string text, params object[] values)
         {
-            builder.AppendLine(GetLogLine(text));
+            string line = GetLogLine($"{text}: {string.Join(" | ",values)}");
+            System.IO.File.AppendAllLines("./test.log", new string[] { line });
+            builder.AppendLine(line);
         }
 
         private static string GetLogLine(string text)

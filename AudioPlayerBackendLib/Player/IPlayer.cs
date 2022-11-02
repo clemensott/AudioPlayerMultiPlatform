@@ -7,7 +7,8 @@ namespace AudioPlayerBackend.Player
     public interface IPlayer : IDisposable
     {
         event EventHandler<MediaOpenedEventArgs> MediaOpened;
-        event EventHandler<PlaybackStoppedEventArgs> PlaybackStopped;
+        event EventHandler<MediaFailedEventArgs> MediaFailed;
+        event EventHandler<MediaEndedEventArgs> MediaEnded;
 
         PlaybackState PlayState { get; set; }
 

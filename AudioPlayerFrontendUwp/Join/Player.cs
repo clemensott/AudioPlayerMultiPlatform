@@ -17,8 +17,9 @@ namespace AudioPlayerFrontend.Join
         private readonly SemaphoreSlim sem;
         private readonly MediaPlayer player;
 
-        public event EventHandler<PlaybackStoppedEventArgs> PlaybackStopped;
         public event EventHandler<MediaOpenedEventArgs> MediaOpened;
+        public event EventHandler<MediaFailedEventArgs> MediaFailed;
+        public event EventHandler<MediaEndedEventArgs> MediaEnded;
         public event EventHandler<HandledEventArgs> NextPressed;
         public event EventHandler<HandledEventArgs> PreviousPressed;
         public event EventHandler<ValueChangedEventArgs<PlaybackState>> PlayStateChanged;
@@ -108,13 +109,13 @@ namespace AudioPlayerFrontend.Join
         private void Player_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
             Source = null;
-            PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wannaSong?.Song, args.ExtendedErrorCode));
+            MediaFailed?.Invoke(this, new MediaFailedEventArgs(wannaSong?.Song, args.ExtendedErrorCode));
             sem.Release();
         }
 
         private void Player_MediaEnded(MediaPlayer sender, object args)
         {
-            PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(Source));
+            MediaEnded?.Invoke(this, new MediaEndedEventArgs(Source));
         }
 
         public Task Set(RequestSong? wanna)
@@ -149,7 +150,7 @@ namespace AudioPlayerFrontend.Join
             catch (Exception e)
             {
                 Source = null;
-                PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wanna.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
             }
             finally
             {
@@ -175,7 +176,7 @@ namespace AudioPlayerFrontend.Join
             catch (Exception e)
             {
                 Source = null;
-                PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wanna.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
                 sem.Release();
             }
         }

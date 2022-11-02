@@ -30,7 +30,8 @@ namespace AudioPlayerBackend.Player
 
             player.PlayState = service.PlayState;
             player.MediaOpened += Player_MediaOpened;
-            player.PlaybackStopped += Player_PlaybackStopped;
+            player.MediaFailed += Player_MediaFailed;
+            player.MediaEnded += Player_MediaEnded;
 
             timer = new Timer(Timer_Elapsed, null, updateInterval, updateInterval);
 
@@ -65,11 +66,17 @@ namespace AudioPlayerBackend.Player
             EnableTimer();
         }
 
-        private void Player_PlaybackStopped(object sender, PlaybackStoppedEventArgs e)
+        private void Player_MediaFailed(object sender, MediaFailedEventArgs e)
         {
             StopTimer();
+            if ( ++errorCount < 10) Service.Continue(e.Song);
+        }
 
-            if ((e.Exception != null && ++errorCount < 10) || Player.Position >= Player.Duration) Service.Continue(e.Song);
+        private void Player_MediaEnded(object sender, MediaEndedEventArgs e)
+        {
+            Logs.Log($"Player_MediaEnded: {e.Song?.FullPath}");
+            StopTimer();
+            Service.Continue(e.Song);
         }
 
         private void Timer_Elapsed(object state)
@@ -255,7 +262,8 @@ namespace AudioPlayerBackend.Player
         public void Dispose()
         {
             Player.MediaOpened -= Player_MediaOpened;
-            Player.PlaybackStopped -= Player_PlaybackStopped;
+            Player.MediaFailed -= Player_MediaFailed;
+            Player.MediaEnded -= Player_MediaEnded;
             Unsubscribe(Service);
 
             timer.Dispose();

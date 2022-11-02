@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
 
 namespace AudioPlayerFrontend.Join
 {
@@ -19,7 +18,8 @@ namespace AudioPlayerFrontend.Join
         private TimeSpan lastPosition;
 
         public event EventHandler<MediaOpenedEventArgs> MediaOpened;
-        public event EventHandler<PlaybackStoppedEventArgs> PlaybackStopped;
+        public event EventHandler<MediaFailedEventArgs> MediaFailed;
+        public event EventHandler<MediaEndedEventArgs> MediaEnded;
 
         public PlaybackState PlayState
         {
@@ -100,14 +100,17 @@ namespace AudioPlayerFrontend.Join
 
         private void MediaElement_MediaFailed(object sender, ExceptionRoutedEventArgs e)
         {
+            AudioPlayerBackend.Logs.Log($"MediaElement_MediaFailed1: {e.ErrorException}");
+            AudioPlayerBackend.Logs.Log($"MediaElement_MediaFailed2: {Position} / {Duration} | {Source?.FullPath} | {PlayState}");
             Source = null;
-            PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wannaSong?.Song, e.ErrorException));
+            MediaFailed?.Invoke(this, new MediaFailedEventArgs(wannaSong?.Song, e.ErrorException));
             handleSem.Release();
         }
 
         private void MediaElement_MediaEnded(object sender, RoutedEventArgs e)
         {
-            PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(Source));
+            AudioPlayerBackend.Logs.Log($"MediaElement_MediaEnded: {Position} / {Duration} | {Source?.FullPath} | {PlayState}");
+            MediaEnded?.Invoke(this, new MediaEndedEventArgs(Source));
         }
 
         private async void OnPowerChange(object sender, PowerModeChangedEventArgs e)
@@ -128,11 +131,13 @@ namespace AudioPlayerFrontend.Join
 
         public Task Set(RequestSong? wanna)
         {
+            AudioPlayerBackend.Logs.Log($"Player.Set2: {wanna.HasValue}");
             return wanna.HasValue ? Set(wanna.Value) : Stop();
         }
 
         private async Task Set(RequestSong wanna)
         {
+            AudioPlayerBackend.Logs.Log($"Player.Set4: {wanna.Song.FullPath} | {wanna.Position} / {wanna.Duration}");
             wannaSong = wanna;
 
             await handleSem.WaitAsync();
@@ -140,8 +145,10 @@ namespace AudioPlayerFrontend.Join
             bool release = true;
             try
             {
+                AudioPlayerBackend.Logs.Log($"Player.Set5: {wannaSong.Equals(wanna)}");
                 if (!wannaSong.Equals(wanna)) return;
 
+                AudioPlayerBackend.Logs.Log($"Player.Set6: {Source.HasValue} | {wanna.Song.FullPath} | {Source?.FullPath}");
                 if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)
                 {
                     if (wanna.Position.HasValue &&
@@ -158,7 +165,7 @@ namespace AudioPlayerFrontend.Join
             catch (Exception e)
             {
                 Source = null;
-                PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wanna.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
             }
             finally
             {
@@ -167,21 +174,24 @@ namespace AudioPlayerFrontend.Join
 
             try
             {
+                AudioPlayerBackend.Logs.Log($"Player.Set8: {wanna.Song.FullPath}");
                 mediaElement.Source = new Uri(wanna.Song.FullPath);
             }
             catch (Exception e)
             {
                 Source = null;
-                PlaybackStopped?.Invoke(this, new PlaybackStoppedEventArgs(wanna.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
                 handleSem.Release();
             }
         }
 
         public async Task Stop()
         {
+            AudioPlayerBackend.Logs.Log($"Player.Stop2: {Source?.FullPath}");
             await handleSem.WaitAsync();
             try
             {
+                AudioPlayerBackend.Logs.Log($"Player.Stop3: {Source?.FullPath}");
                 mediaElement.Source = null;
                 Source = null;
                 lastPosition = TimeSpan.Zero;
