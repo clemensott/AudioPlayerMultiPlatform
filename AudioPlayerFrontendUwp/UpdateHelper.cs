@@ -1,5 +1,6 @@
 ﻿using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.FileSystem;
 using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
@@ -24,6 +25,9 @@ namespace AudioPlayerFrontend
 
         public static async Task Update(IAudioService service, bool reload)
         {
+            IAudioCreateService audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
+            IFileSystemService fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
+
             IEnumerable<StorageFolder> folders = await GetAllFolders(KnownFolders.MusicLibrary);
             List<ISourcePlaylist> updatedSourcePlaylists = new List<ISourcePlaylist>();
 
@@ -43,7 +47,7 @@ namespace AudioPlayerFrontend
 
                 if (service.SourcePlaylists.TryFirst(p => HasSameSource(p, paths), out playlist))
                 {
-                    await Task.Run(reload ? (Func<Task>)playlist.Reload : playlist.Update);
+                    await (reload ? fileSystemService.ReloadSourcePlaylist(playlist) : fileSystemService.UpdateSourcePlaylist(playlist));
 
                     if (playlist.Songs.Length == 0)
                     {
@@ -59,10 +63,10 @@ namespace AudioPlayerFrontend
                 }
                 else
                 {
-                    playlist = (ISourcePlaylist)service.CreateSourcePlaylist();
+                    playlist = audioCreateService.CreateSourcePlaylist(Guid.NewGuid());
                     playlist.Name = folder.DisplayName;
                     playlist.FileMediaSources = paths;
-                    await Task.Run(playlist.Update);
+                    await fileSystemService.UpdateSourcePlaylist(playlist);
 
                     if (playlist.Songs.Length == 0) continue;
 
@@ -75,7 +79,7 @@ namespace AudioPlayerFrontend
                 if (service.CurrentPlaylist == null) service.CurrentPlaylist = playlist;
             }
 
-            await Task.Run(() => Task.WhenAll(service.SourcePlaylists.Except(updatedSourcePlaylists).Select(p => p.Update())));
+            await Task.WhenAll(service.SourcePlaylists.Except(updatedSourcePlaylists).Select(fileSystemService.UpdateSourcePlaylist));
 
             IDictionary<string, Song> allSongs = service.SourcePlaylists
                 .SelectMany(p => p.Songs).Distinct().ToDictionary(s => s.FullPath);
@@ -95,6 +99,9 @@ namespace AudioPlayerFrontend
 
         public static async Task UpdatePlaylists(IAudioService service)
         {
+            IAudioCreateService audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
+            IFileSystemService fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
+
             IEnumerable<StorageFolder> folders = await GetAllFolders(KnownFolders.MusicLibrary);
 
             int nextIndex = 0;
@@ -118,10 +125,10 @@ namespace AudioPlayerFrontend
                     continue;
                 }
 
-                ISourcePlaylist playlist = (ISourcePlaylist)service.CreateSourcePlaylist();
+                ISourcePlaylist playlist = audioCreateService.CreateSourcePlaylist(Guid.NewGuid());
                 playlist.Name = folder.DisplayName;
                 playlist.FileMediaSources = paths;
-                await Task.Run(playlist.Update);
+                await fileSystemService.UpdateSourcePlaylist(playlist);
 
                 if (playlist.Songs.Length == 0) continue;
 

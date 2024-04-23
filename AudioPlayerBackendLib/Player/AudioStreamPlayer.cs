@@ -4,17 +4,14 @@ namespace AudioPlayerBackend.Player
 {
     public class AudioStreamPlayer : IServicePlayer
     {
-        private readonly IAudioStreamHelper helper;
-
         public IAudioService Service { get; }
 
         public IPlayer Player { get; }
 
-        public AudioStreamPlayer(IAudioService service, IPlayer player, IAudioStreamHelper helper = null)
+        public AudioStreamPlayer(IAudioService service, IPlayer player)
         {
             Service = service;
             Player = player;
-            this.helper = helper;
 
             Subscribe(service);
         }

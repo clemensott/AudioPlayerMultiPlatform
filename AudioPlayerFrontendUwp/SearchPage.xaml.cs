@@ -33,7 +33,7 @@ namespace AudioPlayerFrontend
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, true, ServiceBuilderHelper.Current.Dispatcher);
+            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, true);
         }
 
         private void IbnAdd_Click(object sender, RoutedEventArgs e)
@@ -42,7 +42,7 @@ namespace AudioPlayerFrontend
 
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            service.Audio.AddSongsToFirstPlaylist(new Song[] { song }, ServiceBuilderHelper.Current.Dispatcher);
+            service.Audio.AddSongsToFirstPlaylist(new Song[] { song });
         }
 
         private void IbnSelectAll_Click(object sender, RoutedEventArgs e)
@@ -51,7 +51,7 @@ namespace AudioPlayerFrontend
 
             IEnumerable<Song> songs = (IEnumerable<Song>)micSongs.Output;
 
-            service.Audio.AddSongsToFirstPlaylist(songs, ServiceBuilderHelper.Current.Dispatcher);
+            service.Audio.AddSongsToFirstPlaylist(songs);
         }
 
         private void BtnClear_Click(object sender, RoutedEventArgs e)
@@ -65,16 +65,6 @@ namespace AudioPlayerFrontend
         private void IbnBack_Click(object sender, RoutedEventArgs e)
         {
             Frame.GoBack();
-        }
-
-        private void Page_Loaded(object sender, RoutedEventArgs e)
-        {
-
-        }
-
-        private void Page_Unloaded(object sender, RoutedEventArgs e)
-        {
-
         }
 
         private object MicSongs_Convert(object sender, MultiplesInputsConvert2EventArgs args)

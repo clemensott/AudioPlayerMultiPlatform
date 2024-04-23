@@ -2,6 +2,7 @@
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Communication;
+using AudioPlayerBackend.Data;
 using AudioPlayerBackend.Player;
 using AudioPlayerFrontend.Join;
 using StdOttStandard.Dispatch;
@@ -15,7 +16,8 @@ namespace AudioPlayerFrontend
     {
         private const string dataFileName = "data.xml";
 
-        private readonly Dispatcher dispatcher;
+        private readonly IInvokeDispatcherService dispatcher;
+        private readonly Dispatcher backgrounTaskDispatcher;
         private bool isClient;
         private ServiceBuilder builder;
         private ServiceBuild serviceOpenBuild;
@@ -23,6 +25,7 @@ namespace AudioPlayerFrontend
         private IAudioService audioService;
         private ICommunicator communicator;
         private IServicePlayer servicePlayer;
+        private ReadWriteAudioServiceData data;
 
         public bool IsClient
         {
@@ -95,15 +98,27 @@ namespace AudioPlayerFrontend
             {
                 if (value == servicePlayer) return;
 
-                IServicePlayer oldServicePlayer = servicePlayer;
                 servicePlayer = value;
                 OnPropertyChanged(nameof(ServicePlayer));
             }
         }
 
-        public ServiceHandler(Dispatcher dispatcher, ServiceBuilder builder)
+        public ReadWriteAudioServiceData Data
         {
-            this.dispatcher = dispatcher;
+            get => data;
+            private set
+            {
+                if (value == servicePlayer) return;
+
+                data = value;
+                OnPropertyChanged(nameof(Data));
+            }
+        }
+
+        public ServiceHandler(Dispatcher backgrounTaskDispatcher, ServiceBuilder builder)
+        {
+            dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
+            this.backgrounTaskDispatcher = backgrounTaskDispatcher;
             Builder = builder;
         }
 
@@ -111,7 +126,7 @@ namespace AudioPlayerFrontend
         {
             ServiceBuild build = ServiceOpenBuild = new ServiceBuild();
 
-            await dispatcher.Run(() =>
+            await backgrounTaskDispatcher.Run(() =>
             {
                 if (build != ServiceOpenBuild) return Task.CompletedTask;
 
@@ -145,6 +160,7 @@ namespace AudioPlayerFrontend
             Audio = result?.AudioService;
             Communicator = result?.Communicator;
             ServicePlayer = result?.ServicePlayer;
+            Data = result?.Data;
 
             buildResult = result;
 
@@ -206,14 +222,7 @@ namespace AudioPlayerFrontend
 
         private void OnPropertyChanged(string name)
         {
-            IInvokeDispatcherHelper dispatcher = ServiceBuilderHelper.Current.Dispatcher;
-            if (dispatcher == null) Raise();
-            else dispatcher.InvokeDispatcher(Raise);
-
-            void Raise()
-            {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-            };
+            dispatcher.InvokeDispatcher(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)));
         }
     }
 }

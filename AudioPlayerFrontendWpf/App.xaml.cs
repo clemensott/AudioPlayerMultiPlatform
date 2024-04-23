@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AudioPlayerBackend;
+using AudioPlayerFrontend.Join;
+using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
@@ -11,6 +13,12 @@ namespace AudioPlayerFrontend
         {
             Dispatcher.UnhandledException += Dispatcher_UnhandledException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
+            AudioPlayerServiceProvider.Current
+                .AddFileSystemService<FileSystemService>()
+                .AddDispatcher<InvokeDispatcherService>()
+                .AddPlayerCreateService<PlayerCreateService>()
+                .Build();
 
             base.OnStartup(e);
         }

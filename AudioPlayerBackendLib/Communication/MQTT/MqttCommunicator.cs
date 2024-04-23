@@ -16,8 +16,11 @@ namespace AudioPlayerBackend.Communication.MQTT
     {
         private readonly Dictionary<Guid, InitList<string>> initPlaylistLists = new Dictionary<Guid, InitList<string>>();
 
+        protected readonly IAudioCreateService audioCreateService;
+
         protected MqttCommunicator()
         {
+            audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
         }
 
         protected async void InitPlaylists()
@@ -595,10 +598,10 @@ namespace AudioPlayerBackend.Communication.MQTT
             switch (playlistType)
             {
                 case nameof(ISourcePlaylistBase):
-                    return Service.CreateSourcePlaylist(id);
+                    return audioCreateService.CreateSourcePlaylist(id);
 
                 case nameof(IPlaylistBase):
-                    return Service.CreatePlaylist(id);
+                    return audioCreateService.CreatePlaylist(id);
             }
 
             throw new ArgumentException($"Type is not supported: {playlistType}", nameof(playlistType));

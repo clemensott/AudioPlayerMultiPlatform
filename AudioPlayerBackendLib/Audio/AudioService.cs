@@ -21,7 +21,8 @@ namespace AudioPlayerBackend.Audio
         public event EventHandler<ValueChangedEventArgs<float>> VolumeChanged;
         public event EventHandler<ValueChangedEventArgs<byte[]>> AudioDataChanged;
 
-        private readonly ISourcePlaylistHelper helper;
+        private readonly IAudioCreateService audioCreateService;
+        private readonly IInvokeDispatcherService dispatcher;
         private bool isSearchShuffle, isSearching, isUpdatingSourcePlaylists, isUpdatingPlaylists;
         private string searchKey;
         private PlaybackState playState;
@@ -218,9 +219,10 @@ namespace AudioPlayerBackend.Audio
 
         private IAudioServiceBase Base => this;
 
-        public AudioService(ISourcePlaylistHelper helper = null)
+        public AudioService()
         {
-            this.helper = helper;
+            audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
+            dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
             playState = PlaybackState.Paused;
             shuffledSongs = new Dictionary<ISourcePlaylist, IEnumerable<Song>>();
 
@@ -417,30 +419,7 @@ namespace AudioPlayerBackend.Audio
         {
             if (PropertyChanged == null) return;
 
-            if (helper?.Dispatcher != null) helper.Dispatcher.InvokeDispatcher(Raise);
-            else Raise();
-
-            void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-        }
-
-        public ISourcePlaylistBase CreateSourcePlaylist()
-        {
-            return CreateSourcePlaylist(Guid.NewGuid());
-        }
-
-        public ISourcePlaylistBase CreateSourcePlaylist(Guid id)
-        {
-            return new SourcePlaylist(id, helper);
-        }
-
-        public IPlaylistBase CreatePlaylist()
-        {
-            return CreatePlaylist(Guid.NewGuid());
-        }
-
-        public IPlaylistBase CreatePlaylist(Guid id)
-        {
-            return new Playlist(id, helper?.Dispatcher);
+            dispatcher.InvokeDispatcher(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)));
         }
     }
 }

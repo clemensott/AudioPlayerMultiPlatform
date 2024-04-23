@@ -19,6 +19,7 @@ namespace AudioPlayerFrontend
     /// </summary>
     public sealed partial class SettingsPage : Page
     {
+        private bool submit;
         private IntConverter serverPortConverter;
         private IntNullableConverter clientPortConverter;
         private ServiceBuilder serviceBuilder;
@@ -68,7 +69,7 @@ namespace AudioPlayerFrontend
         {
             base.OnNavigatedFrom(e);
 
-            if (!result.Task.IsCompleted) result.SetResult(null);
+            result.SetResult(submit ? serviceBuilder : null);
         }
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
@@ -151,7 +152,7 @@ namespace AudioPlayerFrontend
 
         private void AbbOk_Click(object sender, RoutedEventArgs e)
         {
-            result.SetResult(serviceBuilder);
+            submit = true;
             Frame.GoBack();
         }
 

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend
 {
-    public interface IInvokeDispatcherHelper
+    public interface IInvokeDispatcherService
     {
         Task InvokeDispatcher(Action action);
 
