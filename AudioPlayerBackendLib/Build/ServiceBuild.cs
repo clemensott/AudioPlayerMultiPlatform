@@ -12,6 +12,7 @@ namespace AudioPlayerBackend.Build
 
     public class ServiceBuild : INotifyPropertyChanged
     {
+        private readonly IAudioCreateService audioCreateService;
         private bool sendCommandsDirect, sendToggle;
         private int songOffset;
         private BuildState state;
@@ -114,6 +115,7 @@ namespace AudioPlayerBackend.Build
 
         public ServiceBuild()
         {
+            audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
             State = BuildState.Init;
             CommunicatorToken = new BuildStatusToken<ICommunicator>();
             SyncToken = new BuildStatusToken<IAudioService>();
@@ -187,7 +189,7 @@ namespace AudioPlayerBackend.Build
                     try
                     {
                         State = BuildState.SyncCommunicator;
-                        service = new AudioService(serviceBuilder.SourcePlaylistHelper);
+                        service = audioCreateService.CreateAudioService();
 
                         if (Communicator != null)
                         {
@@ -240,7 +242,7 @@ namespace AudioPlayerBackend.Build
                     try
                     {
                         State = BuildState.CompleteSerivce;
-                        ReadWriteAudioServiceData data = serviceBuilder.CompleteService(service);
+                        ReadWriteAudioServiceData data = await serviceBuilder.CompleteService(service);
 
                         if (CompleteToken.IsEnded.HasValue) return;
 

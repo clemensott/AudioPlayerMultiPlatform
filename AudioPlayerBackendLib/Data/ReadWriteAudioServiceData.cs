@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.FileSystem;
 using StdOttStandard;
 using StdOttStandard.Linq;
 
@@ -12,8 +13,8 @@ namespace AudioPlayerBackend.Data
 {
     public class ReadWriteAudioServiceData : IDisposable
     {
-        private static readonly Random rnd = new Random();
-
+        private readonly IAudioCreateService audioCreateService;
+        private readonly IFileSystemService fileSystemService;
         private readonly string path;
         private SemaphoreSlim saveSem;
         private bool disposed;
@@ -22,22 +23,24 @@ namespace AudioPlayerBackend.Data
 
         private ReadWriteAudioServiceData(string path, IAudioServiceBase service)
         {
+            audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
+            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
             this.path = path;
             Service = service;
         }
 
-        public static ReadWriteAudioServiceData Start(string path, IAudioServiceBase service)
+        public static async Task<ReadWriteAudioServiceData> Start(string path, IAudioServiceBase service)
         {
             ReadWriteAudioServiceData dataService = new ReadWriteAudioServiceData(path, service);
-            dataService.Init();
+            await dataService.Init();
             return dataService;
         }
 
-        private void Init()
+        private async Task Init()
         {
             if (!string.IsNullOrWhiteSpace(path))
             {
-                Load();
+                await Load();
 
                 saveSem = new SemaphoreSlim(0);
                 Task.Run(SaveHandler);
@@ -132,14 +135,15 @@ namespace AudioPlayerBackend.Data
             TriggerSave();
         }
 
-        private void Load()
+        private async Task Load()
         {
             AudioServiceData data;
             if (!File.Exists(path)) return;
 
             try
             {
-                data = StdUtils.XmlDeserializeFile<AudioServiceData>(path);
+                string xml = await fileSystemService.ReadTextFile(path);
+                data = StdUtils.XmlDeserializeText<AudioServiceData>(xml);
             }
             catch
             {
@@ -154,7 +158,7 @@ namespace AudioPlayerBackend.Data
             {
                 Guid id = Guid.Parse(playlistData.ID);
                 ISourcePlaylistBase playlist = Service.SourcePlaylists
-                    .FirstOrDefault(s => s.ID == id) ?? Service.CreateSourcePlaylist(id);
+                    .FirstOrDefault(s => s.ID == id) ?? audioCreateService.CreateSourcePlaylist(id);
 
                 MergePlaylist(playlist, playlistData);
 
@@ -167,7 +171,7 @@ namespace AudioPlayerBackend.Data
             {
                 Guid id = Guid.Parse(playlistData.ID);
                 IPlaylistBase playlist = Service.Playlists
-                    .FirstOrDefault(s => s.ID == id) ?? Service.CreatePlaylist(id);
+                    .FirstOrDefault(s => s.ID == id) ?? audioCreateService.CreatePlaylist(id);
 
                 playlistData.Songs = playlistData.Songs.Where(s => allSongs.ContainsKey(s.FullPath)).ToArray();
 
@@ -225,7 +229,7 @@ namespace AudioPlayerBackend.Data
                     while (saveSem.CurrentCount > 0);
 
                     await Task.Delay(400);
-                    Save();
+                    await Save();
                     await Task.Delay(500);
                 }
                 catch (Exception e)
@@ -235,10 +239,11 @@ namespace AudioPlayerBackend.Data
             }
         }
 
-        private void Save()
+        private async Task Save()
         {
             AudioServiceData data = new AudioServiceData(Service);
-            StdUtils.XmlSerialize(path, data);
+            string xml = StdUtils.XmlSerialize(data);
+            await fileSystemService.WriteTextFile(path, xml);
         }
 
         public void Dispose()

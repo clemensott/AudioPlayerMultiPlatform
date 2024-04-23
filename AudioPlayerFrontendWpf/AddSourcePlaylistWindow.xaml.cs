@@ -1,8 +1,10 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.FileSystem;
 using AudioPlayerFrontend.Join;
 using StdOttStandard.Converter.MultipleInputs;
 using StdOttStandard.Linq;
@@ -14,6 +16,7 @@ namespace AudioPlayerFrontend
     /// </summary>
     public partial class AddSourcePlaylistWindow : Window
     {
+        private readonly IFileSystemService fileSystemService;
         private readonly IAudioService service;
         private readonly ISourcePlaylist newPlaylist;
 
@@ -21,8 +24,10 @@ namespace AudioPlayerFrontend
         {
             InitializeComponent();
 
+            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
             this.service = service;
-            newPlaylist = (ISourcePlaylist)service.CreateSourcePlaylist();
+            IAudioCreateService audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
+            newPlaylist = audioCreateService.CreateSourcePlaylist(Guid.NewGuid());
             newPlaylist.Loop = LoopType.CurrentPlaylist;
 
             try
@@ -66,7 +71,7 @@ namespace AudioPlayerFrontend
             if ((bool)micNewPlaylist.Output)
             {
                 newPlaylist.FileMediaSources = sources;
-                newPlaylist.Update();
+                fileSystemService.UpdateSourcePlaylist(newPlaylist);
                 service.SourcePlaylists.Add(newPlaylist);
                 service.CurrentPlaylist = newPlaylist;
             }
@@ -75,6 +80,7 @@ namespace AudioPlayerFrontend
                 ISourcePlaylist selectedPlaylist = (ISourcePlaylist)lbxPlaylists.SelectedItem;
                 selectedPlaylist.FileMediaSources = rbnAppend.IsChecked == true ?
                     selectedPlaylist.FileMediaSources.ToNotNull().Concat(sources).ToArray() : sources;
+                fileSystemService.UpdateSourcePlaylist(selectedPlaylist);
             }
 
             Close();

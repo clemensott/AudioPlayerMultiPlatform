@@ -1,6 +1,4 @@
 ﻿using AudioPlayerBackend.Audio;
-using StdOttStandard.Linq;
-using StdOttStandard.Linq.DataStructures.Observable;
 using System;
 using System.Linq;
 using System.Threading;
@@ -10,7 +8,7 @@ namespace AudioPlayerBackend.Player
 {
     public class AudioServicePlayer : IServicePlayer
     {
-        private const int updateInterval = 100, maxErrorCount = 15;
+        private const int updateInterval = 100;
 
         private bool isSetCurrentSong;
         private int errorCount;
@@ -20,20 +18,20 @@ namespace AudioPlayerBackend.Player
 
         public IPlayer Player { get; }
 
-        public IInvokeDispatcherHelper Dispatcher { get; }
+        public IInvokeDispatcherService Dispatcher { get; }
 
-        public AudioServicePlayer(IAudioService service, IPlayer player, IInvokeDispatcherHelper dispatcher)
+        public AudioServicePlayer(IAudioService service, IPlayer player)
         {
             Service = service;
             Player = player;
-            Dispatcher = dispatcher;
+            Dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
 
             player.PlayState = service.PlayState;
             player.MediaOpened += Player_MediaOpened;
             player.MediaFailed += Player_MediaFailed;
             player.MediaEnded += Player_MediaEnded;
 
-            timer = new Timer(Timer_Elapsed, null, updateInterval, updateInterval);
+            timer = new Timer(Timer_Elapsed, null, -1, updateInterval);
 
             service.Volume = player.Volume;
 
@@ -108,14 +106,10 @@ namespace AudioPlayerBackend.Player
             if (service == null) return;
 
             service.CurrentPlaylistChanged += Service_CurrentPlaylistChanged;
-            service.SourcePlaylists.AddedAny += SourcePlaylists_AddedAny;
-            service.SourcePlaylists.RemovedAny += SourcePlaylists_RemovedAny;
             service.PlayStateChanged += Service_PlayStateChanged;
             service.VolumeChanged += Service_VolumeChanged;
 
             Subscribe(service.CurrentPlaylist);
-
-            service.SourcePlaylists.ForEach(Subscribe);
         }
 
         private void Unsubscribe(IAudioService service)
@@ -123,14 +117,10 @@ namespace AudioPlayerBackend.Player
             if (service == null) return;
 
             service.CurrentPlaylistChanged -= Service_CurrentPlaylistChanged;
-            service.SourcePlaylists.AddedAny -= SourcePlaylists_AddedAny;
-            service.SourcePlaylists.RemovedAny -= SourcePlaylists_RemovedAny;
             service.PlayStateChanged -= Service_PlayStateChanged;
             service.VolumeChanged -= Service_VolumeChanged;
 
             Unsubscribe(service.CurrentPlaylist);
-
-            service.SourcePlaylists.ForEach(Unsubscribe);
         }
 
         private void Subscribe(IPlaylist playlist)
@@ -149,16 +139,6 @@ namespace AudioPlayerBackend.Player
             playlist.SongsChanged -= Playlist_SongsChanged;
         }
 
-        private void Subscribe(ISourcePlaylist playlist)
-        {
-            if (playlist != null) playlist.FileMediaSourcesChanged += Playlist_FileMediaSourcesChanged;
-        }
-
-        private void Unsubscribe(ISourcePlaylist playlist)
-        {
-            if (playlist != null) playlist.FileMediaSourcesChanged -= Playlist_FileMediaSourcesChanged;
-        }
-
         private async void Service_CurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
         {
             Unsubscribe((IPlaylist)e.OldValue);
@@ -173,16 +153,6 @@ namespace AudioPlayerBackend.Player
             await UpdateCurrentSong();
         }
 
-        private void SourcePlaylists_AddedAny(object sender, SingleChangeEventArgs<ISourcePlaylist> e)
-        {
-            Subscribe(e.Item);
-        }
-
-        private void SourcePlaylists_RemovedAny(object sender, SingleChangeEventArgs<ISourcePlaylist> e)
-        {
-            Unsubscribe(e.Item);
-        }
-
         private void Service_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
         {
             Player.PlayState = Service.PlayState;
@@ -193,11 +163,6 @@ namespace AudioPlayerBackend.Player
         private void Service_VolumeChanged(object sender, ValueChangedEventArgs<float> e)
         {
             Player.Volume = Service.Volume;
-        }
-
-        private async void Playlist_FileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
-        {
-            await ((ISourcePlaylist)sender).Reload();
         }
 
         private async void Playlist_WannaSongChanged(object sender, ValueChangedEventArgs<RequestSong?> e)
@@ -268,6 +233,7 @@ namespace AudioPlayerBackend.Player
 
             timer.Dispose();
             Player.Stop();
+            Player.Dispose();
         }
     }
 }

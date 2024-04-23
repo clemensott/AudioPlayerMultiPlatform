@@ -10,12 +10,12 @@ using System.Linq;
 using AudioPlayerBackend.Communication.OwnTcp;
 using AudioPlayerBackend.Data;
 using StdOttStandard.Linq;
+using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Build
 {
     public class ServiceBuilder : INotifyPropertyChanged
     {
-        private readonly IServiceBuilderHelper helper;
         private bool? isSearchShuffle, play, isStreaming;
         private OrderType? shuffle;
         private int serverPort;
@@ -23,9 +23,8 @@ namespace AudioPlayerBackend.Build
         private string searchKey, serverAddress, dataFilePath;
         private float? volume;
         private CommunicatorProtocol communicatorProtocol;
-        private IPlayer player;
-        private ISourcePlaylistHelper sourcePlaylistHelper;
-        private IInvokeDispatcherHelper communicatorHelper;
+        private readonly IPlayerCreateService playerCreateService;
+        private readonly IInvokeDispatcherService dispatcher;
 
         public bool BuildStandalone { get; private set; }
 
@@ -165,45 +164,10 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public IPlayer Player
+        public ServiceBuilder()
         {
-            get => player;
-            set
-            {
-                if (value == player) return;
-
-                player = value;
-                OnPropertyChanged(nameof(Player));
-            }
-        }
-
-        public ISourcePlaylistHelper SourcePlaylistHelper
-        {
-            get => sourcePlaylistHelper;
-            set
-            {
-                if (value == sourcePlaylistHelper) return;
-
-                sourcePlaylistHelper = value;
-                OnPropertyChanged(nameof(SourcePlaylistHelper));
-            }
-        }
-
-        public IInvokeDispatcherHelper CommunicatorHelper
-        {
-            get => communicatorHelper;
-            set
-            {
-                if (value == communicatorHelper) return;
-
-                communicatorHelper = value;
-                OnPropertyChanged(nameof(CommunicatorHelper));
-            }
-        }
-
-        public ServiceBuilder(IServiceBuilderHelper helper = null)
-        {
-            this.helper = helper;
+            playerCreateService = AudioPlayerServiceProvider.Current.GetPlayerCreateService();
+            dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
 
             WithStandalone();
         }
@@ -395,27 +359,6 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuilder WithPlayer(IPlayer player)
-        {
-            Player = player;
-
-            return this;
-        }
-
-        public ServiceBuilder WithSourcePlaylistHelper(ISourcePlaylistHelper helper)
-        {
-            SourcePlaylistHelper = helper;
-
-            return this;
-        }
-
-        public ServiceBuilder WithCommunicatorHelper(IInvokeDispatcherHelper helper)
-        {
-            CommunicatorHelper = helper;
-
-            return this;
-        }
-
         public ICommunicator CreateCommunicator()
         {
             switch (CommunicatorProtocol)
@@ -439,11 +382,11 @@ namespace AudioPlayerBackend.Build
 
         public IServicePlayer CreateServicePlayer(IAudioService service)
         {
-            if (BuildClient) return CreateAudioStreamPlayer(Player, service);
-            return CreateAudioServicePlayer(Player, service);
+            if (BuildClient) return playerCreateService.CreateAudioStreamPlayer(service);
+            return playerCreateService.CreateAudioServicePlayer(service);
         }
 
-        public ReadWriteAudioServiceData CompleteService(IAudioService service)
+        public async Task<ReadWriteAudioServiceData> CompleteService(IAudioService service)
         {
             if (Shuffle.HasValue)
             {
@@ -463,7 +406,7 @@ namespace AudioPlayerBackend.Build
             if (Play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (Volume.HasValue) service.Volume = volume.Value;
 
-            return ReadWriteAudioServiceData.Start(DataFilePath, service);
+            return await ReadWriteAudioServiceData.Start(DataFilePath, service);
         }
 
         protected virtual MqttClientCommunicator CreateMqttClientCommunicator(string serverAddress, int? port)
@@ -478,7 +421,7 @@ namespace AudioPlayerBackend.Build
 
         protected virtual OwnTcpClientCommunicator CreateOwnTcpClientCommunicator(string serverAddress, int port)
         {
-            return new OwnTcpClientCommunicator(serverAddress, port, communicatorHelper);
+            return new OwnTcpClientCommunicator(serverAddress, port);
         }
 
         protected virtual OwnTcpServerCommunicator CreateOwnTcpServerCommunicator(int port)
@@ -486,19 +429,9 @@ namespace AudioPlayerBackend.Build
             return new OwnTcpServerCommunicator(port);
         }
 
-        protected virtual AudioStreamPlayer CreateAudioStreamPlayer(IPlayer player, IAudioService service)
-        {
-            return helper.CreateAudioStreamPlayer(player, service);
-        }
-
-        protected virtual AudioServicePlayer CreateAudioServicePlayer(IPlayer player, IAudioService service)
-        {
-            return helper.CreateAudioServicePlayer(player, service);
-        }
-
         public ServiceBuilder Clone()
         {
-            return new ServiceBuilder(helper)
+            return new ServiceBuilder()
             {
                 BuildClient = BuildClient,
                 BuildServer = BuildServer,
@@ -509,9 +442,7 @@ namespace AudioPlayerBackend.Build
                 Shuffle = Shuffle,
                 IsSearchShuffle = IsSearchShuffle,
                 IsStreaming = IsStreaming,
-                SourcePlaylistHelper = SourcePlaylistHelper,
                 Play = Play,
-                Player = Player,
                 SearchKey = SearchKey,
                 ServerAddress = ServerAddress,
                 ServerPort = ServerPort,
@@ -525,10 +456,7 @@ namespace AudioPlayerBackend.Build
         {
             if (PropertyChanged == null) return;
 
-            if (helper?.Dispatcher != null) helper.Dispatcher.InvokeDispatcher(Raise);
-            else Raise();
-
-            void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            dispatcher.InvokeDispatcher(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)));
         }
     }
 }

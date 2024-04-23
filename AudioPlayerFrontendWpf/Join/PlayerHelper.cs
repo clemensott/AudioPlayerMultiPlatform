@@ -5,7 +5,6 @@ namespace AudioPlayerFrontend.Join
 {
     class PlayerHelper : IAudioStreamHelper
     {
-        private static readonly Random ran = new Random();
         private static PlayerHelper instance;
 
         public static PlayerHelper Current

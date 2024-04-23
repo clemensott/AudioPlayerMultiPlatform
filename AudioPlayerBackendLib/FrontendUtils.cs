@@ -20,13 +20,13 @@ namespace AudioPlayerBackend
         }
 
         public static void AddSongsToFirstPlaylist(this IAudioService service,
-            IEnumerable<Song> songs, IInvokeDispatcherHelper helper)
+            IEnumerable<Song> songs, IInvokeDispatcherService helper)
         {
             AddSongsToFirstPlaylist(service, songs, false, helper);
         }
 
         public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs,
-            bool prepend, IInvokeDispatcherHelper helper)
+            bool prepend, IInvokeDispatcherService helper)
         {
             songs = songs as Song[] ?? songs.ToArray();
 
@@ -75,12 +75,10 @@ namespace AudioPlayerBackend
             }
             else
             {
-                IPlaylist playlist = new Playlist(helper)
-                {
-                    Name = "Custom",
-                    Loop = LoopType.Next,
-                    Shuffle = OrderType.Custom
-                };
+                IPlaylist playlist = AudioPlayerServiceProvider.Current.GetAudioCreateService().CreatePlaylist(Guid.NewGuid());
+                playlist.Name = "Custom";
+                playlist.Loop = LoopType.Next;
+                playlist.Shuffle = OrderType.Custom;
 
                 if (prepend || !currentSong.HasValue)
                 {
