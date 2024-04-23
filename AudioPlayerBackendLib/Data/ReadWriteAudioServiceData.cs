@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +16,7 @@ namespace AudioPlayerBackend.Data
         private readonly IFileSystemService fileSystemService;
         private readonly string path;
         private SemaphoreSlim saveSem;
+        private Task saveHandlerTask;
         private bool disposed;
 
         public IAudioServiceBase Service { get; }
@@ -43,7 +43,7 @@ namespace AudioPlayerBackend.Data
                 await Load();
 
                 saveSem = new SemaphoreSlim(0);
-                Task.Run(SaveHandler);
+                saveHandlerTask = Task.Run(SaveHandler);
                 Subscribe();
             }
         }
@@ -138,8 +138,6 @@ namespace AudioPlayerBackend.Data
         private async Task Load()
         {
             AudioServiceData data;
-            if (!File.Exists(path)) return;
-
             try
             {
                 string xml = await fileSystemService.ReadTextFile(path);
@@ -250,12 +248,8 @@ namespace AudioPlayerBackend.Data
         {
             Unsubscribe();
             disposed = true;
-
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(path)) Save();
-            }
-            catch { }
+            saveSem?.Release();
+            saveHandlerTask?.Wait();
         }
     }
 }

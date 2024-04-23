@@ -11,22 +11,10 @@ namespace AudioPlayerBackend
     {
         public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs)
         {
-            AddSongsToFirstPlaylist(service, songs, false, null);
+            AddSongsToFirstPlaylist(service, songs, false);
         }
 
         public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs, bool prepend)
-        {
-            AddSongsToFirstPlaylist(service, songs, prepend, null);
-        }
-
-        public static void AddSongsToFirstPlaylist(this IAudioService service,
-            IEnumerable<Song> songs, IInvokeDispatcherService helper)
-        {
-            AddSongsToFirstPlaylist(service, songs, false, helper);
-        }
-
-        public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs,
-            bool prepend, IInvokeDispatcherService helper)
         {
             songs = songs as Song[] ?? songs.ToArray();
 
@@ -113,9 +101,13 @@ namespace AudioPlayerBackend
 
         public static void Log(string text, params object[] values)
         {
-            string line = GetLogLine($"{text}: {string.Join(" | ",values)}");
-            System.IO.File.AppendAllLines("./test.log", new string[] { line });
-            builder.AppendLine(line);
+            try
+            {
+                string line = GetLogLine($"{text}: {string.Join(" | ", values)}");
+                System.IO.File.AppendAllLines("./test.log", new string[] { line });
+                builder.AppendLine(line);
+            }
+            catch { }
         }
 
         private static string GetLogLine(string text)

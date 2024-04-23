@@ -20,16 +20,19 @@ using Windows.UI.Xaml.Controls.Primitives;
 using StdOttUwp;
 using AudioPlayerBackend;
 using StdOttUwp.Converters;
+using AudioPlayerBackend.FileSystem;
 
 namespace AudioPlayerFrontend
 {
     public sealed partial class MainPage : Page
     {
+        private readonly IFileSystemService fileSystemService;
         private ViewModel viewModel;
         private readonly ObservableCollection<IPlaylist> allPlaylists;
 
         public MainPage()
         {
+            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
             allPlaylists = new ObservableCollection<IPlaylist>();
 
             this.InitializeComponent();
@@ -237,7 +240,7 @@ namespace AudioPlayerFrontend
             try
             {
                 viewModel.IsUpdatingPlaylists = true;
-                await UwpUtils.GetDataContext<ISourcePlaylist>(sender).Update();
+                await fileSystemService.UpdateSourcePlaylist(UwpUtils.GetDataContext<ISourcePlaylist>(sender));
             }
             catch (Exception exc)
             {
@@ -254,7 +257,7 @@ namespace AudioPlayerFrontend
             try
             {
                 viewModel.IsUpdatingPlaylists = true;
-                await UwpUtils.GetDataContext<ISourcePlaylist>(sender).Reload();
+                await fileSystemService.ReloadSourcePlaylist(UwpUtils.GetDataContext<ISourcePlaylist>(sender));
             }
             catch (Exception exc)
             {

@@ -6,12 +6,8 @@ using Windows.UI.Core;
 
 namespace AudioPlayerFrontend.Join
 {
-    class InvokeDispatcherHelper : IInvokeDispatcherHelper
+    class InvokeDispatcherService : IInvokeDispatcherService
     {
-        public InvokeDispatcherHelper()
-        {
-        }
-
         public async Task InvokeDispatcher(Action action)
         {
             try

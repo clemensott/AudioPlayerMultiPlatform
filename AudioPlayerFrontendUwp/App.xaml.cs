@@ -17,6 +17,7 @@ using StdOttStandard.Dispatch;
 using System.ComponentModel;
 using AudioPlayerBackend.Communication;
 using Windows.Foundation;
+using AudioPlayerBackend;
 
 namespace AudioPlayerFrontend
 {
@@ -33,6 +34,7 @@ namespace AudioPlayerFrontend
 
         private readonly ViewModel viewModel;
         private readonly TaskCompletionSource<bool> launchCompletionSource;
+        private readonly BackgroundTaskHandler backgroundTaskHandler;
         private Frame rootFrame;
         private bool canceledBuild;
         private DateTime lastAutoUpdatePlaylists;
@@ -45,18 +47,20 @@ namespace AudioPlayerFrontend
             this.EnteredBackground += OnEnteredBackground;
             this.LeavingBackground += OnLeavingBackground;
 
-            ServiceBuilder serviceBuilder = new ServiceBuilder(ServiceBuilderHelper.Current);
-            serviceBuilder.WithPlayer(new Player())
-                .WithSourcePlaylistHelper(SourcePlaylistHelper.Current)
-                .WithCommunicatorHelper(SourcePlaylistHelper.Current.Dispatcher);
+            AudioPlayerServiceProvider.Current
+                .AddFileSystemService<FileSystemService>()
+                .AddDispatcher<InvokeDispatcherService>()
+                .AddPlayerCreateService<PlayerCreateService>()
+                .Build();
 
             Dispatcher dispatcher = new Dispatcher();
+            ServiceBuilder serviceBuilder = new ServiceBuilder();
             ServiceHandler service = new ServiceHandler(dispatcher, serviceBuilder);
             service.PropertyChanged += Service_PropertyChanged;
 
             viewModel = new ViewModel(service);
             launchCompletionSource = new TaskCompletionSource<bool>();
-            BackgroundTaskHandler.Current = new BackgroundTaskHandler(dispatcher, service);
+            backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, service);
         }
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -146,10 +150,10 @@ namespace AudioPlayerFrontend
             Settings.Current.SuspendTime = DateTime.Now;
             SuspendingDeferral deferral = e.SuspendingOperation.GetDeferral();
 
-            BackgroundTaskHandler.Current.Stop();
-
             try
             {
+                backgroundTaskHandler.Stop();
+
                 ServiceProfile profile = new ServiceProfile(viewModel.Service.Builder);
                 StringWriter writer = new StringWriter();
                 serializer.Serialize(writer, profile);
@@ -157,13 +161,19 @@ namespace AudioPlayerFrontend
                 StorageFile file = await ApplicationData.Current.LocalFolder
                     .CreateFileAsync(serviceProfileFilename, CreationCollisionOption.OpenIfExists);
                 await FileIO.WriteTextAsync(file, writer.ToString());
+
+                viewModel.Service.Communicator?.Dispose();
+                viewModel.Service.ServicePlayer?.Dispose();
+                viewModel.Service.Data?.Dispose();
             }
             catch (Exception exc)
             {
                 System.Diagnostics.Debug.WriteLine("Saving service profile failed:\n" + exc);
             }
-
-            deferral.Complete();
+            finally
+            {
+                deferral.Complete();
+            }
         }
 
         private void Service_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -212,7 +222,7 @@ namespace AudioPlayerFrontend
             }
             else return;
 
-            if (result?.Communicator is IClientCommunicator || viewModel.IsUpdatingPlaylists) return;
+            if (result == null || result.Communicator is IClientCommunicator || viewModel.IsUpdatingPlaylists) return;
 
             try
             {

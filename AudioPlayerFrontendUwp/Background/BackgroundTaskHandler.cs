@@ -15,7 +15,7 @@ namespace AudioPlayerFrontend.Background
     {
         private static readonly TimeSpan inativeTime = TimeSpan.FromMinutes(10);
 
-        public static BackgroundTaskHandler Current { get; set; }
+        public static BackgroundTaskHandler Current { get; private set; }
 
         public bool isInBackground;
         private readonly ServiceHandler service;
@@ -28,6 +28,9 @@ namespace AudioPlayerFrontend.Background
 
         public BackgroundTaskHandler(Dispatcher dispatcher, ServiceHandler service)
         {
+            if (Current != null) throw new InvalidOperationException("Only one instance of this class is allowed");
+            Current = this;
+
             isInBackground = false;
             sem = new SemaphoreSlim(0, 1);
 
