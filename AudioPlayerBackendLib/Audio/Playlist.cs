@@ -230,10 +230,7 @@ namespace AudioPlayerBackend.Audio
         {
             if (PropertyChanged == null) return;
 
-            if (dispatcher != null) dispatcher.InvokeDispatcher(Raise);
-            else Raise();
-
-            void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            dispatcher.InvokeDispatcher(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)));
         }
 
         public override bool Equals(object obj)

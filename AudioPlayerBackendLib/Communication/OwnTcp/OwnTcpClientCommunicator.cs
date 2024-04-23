@@ -244,8 +244,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     LockTopic(item.Topic, item.Payload);
 
                     bool handleAction() => HandlerMessage(item);
-                    bool success = dispatcher == null ?
-                        handleAction() : await dispatcher.InvokeDispatcher(handleAction);
+                    bool success = await dispatcher.InvokeDispatcher(handleAction);
 
                     if (success) continue;
 

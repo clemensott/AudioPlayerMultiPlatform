@@ -1,17 +1,9 @@
-﻿using StdOttStandard.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System;
 
 namespace AudioPlayerBackend.Audio
 {
     class SourcePlaylist : Playlist, ISourcePlaylist
     {
-        private static readonly Random ran = new Random();
-
-        private readonly ISourcePlaylistHelper helper;
         private string[] fileMediaSources;
 
         public event EventHandler<ValueChangedEventArgs<string[]>> FileMediaSourcesChanged;
