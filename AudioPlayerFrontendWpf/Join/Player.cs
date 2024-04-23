@@ -26,7 +26,6 @@ namespace AudioPlayerFrontend.Join
             get => playState;
             set
             {
-                PlaybackState oldState = playState;
                 playState = value;
 
                 HandlePlayStateChange();
@@ -49,7 +48,7 @@ namespace AudioPlayerFrontend.Join
 
         public Song? Source { get; private set; }
 
-        public Player(int deviceNumber = -1, IntPtr? windowHandle = null)
+        public Player()
         {
             handleSem = new SemaphoreSlim(1);
 

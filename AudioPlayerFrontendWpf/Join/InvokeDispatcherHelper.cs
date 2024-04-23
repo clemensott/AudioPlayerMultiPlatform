@@ -5,7 +5,7 @@ using System.Windows.Threading;
 
 namespace AudioPlayerFrontend.Join
 {
-    class InvokeDispatcherHelper : IInvokeDispatcherHelper
+    class InvokeDispatcherHelper : IInvokeDispatcherService
     {
         private readonly Dispatcher dispatcher;
 

@@ -6,7 +6,7 @@ namespace AudioPlayerBackend.Audio
 {
     public interface ISourcePlaylistHelper
     {
-        IInvokeDispatcherHelper Dispatcher { get; }
+        IInvokeDispatcherService Dispatcher { get; }
 
         Func<string[], Task<IEnumerable<string>>> FetchFiles { get; }
 

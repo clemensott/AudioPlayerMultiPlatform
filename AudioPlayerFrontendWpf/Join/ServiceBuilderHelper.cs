@@ -13,16 +13,16 @@ namespace AudioPlayerFrontend.Join
             if (dispatcher != null) Dispatcher = new InvokeDispatcherHelper(dispatcher);
         }
 
-        public IInvokeDispatcherHelper Dispatcher { get; }
+        public IInvokeDispatcherService Dispatcher { get; }
 
         public AudioServicePlayer CreateAudioServicePlayer(IPlayer player, IAudioService service)
         {
-            return new AudioServicePlayer(service, player, Dispatcher);
+            return new AudioServicePlayer(service, player);
         }
 
         public AudioStreamPlayer CreateAudioStreamPlayer(IPlayer player, IAudioService service)
         {
-            return new AudioStreamPlayer(service, player, PlayerHelper.Current);
+            return new AudioStreamPlayer(service, player);
         }
     }
 }

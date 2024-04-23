@@ -1,7 +1,6 @@
 ﻿using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Player;
-using AudioPlayerFrontend.Join;
 using Microsoft.Win32;
 using StdOttStandard;
 using StdOttStandard.Linq;
@@ -14,7 +13,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
 using AudioPlayerBackend.Build;
 using StdOttFramework.RestoreWindow;
 using StdOttStandard.Converter.MultipleInputs;
@@ -23,11 +21,13 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using StdOttFramework;
 using StdOttFramework.Converters;
+using AudioPlayerBackend.FileSystem;
 
 namespace AudioPlayerFrontend
 {
     public partial class MainWindow : Window
     {
+        private readonly IFileSystemService fileSystemService;
         private ServiceBuilder serviceBuilder;
         private HotKeysBuilder hotKeysBuilder;
         private readonly ViewModel viewModel;
@@ -37,13 +37,14 @@ namespace AudioPlayerFrontend
 
         public MainWindow()
         {
+            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
             allPlaylists = new ObservableCollection<IPlaylist>();
 
             InitializeComponent();
 
             RestoreWindowHandler.Activate(this, RestoreWindowSettings.GetDefault());
 
-            serviceBuilder = new ServiceBuilder(new ServiceBuilderHelper(Dispatcher));
+            serviceBuilder = new ServiceBuilder();
             hotKeysBuilder = new HotKeysBuilder();
 
             DataContext = viewModel = new ViewModel();
@@ -111,10 +112,6 @@ namespace AudioPlayerFrontend
 
             if (result.TryGetFirstValidOptionParseds(disableUiOpt, out _)) viewModel.IsUiEnabled = false;
 
-            IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-            serviceBuilder.WithPlayer(new Player(-1, windowHandle))
-                .WithCommunicatorHelper(new InvokeDispatcherHelper(Dispatcher));
-
             await BuildAudioServiceAsync();
 
             BuildHotKeys();
@@ -149,14 +146,15 @@ namespace AudioPlayerFrontend
                 {
                     await Task.Run(async () =>
                     {
-                        await Task.WhenAll(result.AudioService.SourcePlaylists.Select(p => p.Update()));
+                        await Task.WhenAll(result.AudioService.SourcePlaylists.Select(fileSystemService.UpdateSourcePlaylist));
 
+                        // remove all songs from not source playlists that are not in source playlists (any more)
                         IDictionary<string, Song> allSongs = result.AudioService.SourcePlaylists
                             .SelectMany(p => p.Songs).Distinct().ToDictionary(s => s.FullPath);
 
+                        Song song = new Song();
                         foreach (IPlaylist playlist in result.AudioService.Playlists)
                         {
-                            Song song = new Song();
                             playlist.Songs = playlist.Songs
                                 .Where(s => allSongs.TryGetValue(s.FullPath, out song)).Select(_ => song).ToArray();
                         }
@@ -381,6 +379,7 @@ namespace AudioPlayerFrontend
         private void Window_Closing(object sender, CancelEventArgs e)
         {
             hotKeys?.Dispose();
+            viewModel.Service?.ServicePlayer?.Dispose();
             viewModel.Service?.Communicator?.Dispose();
             viewModel.Service?.Data?.Dispose();
         }
@@ -539,7 +538,7 @@ namespace AudioPlayerFrontend
 
         private async void MimReloadSongs_Click(object sender, RoutedEventArgs e)
         {
-            await FrameworkUtils.GetDataContext<ISourcePlaylist>(sender).Reload();
+            await fileSystemService.ReloadSourcePlaylist(FrameworkUtils.GetDataContext<ISourcePlaylist>(sender));
         }
 
         private void MimRemixSongs_Click(object sender, RoutedEventArgs e)

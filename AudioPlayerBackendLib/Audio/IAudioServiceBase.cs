@@ -29,13 +29,5 @@ namespace AudioPlayerBackend.Audio
         float Volume { get; set; }
 
         byte[] AudioData { get; set; }
-
-        ISourcePlaylistBase CreateSourcePlaylist();
-
-        ISourcePlaylistBase CreateSourcePlaylist(Guid id);
-
-        IPlaylistBase CreatePlaylist();
-
-        IPlaylistBase CreatePlaylist(Guid id);
     }
 }

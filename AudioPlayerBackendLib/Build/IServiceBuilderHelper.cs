@@ -5,7 +5,7 @@ namespace AudioPlayerBackend.Build
 {
     public interface IServiceBuilderHelper
     {
-        IInvokeDispatcherHelper Dispatcher { get; }
+        IInvokeDispatcherService Dispatcher { get; }
 
         AudioStreamPlayer CreateAudioStreamPlayer(IPlayer player, IAudioService service);
 

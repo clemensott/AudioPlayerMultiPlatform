@@ -16,7 +16,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         private bool isSyncing;
         private OwnTcpClientConnection connection;
-        private readonly IInvokeDispatcherHelper helper;
+        private readonly IInvokeDispatcherService dispatcher;
 
         public override event EventHandler<DisconnectedEventArgs> Disconnected;
 
@@ -28,11 +28,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public int? Port { get; }
 
-        public OwnTcpClientCommunicator(string serverAddress, int port, IInvokeDispatcherHelper helper)
+        public OwnTcpClientCommunicator(string serverAddress, int port)
         {
             ServerAddress = serverAddress;
             Port = port;
-            this.helper = helper;
+            dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
         }
 
         public override async Task OpenAsync(BuildStatusToken statusToken)
@@ -211,10 +211,10 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                         case SyncCmd:
                             ByteQueue data = message.Payload;
-                            void syncAction() => data.DequeueService(connection.Service, Service.CreateSourcePlaylist, Service.CreatePlaylist);
+                            void syncAction() => data.DequeueService(connection.Service, 
+                                audioCreateService.CreateSourcePlaylist, audioCreateService.CreatePlaylist);
 
-                            if (helper == null) syncAction();
-                            else await helper.InvokeDispatcher(syncAction);
+                            await dispatcher.InvokeDispatcher(syncAction);
 
                             connection.Waits[message.ID].SetResult(true);
                             connection.Waits.Remove(message.ID);
@@ -244,8 +244,8 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     LockTopic(item.Topic, item.Payload);
 
                     bool handleAction() => HandlerMessage(item);
-                    bool success = helper == null ?
-                        handleAction() : await helper.InvokeDispatcher(handleAction);
+                    bool success = dispatcher == null ?
+                        handleAction() : await dispatcher.InvokeDispatcher(handleAction);
 
                     if (success) continue;
 
