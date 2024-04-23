@@ -268,12 +268,9 @@
     <Compile Include="HotKeysBuilder.cs" />
     <Compile Include="HotKeys.cs" />
     <Compile Include="Join\FileSystemService.cs" />
-    <Compile Include="Join\InvokeDispatcherHelper.cs" />
     <Compile Include="Join\InvokeDispatcherService.cs" />
     <Compile Include="Join\PlayerCreateService.cs" />
-    <Compile Include="Join\PlayerHelper.cs" />
     <Compile Include="Join\Player.cs" />
-    <Compile Include="Join\ServiceBuilderHelper.cs" />
     <Compile Include="SettingsWindow.xaml.cs">
       <DependentUpon>SettingsWindow.xaml</DependentUpon>
     </Compile>
