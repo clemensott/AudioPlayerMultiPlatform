@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerFrontend.Join
 {
-    internal class FileSystemService : IFileSystemService
+    class FileSystemService : IFileSystemService
     {
         private static readonly Random ran = new Random();
 
@@ -27,9 +27,9 @@ namespace AudioPlayerFrontend.Join
         public async Task UpdateSourcePlaylist(ISourcePlaylist playlist)
         {
             List<Song> songs = playlist. Songs.ToList();
-            playlist.Songs = await Task.Run(async () =>
+            playlist.Songs = await Task.Run(() =>
             {
-                IEnumerable<string> allFiles = await FetchFiles(playlist.FileMediaSources);
+                IEnumerable<string> allFiles = LoadAllSongs(playlist.FileMediaSources);
                 Dictionary<string, string> dict = allFiles.Distinct().ToDictionary(f => f);
 
                 for (int i = songs.Count - 1; i >= 0; i--)
@@ -50,9 +50,9 @@ namespace AudioPlayerFrontend.Join
         public async Task ReloadSourcePlaylist(ISourcePlaylist playlist)
         {
             List<Song> songs = playlist.Songs.ToList();
-            playlist.Songs = await Task.Run(async () =>
+            playlist.Songs = await Task.Run(() =>
             {
-                IEnumerable<string> allFiles = await FetchFiles(playlist.FileMediaSources);
+                IEnumerable<string> allFiles = LoadAllSongs(playlist.FileMediaSources);
                 IEnumerable<Song> allSongs = allFiles.Distinct().Select(CreateSong);
                 Dictionary<string, Song> loadedSongs = allSongs.ToDictionary(s => s.FullPath);
 
@@ -74,11 +74,6 @@ namespace AudioPlayerFrontend.Join
 
                 return songs.ToArray();
             });
-        }
-
-        private static Task<IEnumerable<string>> FetchFiles(string[] sources)
-        {
-            return Task.FromResult(LoadAllSongs(sources));
         }
 
         private static IEnumerable<string> LoadAllSongs(string[] sources)
