@@ -212,7 +212,7 @@ namespace AudioPlayerFrontend
 
         private void IbnSearch_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.Service.Audio != null) Frame.Navigate(typeof(SearchPage), viewModel.Service);
+            if (viewModel.Service.Audio != null) Frame.Navigate(typeof(SearchPage), viewModel.Service.Audio);
         }
 
         private void LbxPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e)
