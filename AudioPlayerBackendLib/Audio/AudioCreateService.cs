@@ -4,9 +4,16 @@ namespace AudioPlayerBackend.Audio
 {
     internal class AudioCreateService : IAudioCreateService
     {
+        private readonly IInvokeDispatcherService dispatcher;
+
+        public AudioCreateService(IInvokeDispatcherService dispatcher)
+        {
+            this.dispatcher = dispatcher;
+        }
+
         public IAudioService CreateAudioService()
         {
-            return new AudioService();
+            return new AudioService(dispatcher);
         }
 
         public IPlaylist CreatePlaylist(Guid id)

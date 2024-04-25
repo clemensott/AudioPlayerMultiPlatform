@@ -21,7 +21,6 @@ namespace AudioPlayerBackend.Audio
         public event EventHandler<ValueChangedEventArgs<float>> VolumeChanged;
         public event EventHandler<ValueChangedEventArgs<byte[]>> AudioDataChanged;
 
-        private readonly IAudioCreateService audioCreateService;
         private readonly IInvokeDispatcherService dispatcher;
         private bool isSearchShuffle, isSearching, isUpdatingSourcePlaylists, isUpdatingPlaylists;
         private string searchKey;
@@ -219,10 +218,9 @@ namespace AudioPlayerBackend.Audio
 
         private IAudioServiceBase Base => this;
 
-        public AudioService()
+        public AudioService(IInvokeDispatcherService dispatcher)
         {
-            audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
-            dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
+            this.dispatcher = dispatcher;
             playState = PlaybackState.Paused;
             shuffledSongs = new Dictionary<ISourcePlaylist, IEnumerable<Song>>();
 
