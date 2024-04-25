@@ -113,7 +113,7 @@ namespace AudioPlayerBackend.Build
 
         public BuildStatusToken<ServiceBuildResult> CompleteToken { get; }
 
-        private ServiceBuild()
+        public ServiceBuild()
         {
             audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
             State = BuildState.Init;

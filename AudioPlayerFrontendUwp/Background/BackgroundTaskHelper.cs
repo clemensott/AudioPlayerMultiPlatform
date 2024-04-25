@@ -8,21 +8,9 @@ namespace AudioPlayerFrontend.Background
     {
         private const string applicationBackgroundTaskBuilderName = "AppRemoteAudioPlayerTask";
 
-        private static BackgroundTaskHelper instance;
-
-        public static BackgroundTaskHelper Current
-        {
-            get
-            {
-                if (instance == null) instance = new BackgroundTaskHelper();
-
-                return instance;
-            }
-        }
-
         private ApplicationTrigger appTrigger;
 
-        private BackgroundTaskHelper()
+        public BackgroundTaskHelper()
         {
         }
 

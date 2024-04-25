@@ -84,21 +84,6 @@ namespace AudioPlayerFrontend.Background
             isInBackground = false;
         }
 
-        private void Smtc_ButtonPressed(SystemMediaTransportControls sender, SystemMediaTransportControlsButtonPressedEventArgs args)
-        {
-            switch (args.Button)
-            {
-                case SystemMediaTransportControlsButton.Play:
-                    break;
-                case SystemMediaTransportControlsButton.Pause:
-                    break;
-                case SystemMediaTransportControlsButton.Next:
-                    break;
-                case SystemMediaTransportControlsButton.Previous:
-                    break;
-            }
-        }
-
         public async Task Run()
         {
             IsRunning = true;

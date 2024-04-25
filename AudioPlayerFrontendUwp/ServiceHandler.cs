@@ -139,7 +139,7 @@ namespace AudioPlayerFrontend
                     buildResult?.Data?.Dispose();
                     build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
                 }
-                else build.StartOpen(communicator, Audio, ServicePlayer, buildResult.Data, TimeSpan.FromMilliseconds(200));
+                else build.StartOpen(communicator, Audio, ServicePlayer, Data, TimeSpan.FromMilliseconds(200));
 
                 return build.CompleteToken.EndTask;
             });

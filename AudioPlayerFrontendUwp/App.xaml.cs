@@ -35,6 +35,7 @@ namespace AudioPlayerFrontend
         private readonly ViewModel viewModel;
         private readonly TaskCompletionSource<bool> launchCompletionSource;
         private readonly BackgroundTaskHandler backgroundTaskHandler;
+        private readonly BackgroundTaskHelper backgroundTaskHelper;
         private Frame rootFrame;
         private bool canceledBuild;
         private DateTime lastAutoUpdatePlaylists;
@@ -61,6 +62,7 @@ namespace AudioPlayerFrontend
             viewModel = new ViewModel(service);
             launchCompletionSource = new TaskCompletionSource<bool>();
             backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, service);
+            backgroundTaskHelper = new BackgroundTaskHelper();
         }
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -79,53 +81,41 @@ namespace AudioPlayerFrontend
 
             BackPressHandler.Current.Activate();
 
+            Task loadServiceProfileTask = Task.CompletedTask;
+
             // App-Initialisierung nicht wiederholen, wenn das Fenster bereits Inhalte enthält.
             // Nur sicherstellen, dass das Fenster aktiv ist.
-            if (rootFrame == null)
+            if (rootFrame == null) Window.Current.Content = rootFrame = new Frame();
+            if (rootFrame.Content == null)
             {
-                // Frame erstellen, der als Navigationskontext fungiert und zum Parameter der ersten Seite navigieren
-                rootFrame = new Frame();
-
-                rootFrame.NavigationFailed += OnNavigationFailed;
-
-                if (e.PreviousExecutionState == ApplicationExecutionState.Terminated)
-                {
-                    //TODO: Zustand von zuvor angehaltener Anwendung laden
-                }
-
-                // Den Frame im aktuellen Fenster platzieren
-                Window.Current.Content = rootFrame;
+                loadServiceProfileTask = LoadServiceProfile();
+                rootFrame.Navigate(typeof(MainPage), viewModel);
             }
+            // Sicherstellen, dass das aktuelle Fenster aktiv ist
+            Window.Current.Activate();
 
-            if (e.PrelaunchActivated == false)
-            {
-                if (rootFrame.Content == null)
-                {
-                    try
-                    {
-                        IStorageItem item =
-                            await ApplicationData.Current.LocalFolder.TryGetItemAsync(serviceProfileFilename);
-                        if (item is StorageFile)
-                        {
-                            string xmlText = await FileIO.ReadTextAsync((StorageFile)item);
-                            StringReader reader = new StringReader(xmlText);
-
-                            ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
-                            profile.FillServiceBuilder(viewModel.Service.Builder);
-                        }
-                    }
-                    catch (Exception exc)
-                    {
-                        System.Diagnostics.Debug.WriteLine("Loading service profile failed:\n" + exc);
-                    }
-
-                    rootFrame.Navigate(typeof(MainPage), viewModel);
-                }
-                // Sicherstellen, dass das aktuelle Fenster aktiv ist
-                Window.Current.Activate();
-            }
-
+            await loadServiceProfileTask;
             launchCompletionSource.TrySetResult(true);
+        }
+
+        private async Task LoadServiceProfile()
+        {
+            try
+            {
+                IStorageItem item = await ApplicationData.Current.LocalFolder.TryGetItemAsync(serviceProfileFilename);
+                if (item is StorageFile)
+                {
+                    string xmlText = await FileIO.ReadTextAsync((StorageFile)item);
+                    StringReader reader = new StringReader(xmlText);
+
+                    ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
+                    profile.FillServiceBuilder(viewModel.Service.Builder);
+                }
+            }
+            catch (Exception exc)
+            {
+                System.Diagnostics.Debug.WriteLine("Loading service profile failed:\n" + exc);
+            }
         }
 
         /// <summary>
@@ -207,7 +197,7 @@ namespace AudioPlayerFrontend
 
         private async void OnLeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            if (!BackgroundTaskHandler.Current.IsRunning) await BackgroundTaskHelper.Current.Start();
+            if (!backgroundTaskHandler.IsRunning) await backgroundTaskHelper.Start();
 
             await launchCompletionSource.Task;
 
@@ -254,7 +244,7 @@ namespace AudioPlayerFrontend
         protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)
         {
             BackgroundTaskDeferral deferral = args.TaskInstance.GetDeferral();
-            await BackgroundTaskHandler.Current.Run();
+            await backgroundTaskHandler.Run();
             deferral.Complete();
         }
     }
