@@ -32,7 +32,7 @@ namespace AudioPlayerFrontend
 
         private static readonly XmlSerializer serializer = new XmlSerializer(typeof(ServiceProfile));
 
-        private readonly ViewModel viewModel;
+        private readonly ServiceHandler serviceHandler;
         private readonly TaskCompletionSource<bool> launchCompletionSource;
         private readonly BackgroundTaskHandler backgroundTaskHandler;
         private readonly BackgroundTaskHelper backgroundTaskHelper;
@@ -55,13 +55,15 @@ namespace AudioPlayerFrontend
                 .Build();
 
             Dispatcher dispatcher = new Dispatcher();
-            ServiceBuilder serviceBuilder = new ServiceBuilder();
-            ServiceHandler service = new ServiceHandler(dispatcher, serviceBuilder);
-            service.PropertyChanged += Service_PropertyChanged;
+            ViewModel viewModel = new ViewModel();
+            serviceHandler = new ServiceHandler(dispatcher, viewModel)
+            {
+                Builder = new ServiceBuilder(),
+            };
+            serviceHandler.PropertyChanged += Service_PropertyChanged;
 
-            viewModel = new ViewModel(service);
             launchCompletionSource = new TaskCompletionSource<bool>();
-            backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, service);
+            backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, serviceHandler);
             backgroundTaskHelper = new BackgroundTaskHelper();
         }
 
@@ -89,7 +91,7 @@ namespace AudioPlayerFrontend
             if (rootFrame.Content == null)
             {
                 loadServiceProfileTask = LoadServiceProfile();
-                rootFrame.Navigate(typeof(MainPage), viewModel);
+                rootFrame.Navigate(typeof(MainPage), serviceHandler);
             }
             // Sicherstellen, dass das aktuelle Fenster aktiv ist
             Window.Current.Activate();
@@ -109,7 +111,7 @@ namespace AudioPlayerFrontend
                     StringReader reader = new StringReader(xmlText);
 
                     ServiceProfile profile = (ServiceProfile)serializer.Deserialize(reader);
-                    profile.FillServiceBuilder(viewModel.Service.Builder);
+                    profile.FillServiceBuilder(serviceHandler.Builder);
                 }
             }
             catch (Exception exc)
@@ -144,7 +146,7 @@ namespace AudioPlayerFrontend
             {
                 backgroundTaskHandler.Stop();
 
-                ServiceProfile profile = new ServiceProfile(viewModel.Service.Builder);
+                ServiceProfile profile = new ServiceProfile(serviceHandler.Builder);
                 StringWriter writer = new StringWriter();
                 serializer.Serialize(writer, profile);
 
@@ -152,9 +154,7 @@ namespace AudioPlayerFrontend
                     .CreateFileAsync(serviceProfileFilename, CreationCollisionOption.OpenIfExists);
                 await FileIO.WriteTextAsync(file, writer.ToString());
 
-                viewModel.Service.Communicator?.Dispose();
-                viewModel.Service.ServicePlayer?.Dispose();
-                viewModel.Service.Data?.Dispose();
+                serviceHandler.Dispose();
             }
             catch (Exception exc)
             {
@@ -179,14 +179,14 @@ namespace AudioPlayerFrontend
 
         private async void OnEnteredBackground(object sender, EnteredBackgroundEventArgs e)
         {
-            ServiceBuild build = viewModel.Service.ServiceOpenBuild;
+            ServiceBuild build = serviceHandler.ServiceOpenBuild;
             if (build?.CompleteToken.IsEnded.HasValue != false) return;
 
             Deferral deferral = e.GetDeferral();
 
             try
             {
-                await viewModel.Service.CloseAsync();
+                await serviceHandler.CloseAsync();
                 canceledBuild = true;
             }
             finally
@@ -202,21 +202,21 @@ namespace AudioPlayerFrontend
             await launchCompletionSource.Task;
 
             ServiceBuildResult result;
-            if (canceledBuild && viewModel.Service.ServiceOpenBuild == null)
+            if (canceledBuild && serviceHandler.ServiceOpenBuild == null)
             {
-                result = await viewModel.Service.ConnectAsync(true);
+                result = await serviceHandler.ConnectAsync(true);
             }
-            else if (viewModel.Service.Audio == null || viewModel.Service.Communicator?.IsOpen == false)
+            else if (serviceHandler.Audio == null || serviceHandler.Communicator?.IsOpen == false)
             {
-                result = await viewModel.Service.ConnectAsync(false);
+                result = await serviceHandler.ConnectAsync(false);
             }
             else return;
 
-            if (result == null || result.Communicator is IClientCommunicator || viewModel.IsUpdatingPlaylists) return;
+            if (result == null || result.Communicator is IClientCommunicator || serviceHandler.ViewModel.IsUpdatingPlaylists) return;
 
             try
             {
-                viewModel.IsUpdatingPlaylists = true;
+                serviceHandler.ViewModel.IsUpdatingPlaylists = true;
 
                 if (Settings.Current.LastUpdatedData > lastAutoUpdatePlaylists)
                 {
@@ -237,7 +237,7 @@ namespace AudioPlayerFrontend
             catch { }
             finally
             {
-                viewModel.IsUpdatingPlaylists = false;
+                serviceHandler.ViewModel.IsUpdatingPlaylists = false;
             }
         }
 

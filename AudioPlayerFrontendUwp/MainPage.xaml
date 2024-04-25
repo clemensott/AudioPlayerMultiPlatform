@@ -46,10 +46,10 @@
         </Grid.RowDefinitions>
 
         <con:SingleInputConverter x:Name="sicIsUpdating" Output="{Binding IsUpdatingPlaylists}"/>
-        <con:SingleInputConverter x:Name="sicIsClient" Output="{Binding Service.IsClient}"/>
+        <con:SingleInputConverter x:Name="sicIsClient" Output="{Binding IsClient}"/>
 
         <con:MultipleInputs4Converter x:Name="micPlaylists"
-                                      DataContext="{Binding Service.Audio}"
+                                      DataContext="{Binding Audio}"
                                       Input0="{Binding SourcePlaylists}"
                                       Input1="{Binding Playlists}"
                                       Input2="{Binding CurrentPlaylist,Mode=TwoWay}"
@@ -62,7 +62,7 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" DataContext="{Binding Service}"
+        <Grid Grid.Row="1"
               Visibility="{Binding Audio,Converter={StaticResource visCon}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -257,7 +257,7 @@
         </Grid>
 
         <StackPanel Grid.Row="1" VerticalAlignment="Center"
-                    Visibility="{Binding Service.Audio,Converter={StaticResource hidCon}}">
+                    Visibility="{Binding Audio,Converter={StaticResource hidCon}}">
             <ProgressRing Grid.Row="1" IsActive="True" Height="100" Width="100" Margin="10"/>
             <Button Grid.Row="2" Content="Settings" Width="100" Margin="5"
                     HorizontalAlignment="Center" Click="BtnSettings_Click"/>
@@ -265,14 +265,14 @@
     </Grid>
 
     <Page.BottomAppBar>
-        <CommandBar Visibility="{Binding Service.Audio,Converter={StaticResource visCon}}">
+        <CommandBar Visibility="{Binding Audio,Converter={StaticResource visCon}}">
             <CommandBar.PrimaryCommands>
                 <AppBarToggleButton x:Name="atbPlaylists" Icon="List" Label="Playlists"/>
                 <AppBarButton Icon="Previous" Label="Previous" Click="AbbPrevious_Click"/>
-                <AppBarButton Label="{Binding Service.Audio.PlayState,Converter={StaticResource isPlayPauseLabelCon}}"
+                <AppBarButton Label="{Binding Audio.PlayState,Converter={StaticResource isPlayPauseLabelCon}}"
                               Click="AbbPlayPause_Click">
                     <AppBarButton.Icon>
-                        <SymbolIcon Symbol="{Binding Service.Audio.PlayState,Converter={StaticResource isPlayPauseIconCon}}"/>
+                        <SymbolIcon Symbol="{Binding Audio.PlayState,Converter={StaticResource isPlayPauseIconCon}}"/>
                     </AppBarButton.Icon>
                 </AppBarButton>
                 <AppBarButton Icon="Next" Label="Next" Click="AbbNext_Click"/>
@@ -281,13 +281,13 @@
             <CommandBar.SecondaryCommands>
                 <AppBarButton Label="Update playlists and songs" Icon="Refresh"
                               IsEnabled="{Binding IsUpdatingPlaylists,Converter={StaticResource invertCon}}"
-                              Visibility="{Binding Service.IsClient,Converter={StaticResource hidCon}}"
+                              Visibility="{Binding IsClient,Converter={StaticResource hidCon}}"
                               Click="AbbUpdatePlaylistsAndSongs_Click"/>
                 <AppBarButton Label="Reload playlists and songs" Icon="Refresh"
                               IsEnabled="{Binding IsUpdatingPlaylists,Converter={StaticResource invertCon}}"
-                              Visibility="{Binding Service.IsClient,Converter={StaticResource hidCon}}"
+                              Visibility="{Binding IsClient,Converter={StaticResource hidCon}}"
                               Click="AbbUReloadPlaylistsAndSongs_Click"/>
-                <AppBarSeparator Visibility="{Binding Service.IsClient,Converter={StaticResource hidCon}}" />
+                <AppBarSeparator Visibility="{Binding IsClient,Converter={StaticResource hidCon}}" />
                 <AppBarToggleButton x:Name="atbViewIndex" Icon="List" Label="Index"/>
                 <AppBarButton Icon="Setting" Label="All settings" Click="AbbSettings_Click"/>
                 <AppBarButton Icon="Admin" Label="Debug" Click="AbbDebug_Click"/>

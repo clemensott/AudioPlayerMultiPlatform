@@ -27,6 +27,7 @@ namespace AudioPlayerFrontend
     public sealed partial class MainPage : Page
     {
         private readonly IFileSystemService fileSystemService;
+        private ServiceHandler serviceHandler;
         private ViewModel viewModel;
         private readonly ObservableCollection<IPlaylist> allPlaylists;
 
@@ -40,12 +41,13 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            DataContext = viewModel = (ViewModel)e.Parameter;
+            serviceHandler = (ServiceHandler)e.Parameter;
+            DataContext = viewModel = serviceHandler.ViewModel;
         }
 
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            if (viewModel.Service.ServiceOpenBuild?.CompleteToken?.IsEnded == BuildEndedType.Settings)
+            if (serviceHandler.ServiceOpenBuild?.CompleteToken?.IsEnded == BuildEndedType.Settings)
             {
                 await NavigateToSettingsPage();
             }
@@ -153,7 +155,7 @@ namespace AudioPlayerFrontend
         private void IbnRemove_Click(object sender, RoutedEventArgs e)
         {
             Song song = (Song)((FrameworkElement)sender).DataContext;
-            IAudioService service = viewModel.Service.Audio;
+            IAudioService service = viewModel.Audio;
             IPlaylist playlist = service.CurrentPlaylist;
 
             if (playlist.Songs.All(s => s == song))
@@ -168,51 +170,51 @@ namespace AudioPlayerFrontend
 
         private void IbnLoopType_Click(object sender, RoutedEventArgs e)
         {
-            switch (viewModel.Service.Audio?.CurrentPlaylist.Loop)
+            switch (viewModel.Audio?.CurrentPlaylist.Loop)
             {
                 case LoopType.Next:
-                    viewModel.Service.Audio.CurrentPlaylist.Loop = LoopType.Stop;
+                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.Stop;
                     break;
 
                 case LoopType.Stop:
-                    viewModel.Service.Audio.CurrentPlaylist.Loop = LoopType.CurrentPlaylist;
+                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.CurrentPlaylist;
                     break;
 
                 case LoopType.CurrentPlaylist:
-                    viewModel.Service.Audio.CurrentPlaylist.Loop = LoopType.CurrentSong;
+                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.CurrentSong;
                     break;
 
                 case LoopType.CurrentSong:
-                    viewModel.Service.Audio.CurrentPlaylist.Loop = LoopType.StopCurrentSong;
+                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.StopCurrentSong;
                     break;
 
                 case LoopType.StopCurrentSong:
-                    viewModel.Service.Audio.CurrentPlaylist.Loop = LoopType.Next;
+                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.Next;
                     break;
             }
         }
 
         private void IbnOrderType_Click(object sender, RoutedEventArgs e)
         {
-            switch (viewModel.Service.Audio?.CurrentPlaylist.Shuffle)
+            switch (viewModel.Audio?.CurrentPlaylist.Shuffle)
             {
                 case OrderType.ByTitleAndArtist:
-                    viewModel.Service.Audio.CurrentPlaylist.Shuffle = OrderType.ByPath;
+                    viewModel.Audio.CurrentPlaylist.Shuffle = OrderType.ByPath;
                     break;
 
                 case OrderType.ByPath:
-                    viewModel.Service.Audio.CurrentPlaylist.Shuffle = OrderType.Custom;
+                    viewModel.Audio.CurrentPlaylist.Shuffle = OrderType.Custom;
                     break;
 
                 case OrderType.Custom:
-                    viewModel.Service.Audio.CurrentPlaylist.Shuffle = OrderType.ByTitleAndArtist;
+                    viewModel.Audio.CurrentPlaylist.Shuffle = OrderType.ByTitleAndArtist;
                     break;
             }
         }
 
         private void IbnSearch_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.Service.Audio != null) Frame.Navigate(typeof(SearchPage), viewModel.Service.Audio);
+            if (viewModel.Audio != null) Frame.Navigate(typeof(SearchPage), viewModel.Audio);
         }
 
         private void LbxPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -278,7 +280,7 @@ namespace AudioPlayerFrontend
         private void MfiRemovePlaylist_Click(object sender, RoutedEventArgs e)
         {
             IPlaylist playlist = UwpUtils.GetDataContext<IPlaylist>(sender);
-            IAudioService service = viewModel.Service.Audio;
+            IAudioService service = viewModel.Audio;
 
             if (service.CurrentPlaylist == playlist)
             {
@@ -300,7 +302,7 @@ namespace AudioPlayerFrontend
             try
             {
                 viewModel.IsUpdatingPlaylists = true;
-                await UpdateHelper.Update(viewModel.Service.Audio);
+                await UpdateHelper.Update(viewModel.Audio);
                 Settings.Current.LastUpdatedData = DateTime.Now;
             }
             finally
@@ -314,7 +316,7 @@ namespace AudioPlayerFrontend
             try
             {
                 viewModel.IsUpdatingPlaylists = true;
-                await UpdateHelper.Reload(viewModel.Service.Audio);
+                await UpdateHelper.Reload(viewModel.Audio);
                 Settings.Current.LastUpdatedData = DateTime.Now;
             }
             finally
@@ -325,7 +327,7 @@ namespace AudioPlayerFrontend
 
         private void AudioPositionSlider_UserPositionChanged(object sender, TimeSpan e)
         {
-            IPlaylist playlist = viewModel.Service.Audio?.CurrentPlaylist;
+            IPlaylist playlist = viewModel.Audio?.CurrentPlaylist;
             if (playlist != null) playlist.WannaSong = RequestSong.Get(playlist.CurrentSong, e, playlist.Duration);
         }
 
@@ -336,12 +338,12 @@ namespace AudioPlayerFrontend
 
         private void AbbPrevious_Click(object sender, RoutedEventArgs e)
         {
-            viewModel.Service.Audio?.SetPreviousSong();
+            viewModel.Audio?.SetPreviousSong();
         }
 
         private void AbbPlayPause_Click(object sender, RoutedEventArgs e)
         {
-            IAudioService service = viewModel.Service.Audio;
+            IAudioService service = viewModel.Audio;
 
             if (service == null) return;
 
@@ -352,14 +354,14 @@ namespace AudioPlayerFrontend
 
         private void AbbNext_Click(object sender, RoutedEventArgs e)
         {
-            viewModel.Service.Audio?.SetNextSong();
+            viewModel.Audio?.SetNextSong();
         }
 
         private async void AbbSettings_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.Service.Audio != null)
+            if (viewModel.Audio != null)
             {
-                viewModel.Service.Builder.WithService(viewModel.Service.Audio);
+                serviceHandler.Builder.WithService(viewModel.Audio);
             }
 
             await NavigateToSettingsPage();
@@ -367,17 +369,17 @@ namespace AudioPlayerFrontend
 
         private async Task NavigateToSettingsPage()
         {
-            TaskCompletionSourceS<ServiceBuilder> result = new TaskCompletionSourceS<ServiceBuilder>(viewModel.Service.Builder.Clone());
+            TaskCompletionSourceS<ServiceBuilder> result = new TaskCompletionSourceS<ServiceBuilder>(serviceHandler.Builder.Clone());
             Frame.Navigate(typeof(SettingsPage), result);
 
             ServiceBuilder newBuilder = await result.Task;
 
             if (newBuilder == null) return;
 
-            viewModel.Service.Builder = newBuilder;
+            serviceHandler.Builder = newBuilder;
 
-            await viewModel.Service.CloseAsync();
-            await viewModel.Service.ConnectAsync(true);
+            await serviceHandler.CloseAsync();
+            await serviceHandler.ConnectAsync(true);
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)
@@ -389,8 +391,8 @@ namespace AudioPlayerFrontend
 
             await new MessageDialog(exceptionText, time.ToString()).ShowAsync();
 
-            string message = $"Communicator: {viewModel.Service?.Communicator?.Name}\r\n" +
-                $"State: {viewModel.Service?.Communicator?.IsOpen}\r\n" +
+            string message = $"Communicator: {serviceHandler?.Communicator?.Name}\r\n" +
+                $"State: {serviceHandler?.Communicator?.IsOpen}\r\n" +
                 $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}";
             await new MessageDialog(message).ShowAsync();
         }

@@ -12,32 +12,15 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerFrontend
 {
-    class ServiceHandler : INotifyPropertyChanged
+    class ServiceHandler : INotifyPropertyChanged, IDisposable
     {
         private const string dataFileName = "data.xml";
 
         private readonly IInvokeDispatcherService dispatcher;
         private readonly Dispatcher backgrounTaskDispatcher;
-        private bool isClient;
         private ServiceBuilder builder;
         private ServiceBuild serviceOpenBuild;
         private ServiceBuildResult buildResult;
-        private IAudioService audioService;
-        private ICommunicator communicator;
-        private IServicePlayer servicePlayer;
-        private ReadWriteAudioServiceData data;
-
-        public bool IsClient
-        {
-            get => isClient;
-            set
-            {
-                if (value == isClient) return;
-
-                isClient = value;
-                OnPropertyChanged(nameof(IsClient));
-            }
-        }
 
         public ServiceBuilder Builder
         {
@@ -65,61 +48,21 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public IAudioService Audio
-        {
-            get => audioService;
-            private set
-            {
-                if (value == audioService) return;
+        public IAudioService Audio => buildResult?.AudioService;
 
-                audioService = value;
-                OnPropertyChanged(nameof(Audio));
-            }
-        }
+        public ICommunicator Communicator => buildResult?.Communicator;
 
-        public ICommunicator Communicator
-        {
-            get => communicator;
-            private set
-            {
-                if (value == communicator) return;
+        public IServicePlayer ServicePlayer => buildResult?.ServicePlayer;
 
-                communicator = value;
-                OnPropertyChanged(nameof(Communicator));
+        public ReadWriteAudioServiceData Data => buildResult?.Data;
 
-                IsClient = value is IClientCommunicator;
-            }
-        }
+        public ViewModel ViewModel { get; }
 
-        public IServicePlayer ServicePlayer
-        {
-            get => servicePlayer;
-            private set
-            {
-                if (value == servicePlayer) return;
-
-                servicePlayer = value;
-                OnPropertyChanged(nameof(ServicePlayer));
-            }
-        }
-
-        public ReadWriteAudioServiceData Data
-        {
-            get => data;
-            private set
-            {
-                if (value == servicePlayer) return;
-
-                data = value;
-                OnPropertyChanged(nameof(Data));
-            }
-        }
-
-        public ServiceHandler(Dispatcher backgrounTaskDispatcher, ServiceBuilder builder)
+        public ServiceHandler(Dispatcher backgrounTaskDispatcher, ViewModel viewModel)
         {
             dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
             this.backgrounTaskDispatcher = backgrounTaskDispatcher;
-            Builder = builder;
+            ViewModel = viewModel;
         }
 
         public async Task<ServiceBuildResult> ConnectAsync(bool forceBuild)
@@ -135,11 +78,14 @@ namespace AudioPlayerFrontend
                 ICommunicator communicator = Communicator;
                 if (forceBuild || communicator == null)
                 {
-                    buildResult?.ServicePlayer?.Dispose();
-                    buildResult?.Data?.Dispose();
+                    ServicePlayer?.Dispose();
+                    Data?.Dispose();
                     build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
                 }
-                else build.StartOpen(communicator, Audio, ServicePlayer, Data, TimeSpan.FromMilliseconds(200));
+                else
+                {
+                    build.StartOpen(communicator, Audio, ServicePlayer, Data, TimeSpan.FromMilliseconds(200));
+                }
 
                 return build.CompleteToken.EndTask;
             });
@@ -152,17 +98,18 @@ namespace AudioPlayerFrontend
             if (Communicator != null) Communicator.Disconnected -= Communicator_Disconnected;
 
             Player oldPlayer = ServicePlayer?.Player as Player;
-
             ServiceBuildResult result = await (build?.CompleteToken.ResultTask ?? Task.FromResult<ServiceBuildResult>(null));
 
             if (build != ServiceOpenBuild) return;
 
-            Audio = result?.AudioService;
-            Communicator = result?.Communicator;
-            ServicePlayer = result?.ServicePlayer;
-            Data = result?.Data;
-
             buildResult = result;
+            OnPropertyChanged(nameof(Audio));
+            OnPropertyChanged(nameof(Communicator));
+            OnPropertyChanged(nameof(ServicePlayer));
+            OnPropertyChanged(nameof(Data));
+
+            ViewModel.Audio = Audio;
+            ViewModel.IsClient = Communicator is IClientCommunicator;
 
             if (Communicator != null) Communicator.Disconnected += Communicator_Disconnected;
 
@@ -215,7 +162,7 @@ namespace AudioPlayerFrontend
         {
             ServiceOpenBuild?.Cancel();
             ServiceOpenBuild = null;
-            await (Communicator?.CloseAsync() ?? Task.CompletedTask);
+            await (buildResult?.Communicator?.CloseAsync() ?? Task.CompletedTask);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -223,6 +170,13 @@ namespace AudioPlayerFrontend
         private void OnPropertyChanged(string name)
         {
             dispatcher.InvokeDispatcher(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)));
+        }
+
+        public void Dispose()
+        {
+            buildResult?.Communicator?.Dispose();
+            buildResult?.ServicePlayer?.Dispose();
+            buildResult?.Data?.Dispose();
         }
     }
 }

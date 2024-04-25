@@ -1,10 +1,12 @@
-﻿using System.ComponentModel;
+﻿using AudioPlayerBackend.Audio;
+using System.ComponentModel;
 
 namespace AudioPlayerFrontend
 {
     class ViewModel : INotifyPropertyChanged
     {
-        private bool isUpdatingPlaylists;
+        private bool isUpdatingPlaylists, isClient;
+        private IAudioService audio;
 
         public bool IsUpdatingPlaylists
         {
@@ -18,11 +20,32 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public ServiceHandler Service { get; }
-
-        public ViewModel(ServiceHandler service)
+        public bool IsClient
         {
-            Service = service;
+            get => isClient;
+            set
+            {
+                if (value == isClient) return;
+
+                isClient = value;
+                OnPropertyChanged(nameof(IsClient));
+            }
+        }
+
+        public IAudioService Audio
+        {
+            get => audio;
+            set
+            {
+                if (value == audio) return;
+
+                audio = value;
+                OnPropertyChanged(nameof(Audio));
+            }
+        }
+
+        public ViewModel()
+        {
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
