@@ -43,28 +43,23 @@ namespace AudioPlayerFrontend
             this.UnhandledException += OnUnhandledException;
             this.LeavingBackground += OnLeavingBackground;
 
-            Logs.Log("App1");
             loadServiceProfileTask = Task.Run(LoadServiceProfile);
             AudioPlayerServiceProvider.Current
                 .AddFileSystemService<FileSystemService>()
                 .AddDispatcher<InvokeDispatcherService>()
                 .AddPlayerCreateService<PlayerCreateService>()
                 .Build();
-            Logs.Log("App2");
 
             Dispatcher dispatcher = new Dispatcher();
             ViewModel viewModel = new ViewModel();
-            Logs.Log("App3");
             viewModel.PropertyChanged += ViewModel_PropertyChanged;
             serviceHandler = new ServiceHandler(dispatcher, viewModel)
             {
                 Builder = new ServiceBuilder(),
             };
 
-            Logs.Log("App4");
             backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, serviceHandler);
             backgroundTaskHelper = new BackgroundTaskHelper();
-            Logs.Log("App5");
         }
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -86,40 +81,30 @@ namespace AudioPlayerFrontend
             // App-Initialisierung nicht wiederholen, wenn das Fenster bereits Inhalte enthält.
             // Nur sicherstellen, dass das Fenster aktiv ist.
             if (rootFrame == null) Window.Current.Content = rootFrame = new Frame();
-            Logs.Log("OnLaunched3");
             if (rootFrame.Content == null)
             {
                 await Task.Yield(); // let OnLeavingBackground fire to start background task asap
-                Logs.Log("OnLaunched4");
                 rootFrame.NavigateToBuildOpenPage(serviceHandler);
-                Logs.Log("OnLaunched5");
                 await loadServiceProfileTask;
-                Logs.Log("OnLaunched6");
                 await serviceHandler.Start(rootFrame);
+				loadServiceProfileTask = null;
             }
 
             // Sicherstellen, dass das aktuelle Fenster aktiv ist
             Window.Current.Activate();
-
-            Logs.Log("OnLaunched8");
         }
 
         private async Task LoadServiceProfile()
         {
             try
             {
-                Logs.Log("LoadServiceProfile1");
                 IStorageItem item = await ApplicationData.Current.LocalFolder.TryGetItemAsync(serviceProfileFilename);
-                Logs.Log("LoadServiceProfile2");
                 if (item is StorageFile)
                 {
                     string jsonText = await FileIO.ReadTextAsync((StorageFile)item);
-                    Logs.Log("LoadServiceProfile3", jsonText.Length);
                     ServiceProfile profile = JsonConvert.DeserializeObject<ServiceProfile>(jsonText);
-                    Logs.Log("LoadServiceProfile4");
                     profile.FillServiceBuilder(serviceHandler.Builder);
                 }
-                Logs.Log("LoadServiceProfile5");
             }
             catch (Exception exc)
             {
@@ -175,7 +160,6 @@ namespace AudioPlayerFrontend
 
         private async void OnLeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            Logs.Log("OnLeavingBackground1", backgroundTaskHandler.IsRunning);
             if (!backgroundTaskHandler.IsRunning) await backgroundTaskHelper.Start();
         }
 
@@ -224,7 +208,6 @@ namespace AudioPlayerFrontend
 
         protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)
         {
-            Logs.Log("OnBackgroundActivated1");
             BackgroundTaskDeferral deferral = args.TaskInstance.GetDeferral();
             await backgroundTaskHandler.Run();
             deferral.Complete();

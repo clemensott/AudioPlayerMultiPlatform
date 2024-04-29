@@ -99,7 +99,6 @@ namespace AudioPlayerFrontend
 
             try
             {
-                Logs.Log("StartKeepService1");
                 while (keepService)
                 {
                     await keepOpenSem.WaitAsync();
@@ -109,11 +108,9 @@ namespace AudioPlayerFrontend
 
                     if (Communicator != null) Communicator.Disconnected -= Communicator_Disconnected;
 
-                    Logs.Log("StartKeepService2");
                     ServiceBuild build = ServiceOpenBuild = new ServiceBuild();
                     BuildStatusToken<ServiceBuildResult> completeToken = await backgrounTaskDispatcher.Run(() =>
                     {
-                        Logs.Log("StartKeepService3");
                         Builder.DataFilePath = Builder.BuildClient ? null : dataFileName;
 
                         ICommunicator communicator = Communicator;
@@ -128,15 +125,12 @@ namespace AudioPlayerFrontend
                             build.StartOpen(communicator, Audio, ServicePlayer, Data, TimeSpan.FromMilliseconds(200));
                         }
 
-                        Logs.Log("StartKeepService4");
                         return build.CompleteToken;
                     });
 
-                    Logs.Log("StartKeepService5");
                     ServiceBuildResult result = await completeToken.ResultTask;
                     BuildEndedType endedType = await completeToken.EndTask;
 
-                    Logs.Log("StartKeepService6");
                     switch (endedType)
                     {
                         case BuildEndedType.Successful:
@@ -164,7 +158,6 @@ namespace AudioPlayerFrontend
                             forceBuild = true;
                             break;
                     }
-                    Logs.Log("StartKeepService7");
                 }
             }
             finally

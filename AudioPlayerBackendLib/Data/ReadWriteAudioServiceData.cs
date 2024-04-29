@@ -55,11 +55,8 @@ namespace AudioPlayerBackend.Data
         {
             try
             {
-                Logs.Log("PreloadData1");
                 string jsonText = await fileSystemService.ReadTextFile(path);
-                Logs.Log("PreloadData2", jsonText.Length);
                 preloadData = JsonConvert.DeserializeObject<AudioServiceData>(jsonText);
-                Logs.Log("PreloadData3");
             }
             catch { }
         }
@@ -168,7 +165,6 @@ namespace AudioPlayerBackend.Data
 
             IDictionary<string, Song> allSongs = new Dictionary<string, Song>();
 
-            Logs.Log("Load6");
             Service.SourcePlaylists = preloadData.SourcePlaylists.Select(playlistData =>
             {
                 Guid id = Guid.Parse(playlistData.ID);
@@ -182,7 +178,6 @@ namespace AudioPlayerBackend.Data
                 return playlist;
             }).ToArray();
 
-            Logs.Log("Load7");
             Service.Playlists = preloadData.Playlists.Select(playlistData =>
             {
                 Guid id = Guid.Parse(playlistData.ID);
@@ -196,14 +191,12 @@ namespace AudioPlayerBackend.Data
                 return playlist;
             }).ToArray();
 
-            Logs.Log("Load8");
             if (string.IsNullOrWhiteSpace(preloadData.CurrentPlaylistID)) Service.CurrentPlaylist = null;
             else
             {
                 Guid currentPlaylistID = Guid.Parse(preloadData.CurrentPlaylistID);
                 Service.CurrentPlaylist = Service.GetAllPlaylists().FirstOrDefault(p => p.ID == currentPlaylistID);
             }
-            Logs.Log("Load9");
         }
 
         private static void MergePlaylist(ISourcePlaylistBase playlist, SourcePlaylistData data)
