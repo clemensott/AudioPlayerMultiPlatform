@@ -386,7 +386,7 @@ namespace AudioPlayerBackend.Build
             return playerCreateService.CreateAudioServicePlayer(service);
         }
 
-        public async Task<ReadWriteAudioServiceData> CompleteService(IAudioService service)
+        public void CompleteService(IAudioService service)
         {
             if (Shuffle.HasValue)
             {
@@ -405,8 +405,6 @@ namespace AudioPlayerBackend.Build
             if (SearchKey != null) service.SearchKey = SearchKey;
             if (Play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
             if (Volume.HasValue) service.Volume = volume.Value;
-
-            return await ReadWriteAudioServiceData.Start(DataFilePath, service);
         }
 
         protected virtual MqttClientCommunicator CreateMqttClientCommunicator(string serverAddress, int? port)

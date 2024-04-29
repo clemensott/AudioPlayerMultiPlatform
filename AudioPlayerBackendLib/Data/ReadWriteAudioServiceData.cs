@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.FileSystem;
-using StdOttStandard;
+using Newtonsoft.Json;
 using StdOttStandard.Linq;
 
 namespace AudioPlayerBackend.Data
@@ -15,11 +15,19 @@ namespace AudioPlayerBackend.Data
         private readonly IAudioCreateService audioCreateService;
         private readonly IFileSystemService fileSystemService;
         private readonly string path;
+        private AudioServiceData preloadData;
         private SemaphoreSlim saveSem;
         private Task saveHandlerTask;
         private bool disposed;
 
-        public IAudioServiceBase Service { get; }
+        public IAudioServiceBase Service { get; private set; }
+
+        private ReadWriteAudioServiceData(string path)
+        {
+            audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
+            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
+            this.path = path;
+        }
 
         private ReadWriteAudioServiceData(string path, IAudioServiceBase service)
         {
@@ -29,21 +37,40 @@ namespace AudioPlayerBackend.Data
             Service = service;
         }
 
-        public static async Task<ReadWriteAudioServiceData> Start(string path, IAudioServiceBase service)
+        public static async Task<ReadWriteAudioServiceData> Preload(string path)
         {
-            ReadWriteAudioServiceData dataService = new ReadWriteAudioServiceData(path, service);
-            await dataService.Init();
+            ReadWriteAudioServiceData dataService = new ReadWriteAudioServiceData(path);
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                await Task.Run(dataService.PreloadData);
+
+                dataService.saveSem = new SemaphoreSlim(0);
+                dataService.saveHandlerTask = Task.Run(dataService.SaveHandler);
+            }
+
             return dataService;
         }
 
-        private async Task Init()
+        private async Task PreloadData()
         {
+            try
+            {
+                Logs.Log("PreloadData1");
+                string jsonText = await fileSystemService.ReadTextFile(path);
+                Logs.Log("PreloadData2", jsonText.Length);
+                preloadData = JsonConvert.DeserializeObject<AudioServiceData>(jsonText);
+                Logs.Log("PreloadData3");
+            }
+            catch { }
+        }
+
+        public void Init(IAudioService service)
+        {
+            Service = service;
+
             if (!string.IsNullOrWhiteSpace(path))
             {
-                await Load();
-
-                saveSem = new SemaphoreSlim(0);
-                saveHandlerTask = Task.Run(SaveHandler);
+                Load();
                 Subscribe();
             }
         }
@@ -135,24 +162,14 @@ namespace AudioPlayerBackend.Data
             TriggerSave();
         }
 
-        private async Task Load()
+        private void Load()
         {
-            AudioServiceData data;
-            try
-            {
-                string xml = await fileSystemService.ReadTextFile(path);
-                data = StdUtils.XmlDeserializeText<AudioServiceData>(xml);
-            }
-            catch
-            {
-                return;
-            }
-
-            Service.Volume = data.Volume;
+            Service.Volume = preloadData.Volume;
 
             IDictionary<string, Song> allSongs = new Dictionary<string, Song>();
 
-            Service.SourcePlaylists = data.SourcePlaylists.Select(playlistData =>
+            Logs.Log("Load6");
+            Service.SourcePlaylists = preloadData.SourcePlaylists.Select(playlistData =>
             {
                 Guid id = Guid.Parse(playlistData.ID);
                 ISourcePlaylistBase playlist = Service.SourcePlaylists
@@ -165,7 +182,8 @@ namespace AudioPlayerBackend.Data
                 return playlist;
             }).ToArray();
 
-            Service.Playlists = data.Playlists.Select(playlistData =>
+            Logs.Log("Load7");
+            Service.Playlists = preloadData.Playlists.Select(playlistData =>
             {
                 Guid id = Guid.Parse(playlistData.ID);
                 IPlaylistBase playlist = Service.Playlists
@@ -178,12 +196,14 @@ namespace AudioPlayerBackend.Data
                 return playlist;
             }).ToArray();
 
-            if (string.IsNullOrWhiteSpace(data.CurrentPlaylistID)) Service.CurrentPlaylist = null;
+            Logs.Log("Load8");
+            if (string.IsNullOrWhiteSpace(preloadData.CurrentPlaylistID)) Service.CurrentPlaylist = null;
             else
             {
-                Guid currentPlaylistID = Guid.Parse(data.CurrentPlaylistID);
+                Guid currentPlaylistID = Guid.Parse(preloadData.CurrentPlaylistID);
                 Service.CurrentPlaylist = Service.GetAllPlaylists().FirstOrDefault(p => p.ID == currentPlaylistID);
             }
+            Logs.Log("Load9");
         }
 
         private static void MergePlaylist(ISourcePlaylistBase playlist, SourcePlaylistData data)
@@ -240,8 +260,8 @@ namespace AudioPlayerBackend.Data
         private async Task Save()
         {
             AudioServiceData data = new AudioServiceData(Service);
-            string xml = StdUtils.XmlSerialize(data);
-            await fileSystemService.WriteTextFile(path, xml);
+            string jsonText = JsonConvert.SerializeObject(data);
+            await fileSystemService.WriteTextFile(path, jsonText);
         }
 
         public void Dispose()

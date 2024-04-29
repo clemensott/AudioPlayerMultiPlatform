@@ -5,10 +5,11 @@ using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
-using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 using StdOttStandard.Converter.MultipleInputs;
-using StdOttUwp.BackPress;
+using System.ComponentModel;
+using System.Threading.Tasks;
+using AudioPlayerBackend.Build;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
 
@@ -19,35 +20,44 @@ namespace AudioPlayerFrontend
     /// </summary>
     public sealed partial class BuildOpenPage : Page
     {
-        private ServiceBuild build;
+        private ServiceHandler serviceHandler;
 
         public BuildOpenPage()
         {
             this.InitializeComponent();
         }
 
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
-            DataContext = build = (ServiceBuild)e.Parameter;
-
-            base.OnNavigatedTo(e);
+            serviceHandler = (ServiceHandler)e.Parameter;
+            serviceHandler.PropertyChanged += ServiceHandler_PropertyChanged;
 
             IEnumerable<string> frames = Frame.BackStack.Select(s => s.SourcePageType.FullName);
             tblFrameStack.Text = string.Join("\r\n", frames);
 
-            BackPressHandler.Current.BackPressed += BackPressHandler_BackPressed;
+            await SetDataContext(serviceHandler.ServiceOpenBuild);
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
-            base.OnNavigatedFrom(e);
-
-            BackPressHandler.Current.BackPressed += BackPressHandler_BackPressed;
+            serviceHandler.PropertyChanged -= ServiceHandler_PropertyChanged;
         }
 
-        private void BackPressHandler_BackPressed(object sender, BackPressEventArgs e)
+        private async void ServiceHandler_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            e.Action = BackPressAction.Unhandled;
+            if (e.PropertyName == nameof(serviceHandler.ServiceOpenBuild))
+            {
+                await SetDataContext(serviceHandler.ServiceOpenBuild);
+            }
+        }
+
+        private async Task SetDataContext(ServiceBuild dataContext)
+        {
+            if (dataContext == null) return;
+
+            // only show all options if opening takes to long
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            DataContext = dataContext;
         }
 
         private object MicException_Convert(object sender, MultiplesInputsConvert4EventArgs args)
@@ -57,7 +67,7 @@ namespace AudioPlayerFrontend
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            build.Settings();
+            serviceHandler.ServiceOpenBuild.Settings();
         }
 
         private async void BtnException_Click(object sender, RoutedEventArgs e)
@@ -70,36 +80,29 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private async void BuildOpenPage_Loaded(object sender, RoutedEventArgs e)
-        {
-            await build.CompleteToken.EndTask;
-
-            Frame.GoBack();
-        }
-
         private async void AbbPrevious_Click(object sender, RoutedEventArgs e)
         {
-            await build.SetPreviousSong();
+            await serviceHandler.ServiceOpenBuild.SetPreviousSong();
         }
 
         private async void AbbPlay_Click(object sender, RoutedEventArgs e)
         {
-            await build.SetPlayState(PlaybackState.Playing);
+            await serviceHandler.ServiceOpenBuild.SetPlayState(PlaybackState.Playing);
         }
 
         private async void AbbPause_Click(object sender, RoutedEventArgs e)
         {
-            await build.SetPlayState(PlaybackState.Paused);
+            await serviceHandler.ServiceOpenBuild.SetPlayState(PlaybackState.Paused);
         }
 
         private async void AtbToggle_Checked(object sender, RoutedEventArgs e)
         {
-            await build.SetToggle();
+            await serviceHandler.ServiceOpenBuild.SetToggle();
         }
 
         private async void AbbNext_Click(object sender, RoutedEventArgs e)
         {
-            await build.SetNextSong();
+            await serviceHandler.ServiceOpenBuild.SetNextSong();
         }
     }
 }

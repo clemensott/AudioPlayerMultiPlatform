@@ -67,7 +67,7 @@ namespace AudioPlayerFrontend
             IEnumerable<Song> viewSongs = service.IsSearching ?
                 service.SearchSongs : service.AllSongs;
 
-            if (service.CurrentPlaylist is ISourcePlaylist) return viewSongs;
+            if (service.CurrentPlaylist is null || service.CurrentPlaylist is ISourcePlaylist) return viewSongs;
 
             return viewSongs.Except(service.CurrentPlaylist.Songs);
         }

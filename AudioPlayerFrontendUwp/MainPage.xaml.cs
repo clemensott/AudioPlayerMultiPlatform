@@ -21,6 +21,7 @@ using StdOttUwp;
 using AudioPlayerBackend;
 using StdOttUwp.Converters;
 using AudioPlayerBackend.FileSystem;
+using AudioPlayerFrontend.Extensions;
 
 namespace AudioPlayerFrontend
 {
@@ -214,7 +215,7 @@ namespace AudioPlayerFrontend
 
         private void IbnSearch_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.Audio != null) Frame.Navigate(typeof(SearchPage), viewModel.Audio);
+            if (viewModel.Audio != null) Frame.NavigateToSearchPage(viewModel.Audio);
         }
 
         private void LbxPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -370,7 +371,7 @@ namespace AudioPlayerFrontend
         private async Task NavigateToSettingsPage()
         {
             TaskCompletionSourceS<ServiceBuilder> result = new TaskCompletionSourceS<ServiceBuilder>(serviceHandler.Builder.Clone());
-            Frame.Navigate(typeof(SettingsPage), result);
+            Frame.NavigateToSettingsPage(result);
 
             ServiceBuilder newBuilder = await result.Task;
 
@@ -378,8 +379,7 @@ namespace AudioPlayerFrontend
 
             serviceHandler.Builder = newBuilder;
 
-            await serviceHandler.CloseAsync();
-            await serviceHandler.ConnectAsync(true);
+            await serviceHandler.Rebuild(true);
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)
@@ -393,8 +393,12 @@ namespace AudioPlayerFrontend
 
             string message = $"Communicator: {serviceHandler?.Communicator?.Name}\r\n" +
                 $"State: {serviceHandler?.Communicator?.IsOpen}\r\n" +
+                $"Build: {serviceHandler?.ServiceOpenBuild != null}\r\n" +
+                $"BuildEnd: {serviceHandler?.ServiceOpenBuild?.CommunicatorToken.IsEnded}\r\n" +
                 $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}";
-            await new MessageDialog(message).ShowAsync();
+            await new MessageDialog(message, "States").ShowAsync();
+
+            await new MessageDialog(Logs.Get(), "Logs").ShowAsync();
         }
     }
 }

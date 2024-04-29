@@ -1,9 +1,7 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Player;
+﻿using AudioPlayerBackend.Player;
 using StdOttStandard;
 using StdOttStandard.Dispatch;
 using System;
-using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Media;
@@ -17,12 +15,11 @@ namespace AudioPlayerFrontend.Background
 
         public static BackgroundTaskHandler Current { get; private set; }
 
-        public bool isInBackground;
+        private bool isInBackground;
         private readonly ServiceHandler service;
         private readonly SemaphoreSlim sem;
         private readonly Dispatcher dispatcher;
         private readonly ResetTimer closeTimer;
-        private IAudioService audio;
 
         public bool IsRunning { get; private set; }
 
@@ -36,23 +33,12 @@ namespace AudioPlayerFrontend.Background
 
             this.dispatcher = dispatcher;
             this.service = service;
-            service.PropertyChanged += Service_PropertyChanged;
 
             closeTimer = ResetTimer.Start(inativeTime);
             closeTimer.RanDown += CloseTimer_RanDown;
 
             Application.Current.EnteredBackground += OnEnteredBackground;
             Application.Current.LeavingBackground += OnLeavingBackground;
-
-            audio = service.Audio;
-        }
-
-        private void Service_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(ServiceHandler.Audio))
-            {
-                audio = service.Audio;
-            }
         }
 
         private static SystemMediaTransportControls GetInitializedSystemMediaTransportControls()
@@ -70,13 +56,14 @@ namespace AudioPlayerFrontend.Background
 
         private void CloseTimer_RanDown(object sender, EventArgs e)
         {
-            if (isInBackground && audio.PlayState != PlaybackState.Playing) Stop();
+            if (isInBackground && service.Audio?.PlayState != PlaybackState.Playing) Stop();
+            else ResetCloseTimer();
         }
 
-        private async void OnEnteredBackground(object sender, object e)
+        private void OnEnteredBackground(object sender, object e)
         {
             isInBackground = true;
-            await closeTimer.Reset();
+            ResetCloseTimer();
         }
 
         private void OnLeavingBackground(object sender, object e)
@@ -93,7 +80,7 @@ namespace AudioPlayerFrontend.Background
 
             await sem.WaitAsync();
             IsRunning = false;
-            await Task.WhenAll(service.CloseAsync(), dispatcher.Stop());
+            await dispatcher.Stop();
         }
 
         private async void ResetCloseTimer()

@@ -4,20 +4,31 @@ using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Data;
 using AudioPlayerBackend.Player;
+using AudioPlayerFrontend.Extensions;
 using AudioPlayerFrontend.Join;
 using StdOttStandard.Dispatch;
+using StdOttStandard.TaskCompletionSources;
 using System;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
+using Windows.ApplicationModel;
+using Windows.Foundation;
+using Windows.UI.Core;
+using Windows.UI.Xaml;
+using Windows.UI.Xaml.Controls;
 
 namespace AudioPlayerFrontend
 {
     class ServiceHandler : INotifyPropertyChanged, IDisposable
     {
-        private const string dataFileName = "data.xml";
+        private const string dataFileName = "data.json";
 
         private readonly IInvokeDispatcherService dispatcher;
         private readonly Dispatcher backgrounTaskDispatcher;
+        private readonly SemaphoreSlim keepOpenSem;
+        private bool keepService;
+        private Frame frame;
         private ServiceBuilder builder;
         private ServiceBuild serviceOpenBuild;
         private ServiceBuildResult buildResult;
@@ -43,8 +54,6 @@ namespace AudioPlayerFrontend
 
                 serviceOpenBuild = value;
                 OnPropertyChanged(nameof(ServiceOpenBuild));
-
-                SetBuildResult(serviceOpenBuild);
             }
         }
 
@@ -62,45 +71,131 @@ namespace AudioPlayerFrontend
         {
             dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
             this.backgrounTaskDispatcher = backgrounTaskDispatcher;
+            keepOpenSem = new SemaphoreSlim(0);
             ViewModel = viewModel;
         }
 
-        public async Task<ServiceBuildResult> ConnectAsync(bool forceBuild)
+        public async Task Start(Frame frame)
         {
-            ServiceBuild build = ServiceOpenBuild = new ServiceBuild();
+            this.frame = frame;
 
-            await backgrounTaskDispatcher.Run(() =>
-            {
-                if (build != ServiceOpenBuild) return Task.CompletedTask;
+            Application.Current.EnteredBackground += Application_EnteredBackground;
+            Application.Current.LeavingBackground += Application_LeavingBackground;
 
-                Builder.DataFilePath = Builder.BuildClient ? null : dataFileName;
-
-                ICommunicator communicator = Communicator;
-                if (forceBuild || communicator == null)
-                {
-                    ServicePlayer?.Dispose();
-                    Data?.Dispose();
-                    build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
-                }
-                else
-                {
-                    build.StartOpen(communicator, Audio, ServicePlayer, Data, TimeSpan.FromMilliseconds(200));
-                }
-
-                return build.CompleteToken.EndTask;
-            });
-
-            return build == ServiceOpenBuild ? await build.CompleteToken.ResultTask : null;
+            await Rebuild(true);
         }
 
-        private async void SetBuildResult(ServiceBuild build)
+        public async Task Rebuild(bool forceBuild)
         {
-            if (Communicator != null) Communicator.Disconnected -= Communicator_Disconnected;
+            await CloseAsync();
+            keepOpenSem.Release();
+            StartKeepService(forceBuild);
+        }
 
-            Player oldPlayer = ServicePlayer?.Player as Player;
-            ServiceBuildResult result = await (build?.CompleteToken.ResultTask ?? Task.FromResult<ServiceBuildResult>(null));
+        private async void StartKeepService(bool forceBuild)
+        {
+            if (keepService) return;
+            keepService = true;
 
-            if (build != ServiceOpenBuild) return;
+            try
+            {
+                Logs.Log("StartKeepService1");
+                while (keepService)
+                {
+                    await keepOpenSem.WaitAsync();
+
+                    bool wasOnOpenPage = frame.CurrentSourcePageType == typeof(BuildOpenPage);
+                    if (!wasOnOpenPage) frame.NavigateToBuildOpenPage(this);
+
+                    if (Communicator != null) Communicator.Disconnected -= Communicator_Disconnected;
+
+                    Logs.Log("StartKeepService2");
+                    ServiceBuild build = ServiceOpenBuild = new ServiceBuild();
+                    BuildStatusToken<ServiceBuildResult> completeToken = await backgrounTaskDispatcher.Run(() =>
+                    {
+                        Logs.Log("StartKeepService3");
+                        Builder.DataFilePath = Builder.BuildClient ? null : dataFileName;
+
+                        ICommunicator communicator = Communicator;
+                        if (forceBuild || communicator == null)
+                        {
+                            ServicePlayer?.Dispose();
+                            Data?.Dispose();
+                            build.StartBuild(Builder, TimeSpan.FromMilliseconds(200));
+                        }
+                        else
+                        {
+                            build.StartOpen(communicator, Audio, ServicePlayer, Data, TimeSpan.FromMilliseconds(200));
+                        }
+
+                        Logs.Log("StartKeepService4");
+                        return build.CompleteToken;
+                    });
+
+                    Logs.Log("StartKeepService5");
+                    ServiceBuildResult result = await completeToken.ResultTask;
+                    BuildEndedType endedType = await completeToken.EndTask;
+
+                    Logs.Log("StartKeepService6");
+                    switch (endedType)
+                    {
+                        case BuildEndedType.Successful:
+                            SetBuildResult(result);
+
+                            if (wasOnOpenPage)
+                            {
+                                frame.NavigateToMainPage(this);
+                                frame.BackStack.RemoveAt(0);
+                            }
+                            else if (frame.CanGoBack) frame.GoBack();
+                            break;
+
+                        case BuildEndedType.Canceled:
+                            // canceled means in the uwp app, a new attempt was started
+                            break;
+
+                        case BuildEndedType.Settings:
+                            TaskCompletionSourceS<ServiceBuilder> settingsResult = new TaskCompletionSourceS<ServiceBuilder>(Builder.Clone());
+                            frame.NavigateToSettingsPage(settingsResult);
+
+                            ServiceBuilder newBuilder = await settingsResult.Task;
+
+                            if (newBuilder != null) Builder = newBuilder;
+                            forceBuild = true;
+                            break;
+                    }
+                    Logs.Log("StartKeepService7");
+                }
+            }
+            finally
+            {
+                keepService = false;
+            }
+        }
+
+        private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
+        {
+            if (ServiceOpenBuild?.CompleteToken.IsEnded.HasValue != false) return;
+
+            Deferral deferral = e.GetDeferral();
+            try
+            {
+                await CloseAsync();
+            }
+            finally
+            {
+                deferral.Complete();
+            }
+        }
+
+        private async void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
+        {
+            if (ServiceOpenBuild == null  || ServiceOpenBuild.CompleteToken.IsEnded == BuildEndedType.Canceled) await Rebuild(true);
+        }
+
+        private void SetBuildResult(ServiceBuildResult result)
+        {
+            IPlayer oldPlayer = buildResult?.ServicePlayer?.Player;
 
             buildResult = result;
             OnPropertyChanged(nameof(Audio));
@@ -113,24 +208,26 @@ namespace AudioPlayerFrontend
 
             if (Communicator != null) Communicator.Disconnected += Communicator_Disconnected;
 
-            Player newPlayer = ServicePlayer?.Player as Player;
-            if (oldPlayer != newPlayer)
-            {
-                if (oldPlayer != null)
-                {
-                    oldPlayer.NextPressed -= Player_NextPressed;
-                    oldPlayer.PreviousPressed -= Player_PreviousPressed;
-                    oldPlayer.PlayStateChanged -= Player_PlayStateChanged;
-                    await oldPlayer.Stop();
-                }
+            Unsubscribe(oldPlayer as Player);
+            Subscribe(ServicePlayer?.Player as Player);
+        }
 
-                if (newPlayer != null)
-                {
-                    newPlayer.NextPressed += Player_NextPressed;
-                    newPlayer.PreviousPressed += Player_PreviousPressed;
-                    newPlayer.PlayStateChanged += Player_PlayStateChanged;
-                }
-            }
+        private void Subscribe(Player player)
+        {
+            if (player == null) return;
+
+            player.NextPressed += Player_NextPressed;
+            player.PreviousPressed += Player_PreviousPressed;
+            player.PlayStateChanged += Player_PlayStateChanged;
+        }
+
+        private void Unsubscribe(Player player)
+        {
+            if (player == null) return;
+
+            player.NextPressed -= Player_NextPressed;
+            player.PreviousPressed -= Player_PreviousPressed;
+            player.PlayStateChanged -= Player_PlayStateChanged;
         }
 
         private void Player_NextPressed(object sender, HandledEventArgs e)
@@ -154,15 +251,14 @@ namespace AudioPlayerFrontend
         {
             if (e.OnDisconnect) return;
 
-            await CloseAsync();
-            await ConnectAsync(false);
+            await frame.Dispatcher.RunAsync(CoreDispatcherPriority.High, () => Rebuild(false));
         }
 
         public async Task CloseAsync()
         {
             ServiceOpenBuild?.Cancel();
             ServiceOpenBuild = null;
-            await (buildResult?.Communicator?.CloseAsync() ?? Task.CompletedTask);
+            await (Communicator?.CloseAsync() ?? Task.CompletedTask);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -174,9 +270,11 @@ namespace AudioPlayerFrontend
 
         public void Dispose()
         {
-            buildResult?.Communicator?.Dispose();
-            buildResult?.ServicePlayer?.Dispose();
-            buildResult?.Data?.Dispose();
+            Communicator?.Dispose();
+            ServicePlayer?.Dispose();
+            Data?.Dispose();
+
+            buildResult = null;
         }
     }
 }

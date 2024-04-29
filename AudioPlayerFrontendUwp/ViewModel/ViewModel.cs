@@ -52,6 +52,7 @@ namespace AudioPlayerFrontend
 
         private void OnPropertyChanged(string name)
         {
+            var del = PropertyChanged?.GetInvocationList();
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }

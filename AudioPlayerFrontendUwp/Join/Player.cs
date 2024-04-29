@@ -230,6 +230,8 @@ namespace AudioPlayerFrontend.Join
             player.MediaFailed -= Player_MediaFailed;
             player.MediaEnded -= Player_MediaEnded;
 
+            Source = null;
+
             player.Dispose();
         }
     }

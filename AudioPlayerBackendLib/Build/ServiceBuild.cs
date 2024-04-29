@@ -160,6 +160,8 @@ namespace AudioPlayerBackend.Build
                     PlayerToken.Reset();
                     CompleteToken.Reset();
 
+                    Task<ReadWriteAudioServiceData> preloadDataServiceTask = ReadWriteAudioServiceData.Preload(serviceBuilder.DataFilePath);
+
                     try
                     {
                         State = BuildState.OpenCommunicator;
@@ -242,7 +244,10 @@ namespace AudioPlayerBackend.Build
                     try
                     {
                         State = BuildState.CompleteSerivce;
-                        ReadWriteAudioServiceData data = await serviceBuilder.CompleteService(service);
+
+                        serviceBuilder.CompleteService(service);
+                        ReadWriteAudioServiceData data = await preloadDataServiceTask;
+                        data.Init(service);
 
                         if (CompleteToken.IsEnded.HasValue) return;
 
