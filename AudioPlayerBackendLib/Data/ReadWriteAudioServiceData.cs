@@ -197,6 +197,8 @@ namespace AudioPlayerBackend.Data
                 Guid currentPlaylistID = Guid.Parse(preloadData.CurrentPlaylistID);
                 Service.CurrentPlaylist = Service.GetAllPlaylists().FirstOrDefault(p => p.ID == currentPlaylistID);
             }
+
+            preloadData = null; // release memory
         }
 
         private static void MergePlaylist(ISourcePlaylistBase playlist, SourcePlaylistData data)

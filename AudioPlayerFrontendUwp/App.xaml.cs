@@ -87,7 +87,7 @@ namespace AudioPlayerFrontend
                 rootFrame.NavigateToBuildOpenPage(serviceHandler);
                 await loadServiceProfileTask;
                 await serviceHandler.Start(rootFrame);
-				loadServiceProfileTask = null;
+                loadServiceProfileTask = null; // release memory
             }
 
             // Sicherstellen, dass das aktuelle Fenster aktiv ist
