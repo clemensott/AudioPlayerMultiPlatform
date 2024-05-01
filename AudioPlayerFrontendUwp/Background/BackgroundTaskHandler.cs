@@ -1,10 +1,11 @@
-﻿using AudioPlayerBackend.Player;
+﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Player;
 using StdOttStandard;
 using StdOttStandard.Dispatch;
 using System;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Media;
 using Windows.UI.Xaml;
 
 namespace AudioPlayerFrontend.Background
@@ -37,27 +38,60 @@ namespace AudioPlayerFrontend.Background
             closeTimer = ResetTimer.Start(inativeTime);
             closeTimer.RanDown += CloseTimer_RanDown;
 
+            Subscribe(service);
             Application.Current.EnteredBackground += OnEnteredBackground;
             Application.Current.LeavingBackground += OnLeavingBackground;
-        }
-
-        private static SystemMediaTransportControls GetInitializedSystemMediaTransportControls()
-        {
-            SystemMediaTransportControls smtc = SystemMediaTransportControls.GetForCurrentView();
-            smtc.IsPlayEnabled = true;
-            smtc.IsPauseEnabled = true;
-            smtc.IsNextEnabled = true;
-            smtc.IsPreviousEnabled = true;
-            smtc.DisplayUpdater.Type = MediaPlaybackType.Music;
-            smtc.IsEnabled = true;
-
-            return smtc;
         }
 
         private void CloseTimer_RanDown(object sender, EventArgs e)
         {
             if (isInBackground && service.Audio?.PlayState != PlaybackState.Playing) Stop();
             else ResetCloseTimer();
+        }
+
+        private void Subscribe(ServiceHandler serviceHandler)
+        {
+            if (serviceHandler == null) return;
+
+            serviceHandler.PropertyChanged += ServiceHandler_PropertyChanged;
+            Subscribe(service.Audio);
+        }
+
+        private void Unsubscribe(ServiceHandler serviceHandler)
+        {
+            if (serviceHandler == null) return;
+
+            serviceHandler.PropertyChanged -= ServiceHandler_PropertyChanged;
+            Unsubscribe(service.Audio);
+        }
+
+        private void ServiceHandler_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            ServiceHandler serviceHandler = (ServiceHandler)sender;
+            if (e.PropertyName == nameof(serviceHandler.Audio))
+            {
+                Subscribe(serviceHandler.Audio);
+                ResetCloseTimer();
+            }
+        }
+
+        private void Subscribe(IAudioService audioService)
+        {
+            if (audioService == null) return;
+
+            audioService.PlayStateChanged += AudioService_PlayStateChanged;
+        }
+
+        private void Unsubscribe(IAudioService audioService)
+        {
+            if (audioService == null) return;
+
+            audioService.PlayStateChanged -= AudioService_PlayStateChanged;
+        }
+
+        private void AudioService_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
+        {
+            ResetCloseTimer();
         }
 
         private void OnEnteredBackground(object sender, object e)
@@ -79,6 +113,7 @@ namespace AudioPlayerFrontend.Background
             dispatcher.Start();
 
             await sem.WaitAsync();
+            Unsubscribe(service);
             IsRunning = false;
             await dispatcher.Stop();
         }

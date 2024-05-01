@@ -10,6 +10,7 @@ namespace AudioPlayerBackend.Player
     {
         private const int updateInterval = 100;
 
+        private readonly IInvokeDispatcherService dispatcher;
         private bool isSetCurrentSong;
         private int errorCount;
         private readonly Timer timer;
@@ -18,13 +19,11 @@ namespace AudioPlayerBackend.Player
 
         public IPlayer Player { get; }
 
-        public IInvokeDispatcherService Dispatcher { get; }
-
         public AudioServicePlayer(IAudioService service, IPlayer player)
         {
             Service = service;
             Player = player;
-            Dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
+            dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
 
             player.PlayState = service.PlayState;
             player.MediaOpened += Player_MediaOpened;
@@ -79,7 +78,7 @@ namespace AudioPlayerBackend.Player
 
         private void Timer_Elapsed(object state)
         {
-            Dispatcher.InvokeDispatcher(UpdatePosition);
+            dispatcher.InvokeDispatcher(UpdatePosition);
         }
 
         private void UpdatePosition()
