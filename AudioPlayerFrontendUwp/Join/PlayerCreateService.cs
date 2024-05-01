@@ -5,12 +5,12 @@ namespace AudioPlayerFrontend.Join
 {
     class PlayerCreateService : IPlayerCreateService
     {
-        public AudioServicePlayer CreateAudioServicePlayer(IAudioService service)
+        public IServicePlayer CreateAudioServicePlayer(IAudioService service)
         {
             return new AudioServicePlayer(service, new Player());
         }
 
-        public AudioStreamPlayer CreateAudioStreamPlayer(IAudioService service)
+        public IServicePlayer CreateAudioStreamPlayer(IAudioService service)
         {
             return new AudioStreamPlayer(service, new Player());
         }
