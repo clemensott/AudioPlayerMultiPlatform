@@ -161,7 +161,10 @@ namespace AudioPlayerBackend.Data
 
         private void Load()
         {
+            if (preloadData == null) return;
+
             Service.Volume = preloadData.Volume;
+            Service.FileMediaSourceRoots = preloadData.FileMediaSourceRoots;
 
             IDictionary<string, Song> allSongs = new Dictionary<string, Song>();
 
