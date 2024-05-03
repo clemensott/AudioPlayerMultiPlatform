@@ -81,7 +81,6 @@ namespace AudioPlayerFrontend.Join
             try
             {
                 return sources.ToNotNull()
-                    .Where(s => !string.IsNullOrWhiteSpace(s.RelativePath))
                     .Select(s => GetFileMediaSourcePath(s, roots))
                     .Where(p => !string.IsNullOrWhiteSpace(p))
                     .SelectMany(LoadFilePaths).ToArray();

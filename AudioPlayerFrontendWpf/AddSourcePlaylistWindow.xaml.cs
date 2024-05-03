@@ -67,12 +67,13 @@ namespace AudioPlayerFrontend
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {
             string[] paths = tbxSources.Text?.Replace("\r\n", "\n").Split('\n').Where(l => l.Length > 0).ToArray();
+            var fileMediaSourceRoots = service.FileMediaSourceRoots.ToNotNull();
             (IList<FileMediaSource> newSoruces, IList<FileMediaSourceRoot> newRoots) =
-                FileMediaSourcesHelper.ExtractFileMediaSources(paths, service.FileMediaSourceRoots);
+                FileMediaSourcesHelper.ExtractFileMediaSources(paths, fileMediaSourceRoots);
 
             if ((bool)micNewPlaylist.Output)
             {
-                FileMediaSourceRoot[] newAllRoots = service.FileMediaSourceRoots.Concat(newRoots).ToArray();
+                FileMediaSourceRoot[] newAllRoots = fileMediaSourceRoots.ToNotNull().Concat(newRoots).ToArray();
                 newPlaylist.FileMediaSources = newSoruces.ToArray();
                 fileSystemService.UpdateSourcePlaylist(newPlaylist, newAllRoots);
                 service.SourcePlaylists.Add(newPlaylist);
@@ -85,12 +86,12 @@ namespace AudioPlayerFrontend
                 if (rbnAppend.IsChecked == true)
                 {
                     selectedPlaylist.FileMediaSources = selectedPlaylist.FileMediaSources.Concat(newSoruces).ToArray();
-                    service.FileMediaSourceRoots = service.FileMediaSourceRoots.Concat(newRoots).ToArray();
+                    service.FileMediaSourceRoots = fileMediaSourceRoots.Concat(newRoots).ToArray();
                 }
                 else
                 {
                     selectedPlaylist.FileMediaSources = newSoruces.ToArray();
-                    service.FileMediaSourceRoots = service.FileMediaSourceRoots
+                    service.FileMediaSourceRoots = fileMediaSourceRoots
                         .Where(root => service.SourcePlaylists.SelectMany(p => p.FileMediaSources).Any(s => s.RootId == root.Id))
                         .ToArray();
                 }

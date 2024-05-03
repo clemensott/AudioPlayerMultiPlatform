@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 
 namespace AudioPlayerFrontend
 {
@@ -39,25 +40,36 @@ namespace AudioPlayerFrontend
                 : string.Empty;
         }
 
+        private static (string root, string releative) SplitPath(string path, int depth)
+        {
+            int index = 0;
+            while (index < path.Length && depth > 0)
+            {
+                if (diretorySeparators.Contains(path[index])) depth--;
+                index++;
+            }
+
+            if (index + 1 >= path.Length) return (path, string.Empty);
+
+            string root = path.Remove(index - 1);
+            string relative = path.Substring(index);
+
+            return (root, relative);
+        }
+
         private static IEnumerable<IList<FileMediaSourceRootPaths>> GetPossibleRoots(
             IList<string> paths)
         {
             int depth = 1;
             while (true)
             {
-                IGrouping<string, FileMediaSourceRootPaths>[] groups = paths.Select(path =>
-                {
-                    string[] pathParts = path.Split(diretorySeparators, depth + 1);
-                    string rootPath = Path.Combine(pathParts.Take(depth).ToArray());
-
-                    return new FileMediaSourceRootPaths(rootPath, pathParts.Skip(depth).FirstOrDefault());
-                }).GroupBy(t => t.RootPath).ToArray();
-
-                yield return groups
-                    .Select(g => new FileMediaSourceRootPaths(g.Key, g.SelectMany(t => t.Children)))
+                var groups = paths.Select(path => SplitPath(path, depth))
+                    .GroupBy(t => t.root, (key, g) => new FileMediaSourceRootPaths(key, g.Select(t => t.releative)))
                     .ToArray();
 
-                if (groups.Length == paths.Count) yield break;
+                yield return groups;
+
+                if (groups.All(r => r.Children.All(rel => rel.Length == 0))) yield break;
 
                 depth++;
             }
@@ -88,23 +100,22 @@ namespace AudioPlayerFrontend
             IList<FileMediaSourceRootPaths> lastList = null;
             foreach (IList<FileMediaSourceRootPaths> list in GetPossibleRoots(paths))
             {
-                if (lastList != null && lastList.Count < list.Count)
-                {
-                    var fileMediaPahts = list.Select(item => CreateFileMediaSources(item.RootPath, item.Children)).ToArray();
-                    IList<FileMediaSource> newSources = fileMediaPahts.SelectMany(media => media.soruces).ToArray();
-                    IList<FileMediaSourceRoot> newRoots = fileMediaPahts.Select(media => media.root).ToArray();
-
-                    return (newSources, newRoots);
-                }
+                if (lastList != null && lastList.Count < list.Count) break;
 
                 lastList = list;
             }
 
-            return (new FileMediaSource[0], new FileMediaSourceRoot[0]);
+            if (lastList == null) return (new FileMediaSource[0], new FileMediaSourceRoot[0]);
+
+            var fileMediaPahts = lastList.Select(item => CreateFileMediaSources(item.RootPath, item.Children)).ToArray();
+            IList<FileMediaSource> newSources = fileMediaPahts.SelectMany(media => media.soruces).ToArray();
+            IList<FileMediaSourceRoot> newRoots = fileMediaPahts.Select(media => media.root).ToArray();
+
+            return (newSources, newRoots);
         }
 
         public static (IList<FileMediaSource> newSoruces, IList<FileMediaSourceRoot> newRoots) ExtractFileMediaSources(
-            IEnumerable<string> paths, FileMediaSourceRoot[] currentRoots)
+            IEnumerable<string> paths, IEnumerable<FileMediaSourceRoot> currentRoots)
         {
             FileMediaSourceRoot[] currentPathRoots = currentRoots.Where(r => r.Type == FileMediaSourceRootType.Path).ToArray();
             List<FileMediaSource> newSources = new List<FileMediaSource>();
