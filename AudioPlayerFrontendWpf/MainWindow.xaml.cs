@@ -146,7 +146,8 @@ namespace AudioPlayerFrontend
                 {
                     await Task.Run(async () =>
                     {
-                        await Task.WhenAll(result.AudioService.SourcePlaylists.Select(fileSystemService.UpdateSourcePlaylist));
+                        await Task.WhenAll(result.AudioService.SourcePlaylists
+                            .Select(playlist => fileSystemService.UpdateSourcePlaylist(playlist, result.AudioService.FileMediaSourceRoots)));
 
                         // remove all songs from not source playlists that are not in source playlists (any more)
                         IDictionary<string, Song> allSongs = result.AudioService.SourcePlaylists
@@ -538,7 +539,8 @@ namespace AudioPlayerFrontend
 
         private async void MimReloadSongs_Click(object sender, RoutedEventArgs e)
         {
-            await fileSystemService.ReloadSourcePlaylist(FrameworkUtils.GetDataContext<ISourcePlaylist>(sender));
+            FileMediaSourceRoot[] roots = viewModel.Service.AudioService.FileMediaSourceRoots;
+            await fileSystemService.ReloadSourcePlaylist(FrameworkUtils.GetDataContext<ISourcePlaylist>(sender), roots);
         }
 
         private void MimRemixSongs_Click(object sender, RoutedEventArgs e)

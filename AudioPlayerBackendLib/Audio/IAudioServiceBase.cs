@@ -5,6 +5,7 @@ namespace AudioPlayerBackend.Audio
 {
     public interface IAudioServiceBase
     {
+        event EventHandler<ValueChangedEventArgs<FileMediaSourceRoot[]>> FileMediaSourceRootsChanged;
         event EventHandler<ValueChangedEventArgs<IPlaylistBase>> CurrentPlaylistChanged;
         event EventHandler<ValueChangedEventArgs<ISourcePlaylistBase[]>> SourcePlaylistsChanged;
         event EventHandler<ValueChangedEventArgs<IPlaylistBase[]>> PlaylistsChanged;
@@ -17,6 +18,8 @@ namespace AudioPlayerBackend.Audio
         bool IsSearchShuffle { get; set; }
 
         string SearchKey { get; set; }
+
+        FileMediaSourceRoot[] FileMediaSourceRoots { get; set; }
 
         IPlaylistBase CurrentPlaylist { get; set; }
 

@@ -59,6 +59,7 @@ namespace AudioPlayerBackend.Communication.Base
             if (service == null) return;
 
             service.AudioDataChanged += OnServiceAudioDataChanged;
+            service.FileMediaSourceRootsChanged += OnFileMediaSourceRootsChanged;
             service.CurrentPlaylistChanged += OnServiceCurrentPlaylistChanged;
             service.SourcePlaylistsChanged += OnServiceSourcePlaylistsChanged;
             service.PlaylistsChanged += OnServicePlaylistsChanged;
@@ -76,6 +77,7 @@ namespace AudioPlayerBackend.Communication.Base
             if (service == null) return;
 
             service.AudioDataChanged -= OnServiceAudioDataChanged;
+            service.FileMediaSourceRootsChanged -= OnFileMediaSourceRootsChanged;
             service.CurrentPlaylistChanged -= OnServiceCurrentPlaylistChanged;
             service.SourcePlaylistsChanged -= OnServiceSourcePlaylistsChanged;
             service.PlaylistsChanged -= OnServicePlaylistsChanged;
@@ -139,6 +141,10 @@ namespace AudioPlayerBackend.Communication.Base
         {
         }
 
+        protected virtual void OnFileMediaSourceRootsChanged(object sender, ValueChangedEventArgs<FileMediaSourceRoot[]> e)
+        {
+        }
+
         protected virtual void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
         {
         }
@@ -159,7 +165,7 @@ namespace AudioPlayerBackend.Communication.Base
         {
         }
 
-        protected virtual void OnPlaylistFileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
+        protected virtual void OnPlaylistFileMediaSourcesChanged(object sender, ValueChangedEventArgs<FileMediaSource[]> e)
         {
         }
 

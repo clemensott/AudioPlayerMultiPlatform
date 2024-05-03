@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.FileSystem;
-using AudioPlayerFrontend.Join;
 using StdOttStandard.Converter.MultipleInputs;
 using StdOttStandard.Linq;
 
@@ -66,21 +66,36 @@ namespace AudioPlayerFrontend
 
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {
-            string[] sources = tbxSources.Text?.Replace("\r\n", "\n").Split('\n').Where(l => l.Length > 0).ToArray();
+            string[] paths = tbxSources.Text?.Replace("\r\n", "\n").Split('\n').Where(l => l.Length > 0).ToArray();
+            (IList<FileMediaSource> newSoruces, IList<FileMediaSourceRoot> newRoots) =
+                FileMediaSourcesHelper.ExtractFileMediaSources(paths, service.FileMediaSourceRoots);
 
             if ((bool)micNewPlaylist.Output)
             {
-                newPlaylist.FileMediaSources = sources;
-                fileSystemService.UpdateSourcePlaylist(newPlaylist);
+                FileMediaSourceRoot[] newAllRoots = service.FileMediaSourceRoots.Concat(newRoots).ToArray();
+                newPlaylist.FileMediaSources = newSoruces.ToArray();
+                fileSystemService.UpdateSourcePlaylist(newPlaylist, newAllRoots);
                 service.SourcePlaylists.Add(newPlaylist);
                 service.CurrentPlaylist = newPlaylist;
+                service.FileMediaSourceRoots = newAllRoots;
             }
             else
             {
                 ISourcePlaylist selectedPlaylist = (ISourcePlaylist)lbxPlaylists.SelectedItem;
-                selectedPlaylist.FileMediaSources = rbnAppend.IsChecked == true ?
-                    selectedPlaylist.FileMediaSources.ToNotNull().Concat(sources).ToArray() : sources;
-                fileSystemService.UpdateSourcePlaylist(selectedPlaylist);
+                if (rbnAppend.IsChecked == true)
+                {
+                    selectedPlaylist.FileMediaSources = selectedPlaylist.FileMediaSources.Concat(newSoruces).ToArray();
+                    service.FileMediaSourceRoots = service.FileMediaSourceRoots.Concat(newRoots).ToArray();
+                }
+                else
+                {
+                    selectedPlaylist.FileMediaSources = newSoruces.ToArray();
+                    service.FileMediaSourceRoots = service.FileMediaSourceRoots
+                        .Where(root => service.SourcePlaylists.SelectMany(p => p.FileMediaSources).Any(s => s.RootId == root.Id))
+                        .ToArray();
+                }
+
+                fileSystemService.UpdateSourcePlaylist(selectedPlaylist, service.FileMediaSourceRoots);
             }
 
             Close();
