@@ -47,7 +47,9 @@ namespace AudioPlayerFrontend
 
                 if (service.SourcePlaylists.TryFirst(p => HasSameSource(p, paths), out playlist))
                 {
-                    await (reload ? fileSystemService.ReloadSourcePlaylist(playlist) : fileSystemService.UpdateSourcePlaylist(playlist));
+                    await (reload 
+                        ? fileSystemService.ReloadSourcePlaylist(playlist, service.FileMediaSourceRoots)
+                        : fileSystemService.UpdateSourcePlaylist(playlist, service.FileMediaSourceRoots));
 
                     if (playlist.Songs.Length == 0)
                     {

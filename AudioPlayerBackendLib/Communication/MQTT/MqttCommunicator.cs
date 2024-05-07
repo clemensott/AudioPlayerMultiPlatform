@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Communication.Base;
+using AudioPlayerBackend.Audio.MediaSource;
 
 namespace AudioPlayerBackend.Communication.MQTT
 {

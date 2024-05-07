@@ -1,5 +1,5 @@
 ﻿using AudioPlayerBackend.Audio;
-using System.Collections.Generic;
+using AudioPlayerBackend.Audio.MediaSource;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.FileSystem
@@ -24,7 +24,5 @@ namespace AudioPlayerBackend.FileSystem
         Task ReloadSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots);
 
         Task UpdateSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots);
-
-        IEnumerable<LocalKnownFolder> GetLocalKnownFolders();
     }
 }

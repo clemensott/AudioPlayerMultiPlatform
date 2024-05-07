@@ -1,4 +1,4 @@
-﻿namespace AudioPlayerBackend.Audio
+﻿namespace AudioPlayerBackend.Audio.MediaSource
 {
     public enum FileMediaSourceRootType
     {

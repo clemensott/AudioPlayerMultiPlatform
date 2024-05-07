@@ -22,6 +22,7 @@ using AudioPlayerBackend;
 using StdOttUwp.Converters;
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerFrontend.Extensions;
+using AudioPlayerBackend.Audio.MediaSource;
 
 namespace AudioPlayerFrontend
 {
@@ -243,7 +244,8 @@ namespace AudioPlayerFrontend
             try
             {
                 viewModel.IsUpdatingPlaylists = true;
-                await fileSystemService.UpdateSourcePlaylist(UwpUtils.GetDataContext<ISourcePlaylist>(sender));
+                FileMediaSourceRoot[] roots = viewModel.Audio.FileMediaSourceRoots;
+                await fileSystemService.UpdateSourcePlaylist(UwpUtils.GetDataContext<ISourcePlaylist>(sender), roots);
             }
             catch (Exception exc)
             {
@@ -260,7 +262,8 @@ namespace AudioPlayerFrontend
             try
             {
                 viewModel.IsUpdatingPlaylists = true;
-                await fileSystemService.ReloadSourcePlaylist(UwpUtils.GetDataContext<ISourcePlaylist>(sender));
+                FileMediaSourceRoot[] roots = viewModel.Audio.FileMediaSourceRoots;
+                await fileSystemService.ReloadSourcePlaylist(UwpUtils.GetDataContext<ISourcePlaylist>(sender), roots);
             }
             catch (Exception exc)
             {
