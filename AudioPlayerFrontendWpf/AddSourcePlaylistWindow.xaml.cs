@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using AudioPlayerBackend;
 using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Audio.MediaSource;
 using AudioPlayerBackend.FileSystem;
 using StdOttStandard.Converter.MultipleInputs;
 using StdOttStandard.Linq;
