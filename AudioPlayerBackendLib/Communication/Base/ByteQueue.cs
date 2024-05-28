@@ -1,5 +1,7 @@
 ﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Audio.MediaSource;
 using AudioPlayerBackend.Player;
+using StdOttStandard.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -230,9 +232,63 @@ namespace AudioPlayerBackend.Communication.Base
             ISourcePlaylistBase playlist = createFunc(DequeueGuid());
 
             DequeuePlaylist(playlist);
-            playlist.FileMediaSources = DequeueStrings();
+            playlist.FileMediaSources = DequeueFileMediaSources();
 
             return playlist;
+        }
+
+        public void Enqueue(FileMediaSource fileMediaSource)
+        {
+            Enqueue(fileMediaSource.RootId);
+            Enqueue(fileMediaSource.RelativePath);
+        }
+
+        public FileMediaSource DequeueFileMediaSource()
+        {
+            return new FileMediaSource()
+            {
+                RootId = DequeueGuid(),
+                RelativePath = DequeueString(),
+            };
+        }
+
+        public void Enqueue(IEnumerable<FileMediaSource> fileMediaSources)
+        {
+            Enqueue(fileMediaSources, Enqueue);
+        }
+
+        public FileMediaSource[] DequeueFileMediaSources()
+        {
+            return DequeueArray(DequeueFileMediaSource);
+        }
+
+        public void Enqueue(FileMediaSourceRoot fileMediaSourceRoot)
+        {
+            Enqueue(fileMediaSourceRoot.Id);
+            Enqueue(fileMediaSourceRoot.Name);
+        }
+
+        public FileMediaSourceRoot DequeueFileMediaSourceRoot(IEnumerable<FileMediaSourceRoot> currentRoots)
+        {
+            Guid id = DequeueGuid();
+            FileMediaSourceRoot currentRoot = currentRoots.ToNotNull().FirstOrDefault(root => root.Id == id);
+            return new FileMediaSourceRoot()
+            {
+                Id = id,
+                Name = DequeueString(),
+                Type = currentRoot.Type,
+                Value = currentRoot.Value,
+            };
+        }
+
+        public void Enqueue(IEnumerable<FileMediaSourceRoot> fileMediaSourceRoots)
+        {
+            Enqueue(fileMediaSourceRoots, Enqueue);
+        }
+
+        public FileMediaSourceRoot[] DequeueFileMediaSourceRoots(IEnumerable<FileMediaSourceRoot> currentRoots)
+        {
+            return DequeueArray(() => DequeueFileMediaSourceRoot(currentRoots));
         }
 
         public void Enqueue(IPlaylistBase playlist)
@@ -316,6 +372,7 @@ namespace AudioPlayerBackend.Communication.Base
 
         public void Enqueue(IAudioServiceBase service)
         {
+            Enqueue(service.FileMediaSourceRoots);
             Enqueue(service.SourcePlaylists);
             Enqueue(service.Playlists);
             Enqueue(service.CurrentPlaylist?.ID ?? Guid.Empty);
@@ -326,6 +383,7 @@ namespace AudioPlayerBackend.Communication.Base
         public void DequeueService(IAudioServiceBase service,
             Func<Guid, ISourcePlaylistBase> createSourcePlaylistFunc, Func<Guid, IPlaylistBase> createPlaylistFunc)
         {
+            service.FileMediaSourceRoots = DequeueFileMediaSourceRoots(service.FileMediaSourceRoots);
             service.SourcePlaylists = DequeueSourcePlaylists(createSourcePlaylistFunc);
             service.Playlists = DequeuePlaylists(createPlaylistFunc);
 
@@ -374,7 +432,7 @@ namespace AudioPlayerBackend.Communication.Base
             return bytes.GetEnumerator();
         }
 
-        public static implicit operator byte[] (ByteQueue queue)
+        public static implicit operator byte[](ByteQueue queue)
         {
             return queue.ToArray();
         }

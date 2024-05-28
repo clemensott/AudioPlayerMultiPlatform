@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Audio.MediaSource;
 using AudioPlayerBackend.FileSystem;
 using StdOttStandard.Linq;
 using System;
@@ -24,12 +25,12 @@ namespace AudioPlayerFrontend.Join
             return Task.CompletedTask;
         }
 
-        public async Task UpdateSourcePlaylist(ISourcePlaylist playlist)
+        public async Task UpdateSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots)
         {
-            List<Song> songs = playlist. Songs.ToList();
+            List<Song> songs = playlist.Songs.ToList();
             playlist.Songs = await Task.Run(() =>
             {
-                IEnumerable<string> allFiles = LoadAllSongs(playlist.FileMediaSources);
+                IEnumerable<string> allFiles = LoadAllFilePaths(playlist.FileMediaSources, roots);
                 Dictionary<string, string> dict = allFiles.Distinct().ToDictionary(f => f);
 
                 for (int i = songs.Count - 1; i >= 0; i--)
@@ -47,12 +48,12 @@ namespace AudioPlayerFrontend.Join
             });
         }
 
-        public async Task ReloadSourcePlaylist(ISourcePlaylist playlist)
+        public async Task ReloadSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots)
         {
             List<Song> songs = playlist.Songs.ToList();
             playlist.Songs = await Task.Run(() =>
             {
-                IEnumerable<string> allFiles = LoadAllSongs(playlist.FileMediaSources);
+                IEnumerable<string> allFiles = LoadAllFilePaths(playlist.FileMediaSources, roots);
                 IEnumerable<Song> allSongs = allFiles.Distinct().Select(CreateSong);
                 Dictionary<string, Song> loadedSongs = allSongs.ToDictionary(s => s.FullPath);
 
@@ -76,15 +77,45 @@ namespace AudioPlayerFrontend.Join
             });
         }
 
-        private static IEnumerable<string> LoadAllSongs(string[] sources)
+        private IEnumerable<string> LoadAllFilePaths(FileMediaSource[] sources, FileMediaSourceRoot[] roots)
         {
             try
             {
-                return sources.ToNotNull().SelectMany(LoadFilePaths).ToArray();
+                return sources.ToNotNull()
+                    .Select(s => GetFileMediaSourcePath(s, roots))
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .SelectMany(LoadFilePaths).ToArray();
             }
             catch
             {
                 return Enumerable.Empty<string>();
+            }
+        }
+
+        private string GetFileMediaSourcePath(FileMediaSource source, FileMediaSourceRoot[] roots)
+        {
+            if (!roots.ToNotNull().TryFirst(r => r.Id == source.RootId, out FileMediaSourceRoot root)) return null;
+
+            string rootPath = GetPathFromFileMediaSourceRoot(root);
+            if (string.IsNullOrWhiteSpace(rootPath)) return null;
+
+            return Path.Combine(rootPath, source.RelativePath);
+        }
+
+        private string GetPathFromFileMediaSourceRoot(FileMediaSourceRoot root)
+        {
+            switch (root.Type)
+            {
+                case FileMediaSourceRootType.Path:
+                    return root.Value;
+
+                case FileMediaSourceRootType.KnownFolder:
+                    return GetLocalKnownFolders()
+                        .TryFirst(f => f.Value == root.Value, out LocalKnownFolder folder)
+                        ? folder.CurrentFullPath : null;
+
+                default:
+                    return null;
             }
         }
 
@@ -110,6 +141,23 @@ namespace AudioPlayerFrontend.Join
         private static Song CreateSong(string path)
         {
             return new Song(path);
+        }
+
+        public IEnumerable<LocalKnownFolder> GetLocalKnownFolders()
+        {
+            yield return CreateLocalKnownFolder(Environment.SpecialFolder.MyMusic, "My Music");
+            yield return CreateLocalKnownFolder(Environment.SpecialFolder.MyVideos, "My Videos");
+            yield return CreateLocalKnownFolder(Environment.SpecialFolder.MyPictures, "My Pictures");
+            yield return CreateLocalKnownFolder(Environment.SpecialFolder.MyDocuments, "My Documents");
+            yield return CreateLocalKnownFolder(Environment.SpecialFolder.DesktopDirectory, "Desktop");
+        }
+
+        private static LocalKnownFolder CreateLocalKnownFolder(Environment.SpecialFolder folder, string name)
+        {
+            string value = folder.ToString();
+            string fullPath = Environment.GetFolderPath(folder);
+
+            return new LocalKnownFolder(name, value, fullPath);
         }
     }
 }

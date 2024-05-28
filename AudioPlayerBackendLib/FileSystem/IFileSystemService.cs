@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Audio.MediaSource;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.FileSystem
@@ -20,8 +21,8 @@ namespace AudioPlayerBackend.FileSystem
         /// <returns></returns>
         Task WriteTextFile(string fileName, string text);
 
-        Task ReloadSourcePlaylist(ISourcePlaylist playlist);
+        Task ReloadSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots);
 
-        Task UpdateSourcePlaylist(ISourcePlaylist playlist);
+        Task UpdateSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots);
     }
 }

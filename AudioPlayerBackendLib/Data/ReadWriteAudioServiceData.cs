@@ -29,14 +29,6 @@ namespace AudioPlayerBackend.Data
             this.path = path;
         }
 
-        private ReadWriteAudioServiceData(string path, IAudioServiceBase service)
-        {
-            audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
-            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
-            this.path = path;
-            Service = service;
-        }
-
         public static async Task<ReadWriteAudioServiceData> Preload(string path)
         {
             ReadWriteAudioServiceData dataService = new ReadWriteAudioServiceData(path);
@@ -161,7 +153,10 @@ namespace AudioPlayerBackend.Data
 
         private void Load()
         {
+            if (preloadData == null) return;
+
             Service.Volume = preloadData.Volume;
+            Service.FileMediaSourceRoots = preloadData.FileMediaSourceRoots;
 
             IDictionary<string, Song> allSongs = new Dictionary<string, Song>();
 

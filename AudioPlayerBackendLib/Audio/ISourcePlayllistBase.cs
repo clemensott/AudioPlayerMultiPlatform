@@ -1,11 +1,12 @@
-﻿using System;
+﻿using AudioPlayerBackend.Audio.MediaSource;
+using System;
 
 namespace AudioPlayerBackend.Audio
 {
     public interface ISourcePlaylistBase : IPlaylistBase
     {
-        event EventHandler<ValueChangedEventArgs<string[]>> FileMediaSourcesChanged;
+        event EventHandler<ValueChangedEventArgs<FileMediaSource[]>> FileMediaSourcesChanged;
 
-        string[] FileMediaSources { get; set; }
+        FileMediaSource[] FileMediaSources { get; set; }
     }
 }

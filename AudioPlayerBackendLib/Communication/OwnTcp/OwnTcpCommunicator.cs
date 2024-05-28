@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.Audio.MediaSource;
 using AudioPlayerBackend.Communication.Base;
 using AudioPlayerBackend.Player;
 
@@ -23,6 +24,18 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         protected Task PublishAudioData()
         {
             return SendAsync(nameof(Service.AudioData), Service.AudioData, true);
+        }
+
+        protected override async void OnFileMediaSourceRootsChanged(object sender, ValueChangedEventArgs<FileMediaSourceRoot[]> e)
+        {
+            await PublishFileMediaSourceRoots();
+        }
+
+        protected Task PublishFileMediaSourceRoots()
+        {
+            ByteQueue data = new ByteQueue();
+            data.Enqueue(Service.FileMediaSourceRoots);
+            return SendAsync(nameof(Service.FileMediaSourceRoots), data, false);
         }
 
         protected override async void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
@@ -136,7 +149,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             return SendAsync(nameof(Service.Volume), data, true);
         }
 
-        protected override async void OnPlaylistFileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
+        protected override async void OnPlaylistFileMediaSourcesChanged(object sender, ValueChangedEventArgs<FileMediaSource[]> e)
         {
             await PublishMediaSources((ISourcePlaylistBase)sender);
         }
@@ -492,7 +505,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     break;
 
                 case nameof(source.FileMediaSources):
-                    source.FileMediaSources = data.DequeueStrings();
+                    source.FileMediaSources = data.DequeueFileMediaSources();
                     break;
 
                 default:

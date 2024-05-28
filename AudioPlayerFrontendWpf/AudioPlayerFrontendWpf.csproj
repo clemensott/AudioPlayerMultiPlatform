@@ -261,6 +261,7 @@
     <Compile Include="BuildOpenWindow.xaml.cs">
       <DependentUpon>BuildOpenWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="FileMediaSourcesHelper.cs" />
     <Compile Include="FilePathsToSingleStringConverter.cs" />
     <Compile Include="HotKeyBox.xaml.cs">
       <DependentUpon>HotKeyBox.xaml</DependentUpon>

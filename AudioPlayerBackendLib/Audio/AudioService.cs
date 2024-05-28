@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.Player;
+﻿using AudioPlayerBackend.Audio.MediaSource;
+using AudioPlayerBackend.Player;
 using StdOttStandard.Linq;
 using StdOttStandard.Linq.DataStructures.Observable;
 using System;
@@ -25,6 +26,7 @@ namespace AudioPlayerBackend.Audio
         private bool isSearchShuffle, isSearching, isUpdatingSourcePlaylists, isUpdatingPlaylists;
         private string searchKey;
         private PlaybackState playState;
+        private FileMediaSourceRoot[] fileMediaSourceRoots;
         private IPlaylist currentPlaylist;
         private ISourcePlaylistBase[] sourcePlaylists;
         private IPlaylistBase[] playlists;
@@ -217,6 +219,22 @@ namespace AudioPlayerBackend.Audio
         }
 
         private IAudioServiceBase Base => this;
+
+        public FileMediaSourceRoot[] FileMediaSourceRoots
+        {
+            get => fileMediaSourceRoots; 
+            set
+            {
+                if(ReferenceEquals(value, fileMediaSourceRoots)) return;
+
+                var args = new ValueChangedEventArgs<FileMediaSourceRoot[]>(fileMediaSourceRoots, value);
+                fileMediaSourceRoots = value;
+                FileMediaSourceRootsChanged?.Invoke(this, args);
+
+                OnPropertyChanged(nameof(FileMediaSourceRoots));
+
+            }
+        }
 
         public AudioService(IInvokeDispatcherService dispatcher)
         {
@@ -412,6 +430,7 @@ namespace AudioPlayerBackend.Audio
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
+        public event EventHandler<ValueChangedEventArgs<FileMediaSourceRoot[]>> FileMediaSourceRootsChanged;
 
         protected void OnPropertyChanged(string name)
         {

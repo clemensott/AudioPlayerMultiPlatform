@@ -1,21 +1,22 @@
-﻿using System;
+﻿using AudioPlayerBackend.Audio.MediaSource;
+using System;
 
 namespace AudioPlayerBackend.Audio
 {
     class SourcePlaylist : Playlist, ISourcePlaylist
     {
-        private string[] fileMediaSources;
+        private FileMediaSource[] fileMediaSources;
 
-        public event EventHandler<ValueChangedEventArgs<string[]>> FileMediaSourcesChanged;
+        public event EventHandler<ValueChangedEventArgs<FileMediaSource[]>> FileMediaSourcesChanged;
 
-        public string[] FileMediaSources
+        public FileMediaSource[] FileMediaSources
         {
             get => fileMediaSources;
             set
             {
                 if (value == fileMediaSources) return;
 
-                var args = new ValueChangedEventArgs<string[]>(FileMediaSources, value);
+                var args = new ValueChangedEventArgs<FileMediaSource[]>(FileMediaSources, value);
                 fileMediaSources = value;
                 FileMediaSourcesChanged?.Invoke(this, args);
 

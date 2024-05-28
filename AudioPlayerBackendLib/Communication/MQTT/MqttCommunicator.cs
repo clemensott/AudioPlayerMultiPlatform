@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Communication.Base;
+using AudioPlayerBackend.Audio.MediaSource;
 
 namespace AudioPlayerBackend.Communication.MQTT
 {
@@ -48,6 +49,18 @@ namespace AudioPlayerBackend.Communication.MQTT
         protected async Task PublishAudioData()
         {
             await PublishServiceAsync(nameof(Service.AudioData), Service.AudioData, MqttQualityOfServiceLevel.AtMostOnce);
+        }
+
+        protected override async void OnFileMediaSourceRootsChanged(object sender, ValueChangedEventArgs<FileMediaSourceRoot[]> e)
+        {
+            await PublishFileMediaSourceRoots();
+        }
+
+        protected async Task PublishFileMediaSourceRoots()
+        {
+            ByteQueue data = new ByteQueue();
+            data.Enqueue(Service.FileMediaSourceRoots);
+            await PublishAsync(nameof(Service.FileMediaSourceRoots), data, MqttQualityOfServiceLevel.AtMostOnce);
         }
 
         protected override async void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
@@ -171,7 +184,7 @@ namespace AudioPlayerBackend.Communication.MQTT
             catch { }
         }
 
-        protected override async void OnPlaylistFileMediaSourcesChanged(object sender, ValueChangedEventArgs<string[]> e)
+        protected override async void OnPlaylistFileMediaSourcesChanged(object sender, ValueChangedEventArgs<FileMediaSource[]> e)
         {
             await PublishMediaSources((ISourcePlaylistBase)sender);
         }
@@ -404,6 +417,10 @@ namespace AudioPlayerBackend.Communication.MQTT
         {
             switch (topic)
             {
+                case nameof(Service.FileMediaSourceRoots):
+                    Service.FileMediaSourceRoots = data.DequeueFileMediaSourceRoots(Service.FileMediaSourceRoots);
+                    break;
+
                 case nameof(Service.SourcePlaylists):
                     HandleSourcePlaylistsTopic(data);
                     break;
@@ -539,7 +556,7 @@ namespace AudioPlayerBackend.Communication.MQTT
                     break;
 
                 case nameof(source.FileMediaSources):
-                    source.FileMediaSources = data.DequeueStrings();
+                    source.FileMediaSources = data.DequeueFileMediaSources();
                     break;
 
                 default:
