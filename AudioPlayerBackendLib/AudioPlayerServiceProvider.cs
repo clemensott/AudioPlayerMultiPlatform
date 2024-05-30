@@ -2,6 +2,7 @@
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.Player;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 
 namespace AudioPlayerBackend
@@ -50,6 +51,7 @@ namespace AudioPlayerBackend
 
         public IAudioCreateService GetAudioCreateService()
         {
+            serviceProvider.GetRequiredService
             return serviceProvider?.GetService<IAudioCreateService>() ?? throw NotBuildYetException();
         }
         #endregion
