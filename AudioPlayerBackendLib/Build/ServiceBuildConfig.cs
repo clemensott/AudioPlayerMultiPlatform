@@ -8,13 +8,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using AudioPlayerBackend.Communication.OwnTcp;
-using AudioPlayerBackend.Data;
 using StdOttStandard.Linq;
-using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Build
 {
-    public class ServiceBuilder : INotifyPropertyChanged
+    public class ServiceBuildConfig : INotifyPropertyChanged
     {
         private bool? isSearchShuffle, play, isStreaming;
         private OrderType? shuffle;
@@ -164,7 +162,7 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public ServiceBuilder()
+        public ServiceBuildConfig()
         {
             playerCreateService = AudioPlayerServiceProvider.Current.GetPlayerCreateService();
             dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
@@ -172,7 +170,7 @@ namespace AudioPlayerBackend.Build
             WithStandalone();
         }
 
-        public ServiceBuilder WithArgs(IEnumerable<string> args)
+        public ServiceBuildConfig WithArgs(IEnumerable<string> args)
         {
             OptionParsed parsed;
             Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 3, 2);
@@ -220,7 +218,7 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuilder WithService(IAudioService service)
+        public ServiceBuildConfig WithService(IAudioService service)
         {
             return WithShuffle(GetSharedValueOrNull(service.GetAllPlaylists().Select(p => p.Shuffle)))
                 .WithIsSearchShuffle(service.IsSearchShuffle)
@@ -235,7 +233,7 @@ namespace AudioPlayerBackend.Build
             return distinctValues.Length == 1 ? (T?)distinctValues[0] : null;
         }
 
-        public ServiceBuilder WithStandalone()
+        public ServiceBuildConfig WithStandalone()
         {
             BuildStandalone = true;
             BuildServer = false;
@@ -244,7 +242,7 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuilder WithServer(int port)
+        public ServiceBuildConfig WithServer(int port)
         {
             BuildStandalone = false;
             BuildServer = true;
@@ -253,32 +251,32 @@ namespace AudioPlayerBackend.Build
             return WithServerPort(port);
         }
 
-        public ServiceBuilder WithCommunicatorProtocol(CommunicatorProtocol communicatorProtocol)
+        public ServiceBuildConfig WithCommunicatorProtocol(CommunicatorProtocol communicatorProtocol)
         {
             CommunicatorProtocol = communicatorProtocol;
             return this;
         }
 
-        public ServiceBuilder WithMqtt()
+        public ServiceBuildConfig WithMqtt()
         {
             CommunicatorProtocol = CommunicatorProtocol.MQTT;
             return this;
         }
 
-        public ServiceBuilder WithOwnTcp()
+        public ServiceBuildConfig WithOwnTcp()
         {
             CommunicatorProtocol = CommunicatorProtocol.OwnTCP;
             return this;
         }
 
-        public ServiceBuilder WithServerPort(int port)
+        public ServiceBuildConfig WithServerPort(int port)
         {
             ServerPort = port;
 
             return this;
         }
 
-        public ServiceBuilder WithClient(string serverAddress, int? port = null)
+        public ServiceBuildConfig WithClient(string serverAddress, int? port = null)
         {
             BuildStandalone = false;
             BuildServer = false;
@@ -287,7 +285,7 @@ namespace AudioPlayerBackend.Build
             return WithServerAddress(serverAddress).WithClientPort(port);
         }
 
-        public ServiceBuilder WithCommunicator(ICommunicator communicator)
+        public ServiceBuildConfig WithCommunicator(ICommunicator communicator)
         {
             if (communicator is IClientCommunicator)
             {
@@ -303,56 +301,56 @@ namespace AudioPlayerBackend.Build
             return WithStandalone();
         }
 
-        public ServiceBuilder WithServerAddress(string serverAddress)
+        public ServiceBuildConfig WithServerAddress(string serverAddress)
         {
             ServerAddress = serverAddress;
 
             return this;
         }
 
-        public ServiceBuilder WithClientPort(int? port)
+        public ServiceBuildConfig WithClientPort(int? port)
         {
             ClientPort = port;
 
             return this;
         }
 
-        public ServiceBuilder WithShuffle(OrderType? value)
+        public ServiceBuildConfig WithShuffle(OrderType? value)
         {
             Shuffle = value;
 
             return this;
         }
 
-        public ServiceBuilder WithIsSearchShuffle(bool? value = true)
+        public ServiceBuildConfig WithIsSearchShuffle(bool? value = true)
         {
             IsSearchShuffle = value;
 
             return this;
         }
 
-        public ServiceBuilder WithSearchKey(string value)
+        public ServiceBuildConfig WithSearchKey(string value)
         {
             SearchKey = value;
 
             return this;
         }
 
-        public ServiceBuilder WithPlay(bool? value = true)
+        public ServiceBuildConfig WithPlay(bool? value = true)
         {
             Play = value;
 
             return this;
         }
 
-        public ServiceBuilder WithVolume(float? volume)
+        public ServiceBuildConfig WithVolume(float? volume)
         {
             Volume = volume;
 
             return this;
         }
 
-        public ServiceBuilder WithIsStreaming(bool? value = true)
+        public ServiceBuildConfig WithIsStreaming(bool? value = true)
         {
             IsStreaming = value;
 
@@ -427,9 +425,9 @@ namespace AudioPlayerBackend.Build
             return new OwnTcpServerCommunicator(port);
         }
 
-        public ServiceBuilder Clone()
+        public ServiceBuildConfig Clone()
         {
-            return new ServiceBuilder()
+            return new ServiceBuildConfig()
             {
                 BuildClient = BuildClient,
                 BuildServer = BuildServer,

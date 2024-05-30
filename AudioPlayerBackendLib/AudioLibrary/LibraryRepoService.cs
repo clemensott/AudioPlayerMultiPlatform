@@ -48,9 +48,9 @@ namespace AudioPlayerBackend.AudioLibrary
                 this.parent = parent;
             }
 
-            public Task SendInitCmd()
+            public Task<Library> GetLibrary()
             {
-                return parent.repo.SendInitCmd();
+                return parent.repo.GetLibrary();
             }
 
             private void ForEachClientExcept(Action<Client> action)
@@ -59,27 +59,6 @@ namespace AudioPlayerBackend.AudioLibrary
                 {
                     if (client != this) action(client);
                 }
-            }
-
-            public Task SendIsSearchChange(bool isSearch)
-            {
-                var args = new AudioLibraryChange<bool>(isSearch);
-                ForEachClientExcept(client => client.OnIsSearchChange?.Invoke(this, args));
-                return parent.repo.SendIsSearchChange(isSearch);
-            }
-
-            public Task SendIsSearchShuffleChange(bool isSearchShuffle)
-            {
-                var args = new AudioLibraryChange<bool>(isSearchShuffle);
-                ForEachClientExcept(client => client.OnIsSearchShuffleChange?.Invoke(this, args));
-                return parent.repo.SendIsSearchShuffleChange(isSearchShuffle);
-            }
-
-            public Task SendSearchKeyChange(string searchKey)
-            {
-                var args = new AudioLibraryChange<string>(searchKey);
-                ForEachClientExcept(client => client.OnSearchKeyChange?.Invoke(this, args));
-                return parent.repo.SendSearchKeyChange(searchKey);
             }
 
             public Task SendPlayStateChange(PlaybackState playState)

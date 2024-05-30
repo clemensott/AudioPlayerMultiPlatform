@@ -20,12 +20,9 @@ namespace AudioPlayerBackend.Build
             Services = services;
         }
 
-        public async Task Start()
+        public Task Start()
         {
-            Task startTask = Task.WhenAll(Services.Select(s => s.Start()));
-            await Library.SendInitCmd();
-            await Playlists.SendInitCmd();
-            await startTask;
+            return Task.WhenAll(Services.Select(s => s.Start()));
         }
 
         public Task Stop()

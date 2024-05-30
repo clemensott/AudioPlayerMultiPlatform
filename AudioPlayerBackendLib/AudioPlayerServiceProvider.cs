@@ -51,7 +51,6 @@ namespace AudioPlayerBackend
 
         public IAudioCreateService GetAudioCreateService()
         {
-            serviceProvider.GetRequiredService
             return serviceProvider?.GetService<IAudioCreateService>() ?? throw NotBuildYetException();
         }
         #endregion

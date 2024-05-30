@@ -48,9 +48,9 @@ namespace AudioPlayerBackend.AudioLibrary
                 this.parent = parent;
             }
 
-            public Task SendInitCmd()
+            public Task<Playlist> GetPlaylist(Guid id)
             {
-                return parent.repo.SendInitCmd();
+                return parent.repo.GetPlaylist(id);
             }
 
             private void ForEachClientExcept(Action<Client> action)

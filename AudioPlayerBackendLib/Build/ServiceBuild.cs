@@ -139,7 +139,7 @@ namespace AudioPlayerBackend.Build
             CompleteToken.Settings();
         }
 
-        public static ServiceBuild Build(ServiceBuilder serviceBuilder, TimeSpan delayTime)
+        public static ServiceBuild Build(ServiceBuildConfig serviceBuilder, TimeSpan delayTime)
         {
             ServiceBuild build = new ServiceBuild();
             build.StartBuild(serviceBuilder, delayTime);
@@ -147,7 +147,7 @@ namespace AudioPlayerBackend.Build
             return build;
         }
 
-        public async void StartBuild(ServiceBuilder serviceBuilder, TimeSpan delayTime)
+        public async void StartBuild(ServiceBuildConfig serviceBuilder, TimeSpan delayTime)
         {
             if (State != BuildState.Init) throw new InvalidOperationException("Build has already benn started: " + State);
 

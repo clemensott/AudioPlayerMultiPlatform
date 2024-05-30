@@ -17,11 +17,11 @@ namespace AudioPlayerFrontend
         private IntConverter serverPortConverter;
         private IntNullableConverter clientPortConverter;
 
-        public ServiceBuilder ServiceBuilder { get; private set; }
+        public ServiceBuildConfig ServiceBuilder { get; private set; }
 
         public HotKeysBuilder HotKeysBuilder { get; private set; }
 
-        public SettingsWindow(ServiceBuilder serviceBuilder, HotKeysBuilder hotKeysBuilder)
+        public SettingsWindow(ServiceBuildConfig serviceBuilder, HotKeysBuilder hotKeysBuilder)
         {
             InitializeComponent();
 

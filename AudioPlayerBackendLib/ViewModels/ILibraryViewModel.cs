@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 namespace AudioPlayerBackend.ViewModels
 {
-    public interface ILibraryViewModel : INotifyPropertyChanged
+    public interface ILibraryViewModel : IAudioService, INotifyPropertyChanged
     {
         bool IsLoaded { get; }
 

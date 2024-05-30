@@ -29,7 +29,7 @@ namespace AudioPlayerFrontend
     public partial class MainWindow : Window
     {
         private readonly IFileSystemService fileSystemService;
-        private ServiceBuilder serviceBuilder;
+        private ServiceBuildConfig serviceBuilder;
         private HotKeysBuilder hotKeysBuilder;
         private readonly ViewModel viewModel;
         private HotKeys hotKeys;
@@ -45,7 +45,7 @@ namespace AudioPlayerFrontend
 
             RestoreWindowHandler.Activate(this, RestoreWindowSettings.GetDefault());
 
-            serviceBuilder = new ServiceBuilder();
+            serviceBuilder = new ServiceBuildConfig();
             hotKeysBuilder = new HotKeysBuilder();
 
             DataContext = viewModel = new ViewModel();
@@ -215,7 +215,7 @@ namespace AudioPlayerFrontend
 
         private bool UpdateBuilders()
         {
-            ServiceBuilder serviceBuilderEdit = serviceBuilder.Clone();
+            ServiceBuildConfig serviceBuilderEdit = serviceBuilder.Clone();
             HotKeysBuilder hotKeysBuilderEdit = hotKeysBuilder.Clone();
 
             if (viewModel?.Service?.AudioService != null) serviceBuilderEdit.WithService(viewModel.Service.AudioService);
