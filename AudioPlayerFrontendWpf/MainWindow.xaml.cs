@@ -29,7 +29,7 @@ namespace AudioPlayerFrontend
     public partial class MainWindow : Window
     {
         private readonly IFileSystemService fileSystemService;
-        private ServiceBuildConfig serviceBuilder;
+        private AudioServicesBuildConfig serviceBuilder;
         private HotKeysBuilder hotKeysBuilder;
         private readonly ViewModel viewModel;
         private HotKeys hotKeys;
@@ -45,7 +45,7 @@ namespace AudioPlayerFrontend
 
             RestoreWindowHandler.Activate(this, RestoreWindowSettings.GetDefault());
 
-            serviceBuilder = new ServiceBuildConfig();
+            serviceBuilder = new AudioServicesBuildConfig();
             hotKeysBuilder = new HotKeysBuilder();
 
             DataContext = viewModel = new ViewModel();
@@ -125,7 +125,7 @@ namespace AudioPlayerFrontend
                 if (viewModel.Service?.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
                 viewModel.Service = null;
 
-                ServiceBuild build = ServiceBuild.Build(serviceBuilder, TimeSpan.FromMilliseconds(500));
+                AudioServicesBuilder build = AudioServicesBuilder.Build(serviceBuilder, TimeSpan.FromMilliseconds(500));
                 await Task.WhenAny(build.CompleteToken.ResultTask, Task.Delay(100));
 
                 if (build.CompleteToken.IsEnded == BuildEndedType.Canceled ||
@@ -180,7 +180,7 @@ namespace AudioPlayerFrontend
             {
                 if (viewModel.Service.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
 
-                ServiceBuild build = ServiceBuild.Open(viewModel.Service.Communicator, viewModel.Service.AudioService,
+                AudioServicesBuilder build = AudioServicesBuilder.Open(viewModel.Service.Communicator, viewModel.Service.AudioService,
                     viewModel.Service.ServicePlayer, viewModel.Service.Data, TimeSpan.FromMilliseconds(500));
                 await Task.WhenAny(build.CompleteToken.ResultTask, Task.Delay(100));
 
@@ -203,7 +203,7 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private bool? ShowBuildOpenWindow(ServiceBuild build)
+        private bool? ShowBuildOpenWindow(AudioServicesBuilder build)
         {
             BuildOpenWindow window = BuildOpenWindow.Current;
 
@@ -215,7 +215,7 @@ namespace AudioPlayerFrontend
 
         private bool UpdateBuilders()
         {
-            ServiceBuildConfig serviceBuilderEdit = serviceBuilder.Clone();
+            AudioServicesBuildConfig serviceBuilderEdit = serviceBuilder.Clone();
             HotKeysBuilder hotKeysBuilderEdit = hotKeysBuilder.Clone();
 
             if (viewModel?.Service?.AudioService != null) serviceBuilderEdit.WithService(viewModel.Service.AudioService);

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.ViewModels
 {
-    public class LibraryViewModel : INotifyPropertyChanged, IAudioService
+    public class LibraryViewModel : ILibraryViewModel
     {
         private readonly ILibraryRepo libraryRepo;
         private bool isLoaded, isSearching;

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Communication
 {
-    public interface ICommunicator : IDisposable
+    public interface ICommunicator : IAudioService
     {
         event EventHandler<DisconnectedEventArgs> Disconnected;
 

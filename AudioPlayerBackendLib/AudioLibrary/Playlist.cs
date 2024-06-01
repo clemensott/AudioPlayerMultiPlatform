@@ -21,9 +21,9 @@ namespace AudioPlayerBackend.AudioLibrary
 
         public TimeSpan Duration { get; }
 
-        public RequestSong RequestSong { get; }
+        public RequestSong? RequestSong { get; }
 
-        public Guid CurrentSongId { get; }
+        public Guid? CurrentSongId { get; }
 
         public IList<Song> Songs { get; }
     }

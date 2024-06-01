@@ -6,6 +6,8 @@ namespace AudioPlayerBackend.AudioLibrary
     {
         public Guid Id { get; }
 
+        public PlaylistInfoType Type { get; }
+
         public string Name { get; }
 
         public int SongsCount { get; }

@@ -25,9 +25,9 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private ServiceBuild build, lastAwaitingBuild;
+        private AudioServicesBuilder build, lastAwaitingBuild;
 
-        public ServiceBuild Build
+        public AudioServicesBuilder Build
         {
             get => build;
             set => DataContext = build = value;
@@ -38,7 +38,7 @@ namespace AudioPlayerFrontend
             InitializeComponent();
         }
 
-        public BuildOpenWindow(ServiceBuild build) : this()
+        public BuildOpenWindow(AudioServicesBuilder build) : this()
         {
             Build = build;
         }

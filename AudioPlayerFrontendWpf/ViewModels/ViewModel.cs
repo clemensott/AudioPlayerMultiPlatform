@@ -64,7 +64,7 @@ namespace AudioPlayerFrontend
 
         public ICommunicator CommunicatorUI => IsUiEnabled ? Service?.Communicator : null;
 
-        public IServicePlayer ServicePlayerUI => IsUiEnabled ? Service?.ServicePlayer : null;
+        public IPlayerService ServicePlayerUI => IsUiEnabled ? Service?.ServicePlayer : null;
 
         public ViewModel()
         {

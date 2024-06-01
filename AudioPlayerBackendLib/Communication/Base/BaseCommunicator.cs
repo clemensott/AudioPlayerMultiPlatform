@@ -318,5 +318,20 @@ namespace AudioPlayerBackend.Communication.Base
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
+
+        public Task Start()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task Stop()
+        {
+            throw new NotImplementedException();
+        }
+
+        Task IAudioService.Dispose()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

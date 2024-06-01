@@ -1,4 +1,5 @@
-﻿using StdOttStandard.Linq;
+﻿using AudioPlayerBackend.AudioLibrary;
+using StdOttStandard.Linq;
 using StdOttStandard.Linq.Sort;
 using System;
 using System.Collections.Generic;
@@ -115,15 +116,20 @@ namespace AudioPlayerBackend.Audio
         }
         #endregion
 
-        public static (Song? song, bool overflow) GetNextSong(IPlaylistBase playlist, Song? currentSong = null)
+        public static (Song? song, bool overflow) GetNextSong(IEnumerable<Song> allSongsShuffled, OrderType shuffle, Song? currentSong = null)
         {
-            if (!currentSong.HasValue) currentSong = playlist?.CurrentSong;
             if (!currentSong.HasValue) return (null, false);
 
-            (Song next, bool found, bool overflow) = GetAllSongs(playlist)
+            (Song next, bool found, bool overflow) = GetAllSongs(allSongsShuffled, shuffle)
                 .NextOrDefault(currentSong.Value);
 
             return (found ? (Song?)next : null, overflow);
+        }
+
+        public static (Song? song, bool overflow) GetNextSong(IPlaylistBase playlist, Song? currentSong = null)
+        {
+            if (!currentSong.HasValue) currentSong = playlist?.CurrentSong;
+            return GetNextSong(playlist.Songs, playlist.Shuffle, currentSong);
         }
 
         public static (Song? song, bool underflow) GetPreviousSong(IPlaylistBase playlist)

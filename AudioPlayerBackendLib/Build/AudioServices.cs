@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackend.AudioLibrary;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,16 +7,13 @@ namespace AudioPlayerBackend.Build
 {
     public class AudioServices : IAudioService
     {
-        public ILibraryRepo Library { get; }
-
-        public IPlaylistsRepo Playlists { get; }
+        public IServiceProvider ServiceProvider { get; }
 
         public IEnumerable<IAudioService> Services { get; }
 
-        public AudioServices(ILibraryRepo library, IPlaylistsRepo playlists, IEnumerable<IAudioService> services)
+        public AudioServices(IServiceProvider serviceProvider, IEnumerable<IAudioService> services)
         {
-            Library = library;
-            Playlists = playlists;
+            ServiceProvider = serviceProvider;
             Services = services;
         }
 

@@ -11,12 +11,12 @@ namespace AudioPlayerBackend.Build
 
         public ICommunicator Communicator { get; }
 
-        public IServicePlayer ServicePlayer { get; }
+        public IPlayerService ServicePlayer { get; }
 
         public ReadWriteAudioServiceData Data { get; }
 
         public ServiceBuildResult(IAudioService audioService, ICommunicator communicator,
-            IServicePlayer servicePlayer, ReadWriteAudioServiceData data)
+            IPlayerService servicePlayer, ReadWriteAudioServiceData data)
         {
             AudioService = audioService;
             Communicator = communicator;

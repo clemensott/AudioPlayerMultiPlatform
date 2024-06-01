@@ -2,7 +2,6 @@
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.Player;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 
 namespace AudioPlayerBackend

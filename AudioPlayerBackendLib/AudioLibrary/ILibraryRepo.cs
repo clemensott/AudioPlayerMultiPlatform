@@ -16,11 +16,11 @@ namespace AudioPlayerBackend.AudioLibrary
         Task SendVolumeChange(double volume);
         event EventHandler<AudioLibraryChange<double>> OnVolumeChange;
 
+        Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId);
+        event EventHandler<AudioLibraryChange<Guid?>> OnCurrentPlaylistIdChange;
+
         Task SendPlaylistsChange(IList<PlaylistInfo> playlists);
         event EventHandler<AudioLibraryChange<IList<PlaylistInfo>>> OnPlaylistsChange;
-
-        Task SendSourcePlaylistsChange(IList<SourcePlaylistInfo> sourcePlaylists);
-        event EventHandler<AudioLibraryChange<IList<SourcePlaylistInfo>>> OnSourcePlaylistsChange;
 
         Task SendFileMediaSourceRootsChange(IList<FileMediaSourceRoot> fileMediaSourceRoots);
         event EventHandler<AudioLibraryChange<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;

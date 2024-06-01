@@ -8,10 +8,12 @@ namespace AudioPlayerBackend.ViewModels
     {
         bool IsLoaded { get; }
 
-        IPlaylistViewModel CurrentPlaylist { get; }
+        IPlaylistViewModel CurrentPlaylist { get; set; }
 
         IList<PlaylistInfo> Playlists { get; }
 
-        IList<SourcePlaylistInfo> SourcePlaylists { get; }
+        ISongSearchViewModel SongSearuch { get; }
+
+        double Volume { get; set; }
     }
 }

@@ -1,18 +1,18 @@
 ﻿using System;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication;
-using AudioPlayerBackend.Communication.MQTT;
 using AudioPlayerBackend.Player;
 using StdOttStandard.CommandlineParser;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using AudioPlayerBackend.Communication.OwnTcp;
 using StdOttStandard.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using AudioPlayerBackend.ViewModels;
 
 namespace AudioPlayerBackend.Build
 {
-    public class ServiceBuildConfig : INotifyPropertyChanged
+    public class AudioServicesBuildConfig : INotifyPropertyChanged
     {
         private bool? isSearchShuffle, play, isStreaming;
         private OrderType? shuffle;
@@ -21,6 +21,7 @@ namespace AudioPlayerBackend.Build
         private string searchKey, serverAddress, dataFilePath;
         private float? volume;
         private CommunicatorProtocol communicatorProtocol;
+        private ServiceCollection additionalServices;
         private readonly IPlayerCreateService playerCreateService;
         private readonly IInvokeDispatcherService dispatcher;
 
@@ -162,7 +163,19 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public ServiceBuildConfig()
+        public ServiceCollection AdditionalServices
+        {
+            get => additionalServices;
+            set
+            {
+                if (value == additionalServices) return;
+
+                additionalServices = value;
+                OnPropertyChanged(nameof(AdditionalServices));
+            }
+        }
+
+        public AudioServicesBuildConfig()
         {
             playerCreateService = AudioPlayerServiceProvider.Current.GetPlayerCreateService();
             dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
@@ -170,7 +183,7 @@ namespace AudioPlayerBackend.Build
             WithStandalone();
         }
 
-        public ServiceBuildConfig WithArgs(IEnumerable<string> args)
+        public AudioServicesBuildConfig WithArgs(IEnumerable<string> args)
         {
             OptionParsed parsed;
             Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 3, 2);
@@ -218,13 +231,13 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuildConfig WithService(IAudioService service)
+        public AudioServicesBuildConfig WithService(ILibraryViewModel viewModel)
         {
-            return WithShuffle(GetSharedValueOrNull(service.GetAllPlaylists().Select(p => p.Shuffle)))
-                .WithIsSearchShuffle(service.IsSearchShuffle)
-                .WithSearchKey(service.SearchKey)
+            return WithShuffle(GetSharedValueOrNull(viewModel.GetAllPlaylists().Select(p => p.Shuffle)))
+                .WithIsSearchShuffle(viewModel.SongSearuch.IsSearchShuffle)
+                .WithSearchKey(viewModel.SongSearuch.SearchKey)
                 //.WithPlay(service.PlayState == PlaybackState.Playing)
-                .WithVolume(service.Volume);
+                .WithVolume((float)viewModel.Volume);
         }
 
         private static T? GetSharedValueOrNull<T>(IEnumerable<T> values) where T : struct
@@ -233,7 +246,7 @@ namespace AudioPlayerBackend.Build
             return distinctValues.Length == 1 ? (T?)distinctValues[0] : null;
         }
 
-        public ServiceBuildConfig WithStandalone()
+        public AudioServicesBuildConfig WithStandalone()
         {
             BuildStandalone = true;
             BuildServer = false;
@@ -242,7 +255,7 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public ServiceBuildConfig WithServer(int port)
+        public AudioServicesBuildConfig WithServer(int port)
         {
             BuildStandalone = false;
             BuildServer = true;
@@ -251,32 +264,32 @@ namespace AudioPlayerBackend.Build
             return WithServerPort(port);
         }
 
-        public ServiceBuildConfig WithCommunicatorProtocol(CommunicatorProtocol communicatorProtocol)
+        public AudioServicesBuildConfig WithCommunicatorProtocol(CommunicatorProtocol communicatorProtocol)
         {
             CommunicatorProtocol = communicatorProtocol;
             return this;
         }
 
-        public ServiceBuildConfig WithMqtt()
+        public AudioServicesBuildConfig WithMqtt()
         {
             CommunicatorProtocol = CommunicatorProtocol.MQTT;
             return this;
         }
 
-        public ServiceBuildConfig WithOwnTcp()
+        public AudioServicesBuildConfig WithOwnTcp()
         {
             CommunicatorProtocol = CommunicatorProtocol.OwnTCP;
             return this;
         }
 
-        public ServiceBuildConfig WithServerPort(int port)
+        public AudioServicesBuildConfig WithServerPort(int port)
         {
             ServerPort = port;
 
             return this;
         }
 
-        public ServiceBuildConfig WithClient(string serverAddress, int? port = null)
+        public AudioServicesBuildConfig WithClient(string serverAddress, int? port = null)
         {
             BuildStandalone = false;
             BuildServer = false;
@@ -285,7 +298,7 @@ namespace AudioPlayerBackend.Build
             return WithServerAddress(serverAddress).WithClientPort(port);
         }
 
-        public ServiceBuildConfig WithCommunicator(ICommunicator communicator)
+        public AudioServicesBuildConfig WithCommunicator(ICommunicator communicator)
         {
             if (communicator is IClientCommunicator)
             {
@@ -301,133 +314,65 @@ namespace AudioPlayerBackend.Build
             return WithStandalone();
         }
 
-        public ServiceBuildConfig WithServerAddress(string serverAddress)
+        public AudioServicesBuildConfig WithServerAddress(string serverAddress)
         {
             ServerAddress = serverAddress;
 
             return this;
         }
 
-        public ServiceBuildConfig WithClientPort(int? port)
+        public AudioServicesBuildConfig WithClientPort(int? port)
         {
             ClientPort = port;
 
             return this;
         }
 
-        public ServiceBuildConfig WithShuffle(OrderType? value)
+        public AudioServicesBuildConfig WithShuffle(OrderType? value)
         {
             Shuffle = value;
 
             return this;
         }
 
-        public ServiceBuildConfig WithIsSearchShuffle(bool? value = true)
+        public AudioServicesBuildConfig WithIsSearchShuffle(bool? value = true)
         {
             IsSearchShuffle = value;
 
             return this;
         }
 
-        public ServiceBuildConfig WithSearchKey(string value)
+        public AudioServicesBuildConfig WithSearchKey(string value)
         {
             SearchKey = value;
 
             return this;
         }
 
-        public ServiceBuildConfig WithPlay(bool? value = true)
+        public AudioServicesBuildConfig WithPlay(bool? value = true)
         {
             Play = value;
 
             return this;
         }
 
-        public ServiceBuildConfig WithVolume(float? volume)
+        public AudioServicesBuildConfig WithVolume(float? volume)
         {
             Volume = volume;
 
             return this;
         }
 
-        public ServiceBuildConfig WithIsStreaming(bool? value = true)
+        public AudioServicesBuildConfig WithIsStreaming(bool? value = true)
         {
             IsStreaming = value;
 
             return this;
         }
 
-        public ICommunicator CreateCommunicator()
+        public AudioServicesBuildConfig Clone()
         {
-            switch (CommunicatorProtocol)
-            {
-                case CommunicatorProtocol.MQTT:
-                    if (BuildServer) return CreateMqttServerCommunicator(ServerPort);
-                    if (BuildClient) return CreateMqttClientCommunicator(ServerAddress, ClientPort);
-                    break;
-
-                case CommunicatorProtocol.OwnTCP:
-                    if (BuildServer) return CreateOwnTcpServerCommunicator(ServerPort);
-                    if (BuildClient) return CreateOwnTcpClientCommunicator(ServerAddress, ClientPort ?? 1884);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-
-            return null;
-        }
-
-        public IServicePlayer CreateServicePlayer(IAudioService service)
-        {
-            if (BuildClient) return playerCreateService.CreateAudioStreamPlayer(service);
-            return playerCreateService.CreateAudioServicePlayer(service);
-        }
-
-        public void CompleteService(IAudioService service)
-        {
-            if (Shuffle.HasValue)
-            {
-                foreach (IPlaylist playlist in service.SourcePlaylists)
-                {
-                    playlist.Shuffle = Shuffle.Value;
-                }
-
-                foreach (IPlaylist playlist in service.Playlists)
-                {
-                    playlist.Shuffle = Shuffle.Value;
-                }
-            }
-
-            if (IsSearchShuffle.HasValue) service.IsSearchShuffle = IsSearchShuffle.Value;
-            if (SearchKey != null) service.SearchKey = SearchKey;
-            if (Play.HasValue) service.PlayState = play.Value ? PlaybackState.Playing : PlaybackState.Paused;
-            if (Volume.HasValue) service.Volume = volume.Value;
-        }
-
-        protected virtual MqttClientCommunicator CreateMqttClientCommunicator(string serverAddress, int? port)
-        {
-            return new MqttClientCommunicator(serverAddress, port);
-        }
-
-        protected virtual MqttServerCommunicator CreateMqttServerCommunicator(int port)
-        {
-            return new MqttServerCommunicator(port);
-        }
-
-        protected virtual OwnTcpClientCommunicator CreateOwnTcpClientCommunicator(string serverAddress, int port)
-        {
-            return new OwnTcpClientCommunicator(serverAddress, port);
-        }
-
-        protected virtual OwnTcpServerCommunicator CreateOwnTcpServerCommunicator(int port)
-        {
-            return new OwnTcpServerCommunicator(port);
-        }
-
-        public ServiceBuildConfig Clone()
-        {
-            return new ServiceBuildConfig()
+            return new AudioServicesBuildConfig()
             {
                 BuildClient = BuildClient,
                 BuildServer = BuildServer,
