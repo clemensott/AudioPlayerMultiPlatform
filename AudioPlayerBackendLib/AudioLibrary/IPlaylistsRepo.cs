@@ -30,8 +30,8 @@ namespace AudioPlayerBackend.AudioLibrary
         Task SendRequestSongChange(Guid id, RequestSong? requestSong);
         event EventHandler<PlaylistChange<RequestSong?>> OnRequestSongChange;
 
-        Task SendCurrentSongIdChange(Guid id, Guid currentSongId);
-        event EventHandler<PlaylistChange<Guid>> OnCurrentSongIdChange;
+        Task SendCurrentSongIdChange(Guid id, Guid? currentSongId);
+        event EventHandler<PlaylistChange<Guid?>> OnCurrentSongIdChange;
 
         Task SendSongsChange(Guid id, IList<Song> songs);
         event EventHandler<PlaylistChange<IList<Song>>> OnSongsChange;

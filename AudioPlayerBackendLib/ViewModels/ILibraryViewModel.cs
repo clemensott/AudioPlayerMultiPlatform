@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.Player;
 using System.Collections.Generic;
 using System.ComponentModel;
 
@@ -8,7 +9,9 @@ namespace AudioPlayerBackend.ViewModels
     {
         bool IsLoaded { get; }
 
-        IPlaylistViewModel CurrentPlaylist { get; set; }
+        PlaybackState PlayState { get; set; }
+
+        IPlaylistViewModel CurrentPlaylist { get; }
 
         IList<PlaylistInfo> Playlists { get; }
 

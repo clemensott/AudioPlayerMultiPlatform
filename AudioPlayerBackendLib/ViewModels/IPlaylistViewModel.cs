@@ -8,7 +8,7 @@ namespace AudioPlayerBackend.ViewModels
 {
     public interface IPlaylistViewModel : IAudioService, INotifyPropertyChanged
     {
-        Guid Id { get; }
+        Guid? Id { get; }
 
         string Name { get; }
 
@@ -22,12 +22,12 @@ namespace AudioPlayerBackend.ViewModels
 
         TimeSpan Duration { get; }
 
-        RequestSong RequestSong { get; set; }
-
-        Song CurrentSong { get; }
+        Song? CurrentSong { get; }
 
         IList<Song> Songs { get; }
 
-        Task SetPlaylistId(Guid id);
+        Task SetPlaylistId(Guid? id);
+
+        Task SendRequestSong(RequestSong? requestSong);
     }
 }

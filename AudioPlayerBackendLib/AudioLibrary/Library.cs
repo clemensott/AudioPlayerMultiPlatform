@@ -11,7 +11,7 @@ namespace AudioPlayerBackend.AudioLibrary
 
         public double Volume { get; }
 
-        public Guid CurrentPlaylistId { get; }
+        public Guid? CurrentPlaylistId { get; }
 
         public IList<PlaylistInfo> Playlists { get; }
 

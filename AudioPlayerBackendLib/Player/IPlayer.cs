@@ -12,6 +12,8 @@ namespace AudioPlayerBackend.Player
 
         PlaybackState PlayState { get; set; }
 
+        double PlaybackRate { get; set; }
+
         TimeSpan Position { get; }
 
         TimeSpan Duration { get; }

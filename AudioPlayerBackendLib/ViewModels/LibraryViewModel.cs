@@ -1,5 +1,5 @@
-﻿using AudioPlayerBackend.Audio.MediaSource;
-using AudioPlayerBackend.AudioLibrary;
+﻿using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -10,10 +10,10 @@ namespace AudioPlayerBackend.ViewModels
     public class LibraryViewModel : ILibraryViewModel
     {
         private readonly ILibraryRepo libraryRepo;
-        private bool isLoaded, isSearching;
+        private bool isLoaded;
+        private PlaybackState playState;
+        private double volume;
         private IList<PlaylistInfo> playlists;
-        private IList<SourcePlaylistInfo> sourcePlaylists;
-        private IList<FileMediaSourceRoot> fileMediaSourceRoots;
 
         public bool IsLoaded
         {
@@ -27,15 +27,29 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public bool IsSearching
+        public PlaybackState PlayState
         {
-            get => isSearching;
+            get => playState;
             set
             {
-                if (value == isSearching) return;
+                if (value == playState) return;
 
-                isSearching = value;
-                OnPropertyChanged(nameof(IsSearching));
+                playState = value;
+                OnPropertyChanged(nameof(PlayState));
+                libraryRepo.SendPlayStateChange(value);
+            }
+        }
+
+        public double Volume
+        {
+            get => volume;
+            set
+            {
+                if (value == volume) return;
+
+                volume = value;
+                OnPropertyChanged(nameof(Volume));
+                libraryRepo.SendVolumeChange(value);
             }
         }
 
@@ -53,49 +67,77 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public IList<FileMediaSourceRoot> FileMediaSourceRoots
-        {
-            get => fileMediaSourceRoots;
-            set
-            {
-                if (value == fileMediaSourceRoots) return;
+        public ISongSearchViewModel SongSearuch { get; }
 
-                fileMediaSourceRoots = value;
-                OnPropertyChanged(nameof(FileMediaSourceRoots));
-            }
-        }
-
-        public IList<SourcePlaylistInfo> SourcePlaylists
-        {
-            get => sourcePlaylists;
-            private set
-            {
-                if (value == sourcePlaylists) return;
-
-                sourcePlaylists = value;
-                OnPropertyChanged(nameof(SourcePlaylists));
-            }
-        }
-
-        public LibraryViewModel(ILibraryRepo libraryRepo, IPlaylistViewModel playlistViewModel)
+        public LibraryViewModel(ILibraryRepo libraryRepo, IPlaylistViewModel playlistViewModel, ISongSearchViewModel songSearchViewModel)
         {
             this.libraryRepo = libraryRepo;
             CurrentPlaylist = playlistViewModel;
+            SongSearuch = songSearchViewModel;
         }
 
-        public Task Start()
+        public async Task Start()
         {
-            throw new NotImplementedException();
+            SubscribeLibraryRepo();
+
+            Library library = await libraryRepo.GetLibrary();
+            PlayState = library.PlayState;
+            Volume = library.Volume;
+            Playlists = library.Playlists;
+
+            await CurrentPlaylist.SetPlaylistId(library.CurrentPlaylistId);
+            await CurrentPlaylist.Start();
         }
 
-        public Task Stop()
+        public async Task Stop()
         {
-            throw new NotImplementedException();
+            UnsubscribeLibraryRepo();
+
+            await CurrentPlaylist.Stop();
         }
 
-        public Task Dispose()
+        private void SubscribeLibraryRepo()
         {
-            throw new NotImplementedException();
+            libraryRepo.OnPlayStateChange += OnPlayStateChange;
+            libraryRepo.OnVolumeChange += OnVolumeChange;
+            libraryRepo.OnCurrentPlaylistIdChange += OnCurrentPlaylistIdChange;
+            libraryRepo.OnPlaylistsChange += OnPlaylistsChange;
+        }
+
+        private void UnsubscribeLibraryRepo()
+        {
+            libraryRepo.OnPlayStateChange -= OnPlayStateChange;
+            libraryRepo.OnVolumeChange -= OnVolumeChange;
+            libraryRepo.OnCurrentPlaylistIdChange -= OnCurrentPlaylistIdChange;
+            libraryRepo.OnPlaylistsChange -= OnPlaylistsChange;
+        }
+
+        private void OnPlayStateChange(object sender, AudioLibraryChange<PlaybackState> e)
+        {
+            playState = e.NewValue;
+            OnPropertyChanged(nameof(PlayState));
+        }
+
+        private void OnVolumeChange(object sender, AudioLibraryChange<double> e)
+        {
+            volume = e.NewValue;
+            OnPropertyChanged(nameof(Volume));
+        }
+
+        private async void OnCurrentPlaylistIdChange(object sender, AudioLibraryChange<Guid?> e)
+        {
+            await CurrentPlaylist.SetPlaylistId(e.NewValue);
+        }
+
+        private void OnPlaylistsChange(object sender, AudioLibraryChange<IList<PlaylistInfo>> e)
+        {
+            Playlists = e.NewValue;
+        }
+
+        public async Task Dispose()
+        {
+            await CurrentPlaylist.Dispose();
+            SongSearuch.Dispose();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
