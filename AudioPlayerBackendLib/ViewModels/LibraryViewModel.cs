@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,8 @@ namespace AudioPlayerBackend.ViewModels
                 OnPropertyChanged(nameof(IsLoaded));
             }
         }
+
+        public bool IsLocalFileMediaSource { get; }
 
         public PlaybackState PlayState
         {
@@ -69,8 +72,10 @@ namespace AudioPlayerBackend.ViewModels
 
         public ISongSearchViewModel SongSearuch { get; }
 
-        public LibraryViewModel(ILibraryRepo libraryRepo, IPlaylistViewModel playlistViewModel, ISongSearchViewModel songSearchViewModel)
+        public LibraryViewModel(AudioServicesBuildConfig config, ILibraryRepo libraryRepo,
+            IPlaylistViewModel playlistViewModel, ISongSearchViewModel songSearchViewModel)
         {
+            IsLocalFileMediaSource = config.BuildStandalone || config.BuildServer;
             this.libraryRepo = libraryRepo;
             CurrentPlaylist = playlistViewModel;
             SongSearuch = songSearchViewModel;

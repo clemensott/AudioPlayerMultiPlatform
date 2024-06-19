@@ -1,7 +1,9 @@
-﻿using System;
+﻿using AudioPlayerBackend.Communication;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AudioPlayerBackend.Build
 {
@@ -15,6 +17,12 @@ namespace AudioPlayerBackend.Build
         {
             ServiceProvider = serviceProvider;
             Services = services;
+        }
+
+        public IEnumerable<ICommunicator> GetCommunicators()
+        {
+            yield return ServiceProvider.GetService<IClientCommunicator>();
+            yield return ServiceProvider.GetService<IServerCommunicator>();
         }
 
         public Task Start()

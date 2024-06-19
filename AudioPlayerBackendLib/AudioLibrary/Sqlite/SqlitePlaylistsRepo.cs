@@ -14,8 +14,8 @@ namespace AudioPlayerBackend.AudioLibrary.Sqlite
         public event EventHandler<PlaylistChange<double>> OnPlaybackRateChange;
         public event EventHandler<PlaylistChange<TimeSpan>> OnPositionChange;
         public event EventHandler<PlaylistChange<TimeSpan>> OnDurationChange;
-        public event EventHandler<PlaylistChange<RequestSong>> OnRequestSongChange;
-        public event EventHandler<PlaylistChange<Guid>> OnCurrentSongIdChange;
+        public event EventHandler<PlaylistChange<RequestSong?>> OnRequestSongChange;
+        public event EventHandler<PlaylistChange<Guid?>> OnCurrentSongIdChange;
         public event EventHandler<PlaylistChange<IList<Song>>> OnSongsChange;
 
         public Task<Playlist> GetPlaylist(Guid id)
@@ -23,7 +23,7 @@ namespace AudioPlayerBackend.AudioLibrary.Sqlite
             throw new NotImplementedException();
         }
 
-        public Task SendCurrentSongIdChange(Guid id, Guid currentSongId)
+        public Task SendCurrentSongIdChange(Guid id, Guid? currentSongId)
         {
             throw new NotImplementedException();
         }
@@ -53,7 +53,7 @@ namespace AudioPlayerBackend.AudioLibrary.Sqlite
             throw new NotImplementedException();
         }
 
-        public Task SendRequestSongChange(Guid id, RequestSong requestSong)
+        public Task SendRequestSongChange(Guid id, RequestSong? requestSong)
         {
             throw new NotImplementedException();
         }

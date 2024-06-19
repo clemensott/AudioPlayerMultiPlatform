@@ -1,13 +1,14 @@
 ﻿using AudioPlayerBackend.Audio;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace AudioPlayerBackend.AudioLibrary
 {
     public class Playlist
     {
-     public   Guid Id { get; }
+        public Guid Id { get; }
+
+        public PlaylistType Type { get; }
 
         public string Name { get; }
 

@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using AudioPlayerBackend.Audio;
 using System.Text;
+using AudioPlayerBackend.ViewModels;
+using AudioPlayerBackend.Player;
 
 namespace AudioPlayerBackend
 {
@@ -92,6 +94,38 @@ namespace AudioPlayerBackend
                     currentPlaylist.WannaSong = RequestSong.Start(currentPlaylist.CurrentSong);
                 }
             }
+        }
+
+        public static void SetTogglePlayState(this ILibraryViewModel viewModel)
+        {
+            if (viewModel != null)
+            {
+                viewModel.PlayState = viewModel.PlayState == PlaybackState.Playing ?
+                    PlaybackState.Paused : PlaybackState.Playing;
+            }
+        }
+
+        public static void SetPlay(this ILibraryViewModel viewModel)
+        {
+            if (viewModel != null) viewModel.PlayState = PlaybackState.Playing;
+        }
+
+        public static void SetPause(this ILibraryViewModel viewModel)
+        {
+            if (viewModel != null) viewModel.PlayState = PlaybackState.Paused;
+        }
+
+        public static void SetRestartCurrentSong(this IPlaylistViewModel viewModel)
+        {
+            if (viewModel != null) viewModel.Position = TimeSpan.Zero;
+        }
+
+        public static void SetNextSong(this IPlaylistViewModel viewModel)
+        {
+        }
+
+        public static void SetPreviousSong(this IPlaylistViewModel viewModel)
+        {
         }
     }
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.AudioLibrary;
@@ -9,7 +8,6 @@ using AudioPlayerBackend.AudioLibrary.OwnTcp;
 using AudioPlayerBackend.AudioLibrary.Sqlite;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.OwnTcp;
-using AudioPlayerBackend.Data;
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.Player;
 using AudioPlayerBackend.ViewModels;
@@ -25,49 +23,7 @@ namespace AudioPlayerBackend.Build
     {
         private readonly IAudioCreateService audioCreateService;
         private readonly AudioServicesBuildConfig config;
-        private bool sendCommandsDirect, sendToggle;
-        private int songOffset;
         private BuildState state;
-        private PlaybackState? sendPlayState;
-        private ICommunicator communicator;
-        private IAudioService service;
-        private IPlayerService servicePlayer;
-
-        public bool SendToggle
-        {
-            get => sendToggle;
-            private set
-            {
-                if (value == sendToggle) return;
-
-                sendToggle = value;
-                OnPropertyChanged(nameof(SendToggle));
-            }
-        }
-
-        public int SongOffset
-        {
-            get => songOffset;
-            private set
-            {
-                if (value == songOffset) return;
-
-                songOffset = value;
-                OnPropertyChanged(nameof(SongOffset));
-            }
-        }
-
-        public PlaybackState? SendPlayState
-        {
-            get => sendPlayState;
-            private set
-            {
-                if (value == sendPlayState) return;
-
-                sendPlayState = value;
-                OnPropertyChanged(nameof(SendPlayState));
-            }
-        }
 
         public BuildState State
         {
@@ -81,74 +37,23 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public ICommunicator Communicator
-        {
-            get => communicator;
-            set
-            {
-                if (value == communicator) return;
-
-                communicator = value;
-                OnPropertyChanged(nameof(Communicator));
-            }
-        }
-
-        public IAudioService Service
-        {
-            get => service;
-            set
-            {
-                if (value == service) return;
-
-                service = value;
-                OnPropertyChanged(nameof(Service));
-            }
-        }
-
-        public IPlayerService ServicePlayer
-        {
-            get => servicePlayer;
-            set
-            {
-                if (value == servicePlayer) return;
-
-                servicePlayer = value;
-                OnPropertyChanged(nameof(ServicePlayer));
-            }
-        }
-
-        public BuildStatusToken<ICommunicator> CommunicatorToken { get; }
-
-        public BuildStatusToken<IAudioService> SyncToken { get; }
-
-        public BuildStatusToken<IPlayerService> PlayerToken { get; }
-
         public BuildStatusToken<AudioServices> CompleteToken { get; }
 
         public AudioServicesBuilder(AudioServicesBuildConfig config)
         {
             audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
             State = BuildState.Init;
-            CommunicatorToken = new BuildStatusToken<ICommunicator>();
-            SyncToken = new BuildStatusToken<IAudioService>();
-            PlayerToken = new BuildStatusToken<IPlayerService>();
             CompleteToken = new BuildStatusToken<AudioServices>();
             this.config = config;
         }
 
         public void Cancel()
         {
-            CommunicatorToken.Cancel();
-            SyncToken.Cancel();
-            PlayerToken.Cancel();
             CompleteToken.Cancel();
         }
 
         public void Settings()
         {
-            CommunicatorToken.Settings();
-            SyncToken.Settings();
-            PlayerToken.Settings();
             CompleteToken.Settings();
         }
 
@@ -164,45 +69,42 @@ namespace AudioPlayerBackend.Build
         {
             if (State != BuildState.Init) throw new InvalidOperationException("Build has already benn started: " + State);
 
-            try
+            while (true)
             {
-                while (true)
+                CompleteToken.Reset();
+
+                AudioServices audioServices = null;
+
+                try
                 {
-                    CommunicatorToken.Reset();
-                    SyncToken.Reset();
-                    PlayerToken.Reset();
-                    CompleteToken.Reset();
+                    State = BuildState.CompleteSerivce;
 
-                    try
-                    {
-                        State = BuildState.CompleteSerivce;
+                    audioServices = BuildAudioServices();
 
-                        AudioServices audioServices = BuildAudioServices();
+                    await CompleteServices(audioServices);
 
-                        await CompleteServices(audioServices);
+                    if (CompleteToken.IsEnded.HasValue) return;
 
-                        if (CompleteToken.IsEnded.HasValue) return;
-
-                        CompleteToken.End(BuildEndedType.Successful, audioServices);
-                    }
-                    catch (Exception e)
-                    {
-                        CompleteToken.Exception = e;
-
-                        if (CompleteToken.IsEnded.HasValue) return;
-
-                        await Task.Delay(delayTime);
-                        continue;
-                    }
-                    break;
+                    CompleteToken.End(BuildEndedType.Successful, audioServices);
                 }
+                catch (Exception e)
+                {
+                    CompleteToken.Exception = e;
 
-                State = BuildState.Finished;
+                    foreach (IAudioService service in audioServices?.Services.ToNotNull())
+                    {
+                        await service.Dispose();
+                    }
+
+                    if (CompleteToken.IsEnded.HasValue) return;
+
+                    await Task.Delay(delayTime);
+                    continue;
+                }
+                break;
             }
-            finally
-            {
-                if (Communicator != null && State != BuildState.Finished) await Communicator.CloseAsync();
-            }
+
+            State = BuildState.Finished;
         }
 
         private AudioServices BuildAudioServices()
@@ -218,6 +120,11 @@ namespace AudioPlayerBackend.Build
             if (config.BuildServer)
             {
                 serviceList.Add(serviceProvider.GetService<IServerCommunicator>());
+            }
+
+            if (config.BuildClient)
+            {
+                serviceList.Add(serviceProvider.GetService<IClientCommunicator>());
             }
 
             if (config.BuildStandalone || config.BuildServer)
@@ -293,57 +200,6 @@ namespace AudioPlayerBackend.Build
                 else songSearchViewModel.Disable();
             };
             if (config.SearchKey != null) songSearchViewModel.SearchKey = config.SearchKey;
-        }
-
-        public async Task SetNextSong(int offset = 1)
-        {
-            if (sendCommandsDirect)
-            {
-                for (int i = 0; i < offset; i++)
-                {
-                    await Communicator.NextSong();
-                }
-            }
-            else SongOffset += offset;
-        }
-
-        public async Task SetPreviousSong(int offset = 1)
-        {
-            if (sendCommandsDirect)
-            {
-                for (int i = 0; i < offset; i++)
-                {
-                    await Communicator.PreviousSong();
-                }
-            }
-            else SongOffset -= offset;
-        }
-
-        public async Task SetPlayState(PlaybackState? state)
-        {
-            SendToggle = false;
-            SendPlayState = state;
-
-            if (sendCommandsDirect)
-            {
-                if (state == PlaybackState.Playing) await Communicator.PlaySong();
-                else if (state == PlaybackState.Paused) await Communicator.PauseSong();
-            }
-        }
-
-        public async Task SetToggle(bool value = true)
-        {
-            SendToggle = value;
-            SendPlayState = null;
-
-            if (sendCommandsDirect)
-            {
-                if (SendToggle)
-                {
-                    await Communicator.ToggleSong();
-                    SendToggle = false;
-                }
-            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

@@ -298,22 +298,6 @@ namespace AudioPlayerBackend.Build
             return WithServerAddress(serverAddress).WithClientPort(port);
         }
 
-        public AudioServicesBuildConfig WithCommunicator(ICommunicator communicator)
-        {
-            if (communicator is IClientCommunicator)
-            {
-                IClientCommunicator clientCommunicator = (IClientCommunicator)communicator;
-                return WithClient(clientCommunicator.ServerAddress, clientCommunicator.Port);
-            }
-            else if (communicator is IServerCommunicator)
-            {
-                IServerCommunicator serverCommunicator = (IServerCommunicator)communicator;
-                return WithServer(serverCommunicator.Port);
-            }
-
-            return WithStandalone();
-        }
-
         public AudioServicesBuildConfig WithServerAddress(string serverAddress)
         {
             ServerAddress = serverAddress;

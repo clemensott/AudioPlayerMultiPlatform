@@ -9,6 +9,8 @@ namespace AudioPlayerBackend.ViewModels
     {
         bool IsLoaded { get; }
 
+        bool IsLocalFileMediaSource { get; }
+
         PlaybackState PlayState { get; set; }
 
         IPlaylistViewModel CurrentPlaylist { get; }

@@ -39,8 +39,8 @@ namespace AudioPlayerBackend.AudioLibrary
             public event EventHandler<AudioLibraryChange<string>> OnSearchKeyChange;
             public event EventHandler<AudioLibraryChange<PlaybackState>> OnPlayStateChange;
             public event EventHandler<AudioLibraryChange<double>> OnVolumeChange;
+            public event EventHandler<AudioLibraryChange<Guid?>> OnCurrentPlaylistIdChange;
             public event EventHandler<AudioLibraryChange<IList<PlaylistInfo>>> OnPlaylistsChange;
-            public event EventHandler<AudioLibraryChange<IList<SourcePlaylistInfo>>> OnSourcePlaylistsChange;
             public event EventHandler<AudioLibraryChange<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
 
             public Client(LibraryRepoService parent)
@@ -75,18 +75,18 @@ namespace AudioPlayerBackend.AudioLibrary
                 return parent.repo.SendVolumeChange(volume);
             }
 
+            public Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
+            {
+                var args = new AudioLibraryChange<Guid?>(currentPlaylistId);
+                ForEachClientExcept(client => client.OnCurrentPlaylistIdChange?.Invoke(this, args));
+                return parent.repo.SendCurrentPlaylistIdChange(currentPlaylistId);
+            }
+
             public Task SendPlaylistsChange(IList<PlaylistInfo> playlists)
             {
                 var args = new AudioLibraryChange<IList<PlaylistInfo>>(playlists);
                 ForEachClientExcept(client => client.OnPlaylistsChange?.Invoke(this, args));
                 return parent.repo.SendPlaylistsChange(playlists);
-            }
-
-            public Task SendSourcePlaylistsChange(IList<SourcePlaylistInfo> sourcePlaylists)
-            {
-                var args = new AudioLibraryChange<IList<SourcePlaylistInfo>>(sourcePlaylists);
-                ForEachClientExcept(client => client.OnSourcePlaylistsChange?.Invoke(this, args));
-                return parent.repo.SendSourcePlaylistsChange(sourcePlaylists);
             }
 
             public Task SendFileMediaSourceRootsChange(IList<FileMediaSourceRoot> fileMediaSourceRoots)

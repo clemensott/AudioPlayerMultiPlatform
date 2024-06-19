@@ -39,8 +39,8 @@ namespace AudioPlayerBackend.AudioLibrary
             public event EventHandler<PlaylistChange<double>> OnPlaybackRateChange;
             public event EventHandler<PlaylistChange<TimeSpan>> OnPositionChange;
             public event EventHandler<PlaylistChange<TimeSpan>> OnDurationChange;
-            public event EventHandler<PlaylistChange<RequestSong>> OnRequestSongChange;
-            public event EventHandler<PlaylistChange<Guid>> OnCurrentSongIdChange;
+            public event EventHandler<PlaylistChange<RequestSong?>> OnRequestSongChange;
+            public event EventHandler<PlaylistChange<Guid?>> OnCurrentSongIdChange;
             public event EventHandler<PlaylistChange<IList<Song>>> OnSongsChange;
 
             public Client(PlaylistsRepoService parent)
@@ -103,16 +103,16 @@ namespace AudioPlayerBackend.AudioLibrary
                 return parent.repo.SendDurationChange(id, duration);
             }
 
-            public Task SendRequestSongChange(Guid id, RequestSong requestSong)
+            public Task SendRequestSongChange(Guid id, RequestSong? requestSong)
             {
-                var args = new PlaylistChange<RequestSong>(id, requestSong);
+                var args = new PlaylistChange<RequestSong?>(id, requestSong);
                 ForEachClientExcept(client => client.OnRequestSongChange?.Invoke(this, args));
                 return parent.repo.SendRequestSongChange(id, requestSong);
             }
 
-            public Task SendCurrentSongIdChange(Guid id, Guid currentSongId)
+            public Task SendCurrentSongIdChange(Guid id, Guid? currentSongId)
             {
-                var args = new PlaylistChange<Guid>(id, currentSongId);
+                var args = new PlaylistChange<Guid?>(id, currentSongId);
                 ForEachClientExcept(client => client.OnCurrentSongIdChange?.Invoke(this, args));
                 return parent.repo.SendCurrentSongIdChange(id, currentSongId);
             }

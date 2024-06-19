@@ -23,15 +23,21 @@ using StdOttFramework;
 using StdOttFramework.Converters;
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.Audio.MediaSource;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using AudioPlayerFrontend.Join;
+using AudioPlayerBackend.ViewModels;
 
 namespace AudioPlayerFrontend
 {
     public partial class MainWindow : Window
     {
         private readonly IFileSystemService fileSystemService;
-        private AudioServicesBuildConfig serviceBuilder;
+        private readonly AudioServicesHandler audioServicesHandler;
+        private AudioServicesBuildConfig servicesBuildConfig;
         private HotKeysBuilder hotKeysBuilder;
-        private readonly ViewModel viewModel;
+        private AudioServices audioServices;
+        private ILibraryViewModel viewModel;
         private HotKeys hotKeys;
         private bool isChangingSelectedSongIndex;
         private readonly ObservableCollection<IPlaylist> allPlaylists;
@@ -45,10 +51,9 @@ namespace AudioPlayerFrontend
 
             RestoreWindowHandler.Activate(this, RestoreWindowSettings.GetDefault());
 
-            serviceBuilder = new AudioServicesBuildConfig();
+            audioServicesHandler = new AudioServicesHandler();
+            servicesBuildConfig = new AudioServicesBuildConfig();
             hotKeysBuilder = new HotKeysBuilder();
-
-            DataContext = viewModel = new ViewModel();
 
             DependencyPropertyDescriptor dpd = DependencyPropertyDescriptor
                 .FromProperty(ItemsControl.ItemsSourceProperty, typeof(ListBox));
@@ -67,10 +72,7 @@ namespace AudioPlayerFrontend
             switch (e.Mode)
             {
                 case PowerModes.Resume:
-                    if (viewModel.Service.Communicator != null)
-                    {
-                        await OpenAudioServiceAsync();
-                    }
+                    await (audioServices?.Start() ?? Task.CompletedTask);
 
                     Subscribe(hotKeys);
                     break;
@@ -78,7 +80,7 @@ namespace AudioPlayerFrontend
                 case PowerModes.Suspend:
                     Unsubscribe(hotKeys);
 
-                    viewModel.Service?.Communicator?.Dispose();
+                    await (audioServices?.Stop() ?? Task.CompletedTask);
                     break;
             }
         }
@@ -88,7 +90,7 @@ namespace AudioPlayerFrontend
             string[] args = Environment.GetCommandLineArgs().Skip(1).ToArray();
             try
             {
-                serviceBuilder.WithArgs(args);
+                servicesBuildConfig.WithArgs(args);
             }
             catch (Exception exc)
             {
@@ -111,96 +113,42 @@ namespace AudioPlayerFrontend
             Option disableUiOpt = Option.GetLongOnly("disable-ui", "Disables UI on startup.", false, 0);
             OptionParseResult result = new Options(disableUiOpt).Parse(args);
 
-            if (result.TryGetFirstValidOptionParseds(disableUiOpt, out _)) viewModel.IsUiEnabled = false;
+            //if (result.TryGetFirstValidOptionParseds(disableUiOpt, out _)) viewModel.IsUiEnabled = false;
 
-            await BuildAudioServiceAsync();
+            servicesBuildConfig.AdditionalServices.TryAddSingleton<IFileSystemService, FileSystemService>();
+            servicesBuildConfig.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, InvokeDispatcherService>();
 
-            BuildHotKeys();
+            audioServicesHandler.ServicesBuild += AudioServicesHandler_ServicesBuild;
+            audioServicesHandler.Stopped += AudioServicesHandler_Stopped;
+
+            audioServicesHandler.Start(servicesBuildConfig);
         }
 
-        private async Task BuildAudioServiceAsync()
+        private async void AudioServicesHandler_ServicesBuild(object sender, AudioServicesBuilder build)
         {
-            while (true)
+            await Task.WhenAny(build.CompleteToken.ResultTask, Task.Delay(100));
+
+            if (build.CompleteToken.IsEnded == BuildEndedType.Canceled ||
+                (!build.CompleteToken.IsEnded.HasValue && ShowBuildOpenWindow(build) == false))
             {
-                if (viewModel.Service?.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
-                viewModel.Service = null;
+                build.Cancel();
+                Close();
+                return;
+            }
 
-                AudioServicesBuilder build = AudioServicesBuilder.Build(serviceBuilder, TimeSpan.FromMilliseconds(500));
-                await Task.WhenAny(build.CompleteToken.ResultTask, Task.Delay(100));
+            AudioServices newAudioServices = await build.CompleteToken.ResultTask;
 
-                if (build.CompleteToken.IsEnded == BuildEndedType.Canceled ||
-                    (!build.CompleteToken.IsEnded.HasValue && ShowBuildOpenWindow(build) == false))
-                {
-                    build.Cancel();
-                    Close();
-                    return;
-                }
-
-                ServiceBuildResult result = await build.CompleteToken.ResultTask;
-                viewModel.Service = result;
-
-                if (build.CompleteToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
-                else if (build.CompleteToken.IsEnded != BuildEndedType.Successful) continue;
-
-                if (build.Communicator != null) build.Communicator.Disconnected += Communicator_Disconnected;
-                if (!(build.Communicator is IClientCommunicator))
-                {
-                    await Task.Run(async () =>
-                    {
-                        await Task.WhenAll(result.AudioService.SourcePlaylists
-                            .Select(playlist => fileSystemService.UpdateSourcePlaylist(playlist, result.AudioService.FileMediaSourceRoots)));
-
-                        // remove all songs from not source playlists that are not in source playlists (any more)
-                        IDictionary<string, Song> allSongs = result.AudioService.SourcePlaylists
-                            .SelectMany(p => p.Songs).Distinct().ToDictionary(s => s.FullPath);
-
-                        Song song = new Song();
-                        foreach (IPlaylist playlist in result.AudioService.Playlists)
-                        {
-                            playlist.Songs = playlist.Songs
-                                .Where(s => allSongs.TryGetValue(s.FullPath, out song)).Select(_ => song).ToArray();
-                        }
-                    });
-                }
-                break;
+            if (build.CompleteToken.IsEnded is BuildEndedType.Settings) await StopAndUpadateBuilder();
+            else if (newAudioServices != null)
+            {
+                BuildHotKeys();
+                audioServices = newAudioServices;
+                DataContext = viewModel = audioServices.ServiceProvider.GetService<ILibraryViewModel>();
             }
         }
 
-        private void Communicator_Disconnected(object sender, DisconnectedEventArgs e)
+        private void AudioServicesHandler_Stopped(object sender, EventArgs e)
         {
-            Logs.Log($"Disconnected: {e.OnDisconnect} | {e.Exception?.Message ?? "<none>"}");
-            if (e.OnDisconnect) return;
-
-            Dispatcher.Invoke(async () => await OpenAudioServiceAsync());
-        }
-
-        private async Task OpenAudioServiceAsync()
-        {
-            while (true)
-            {
-                if (viewModel.Service.Communicator != null) viewModel.Service.Communicator.Disconnected -= Communicator_Disconnected;
-
-                AudioServicesBuilder build = AudioServicesBuilder.Open(viewModel.Service.Communicator, viewModel.Service.AudioService,
-                    viewModel.Service.ServicePlayer, viewModel.Service.Data, TimeSpan.FromMilliseconds(500));
-                await Task.WhenAny(build.CompleteToken.ResultTask, Task.Delay(100));
-
-                if (build.CompleteToken.IsEnded == BuildEndedType.Canceled ||
-                    (!build.CompleteToken.IsEnded.HasValue && ShowBuildOpenWindow(build) == false))
-                {
-                    build.Cancel();
-                    Close();
-                    return;
-                }
-
-                await build.CompleteToken.ResultTask;
-
-                if (build.CompleteToken.IsEnded is BuildEndedType.Settings) UpdateBuilders();
-                else if (build.CompleteToken.IsEnded is BuildEndedType.Successful)
-                {
-                    if (build.Communicator != null) build.Communicator.Disconnected += Communicator_Disconnected;
-                    break;
-                }
-            }
         }
 
         private bool? ShowBuildOpenWindow(AudioServicesBuilder build)
@@ -213,23 +161,35 @@ namespace AudioPlayerFrontend
             return window.ShowDialog();
         }
 
+        private async Task<bool> StopAndUpadateBuilder()
+        {
+            await audioServicesHandler.Stop();
+
+            try
+            {
+                return UpdateBuilders();
+            }
+            finally
+            {
+                audioServicesHandler.Start(servicesBuildConfig);
+            }
+        }
+
         private bool UpdateBuilders()
         {
-            AudioServicesBuildConfig serviceBuilderEdit = serviceBuilder.Clone();
+            AudioServicesBuildConfig serviceBuilderEdit = servicesBuildConfig.Clone();
             HotKeysBuilder hotKeysBuilderEdit = hotKeysBuilder.Clone();
 
-            if (viewModel?.Service?.AudioService != null) serviceBuilderEdit.WithService(viewModel.Service.AudioService);
-            if (viewModel?.Service?.Communicator != null) serviceBuilderEdit.WithCommunicator(viewModel.Service.Communicator);
+            //if (viewModel?.Service?.AudioService != null) serviceBuilderEdit.WithService(viewModel.Service.AudioService);
             if (hotKeys != null) hotKeysBuilderEdit.WithHotKeys(hotKeys);
 
             SettingsWindow window = new SettingsWindow(serviceBuilderEdit, hotKeysBuilderEdit);
 
             if (window.ShowDialog() != true) return false;
 
-            serviceBuilder = serviceBuilderEdit;
+            servicesBuildConfig = serviceBuilderEdit;
             hotKeysBuilder = hotKeysBuilderEdit;
             return true;
-
         }
 
         private void BuildHotKeys()
@@ -269,7 +229,7 @@ namespace AudioPlayerFrontend
                     {
                         bool prepend = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
                         Song addSong = (Song)lbxSongs.SelectedItem;
-                        viewModel.AudioServiceUI.AddSongsToFirstPlaylist(new Song[] { addSong }, prepend);
+                        service.AddSongsToFirstPlaylist(new Song[] { addSong }, prepend);
                         service.PlayState = PlaybackState.Playing;
                     }
                     break;
@@ -279,7 +239,7 @@ namespace AudioPlayerFrontend
                     break;
 
                 case Key.Up:
-                    if (lbxSongs.Items.Count > 0 && viewModel.AudioServiceUI?.IsSearching == true)
+                    if (lbxSongs.Items.Count > 0 && service?.IsSearching == true)
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
@@ -289,7 +249,7 @@ namespace AudioPlayerFrontend
                     break;
 
                 case Key.Down:
-                    if (lbxSongs.Items.Count > 0 && viewModel.AudioServiceUI?.IsSearching == true)
+                    if (lbxSongs.Items.Count > 0 && service?.IsSearching == true)
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
@@ -306,55 +266,37 @@ namespace AudioPlayerFrontend
 
         private void OnPrevious(object sender, EventArgs e)
         {
-            viewModel.Service?.AudioService.SetPreviousSong();
+            viewModel.CurrentPlaylist.SetPreviousSong();
         }
 
         private void OnTogglePlayPause(object sender, EventArgs e)
         {
-            IAudioService service = viewModel.Service?.AudioService;
-
-            if (service == null) return;
-
-            service.PlayState = service.PlayState == PlaybackState.Playing ?
-                PlaybackState.Paused : PlaybackState.Playing;
+            viewModel.SetTogglePlayState();
         }
 
         private void OnNext(object sender, EventArgs e)
         {
-            viewModel.Service?.AudioService.SetNextSong();
+           viewModel.CurrentPlaylist.SetNextSong();
         }
 
         private void OnPlay(object sender, EventArgs e)
         {
-            if (viewModel.Service?.AudioService != null) viewModel.Service.AudioService.PlayState = PlaybackState.Playing;
+            viewModel.SetPlay();
         }
 
         private void OnPause(object sender, EventArgs e)
         {
-            if (viewModel.Service?.AudioService != null) viewModel.Service.AudioService.PlayState = PlaybackState.Paused;
+            viewModel.SetPause();
         }
 
         private void OnRestart(object sender, EventArgs e)
         {
-            if (viewModel.Service?.AudioService != null) viewModel.Service.AudioService.CurrentPlaylist.Position = TimeSpan.Zero;
+            viewModel?.CurrentPlaylist.SetRestartCurrentSong();
         }
 
-        private async void BtnSettings_Click(object sender, RoutedEventArgs e)
+        private void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            if (!UpdateBuilders()) return;
-
-            if (viewModel.Service.Communicator != null)
-            {
-                try
-                {
-                    await viewModel.Service.Communicator.CloseAsync();
-                }
-                catch { }
-            }
-
-            await BuildAudioServiceAsync();
-
-            BuildHotKeys();
+            if (UpdateBuilders()) audioServicesHandler.Start(servicesBuildConfig);
         }
 
         private void LbxSongs_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -378,18 +320,19 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private void Window_Closing(object sender, CancelEventArgs e)
+        private async void Window_Closing(object sender, CancelEventArgs e)
         {
+            audioServicesHandler.ServicesBuild -= AudioServicesHandler_ServicesBuild;
+            audioServicesHandler.Stopped -= AudioServicesHandler_Stopped;
+
             hotKeys?.Dispose();
-            viewModel.Service?.ServicePlayer?.Dispose();
-            viewModel.Service?.Communicator?.Dispose();
-            viewModel.Service?.Data?.Dispose();
+            await audioServicesHandler.Stop();
         }
 
         private void StackPanel_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            string message = $"Communicator: {viewModel.Service?.Communicator?.Name}\r\nState: {viewModel.Service?.Communicator?.IsOpen}";
-            MessageBox.Show(message, "State");
+            //string message = $"Communicator: {viewModel.Service?.Communicator?.Name}\r\nState: {viewModel.Service?.Communicator?.IsOpen}";
+            //MessageBox.Show(message, "State");
 
             MessageBoxResult clearLogsResult = MessageBox.Show(Logs.Get() + "\r\nClear?", "Logs", MessageBoxButton.YesNo);
             if (clearLogsResult == MessageBoxResult.Yes) Logs.Clear();

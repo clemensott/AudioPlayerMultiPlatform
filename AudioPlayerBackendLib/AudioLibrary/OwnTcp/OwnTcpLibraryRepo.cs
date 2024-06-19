@@ -10,21 +10,11 @@ namespace AudioPlayerBackend.AudioLibrary.OwnTcp
     {
         public event EventHandler<AudioLibraryChange<PlaybackState>> OnPlayStateChange;
         public event EventHandler<AudioLibraryChange<double>> OnVolumeChange;
+        public event EventHandler<AudioLibraryChange<Guid?>> OnCurrentPlaylistIdChange;
         public event EventHandler<AudioLibraryChange<IList<PlaylistInfo>>> OnPlaylistsChange;
-        public event EventHandler<AudioLibraryChange<IList<SourcePlaylistInfo>>> OnSourcePlaylistsChange;
         public event EventHandler<AudioLibraryChange<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
 
         public Task<Library> GetLibrary()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendFileMediaSourceRootsChange(IList<FileMediaSourceRoot> fileMediaSourceRoots)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendPlaylistsChange(IList<PlaylistInfo> playlists)
         {
             throw new NotImplementedException();
         }
@@ -34,12 +24,22 @@ namespace AudioPlayerBackend.AudioLibrary.OwnTcp
             throw new NotImplementedException();
         }
 
-        public Task SendSourcePlaylistsChange(IList<SourcePlaylistInfo> sourcePlaylists)
+        public Task SendVolumeChange(double volume)
         {
             throw new NotImplementedException();
         }
 
-        public Task SendVolumeChange(double volume)
+        public Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendPlaylistsChange(IList<PlaylistInfo> playlists)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendFileMediaSourceRootsChange(IList<FileMediaSourceRoot> fileMediaSourceRoots)
         {
             throw new NotImplementedException();
         }
