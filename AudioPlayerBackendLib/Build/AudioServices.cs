@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using AudioPlayerBackend.ViewModels;
+using AudioPlayerBackend.FileSystem;
 
 namespace AudioPlayerBackend.Build
 {
@@ -23,6 +25,16 @@ namespace AudioPlayerBackend.Build
         {
             yield return ServiceProvider.GetService<IClientCommunicator>();
             yield return ServiceProvider.GetService<IServerCommunicator>();
+        }
+
+        public ILibraryViewModel GetViewModel()
+        {
+            return ServiceProvider.GetService<ILibraryViewModel>();
+        }
+
+        public IFileSystemService GetFileSystemService()
+        {
+            return ServiceProvider.GetService<IFileSystemService>();
         }
 
         public Task Start()

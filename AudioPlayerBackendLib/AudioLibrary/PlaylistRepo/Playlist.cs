@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace AudioPlayerBackend.AudioLibrary
+namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 {
     public class Playlist
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AudioPlayerBackend.AudioLibrary
+namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 {
     public class PlaylistChange<T> : EventArgs
     {

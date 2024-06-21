@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace AudioPlayerBackend.AudioLibrary
+namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 {
     public interface IPlaylistsRepo
     {

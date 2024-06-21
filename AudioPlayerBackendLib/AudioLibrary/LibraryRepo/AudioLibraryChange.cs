@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AudioPlayerBackend.AudioLibrary
+namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 {
     public class AudioLibraryChange<T> : EventArgs
     {

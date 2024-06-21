@@ -3,7 +3,7 @@ using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;
 
-namespace AudioPlayerBackend.AudioLibrary
+namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 {
     public class Library
     {

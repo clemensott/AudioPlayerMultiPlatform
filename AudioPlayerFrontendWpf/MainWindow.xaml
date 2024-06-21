@@ -21,6 +21,7 @@
         <con:TimeSpanToStringConverter x:Key="timeTextCon"/>
         <local:TimeSpanToSecondsConverter x:Key="timeSecCon"/>
         <local:IsAudioStreamPlayerConverter x:Key="isClientCon"/>
+        <con:ValueConverter x:Key="playlistMenuItemVisCon" ConvertEvent="ValueConverter_ConvertEvent"/>
 
         <con:VisibleCollapsedConverter x:Key="visCon"/>
         <con:CollapsedVisibleConverter x:Key="colCon"/>
@@ -221,8 +222,7 @@
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-
-                            <StackPanel Margin="0,3" Loaded="SplPlaylistItem_Loaded">
+                            <StackPanel Margin="0,3">
                                 <TextBlock FontWeight="SemiBold" FontSize="17"
                                                TextWrapping="Wrap" Text="{Binding Name}"/>
 
@@ -234,8 +234,10 @@
                                 <StackPanel.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Name="mimReloadSongs" Header="Reload songs"
-                                                  Visibility="Collapsed" Click="MimReloadSongs_Click"/>
-                                        <Separator Name="sprUpdatePlaylist" Visibility="Collapsed"/>
+                                                  Visibility="{Binding Type,Converter={StaticResource playlistMenuItemVisCon}}"
+                                                  Click="MimReloadSongs_Click"/>
+                                        <Separator Name="sprUpdatePlaylist"
+                                                  Visibility="{Binding Type,Converter={StaticResource playlistMenuItemVisCon}}"/>
                                         <MenuItem Header="Remix songs" Click="MimRemixSongs_Click"/>
                                         <MenuItem Header="Remove" Click="MimRemovePlaylist_Click"/>
                                     </ContextMenu>

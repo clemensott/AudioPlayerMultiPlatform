@@ -1,12 +1,13 @@
 ﻿using AudioPlayerBackend.Audio.MediaSource;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace AudioPlayerBackend.AudioLibrary.OwnTcp
+namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
 {
-    internal class OwnTcpLibraryRepo : ILibraryRepo
+    internal class SqliteLibraryRepo : ILibraryRepo
     {
         public event EventHandler<AudioLibraryChange<PlaybackState>> OnPlayStateChange;
         public event EventHandler<AudioLibraryChange<double>> OnVolumeChange;

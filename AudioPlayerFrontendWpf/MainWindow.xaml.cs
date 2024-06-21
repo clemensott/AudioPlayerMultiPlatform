@@ -27,12 +27,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using AudioPlayerFrontend.Join;
 using AudioPlayerBackend.ViewModels;
+using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 
 namespace AudioPlayerFrontend
 {
     public partial class MainWindow : Window
     {
-        private readonly IFileSystemService fileSystemService;
         private readonly AudioServicesHandler audioServicesHandler;
         private AudioServicesBuildConfig servicesBuildConfig;
         private HotKeysBuilder hotKeysBuilder;
@@ -44,7 +46,6 @@ namespace AudioPlayerFrontend
 
         public MainWindow()
         {
-            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
             allPlaylists = new ObservableCollection<IPlaylist>();
 
             InitializeComponent();
@@ -461,41 +462,30 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private void SplPlaylistItem_Loaded(object sender, RoutedEventArgs e)
+        private object ValueConverter_ConvertEvent(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
-            FrameworkElement element = (FrameworkElement)sender;
-            bool isPlaylistUpdateable = element.DataContext is ISourcePlaylist &&
-                !(viewModel.Service.Communicator is IClientCommunicator);
-
-            if (!isPlaylistUpdateable) return;
-
-            foreach (FrameworkElement item in element.ContextMenu.Items.OfType<FrameworkElement>())
-            {
-                switch (item.Name)
-                {
-                    case "mimReloadSongs":
-                    case "sprUpdatePlaylist":
-                        item.Visibility = Visibility.Visible;
-                        break;
-                }
-            }
+            PlaylistType playlistType = (PlaylistType)value;
+            return viewModel.IsLocalFileMediaSource && playlistType.HasFlag(PlaylistType.SourcePlaylist)
+                ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private async void MimReloadSongs_Click(object sender, RoutedEventArgs e)
         {
-            FileMediaSourceRoot[] roots = viewModel.Service.AudioService.FileMediaSourceRoots;
-            await fileSystemService.ReloadSourcePlaylist(FrameworkUtils.GetDataContext<ISourcePlaylist>(sender), roots);
+            IFileSystemService fileSystemService = audioServices.GetFileSystemService();
+            PlaylistInfo playlist = FrameworkUtils.GetDataContext<PlaylistInfo>(sender);
+            await fileSystemService.ReloadSourcePlaylist(playlist.Id);
         }
 
         private void MimRemixSongs_Click(object sender, RoutedEventArgs e)
         {
-            IPlaylist playlist = FrameworkUtils.GetDataContext<IPlaylist>(sender);
+            PlaylistInfo playlist = FrameworkUtils.GetDataContext<PlaylistInfo>(sender);
+            Playlist 
             playlist.Songs = playlist.Songs.Shuffle().ToArray();
         }
 
         private void MimRemovePlaylist_Click(object sender, RoutedEventArgs e)
         {
-            IPlaylist playlist = FrameworkUtils.GetDataContext<IPlaylist>(sender);
+            PlaylistInfo playlist = FrameworkUtils.GetDataContext<PlaylistInfo>(sender);
             IAudioService service = viewModel.Service.AudioService;
 
             if (service.CurrentPlaylist == playlist)

@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.AudioLibrary;
-using AudioPlayerBackend.AudioLibrary.OwnTcp;
-using AudioPlayerBackend.AudioLibrary.Sqlite;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.OwnTcp;
 using AudioPlayerBackend.FileSystem;
@@ -153,6 +156,8 @@ namespace AudioPlayerBackend.Build
                 services.AddSingleton<IPlaylistsRepo, OwnTcpPlaylistsRepo>();
             }
             else throw new NotSupportedException("Mode not supported");
+
+            services.AddSingleton<>
 
             services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
             services.AddSingleton<IClientCommunicator, OwnTcpClientCommunicator>();

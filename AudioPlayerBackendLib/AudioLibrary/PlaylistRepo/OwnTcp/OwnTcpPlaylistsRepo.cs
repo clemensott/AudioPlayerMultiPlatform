@@ -1,12 +1,12 @@
 ﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace AudioPlayerBackend.AudioLibrary.Sqlite
+namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 {
-    internal class SqlitePlaylistsRepo : IPlaylistsRepo
+    internal class OwnTcpPlaylistsRepo : IPlaylistsRepo
     {
         public event EventHandler<PlaylistChange<string>> OnNameChange;
         public event EventHandler<PlaylistChange<OrderType>> OnShuffleChange;
@@ -19,6 +19,11 @@ namespace AudioPlayerBackend.AudioLibrary.Sqlite
         public event EventHandler<PlaylistChange<IList<Song>>> OnSongsChange;
 
         public Task<Playlist> GetPlaylist(Guid id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendCurrentSongIdChange(Guid id, Guid currentSongId)
         {
             throw new NotImplementedException();
         }
@@ -49,6 +54,11 @@ namespace AudioPlayerBackend.AudioLibrary.Sqlite
         }
 
         public Task SendPositionChange(Guid id, TimeSpan position)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendRequestSongChange(Guid id, RequestSong requestSong)
         {
             throw new NotImplementedException();
         }
