@@ -2,11 +2,11 @@
 
 namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 {
-    public class AudioLibraryChange<T> : EventArgs
+    public class AudioLibraryChangeArgs<T> : EventArgs
     {
         public T NewValue { get; }
 
-        public AudioLibraryChange(T newValue)
+        public AudioLibraryChangeArgs(T newValue)
         {
             NewValue = newValue;
         }

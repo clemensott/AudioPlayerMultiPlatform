@@ -1,6 +1,4 @@
 ﻿using System;
-using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Player;
 using StdOttStandard.CommandlineParser;
 using System.Collections.Generic;
@@ -9,6 +7,7 @@ using System.Linq;
 using StdOttStandard.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using AudioPlayerBackend.ViewModels;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 
 namespace AudioPlayerBackend.Build
 {
@@ -233,7 +232,8 @@ namespace AudioPlayerBackend.Build
 
         public AudioServicesBuildConfig WithService(ILibraryViewModel viewModel)
         {
-            return WithShuffle(GetSharedValueOrNull(viewModel.GetAllPlaylists().Select(p => p.Shuffle)))
+            //return WithShuffle(GetSharedValueOrNull(viewModel.GetAllPlaylists().Select(p => p.Shuffle)))
+            return WithShuffle(null)
                 .WithIsSearchShuffle(viewModel.SongSearuch.IsSearchShuffle)
                 .WithSearchKey(viewModel.SongSearuch.SearchKey)
                 //.WithPlay(service.PlayState == PlaybackState.Playing)

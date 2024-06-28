@@ -205,16 +205,9 @@
                     </ComboBoxItem>
                 </ComboBox>
 
-                <con:MultipleInputs4Converter x:Name="micPlaylists"
-                                              DataContext="{Binding AudioServiceUI}"
-                                              Input0="{Binding SourcePlaylists}"
-                                              Input1="{Binding Playlists}"
-                                              Input2="{Binding CurrentPlaylist,Mode=TwoWay}"
-                                              ConvertRef="MicPlaylists_Convert"/>
-
                 <ListBox Grid.Row="2" x:Name="lbxPlaylists" Margin="0,5" SelectionMode="Single"
-                         ItemsSource="{Binding ElementName=micPlaylists,Path=Output}"
-                         SelectedItem="{Binding ElementName=micPlaylists,Path=Input3,Mode=TwoWay}">
+                         ItemsSource="{Binding Playlists}"
+                         SelectedIndex="{Binding CurrentPlaylistIndex,Mode=TwoWay}">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

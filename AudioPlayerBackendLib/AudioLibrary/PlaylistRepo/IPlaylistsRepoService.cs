@@ -4,10 +4,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 {
     public interface IPlaylistsRepoService
     {
-        void ForEachRepoExcept(Action<IServicedPlaylistRepo> action, IServicedPlaylistRepo repo);
+        void ForEachRepoExcept(Action<IServicedPlaylistsRepo> action, IServicedPlaylistsRepo repo);
 
-        void AddRepo(IServicedPlaylistRepo repo);
+        void AddRepo(IServicedPlaylistsRepo repo);
 
-        void RemoveRepo(IServicedPlaylistRepo repo);
+        void RemoveRepo(IServicedPlaylistsRepo repo);
     }
 }

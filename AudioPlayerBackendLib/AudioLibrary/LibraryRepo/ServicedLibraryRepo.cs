@@ -11,14 +11,14 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         private readonly ILibraryRepo baseRepo;
         private readonly ILibraryRepoService parent;
 
-        public event EventHandler<AudioLibraryChange<bool>> OnIsSearchChange;
-        public event EventHandler<AudioLibraryChange<bool>> OnIsSearchShuffleChange;
-        public event EventHandler<AudioLibraryChange<string>> OnSearchKeyChange;
-        public event EventHandler<AudioLibraryChange<PlaybackState>> OnPlayStateChange;
-        public event EventHandler<AudioLibraryChange<double>> OnVolumeChange;
-        public event EventHandler<AudioLibraryChange<Guid?>> OnCurrentPlaylistIdChange;
-        public event EventHandler<AudioLibraryChange<IList<PlaylistInfo>>> OnPlaylistsChange;
-        public event EventHandler<AudioLibraryChange<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
+        public event EventHandler<AudioLibraryChangeArgs<bool>> OnIsSearchChange;
+        public event EventHandler<AudioLibraryChangeArgs<bool>> OnIsSearchShuffleChange;
+        public event EventHandler<AudioLibraryChangeArgs<string>> OnSearchKeyChange;
+        public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> OnPlayStateChange;
+        public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
+        public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
+        public event EventHandler<AudioLibraryChangeArgs<IList<PlaylistInfo>>> OnPlaylistsChange;
+        public event EventHandler<AudioLibraryChangeArgs<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
 
         public ServicedLibraryRepo(ILibraryRepo baseRepo, ILibraryRepoService parent)
         {
@@ -39,35 +39,35 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 
         public Task SendPlayStateChange(PlaybackState playState)
         {
-            var args = new AudioLibraryChange<PlaybackState>(playState);
+            var args = new AudioLibraryChangeArgs<PlaybackState>(playState);
             ForEachRepoExcept(repo => repo.OnPlayStateChange?.Invoke(this, args));
             return baseRepo.SendPlayStateChange(playState);
         }
 
         public Task SendVolumeChange(double volume)
         {
-            var args = new AudioLibraryChange<double>(volume);
+            var args = new AudioLibraryChangeArgs<double>(volume);
             ForEachRepoExcept(repo => repo.OnVolumeChange?.Invoke(this, args));
             return baseRepo.SendVolumeChange(volume);
         }
 
         public Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
         {
-            var args = new AudioLibraryChange<Guid?>(currentPlaylistId);
+            var args = new AudioLibraryChangeArgs<Guid?>(currentPlaylistId);
             ForEachRepoExcept(repo => repo.OnCurrentPlaylistIdChange?.Invoke(this, args));
             return baseRepo.SendCurrentPlaylistIdChange(currentPlaylistId);
         }
 
         public Task SendPlaylistsChange(IList<PlaylistInfo> playlists)
         {
-            var args = new AudioLibraryChange<IList<PlaylistInfo>>(playlists);
+            var args = new AudioLibraryChangeArgs<IList<PlaylistInfo>>(playlists);
             ForEachRepoExcept(repo => repo.OnPlaylistsChange?.Invoke(this, args));
             return baseRepo.SendPlaylistsChange(playlists);
         }
 
         public Task SendFileMediaSourceRootsChange(IList<FileMediaSourceRoot> fileMediaSourceRoots)
         {
-            var args = new AudioLibraryChange<IList<FileMediaSourceRoot>>(fileMediaSourceRoots);
+            var args = new AudioLibraryChangeArgs<IList<FileMediaSourceRoot>>(fileMediaSourceRoots);
             ForEachRepoExcept(repo => repo.OnFileMediaSourceRootsChange?.Invoke(this, args));
             return baseRepo.SendFileMediaSourceRootsChange(fileMediaSourceRoots);
         }

@@ -1,7 +1,5 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
-using StdOttStandard;
 using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
@@ -15,8 +13,8 @@ namespace AudioPlayerBackend.Player
     {
         private const int updateInterval = 100;
 
-        private readonly ILibraryRepo libraryRepo;
-        private readonly IPlaylistsRepo playlistsRepo;
+        private readonly IServicedLibraryRepo libraryRepo;
+        private readonly IServicedPlaylistsRepo playlistsRepo;
         private readonly IInvokeDispatcherService dispatcher;
         private bool isSetCurrentSong;
         private int errorCount;
@@ -33,7 +31,7 @@ namespace AudioPlayerBackend.Player
 
         public IPlayer Player { get; }
 
-        public AudioPlayerService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo, IPlayer player, IInvokeDispatcherService dispatcher)
+        public AudioPlayerService(IServicedLibraryRepo libraryRepo, IServicedPlaylistsRepo playlistsRepo, IPlayer player, IInvokeDispatcherService dispatcher)
         {
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
@@ -185,29 +183,29 @@ namespace AudioPlayerBackend.Player
             libraryRepo.OnPlaylistsChange -= OnPlaylistsChange;
         }
 
-        private async void OnCurrentPlaylistIdChange(object sender, AudioLibraryChange<Guid?> e)
+        private async void OnCurrentPlaylistIdChange(object sender, AudioLibraryChangeArgs<Guid?> e)
         {
             await ChangeCurrentPlaylist(e.NewValue);
         }
 
-        private void OnPlayStateChange(object sender, AudioLibraryChange<PlaybackState> e)
+        private void OnPlayStateChange(object sender, AudioLibraryChangeArgs<PlaybackState> e)
         {
             Player.PlayState = e.NewValue;
 
             EnableTimer();
         }
 
-        private void OnVolumeChange(object sender, AudioLibraryChange<double> e)
+        private void OnVolumeChange(object sender, AudioLibraryChangeArgs<double> e)
         {
             Player.Volume = (float)e.NewValue;
         }
 
-        private void OnPlaybackRateChange(object sender, PlaylistChange<double> e)
+        private void OnPlaybackRateChange(object sender, PlaylistChangeArgs<double> e)
         {
             Player.PlaybackRate = e.NewValue;
         }
 
-        private void OnPlaylistsChange(object sender, AudioLibraryChange<IList<PlaylistInfo>> e)
+        private void OnPlaylistsChange(object sender, AudioLibraryChangeArgs<IList<PlaylistInfo>> e)
         {
             playlistIds = e.NewValue.Select(p => p.Id).ToArray();
         }
@@ -228,12 +226,12 @@ namespace AudioPlayerBackend.Player
             playlistsRepo.OnSongsChange += OnSongsChange;
         }
 
-        private void OnPositionChange(object sender, PlaylistChange<TimeSpan> e)
+        private void OnPositionChange(object sender, PlaylistChangeArgs<TimeSpan> e)
         {
             if (e.Id == currentPlaylistId) position = e.NewValue;
         }
 
-        private async void OnRequestSongChange(object sender, PlaylistChange<RequestSong?> e)
+        private async void OnRequestSongChange(object sender, PlaylistChangeArgs<RequestSong?> e)
         {
             if (e.Id == currentPlaylistId)
             {
@@ -242,7 +240,7 @@ namespace AudioPlayerBackend.Player
             }
         }
 
-        private async void OnSongsChange(object sender, PlaylistChange<System.Collections.Generic.IList<Song>> e)
+        private async void OnSongsChange(object sender, PlaylistChangeArgs<System.Collections.Generic.IList<Song>> e)
         {
             if (e.Id == currentPlaylistId)
             {
@@ -386,6 +384,8 @@ namespace AudioPlayerBackend.Player
         {
             await Stop();
 
+            libraryRepo.Dispose();
+            playlistsRepo.Dispose();
             timer.Dispose();
             Player.Dispose();
         }

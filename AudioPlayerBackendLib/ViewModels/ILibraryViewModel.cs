@@ -1,7 +1,9 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.Player;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.ViewModels
 {
@@ -13,6 +15,8 @@ namespace AudioPlayerBackend.ViewModels
 
         PlaybackState PlayState { get; set; }
 
+        int CurrentPlaylistIndex { get; set; }
+
         IPlaylistViewModel CurrentPlaylist { get; }
 
         IList<PlaylistInfo> Playlists { get; }
@@ -20,5 +24,9 @@ namespace AudioPlayerBackend.ViewModels
         ISongSearchViewModel SongSearuch { get; }
 
         double Volume { get; set; }
+
+        Task RemixSongs(Guid playlistId);
+
+        Task RemovePlaylist(Guid playlistId);
     }
 }

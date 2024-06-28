@@ -8,15 +8,15 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 {
     internal class OwnTcpPlaylistsRepo : IPlaylistsRepo
     {
-        public event EventHandler<PlaylistChange<string>> OnNameChange;
-        public event EventHandler<PlaylistChange<OrderType>> OnShuffleChange;
-        public event EventHandler<PlaylistChange<LoopType>> OnLoopChange;
-        public event EventHandler<PlaylistChange<double>> OnPlaybackRateChange;
-        public event EventHandler<PlaylistChange<TimeSpan>> OnPositionChange;
-        public event EventHandler<PlaylistChange<TimeSpan>> OnDurationChange;
-        public event EventHandler<PlaylistChange<RequestSong?>> OnRequestSongChange;
-        public event EventHandler<PlaylistChange<Guid?>> OnCurrentSongIdChange;
-        public event EventHandler<PlaylistChange<IList<Song>>> OnSongsChange;
+        public event EventHandler<PlaylistChangeArgs<string>> OnNameChange;
+        public event EventHandler<PlaylistChangeArgs<OrderType>> OnShuffleChange;
+        public event EventHandler<PlaylistChangeArgs<LoopType>> OnLoopChange;
+        public event EventHandler<PlaylistChangeArgs<double>> OnPlaybackRateChange;
+        public event EventHandler<PlaylistChangeArgs<TimeSpan>> OnPositionChange;
+        public event EventHandler<PlaylistChangeArgs<TimeSpan>> OnDurationChange;
+        public event EventHandler<PlaylistChangeArgs<RequestSong?>> OnRequestSongChange;
+        public event EventHandler<PlaylistChangeArgs<Guid?>> OnCurrentSongIdChange;
+        public event EventHandler<PlaylistChangeArgs<IList<Song>>> OnSongsChange;
 
         public Task<Playlist> GetPlaylist(Guid id)
         {

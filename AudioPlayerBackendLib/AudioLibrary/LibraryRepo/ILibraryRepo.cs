@@ -11,18 +11,18 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         Task<Library> GetLibrary();
 
         Task SendPlayStateChange(PlaybackState playState);
-        event EventHandler<AudioLibraryChange<PlaybackState>> OnPlayStateChange;
+        event EventHandler<AudioLibraryChangeArgs<PlaybackState>> OnPlayStateChange;
 
         Task SendVolumeChange(double volume);
-        event EventHandler<AudioLibraryChange<double>> OnVolumeChange;
+        event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
 
         Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId);
-        event EventHandler<AudioLibraryChange<Guid?>> OnCurrentPlaylistIdChange;
+        event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
 
-        Task SendPlaylistsChange(IList<PlaylistInfo> playlists);
-        event EventHandler<AudioLibraryChange<IList<PlaylistInfo>>> OnPlaylistsChange;
+        //Task SendPlaylistsChange(IList<PlaylistInfo> playlists);
+        //event EventHandler<AudioLibraryChange<IList<PlaylistInfo>>> OnPlaylistsChange;
 
         Task SendFileMediaSourceRootsChange(IList<FileMediaSourceRoot> fileMediaSourceRoots);
-        event EventHandler<AudioLibraryChange<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
+        event EventHandler<AudioLibraryChangeArgs<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
     }
 }

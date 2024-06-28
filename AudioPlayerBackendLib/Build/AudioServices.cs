@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using AudioPlayerBackend.ViewModels;
 using AudioPlayerBackend.FileSystem;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 
 namespace AudioPlayerBackend.Build
 {
@@ -35,6 +37,16 @@ namespace AudioPlayerBackend.Build
         public IFileSystemService GetFileSystemService()
         {
             return ServiceProvider.GetService<IFileSystemService>();
+        }
+
+        public IServicedLibraryRepo GetServicedLibraryRepo()
+        {
+            return ServiceProvider.GetService<IServicedLibraryRepo>();
+        }
+
+        public IServicedPlaylistsRepo GetServicedPlaylistsRepo()
+        {
+            return ServiceProvider.GetService<IServicedPlaylistsRepo>();
         }
 
         public Task Start()

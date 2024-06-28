@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -9,31 +8,37 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
     {
         Task<Playlist> GetPlaylist(Guid id);
 
+        Task InsertPlaylist(Playlist playlist, int index);
+        event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
+
+        Task RemovePlaylist(Guid id);
+        event EventHandler<InsertPlaylistArgs> OnRemovePlaylist;
+
         Task SendNameChange(Guid id, string name);
-        event EventHandler<PlaylistChange<string>> OnNameChange;
+        event EventHandler<PlaylistChangeArgs<string>> OnNameChange;
 
         Task SendShuffleChange(Guid id, OrderType shuffle);
-        event EventHandler<PlaylistChange<OrderType>> OnShuffleChange;
+        event EventHandler<PlaylistChangeArgs<OrderType>> OnShuffleChange;
 
         Task SendLoopChange(Guid id, LoopType loop);
-        event EventHandler<PlaylistChange<LoopType>> OnLoopChange;
+        event EventHandler<PlaylistChangeArgs<LoopType>> OnLoopChange;
 
         Task SendPlaybackRateChange(Guid id, double playbackRate);
-        event EventHandler<PlaylistChange<double>> OnPlaybackRateChange;
+        event EventHandler<PlaylistChangeArgs<double>> OnPlaybackRateChange;
 
         Task SendPositionChange(Guid id, TimeSpan position);
-        event EventHandler<PlaylistChange<TimeSpan>> OnPositionChange;
+        event EventHandler<PlaylistChangeArgs<TimeSpan>> OnPositionChange;
 
         Task SendDurationChange(Guid id, TimeSpan duration);
-        event EventHandler<PlaylistChange<TimeSpan>> OnDurationChange;
+        event EventHandler<PlaylistChangeArgs<TimeSpan>> OnDurationChange;
 
         Task SendRequestSongChange(Guid id, RequestSong? requestSong);
-        event EventHandler<PlaylistChange<RequestSong?>> OnRequestSongChange;
+        event EventHandler<PlaylistChangeArgs<RequestSong?>> OnRequestSongChange;
 
         Task SendCurrentSongIdChange(Guid id, Guid? currentSongId);
-        event EventHandler<PlaylistChange<Guid?>> OnCurrentSongIdChange;
+        event EventHandler<PlaylistChangeArgs<Guid?>> OnCurrentSongIdChange;
 
         Task SendSongsChange(Guid id, IList<Song> songs);
-        event EventHandler<PlaylistChange<IList<Song>>> OnSongsChange;
+        event EventHandler<PlaylistChangeArgs<IList<Song>>> OnSongsChange;
     }
 }

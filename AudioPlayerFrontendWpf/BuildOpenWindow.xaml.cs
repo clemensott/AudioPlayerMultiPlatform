@@ -126,27 +126,27 @@ namespace AudioPlayerFrontend
 
         private async void BtnPrevious_Click(object sender, RoutedEventArgs e)
         {
-            await build.SetPreviousSong();
+            //await build.SetPreviousSong();
         }
 
         private async void BtnPlay_Click(object sender, RoutedEventArgs e)
         {
-            await build.SetPlayState(PlaybackState.Playing);
+            //await build.SetPlayState(PlaybackState.Playing);
         }
 
         private async void TbnToggle_Checked(object sender, RoutedEventArgs e)
         {
-            await build.SetToggle();
+            //await build.SetToggle();
         }
 
         private async void BtnPause_Click(object sender, RoutedEventArgs e)
         {
-            await build.SetPlayState(PlaybackState.Paused);
+            //await build.SetPlayState(PlaybackState.Paused);
         }
 
         private async void BtnNext_Click(object sender, RoutedEventArgs e)
         {
-            await build.SetNextSong();
+            //await build.SetNextSong();
         }
     }
 }

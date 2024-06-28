@@ -2,13 +2,13 @@
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 {
-    public class PlaylistChange<T> : EventArgs
+    public class PlaylistChangeArgs<T> : EventArgs
     {
         public Guid Id { get; }
 
         public T NewValue { get; }
 
-        public PlaylistChange(Guid id, T newValue)
+        public PlaylistChangeArgs(Guid id, T newValue)
         {
             Id = id;
             NewValue = newValue;

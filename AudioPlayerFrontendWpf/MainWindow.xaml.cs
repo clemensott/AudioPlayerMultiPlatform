@@ -1,5 +1,4 @@
 ﻿using AudioPlayerBackend;
-using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Player;
 using Microsoft.Win32;
 using StdOttStandard;
@@ -16,13 +15,8 @@ using System.Windows.Input;
 using AudioPlayerBackend.Build;
 using StdOttFramework.RestoreWindow;
 using StdOttStandard.Converter.MultipleInputs;
-using AudioPlayerBackend.Communication;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using StdOttFramework;
-using StdOttFramework.Converters;
 using AudioPlayerBackend.FileSystem;
-using AudioPlayerBackend.Audio.MediaSource;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using AudioPlayerFrontend.Join;
@@ -42,12 +36,9 @@ namespace AudioPlayerFrontend
         private ILibraryViewModel viewModel;
         private HotKeys hotKeys;
         private bool isChangingSelectedSongIndex;
-        private readonly ObservableCollection<IPlaylist> allPlaylists;
 
         public MainWindow()
         {
-            allPlaylists = new ObservableCollection<IPlaylist>();
-
             InitializeComponent();
 
             RestoreWindowHandler.Activate(this, RestoreWindowSettings.GetDefault());
@@ -217,10 +208,6 @@ namespace AudioPlayerFrontend
 
         private void TbxSearch_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            IAudioService service = viewModel.AudioServiceUI;
-
-            if (service == null) return;
-
             e.Handled = true;
 
             switch (e.Key)
@@ -236,11 +223,11 @@ namespace AudioPlayerFrontend
                     break;
 
                 case Key.Escape:
-                    service.SearchKey = string.Empty;
+                    viewModel.SongSearuch.SearchKey = string.Empty;
                     break;
 
                 case Key.Up:
-                    if (lbxSongs.Items.Count > 0 && service?.IsSearching == true)
+                    if (lbxSongs.Items.Count > 0 && viewModel.SongSearuch.IsSearching)
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
@@ -250,7 +237,7 @@ namespace AudioPlayerFrontend
                     break;
 
                 case Key.Down:
-                    if (lbxSongs.Items.Count > 0 && service?.IsSearching == true)
+                    if (lbxSongs.Items.Count > 0 && viewModel.SongSearuch.IsSearching)
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
@@ -277,7 +264,7 @@ namespace AudioPlayerFrontend
 
         private void OnNext(object sender, EventArgs e)
         {
-           viewModel.CurrentPlaylist.SetNextSong();
+            viewModel.CurrentPlaylist.SetNextSong();
         }
 
         private void OnPlay(object sender, EventArgs e)
@@ -392,21 +379,20 @@ namespace AudioPlayerFrontend
             return songsLbx;
         }
 
-        private object MicCurrentSongIndex_ConvertRef(Song? currentSong, ref RequestSong? wannaSong,
+        private object MicCurrentSongIndex_ConvertRef(Song? currentSong, ref RequestSong? requestSong,
             IEnumerable<Song> allSongs, IEnumerable<Song> searchSongs, bool isSearching, ref int lbxIndex, int changedInput)
         {
             IEnumerable<Song> songs;
-            IPlaylist currentPlaylist = viewModel.AudioServiceUI?.CurrentPlaylist;
-            bool isCurrentPlaylistSourcePlaylist = currentPlaylist is ISourcePlaylist;
+            IPlaylistViewModel currentPlaylist = viewModel.CurrentPlaylist;
 
             if (!isSearching) songs = allSongs;
-            else if (isCurrentPlaylistSourcePlaylist) songs = searchSongs;
+            else if (!currentPlaylist.Type.HasFlag(PlaylistType.Search)) songs = searchSongs;
             else songs = searchSongs.Except(allSongs);
 
             if (changedInput == 6 && lbxIndex != -1 && (isSearching || isChangingSelectedSongIndex)) ;
             else if (changedInput == 6 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))
             {
-                wannaSong = RequestSong.Start(songs.ElementAt(lbxIndex));
+                requestSong = RequestSong.Start(songs.ElementAt(lbxIndex));
             }
             else if (!currentSong.HasValue) lbxIndex = -1;
             else if (songs.Contains(currentSong.Value)) lbxIndex = songs.IndexOf(currentSong.Value);
@@ -414,52 +400,6 @@ namespace AudioPlayerFrontend
             else lbxIndex = -1;
 
             return songs;
-        }
-
-        private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
-        {
-            MultipleInputs4Converter converter = (MultipleInputs4Converter)sender;
-
-            if (args.ChangedValueIndex == 0)
-            {
-                if (args.OldValue is INotifyCollectionChanged oldList) oldList.CollectionChanged -= OnCollectionChanged;
-                if (args.Input0 is INotifyCollectionChanged newList) newList.CollectionChanged += OnCollectionChanged;
-            }
-            else if (args.ChangedValueIndex == 1)
-            {
-                if (args.OldValue is INotifyCollectionChanged oldList) oldList.CollectionChanged -= OnCollectionChanged;
-                if (args.Input1 is INotifyCollectionChanged newList) newList.CollectionChanged += OnCollectionChanged;
-            }
-
-            UpdateAllPlaylists();
-
-            if (args.ChangedValueIndex == 3 && args.Input3 != null) args.Input2 = args.Input3;
-            else args.Input3 = args.Input2;
-
-            return allPlaylists;
-
-            void OnCollectionChanged(object s, NotifyCollectionChangedEventArgs e)
-            {
-                UpdateAllPlaylists();
-            }
-
-            void UpdateAllPlaylists()
-            {
-                IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)converter.Input0).ToNotNull()
-                    .Concat(((IEnumerable<IPlaylist>)converter.Input1).ToNotNull()).ToArray();
-
-                for (int i = allPlaylists.Count - 1; i >= 0; i--)
-                {
-                    if (!newAllPlaylists.Contains(allPlaylists[i])) allPlaylists.RemoveAt(i);
-                }
-
-                foreach ((int newIndex, IPlaylist playlist) in newAllPlaylists.WithIndex())
-                {
-                    int oldIndex = allPlaylists.IndexOf(playlist);
-                    if (oldIndex == -1) allPlaylists.Insert(newIndex, playlist);
-                    else if (oldIndex != newIndex) allPlaylists.Move(oldIndex, newIndex);
-                }
-            }
         }
 
         private object ValueConverter_ConvertEvent(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
@@ -476,26 +416,16 @@ namespace AudioPlayerFrontend
             await fileSystemService.ReloadSourcePlaylist(playlist.Id);
         }
 
-        private void MimRemixSongs_Click(object sender, RoutedEventArgs e)
+        private async void MimRemixSongs_Click(object sender, RoutedEventArgs e)
         {
-            PlaylistInfo playlist = FrameworkUtils.GetDataContext<PlaylistInfo>(sender);
-            Playlist 
-            playlist.Songs = playlist.Songs.Shuffle().ToArray();
+            PlaylistInfo playlistInfo = FrameworkUtils.GetDataContext<PlaylistInfo>(sender);
+            await viewModel.RemixSongs(playlistInfo.Id);
         }
 
-        private void MimRemovePlaylist_Click(object sender, RoutedEventArgs e)
+        private async void MimRemovePlaylist_Click(object sender, RoutedEventArgs e)
         {
-            PlaylistInfo playlist = FrameworkUtils.GetDataContext<PlaylistInfo>(sender);
-            IAudioService service = viewModel.Service.AudioService;
-
-            if (service.CurrentPlaylist == playlist)
-            {
-                service.CurrentPlaylist = service.GetAllPlaylists().Where(p => p != playlist).Any() ?
-                    service.GetAllPlaylists().Next(playlist).next : null;
-            }
-
-            if (playlist is ISourcePlaylist) service.SourcePlaylists.Remove((ISourcePlaylist)playlist);
-            else service.Playlists.Remove(playlist);
+            PlaylistInfo playlistInfo = FrameworkUtils.GetDataContext<PlaylistInfo>(sender);
+            await viewModel.RemovePlaylist(playlistInfo.Id);
         }
 
         private void SldPosition_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -503,13 +433,13 @@ namespace AudioPlayerFrontend
             Slider slider = (Slider)sender;
             double positionSeconds = e.NewValue;
             double durationSeconds = slider.Maximum;
-            IPlaylistBase currentPlaylist = viewModel.AudioServiceUI?.CurrentPlaylist;
+            IPlaylistViewModel currentPlaylist = viewModel.CurrentPlaylist;
 
-            if (currentPlaylist != null && currentPlaylist.CurrentSong.HasValue &&
+            if (currentPlaylist.Id.HasValue && currentPlaylist.CurrentSong.HasValue &&
                 Math.Abs(currentPlaylist.Duration.TotalSeconds - durationSeconds) < 0.01 &&
                 Math.Abs(currentPlaylist.Position.TotalSeconds - positionSeconds) > 0.01)
             {
-                currentPlaylist.WannaSong = RequestSong.Get(currentPlaylist.CurrentSong, TimeSpan.FromSeconds(positionSeconds));
+                currentPlaylist.SendRequestSong(RequestSong.Get(currentPlaylist.CurrentSong.Value, TimeSpan.FromSeconds(positionSeconds)));
             }
         }
     }

@@ -2,7 +2,7 @@
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 {
-    public interface IServicedPlaylistRepo : IPlaylistsRepo, IDisposable
+    public interface IServicedPlaylistsRepo : IPlaylistsRepo, IDisposable
     {
     }
 }

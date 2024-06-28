@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,6 +12,8 @@ namespace AudioPlayerBackend.ViewModels
         Guid? Id { get; }
 
         string Name { get; }
+        
+        PlaylistType Type { get; }
 
         OrderType Shuffle { get; set; }
 

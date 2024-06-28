@@ -7,11 +7,11 @@ namespace AudioPlayerBackend.FileSystem
 {
     internal class UpdateLibraryService : IAudioService
     {
-        private readonly ILibraryRepo libraryRepo;
-        private readonly IPlaylistsRepo playlistsRepo;
+        private readonly IServicedLibraryRepo libraryRepo;
+        private readonly IServicedPlaylistsRepo playlistsRepo;
         private readonly IFileSystemService fileSystemService;
 
-        public UpdateLibraryService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo, IFileSystemService fileSystemService)
+        public UpdateLibraryService(IServicedLibraryRepo libraryRepo, IServicedPlaylistsRepo playlistsRepo, IFileSystemService fileSystemService)
         {
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
@@ -68,6 +68,8 @@ namespace AudioPlayerBackend.FileSystem
 
         public Task Dispose()
         {
+            libraryRepo.Dispose();
+            playlistsRepo.Dispose();
             return Task.CompletedTask;
         }
     }

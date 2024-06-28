@@ -1,7 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
-using StdOttStandard;
-using StdOttStandard.Linq;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,7 +10,7 @@ namespace AudioPlayerBackend.ViewModels
 {
     public class PlaylistViewModel : IPlaylistViewModel
     {
-        private readonly IPlaylistsRepo playlistsRepo;
+        private readonly IServicedPlaylistsRepo playlistsRepo;
         private bool isRunning, isLoaded;
         private Guid? id;
         private string name;
@@ -144,7 +141,7 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public PlaylistViewModel(IPlaylistsRepo playlistsRepo)
+        public PlaylistViewModel(IServicedPlaylistsRepo playlistsRepo)
         {
             this.playlistsRepo = playlistsRepo;
         }
@@ -166,7 +163,7 @@ namespace AudioPlayerBackend.ViewModels
         public Task Start()
         {
             isRunning = true;
-            
+            return Task.CompletedTask;
         }
 
         private async Task LoadPlaylistData()
@@ -188,12 +185,13 @@ namespace AudioPlayerBackend.ViewModels
         public Task Stop()
         {
             isRunning = false;
-            
+            return Task.CompletedTask;
         }
 
         public Task Dispose()
         {
-            throw new NotImplementedException();
+            playlistsRepo.Dispose();
+            return Task.CompletedTask;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

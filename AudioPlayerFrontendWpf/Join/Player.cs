@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.Player;
 using Microsoft.Win32;
 using System;
@@ -11,7 +11,7 @@ namespace AudioPlayerFrontend.Join
 {
     class Player : IPlayer
     {
-        private RequestSong? wannaSong;
+        private RequestSong? requestSong;
         private PlaybackState playState;
         private readonly MediaElement mediaElement;
         private readonly SemaphoreSlim handleSem;
@@ -46,6 +46,12 @@ namespace AudioPlayerFrontend.Join
 
         public TimeSpan Duration => mediaElement.NaturalDuration.HasTimeSpan ? mediaElement.NaturalDuration.TimeSpan : TimeSpan.Zero;
 
+        public double PlaybackRate
+        {
+            get => mediaElement.SpeedRatio;
+            set => mediaElement.SpeedRatio = value;
+        }
+
         public Song? Source { get; private set; }
 
         public Player()
@@ -66,15 +72,15 @@ namespace AudioPlayerFrontend.Join
 
         private void MediaElement_MediaOpened(object sender, RoutedEventArgs e)
         {
-            Source = wannaSong.Value.Song;
-            if (wannaSong.Value.Position.HasValue && mediaElement.NaturalDuration.HasTimeSpan &&
-                wannaSong.Value.Duration == mediaElement.NaturalDuration.TimeSpan)
+            Source = requestSong.Value.Song;
+            if (requestSong.Value.Position.HasValue && mediaElement.NaturalDuration.HasTimeSpan &&
+                requestSong.Value.Duration == mediaElement.NaturalDuration.TimeSpan)
             {
-                SetPosition(wannaSong.Value.Position.Value);
+                SetPosition(requestSong.Value.Position.Value);
             }
             else lastPosition = Position;
 
-            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, wannaSong.Value.Song));
+            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, requestSong.Value.Song));
             ExecutePlayState();
             handleSem.Release();
         }
@@ -102,7 +108,7 @@ namespace AudioPlayerFrontend.Join
             AudioPlayerBackend.Logs.Log($"MediaElement_MediaFailed1: {e.ErrorException}");
             AudioPlayerBackend.Logs.Log($"MediaElement_MediaFailed2: {Position} / {Duration} | {Source?.FullPath} | {PlayState}");
             Source = null;
-            MediaFailed?.Invoke(this, new MediaFailedEventArgs(wannaSong?.Song, e.ErrorException));
+            MediaFailed?.Invoke(this, new MediaFailedEventArgs(requestSong?.Song, e.ErrorException));
             handleSem.Release();
         }
 
@@ -137,15 +143,15 @@ namespace AudioPlayerFrontend.Join
         private async Task Set(RequestSong wanna)
         {
             AudioPlayerBackend.Logs.Log($"Player.Set4: {wanna.Song.FullPath} | {wanna.Position} / {wanna.Duration}");
-            wannaSong = wanna;
+            requestSong = wanna;
 
             await handleSem.WaitAsync();
 
             bool release = true;
             try
             {
-                AudioPlayerBackend.Logs.Log($"Player.Set5: {wannaSong.Equals(wanna)}");
-                if (!wannaSong.Equals(wanna)) return;
+                AudioPlayerBackend.Logs.Log($"Player.Set5: {requestSong.Equals(wanna)}");
+                if (!requestSong.Equals(wanna)) return;
 
                 AudioPlayerBackend.Logs.Log($"Player.Set6: {Source.HasValue} | {wanna.Song.FullPath} | {Source?.FullPath}");
                 if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)

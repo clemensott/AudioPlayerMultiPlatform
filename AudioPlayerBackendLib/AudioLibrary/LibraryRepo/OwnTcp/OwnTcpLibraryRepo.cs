@@ -9,11 +9,11 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 {
     internal class OwnTcpLibraryRepo : ILibraryRepo
     {
-        public event EventHandler<AudioLibraryChange<PlaybackState>> OnPlayStateChange;
-        public event EventHandler<AudioLibraryChange<double>> OnVolumeChange;
-        public event EventHandler<AudioLibraryChange<Guid?>> OnCurrentPlaylistIdChange;
-        public event EventHandler<AudioLibraryChange<IList<PlaylistInfo>>> OnPlaylistsChange;
-        public event EventHandler<AudioLibraryChange<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
+        public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> OnPlayStateChange;
+        public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
+        public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
+        public event EventHandler<AudioLibraryChangeArgs<IList<PlaylistInfo>>> OnPlaylistsChange;
+        public event EventHandler<AudioLibraryChangeArgs<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
 
         public Task<Library> GetLibrary()
         {
