@@ -26,11 +26,13 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         public Guid? CurrentSongId { get; }
 
-        public IList<Song> Songs { get; }
+        public ICollection<Song> Songs { get; }
 
-        public FileMediaSource[] FileMediaSources { get; }
+        public FileMediaSourceRoot FileMediaSource { get; }
 
-        public Playlist(Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop, double playbackRate, TimeSpan position, TimeSpan duration, RequestSong? requestSong, Guid? currentSongId, IList<Song> songs, FileMediaSource[] fileMediaSources)
+        public Playlist(Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop, 
+            double playbackRate, TimeSpan position, TimeSpan duration, RequestSong? requestSong,
+            Guid? currentSongId, ICollection<Song> songs, FileMediaSourceRoot fileMediaSource)
         {
             Id = id;
             Type = type;
@@ -43,7 +45,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             RequestSong = requestSong;
             CurrentSongId = currentSongId;
             Songs = songs;
-            FileMediaSources = fileMediaSources;
+            FileMediaSource = fileMediaSource;
         }
     }
 }

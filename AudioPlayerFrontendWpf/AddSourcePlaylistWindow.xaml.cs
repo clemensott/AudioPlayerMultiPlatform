@@ -90,7 +90,7 @@ namespace AudioPlayerFrontend
                 Playlist newPlaylist = new Playlist(Guid.NewGuid(), PlaylistType.SourcePlaylist, viewModel.Name, viewModel.Shuffle, viewModel.Loop, 1, TimeSpan.Zero, TimeSpan.Zero, null, null, songs, newSoruces.ToArray());
 
                 await viewModel.LibraryRepo.SendFileMediaSourceRootsChange(newAllRoots);
-                await viewModel.PlaylistsRepo.InsertPlaylist(newPlaylist, -1);
+                await viewModel.PlaylistsRepo.SendInsertPlaylist(newPlaylist, -1);
                 await viewModel.LibraryRepo.SendCurrentPlaylistIdChange(newPlaylist.Id);
             }
             else

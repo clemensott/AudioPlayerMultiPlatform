@@ -9,12 +9,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
     {
         Task<Playlist> GetPlaylist(Guid id);
 
-        Task<FileMediaSource> GetAllFileMediaSources();
-
-        Task InsertPlaylist(Playlist playlist, int index);
+        Task SendInsertPlaylist(Playlist playlist, int index);
         event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
 
-        Task RemovePlaylist(Guid id);
+        Task SendRemovePlaylist(Guid id);
         event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
 
         Task SendNameChange(Guid id, string name);
@@ -41,10 +39,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
         Task SendCurrentSongIdChange(Guid id, Guid? currentSongId);
         event EventHandler<PlaylistChangeArgs<Guid?>> OnCurrentSongIdChange;
 
-        Task SendSongsChange(Guid id, IList<Song> songs);
-        event EventHandler<PlaylistChangeArgs<IList<Song>>> OnSongsChange;
+        Task SendSongsChange(Guid id, ICollection<Song> songs);
+        event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
 
-        Task SendFileMedisSourcesChange(Guid id, IList<FileMediaSource> fileMediaSources);
-        event EventHandler<PlaylistChangeArgs<IList<FileMediaSource>>> OnFileMedisSourcesChange;
+        Task SendFileMedisSourcesChange(Guid id, ICollection<FileMediaSource> fileMediaSources);
+        event EventHandler<PlaylistChangeArgs<ICollection<FileMediaSource>>> OnFileMedisSourcesChange;
     }
 }

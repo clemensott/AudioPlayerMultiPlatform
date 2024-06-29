@@ -182,7 +182,7 @@ namespace AudioPlayerBackend.ViewModels
                 await CurrentPlaylist.SetPlaylistId(Playlists.ElementAtOrDefault(newIndex)?.Id);
             }
 
-            await playlistsRepo.RemovePlaylist(playlistId);
+            await playlistsRepo.SendRemovePlaylist(playlistId);
 
             int index = Playlists.IndexOf(p => p.Id == playlistId);
             Playlists.RemoveAt(index);

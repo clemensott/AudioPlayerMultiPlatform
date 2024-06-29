@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.Audio.MediaSource;
-using AudioPlayerBackend.Player;
+﻿using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;
 
@@ -13,8 +12,6 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 
         public Guid? CurrentPlaylistId { get; }
 
-        public IList<PlaylistInfo> Playlists { get; }
-
-        public IList<FileMediaSourceRoot> FileMediaSourceRoots { get; }
+        public ICollection<PlaylistInfo> Playlists { get; }
     }
 }

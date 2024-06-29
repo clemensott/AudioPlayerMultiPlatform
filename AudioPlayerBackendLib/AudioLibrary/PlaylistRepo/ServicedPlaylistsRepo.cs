@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.Audio.MediaSource;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -18,7 +18,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
         public event EventHandler<PlaylistChangeArgs<TimeSpan>> OnDurationChange;
         public event EventHandler<PlaylistChangeArgs<RequestSong?>> OnRequestSongChange;
         public event EventHandler<PlaylistChangeArgs<Guid?>> OnCurrentSongIdChange;
-        public event EventHandler<PlaylistChangeArgs<IList<Song>>> OnSongsChange;
+        public event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
+        public event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
+        public event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
+        public event EventHandler<PlaylistChangeArgs<ICollection<FileMediaSource>>> OnFileMedisSourcesChange;
 
         public ServicedPlaylistsRepo(IPlaylistsRepo baseRepo, IPlaylistsRepoService parent)
         {
@@ -37,67 +40,88 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             parent.ForEachRepoExcept(repo => action(repo as ServicedPlaylistsRepo), this);
         }
 
-        public Task SendNameChange(Guid id, string name)
+        public async Task SendInsertPlaylist(Playlist playlist, int index)
         {
+            await baseRepo.SendInsertPlaylist(playlist, index);
+            var args = new InsertPlaylistArgs(index, playlist);
+            ForEachRepoExcept(repo => repo.OnInsertPlaylist?.Invoke(this, args));
+        }
+
+        public async Task SendRemovePlaylist(Guid id)
+        {
+            await baseRepo.SendRemovePlaylist(id);
+            var args = new RemovePlaylistArgs(id);
+            ForEachRepoExcept(repo => repo.OnRemovePlaylist?.Invoke(this, args));
+        }
+
+        public async Task SendNameChange(Guid id, string name)
+        {
+            await baseRepo.SendNameChange(id, name);
             var args = new PlaylistChangeArgs<string>(id, name);
             ForEachRepoExcept(repo => repo.OnNameChange?.Invoke(this, args));
-            return baseRepo.SendNameChange(id, name);
         }
 
-        public Task SendShuffleChange(Guid id, OrderType shuffle)
+        public async Task SendShuffleChange(Guid id, OrderType shuffle)
         {
+            await baseRepo.SendShuffleChange(id, shuffle);
             var args = new PlaylistChangeArgs<OrderType>(id, shuffle);
             ForEachRepoExcept(repo => repo.OnShuffleChange?.Invoke(this, args));
-            return baseRepo.SendShuffleChange(id, shuffle);
         }
 
-        public Task SendLoopChange(Guid id, LoopType loop)
+        public async Task SendLoopChange(Guid id, LoopType loop)
         {
+            await baseRepo.SendLoopChange(id, loop);
             var args = new PlaylistChangeArgs<LoopType>(id, loop);
             ForEachRepoExcept(repo => repo.OnLoopChange?.Invoke(this, args));
-            return baseRepo.SendLoopChange(id, loop);
         }
 
-        public Task SendPlaybackRateChange(Guid id, double playbackRate)
+        public async Task SendPlaybackRateChange(Guid id, double playbackRate)
         {
+            await baseRepo.SendPlaybackRateChange(id, playbackRate);
             var args = new PlaylistChangeArgs<double>(id, playbackRate);
             ForEachRepoExcept(repo => repo.OnPlaybackRateChange?.Invoke(this, args));
-            return baseRepo.SendPlaybackRateChange(id, playbackRate);
         }
 
-        public Task SendPositionChange(Guid id, TimeSpan position)
+        public async Task SendPositionChange(Guid id, TimeSpan position)
         {
+            await baseRepo.SendPositionChange(id, position);
             var args = new PlaylistChangeArgs<TimeSpan>(id, position);
             ForEachRepoExcept(repo => repo.OnPositionChange?.Invoke(this, args));
-            return baseRepo.SendPositionChange(id, position);
         }
 
-        public Task SendDurationChange(Guid id, TimeSpan duration)
+        public async Task SendDurationChange(Guid id, TimeSpan duration)
         {
+            await baseRepo.SendDurationChange(id, duration);
             var args = new PlaylistChangeArgs<TimeSpan>(id, duration);
             ForEachRepoExcept(repo => repo.OnDurationChange?.Invoke(this, args));
-            return baseRepo.SendDurationChange(id, duration);
         }
 
-        public Task SendRequestSongChange(Guid id, RequestSong? requestSong)
+        public async Task SendRequestSongChange(Guid id, RequestSong? requestSong)
         {
+            await baseRepo.SendRequestSongChange(id, requestSong);
             var args = new PlaylistChangeArgs<RequestSong?>(id, requestSong);
             ForEachRepoExcept(repo => repo.OnRequestSongChange?.Invoke(this, args));
-            return baseRepo.SendRequestSongChange(id, requestSong);
         }
 
-        public Task SendCurrentSongIdChange(Guid id, Guid? currentSongId)
+        public async Task SendCurrentSongIdChange(Guid id, Guid? currentSongId)
         {
+            await baseRepo.SendCurrentSongIdChange(id, currentSongId);
             var args = new PlaylistChangeArgs<Guid?>(id, currentSongId);
             ForEachRepoExcept(repo => repo.OnCurrentSongIdChange?.Invoke(this, args));
-            return baseRepo.SendCurrentSongIdChange(id, currentSongId);
         }
 
-        public Task SendSongsChange(Guid id, IList<Song> songs)
+        public async Task SendSongsChange(Guid id, ICollection<Song> songs)
         {
-            var args = new PlaylistChangeArgs<IList<Song>>(id, songs);
+            await baseRepo.SendSongsChange(id, songs);
+            var args = new PlaylistChangeArgs<ICollection<Song>>(id, songs);
             ForEachRepoExcept(repo => repo.OnSongsChange?.Invoke(this, args));
-            return baseRepo.SendSongsChange(id, songs);
+        }
+
+        public async Task SendFileMedisSourcesChange(Guid id, ICollection<FileMediaSource> fileMediaSources)
+        {
+            await baseRepo.SendFileMedisSourcesChange(id, fileMediaSources);
+            var args = new PlaylistChangeArgs<ICollection<FileMediaSource>>(id, fileMediaSources);
+            ForEachRepoExcept(repo => repo.OnFileMedisSourcesChange?.Invoke(this, args));
         }
 
         public void Dispose()
