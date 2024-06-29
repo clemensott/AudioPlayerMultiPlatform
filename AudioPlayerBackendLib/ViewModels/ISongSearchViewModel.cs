@@ -1,6 +1,7 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.ViewModels
 {
@@ -21,5 +22,7 @@ namespace AudioPlayerBackend.ViewModels
         void Disable();
 
         void Dispose();
+
+        Task AddSongsToSearchPlaylist(IEnumerable<Song> songs, SearchPlaylistAddType addType);
     }
 }

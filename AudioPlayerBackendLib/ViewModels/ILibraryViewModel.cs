@@ -1,7 +1,7 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.Player;
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading.Tasks;
 
@@ -19,7 +19,7 @@ namespace AudioPlayerBackend.ViewModels
 
         IPlaylistViewModel CurrentPlaylist { get; }
 
-        IList<PlaylistInfo> Playlists { get; }
+        ObservableCollection<PlaylistInfo> Playlists { get; }
 
         ISongSearchViewModel SongSearuch { get; }
 

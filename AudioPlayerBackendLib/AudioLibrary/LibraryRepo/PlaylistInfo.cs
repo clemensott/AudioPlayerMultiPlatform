@@ -11,5 +11,13 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         public string Name { get; }
 
         public int SongsCount { get; }
+
+        public PlaylistInfo(Guid id, PlaylistType type, string name, int songsCount)
+        {
+            Id = id;
+            Type = type;
+            Name = name;
+            SongsCount = songsCount;
+        }
     }
 }

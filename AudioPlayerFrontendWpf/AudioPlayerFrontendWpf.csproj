@@ -277,6 +277,7 @@
     </Compile>
     <Compile Include="TimeSpanToSecondsConverter.cs" />
     <Compile Include="IsAudioStreamPlayerConverter.cs" />
+    <Compile Include="ViewModels\AddSourcePlaylistViewModel.cs" />
     <Compile Include="ViewModels\ViewModel.cs" />
     <Page Include="AddSourcePlaylistWindow.xaml">
       <SubType>Designer</SubType>

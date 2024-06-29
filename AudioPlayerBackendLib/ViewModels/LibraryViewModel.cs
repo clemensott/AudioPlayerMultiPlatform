@@ -1,11 +1,11 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.Build;
+using AudioPlayerBackend.Extensions;
 using AudioPlayerBackend.Player;
-using Newtonsoft.Json.Linq;
 using StdOttStandard.Linq;
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,7 +19,7 @@ namespace AudioPlayerBackend.ViewModels
         private bool isLoaded;
         private PlaybackState playState;
         private double volume;
-        private IList<PlaylistInfo> playlists;
+        private ObservableCollection<PlaylistInfo> playlists;
 
         public bool IsLoaded
         {
@@ -75,7 +75,7 @@ namespace AudioPlayerBackend.ViewModels
 
         public IPlaylistViewModel CurrentPlaylist { get; }
 
-        public IList<PlaylistInfo> Playlists
+        public ObservableCollection<PlaylistInfo> Playlists
         {
             get => playlists;
             private set
@@ -102,12 +102,12 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Start()
         {
-            SubscribeLibraryRepo();
+            Subscribe();
 
             Library library = await libraryRepo.GetLibrary();
             PlayState = library.PlayState;
             Volume = library.Volume;
-            Playlists = library.Playlists;
+            Playlists = new ObservableCollection<PlaylistInfo>(library.Playlists);
 
             await CurrentPlaylist.SetPlaylistId(library.CurrentPlaylistId);
             await CurrentPlaylist.Start();
@@ -115,25 +115,29 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Stop()
         {
-            UnsubscribeLibraryRepo();
+            Unsubscribe();
 
             await CurrentPlaylist.Stop();
         }
 
-        private void SubscribeLibraryRepo()
+        private void Subscribe()
         {
             libraryRepo.OnPlayStateChange += OnPlayStateChange;
             libraryRepo.OnVolumeChange += OnVolumeChange;
             libraryRepo.OnCurrentPlaylistIdChange += OnCurrentPlaylistIdChange;
-            libraryRepo.OnPlaylistsChange += OnPlaylistsChange;
+
+            playlistsRepo.OnInsertPlaylist += PlaylistsRepo_OnInsertPlaylist;
+            playlistsRepo.OnRemovePlaylist += PlaylistsRepo_OnRemovePlaylist;
         }
 
-        private void UnsubscribeLibraryRepo()
+        private void Unsubscribe()
         {
             libraryRepo.OnPlayStateChange -= OnPlayStateChange;
             libraryRepo.OnVolumeChange -= OnVolumeChange;
             libraryRepo.OnCurrentPlaylistIdChange -= OnCurrentPlaylistIdChange;
-            libraryRepo.OnPlaylistsChange -= OnPlaylistsChange;
+
+            playlistsRepo.OnInsertPlaylist -= PlaylistsRepo_OnInsertPlaylist;
+            playlistsRepo.OnRemovePlaylist -= PlaylistsRepo_OnRemovePlaylist;
         }
 
         private void OnPlayStateChange(object sender, AudioLibraryChangeArgs<PlaybackState> e)
@@ -153,9 +157,15 @@ namespace AudioPlayerBackend.ViewModels
             await CurrentPlaylist.SetPlaylistId(e.NewValue);
         }
 
-        private void OnPlaylistsChange(object sender, AudioLibraryChangeArgs<IList<PlaylistInfo>> e)
+        private void PlaylistsRepo_OnInsertPlaylist(object sender, InsertPlaylistArgs e)
         {
-            Playlists = e.NewValue;
+            Playlists.Insert(e.Index, e.Playlist.ToPlaylistInfo());
+        }
+
+        private void PlaylistsRepo_OnRemovePlaylist(object sender, RemovePlaylistArgs e)
+        {
+            int index = Playlists.IndexOf(p => p.Id == e.Id);
+            Playlists.RemoveAt(index);
         }
 
         public async Task RemixSongs(Guid playlistId)
@@ -172,9 +182,10 @@ namespace AudioPlayerBackend.ViewModels
                 await CurrentPlaylist.SetPlaylistId(Playlists.ElementAtOrDefault(newIndex)?.Id);
             }
 
-            IList<PlaylistInfo> playlistInfos = Playlists.Where(x => x.Id != playlistId).ToArray();
-            await libraryRepo.SendPlaylistsChange(playlistInfos);
-            Playlists = playlistInfos;
+            await playlistsRepo.RemovePlaylist(playlistId);
+
+            int index = Playlists.IndexOf(p => p.Id == playlistId);
+            Playlists.RemoveAt(index);
         }
 
         public async Task Dispose()

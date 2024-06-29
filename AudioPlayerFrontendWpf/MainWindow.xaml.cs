@@ -215,10 +215,11 @@ namespace AudioPlayerFrontend
                 case Key.Enter:
                     if (lbxSongs.SelectedItem is Song)
                     {
-                        bool prepend = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+                        SearchPlaylistAddType addType = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)
+                            ? SearchPlaylistAddType.FristInPlaylist : SearchPlaylistAddType.LastInPlaylist;
                         Song addSong = (Song)lbxSongs.SelectedItem;
-                        service.AddSongsToFirstPlaylist(new Song[] { addSong }, prepend);
-                        service.PlayState = PlaybackState.Playing;
+                        viewModel.SongSearuch.AddSongsToSearchPlaylist(new Song[] { addSong }, addType);
+                        viewModel.PlayState = PlaybackState.Playing;
                     }
                     break;
 

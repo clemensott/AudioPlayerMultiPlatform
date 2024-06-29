@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AudioPlayerBackend.Audio.MediaSource;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -8,11 +9,13 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
     {
         Task<Playlist> GetPlaylist(Guid id);
 
+        Task<FileMediaSource> GetAllFileMediaSources();
+
         Task InsertPlaylist(Playlist playlist, int index);
         event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
 
         Task RemovePlaylist(Guid id);
-        event EventHandler<InsertPlaylistArgs> OnRemovePlaylist;
+        event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
 
         Task SendNameChange(Guid id, string name);
         event EventHandler<PlaylistChangeArgs<string>> OnNameChange;
@@ -40,5 +43,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         Task SendSongsChange(Guid id, IList<Song> songs);
         event EventHandler<PlaylistChangeArgs<IList<Song>>> OnSongsChange;
+
+        Task SendFileMedisSourcesChange(Guid id, IList<FileMediaSource> fileMediaSources);
+        event EventHandler<PlaylistChangeArgs<IList<FileMediaSource>>> OnFileMedisSourcesChange;
     }
 }
