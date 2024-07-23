@@ -77,7 +77,7 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             string[] args = Environment.GetCommandLineArgs().Skip(1).ToArray();
             try
@@ -301,10 +301,10 @@ namespace AudioPlayerFrontend
 
         private void Window_Drop(object sender, DragEventArgs e)
         {
-            if (viewModel.Service?.AudioService != null && e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (audioServices != null && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 string[] sources = (string[])e.Data.GetData(DataFormats.FileDrop);
-                Window addWindow = new AddSourcePlaylistWindow(sources, viewModel.Service.AudioService);
+                Window addWindow = new AddSourcePlaylistWindow(sources, audioServices);
                 addWindow.ShowDialog();
             }
         }

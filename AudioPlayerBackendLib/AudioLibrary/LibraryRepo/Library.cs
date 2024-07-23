@@ -1,6 +1,7 @@
 ﻿using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 {
@@ -13,5 +14,12 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         public Guid? CurrentPlaylistId { get; }
 
         public ICollection<PlaylistInfo> Playlists { get; }
+
+        public PlaylistInfo GetCurrentPlaylist()
+        {
+            if (!CurrentPlaylistId.HasValue) return null;
+
+            return Playlists.First(p => p.Id == CurrentPlaylistId);
+        }
     }
 }

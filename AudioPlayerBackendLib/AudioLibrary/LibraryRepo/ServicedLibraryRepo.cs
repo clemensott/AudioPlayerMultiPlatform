@@ -58,20 +58,6 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
             return baseRepo.SendCurrentPlaylistIdChange(currentPlaylistId);
         }
 
-        public Task SendPlaylistsChange(IList<PlaylistInfo> playlists)
-        {
-            var args = new AudioLibraryChangeArgs<IList<PlaylistInfo>>(playlists);
-            ForEachRepoExcept(repo => repo.OnPlaylistsChange?.Invoke(this, args));
-            return baseRepo.SendPlaylistsChange(playlists);
-        }
-
-        public Task SendFileMediaSourceRootsChange(IList<FileMediaSourceRoot> fileMediaSourceRoots)
-        {
-            var args = new AudioLibraryChangeArgs<IList<FileMediaSourceRoot>>(fileMediaSourceRoots);
-            ForEachRepoExcept(repo => repo.OnFileMediaSourceRootsChange?.Invoke(this, args));
-            return baseRepo.SendFileMediaSourceRootsChange(fileMediaSourceRoots);
-        }
-
         public void Dispose()
         {
             parent.AddRepo(this);

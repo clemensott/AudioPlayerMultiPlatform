@@ -1,5 +1,5 @@
-﻿using AudioPlayerBackend.Audio.MediaSource;
-using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using System;
 using System.Threading.Tasks;
 
@@ -28,7 +28,7 @@ namespace AudioPlayerBackend.FileSystem
 
         Task ReloadSourcePlaylist(Guid id);
 
-        Task<Song[]> ReloadSourcePlaylist(FileMediaSourceRoot[] fileMediaSourceRoots, FileMediaSource[] fileMediaSources);
+        Task<Song[]> ReloadSourcePlaylist(FileMediaSources fileMediaSources);
 
         Task UpdateSourcePlaylist(Guid id);
     }

@@ -1,6 +1,7 @@
-﻿using AudioPlayerBackend.Audio.MediaSource;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 {
@@ -28,11 +29,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         public ICollection<Song> Songs { get; }
 
-        public FileMediaSourceRoot FileMediaSource { get; }
+        public FileMediaSources FileMediaSources { get; }
 
-        public Playlist(Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop, 
+        public Playlist(Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop,
             double playbackRate, TimeSpan position, TimeSpan duration, RequestSong? requestSong,
-            Guid? currentSongId, ICollection<Song> songs, FileMediaSourceRoot fileMediaSource)
+            Guid? currentSongId, ICollection<Song> songs, FileMediaSources fileMediaSources)
         {
             Id = id;
             Type = type;
@@ -45,7 +46,14 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             RequestSong = requestSong;
             CurrentSongId = currentSongId;
             Songs = songs;
-            FileMediaSource = fileMediaSource;
+            FileMediaSources = fileMediaSources;
+        }
+
+        public Song? GetCurrentSong()
+        {
+            if (CurrentSongId == null) return null;
+
+            return Songs.First(s => s.Id == CurrentSongId);
         }
     }
 }

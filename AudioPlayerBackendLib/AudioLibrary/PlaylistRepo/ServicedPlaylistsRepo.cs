@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackend.Audio.MediaSource;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,7 +21,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
         public event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
         public event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
         public event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
-        public event EventHandler<PlaylistChangeArgs<ICollection<FileMediaSource>>> OnFileMedisSourcesChange;
+        public event EventHandler<PlaylistChangeArgs<FileMediaSources>> OnFileMedisSourcesChange;
 
         public ServicedPlaylistsRepo(IPlaylistsRepo baseRepo, IPlaylistsRepoService parent)
         {
@@ -117,10 +117,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             ForEachRepoExcept(repo => repo.OnSongsChange?.Invoke(this, args));
         }
 
-        public async Task SendFileMedisSourcesChange(Guid id, ICollection<FileMediaSource> fileMediaSources)
+        public async Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources)
         {
             await baseRepo.SendFileMedisSourcesChange(id, fileMediaSources);
-            var args = new PlaylistChangeArgs<ICollection<FileMediaSource>>(id, fileMediaSources);
+            var args = new PlaylistChangeArgs<FileMediaSources>(id, fileMediaSources);
             ForEachRepoExcept(repo => repo.OnFileMedisSourcesChange?.Invoke(this, args));
         }
 

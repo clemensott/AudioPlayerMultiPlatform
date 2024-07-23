@@ -2,7 +2,7 @@
 {
     public enum SearchPlaylistAddType
     {
-        FristInPlaylist,
+        FirstInPlaylist,
         LastInPlaylist,
         NextInPlaylist,
     }

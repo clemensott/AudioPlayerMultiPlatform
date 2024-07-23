@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource
 {
     public struct FileMediaSourceRoot
     {
+        public Guid Id { get; }
+
         public FileMediaSourceRootUpdateType UpdateType { get; }
 
         public string Name { get; }
@@ -14,10 +16,18 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource
         public FileMediaSourceRootType Type { get; }
 
         /// <summary>
-        /// Name of KnownFolder or Path in local file system. Depending on Type.
+        /// Path in local file system. Can start with a known folder, e.g. "Music:\Classic"
         /// </summary>
-        public string Value { get; }
+        public string Path { get; }
 
-        public ICollection<FileMediaSource> Sources { get; }
+        public FileMediaSourceRoot(Guid id, FileMediaSourceRootUpdateType updateType, string name,
+            FileMediaSourceRootType type, string path)
+        {
+            Id = id;
+            UpdateType = updateType;
+            Name = name;
+            Type = type;
+            Path = path;
+        }
     }
 }

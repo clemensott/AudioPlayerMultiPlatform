@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -16,9 +15,17 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
         public event EventHandler<PlaylistChangeArgs<TimeSpan>> OnDurationChange;
         public event EventHandler<PlaylistChangeArgs<RequestSong?>> OnRequestSongChange;
         public event EventHandler<PlaylistChangeArgs<Guid?>> OnCurrentSongIdChange;
-        public event EventHandler<PlaylistChangeArgs<IList<Song>>> OnSongsChange;
+        public event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
+        public event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
+        public event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
+        public event EventHandler<PlaylistChangeArgs<FileMediaSources>> OnFileMedisSourcesChange;
 
         public Task<Playlist> GetPlaylist(Guid id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendInsertPlaylist(Playlist playlist, int index)
         {
             throw new NotImplementedException();
         }
@@ -34,6 +41,16 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
         }
 
         public Task SendDurationChange(Guid id, TimeSpan duration)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendRemovePlaylist(Guid id)
         {
             throw new NotImplementedException();
         }
@@ -73,7 +90,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             throw new NotImplementedException();
         }
 
-        public Task SendSongsChange(Guid id, IList<Song> songs)
+        public Task SendSongsChange(Guid id, ICollection<Song> songs)
         {
             throw new NotImplementedException();
         }

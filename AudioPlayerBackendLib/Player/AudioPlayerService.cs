@@ -1,5 +1,6 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using StdOttStandard;
 using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
@@ -27,7 +28,7 @@ namespace AudioPlayerBackend.Player
         private TimeSpan position;
         private RequestSong? requestSong;
         private Guid? currentSongId;
-        private IList<Song> songs;
+        private ICollection<Song> songs;
 
         public IPlayer Player { get; }
 
@@ -172,7 +173,6 @@ namespace AudioPlayerBackend.Player
             libraryRepo.OnCurrentPlaylistIdChange += OnCurrentPlaylistIdChange;
             libraryRepo.OnPlayStateChange += OnPlayStateChange;
             libraryRepo.OnVolumeChange += OnVolumeChange;
-            libraryRepo.OnPlaylistsChange += OnPlaylistsChange;
         }
 
         private void UnsubscribeLibraryRepo()
@@ -180,7 +180,6 @@ namespace AudioPlayerBackend.Player
             libraryRepo.OnCurrentPlaylistIdChange -= OnCurrentPlaylistIdChange;
             libraryRepo.OnPlayStateChange -= OnPlayStateChange;
             libraryRepo.OnVolumeChange -= OnVolumeChange;
-            libraryRepo.OnPlaylistsChange -= OnPlaylistsChange;
         }
 
         private async void OnCurrentPlaylistIdChange(object sender, AudioLibraryChangeArgs<Guid?> e)
@@ -205,13 +204,10 @@ namespace AudioPlayerBackend.Player
             Player.PlaybackRate = e.NewValue;
         }
 
-        private void OnPlaylistsChange(object sender, AudioLibraryChangeArgs<IList<PlaylistInfo>> e)
-        {
-            playlistIds = e.NewValue.Select(p => p.Id).ToArray();
-        }
-
         private void SubscribePlaylistsRepo()
         {
+            playlistsRepo.OnInsertPlaylist += OnInsertPlaylist;
+            playlistsRepo.OnRemovePlaylist += OnRemovePlaylist;
             playlistsRepo.OnPositionChange += OnPositionChange;
             playlistsRepo.OnPlaybackRateChange += OnPlaybackRateChange;
             playlistsRepo.OnRequestSongChange += OnRequestSongChange;
@@ -220,10 +216,22 @@ namespace AudioPlayerBackend.Player
 
         private void UnsubscribePlaylistsRepo()
         {
-            playlistsRepo.OnPositionChange += OnPositionChange;
-            playlistsRepo.OnPlaybackRateChange += OnPlaybackRateChange;
-            playlistsRepo.OnRequestSongChange += OnRequestSongChange;
-            playlistsRepo.OnSongsChange += OnSongsChange;
+            playlistsRepo.OnInsertPlaylist -= OnInsertPlaylist;
+            playlistsRepo.OnRemovePlaylist -= OnRemovePlaylist;
+            playlistsRepo.OnPositionChange -= OnPositionChange;
+            playlistsRepo.OnPlaybackRateChange -= OnPlaybackRateChange;
+            playlistsRepo.OnRequestSongChange -= OnRequestSongChange;
+            playlistsRepo.OnSongsChange -= OnSongsChange;
+        }
+
+        private void OnInsertPlaylist(object sender, InsertPlaylistArgs e)
+        {
+            playlistIds.Insert(e.Index, e.Playlist.Id);
+        }
+
+        private void OnRemovePlaylist(object sender, RemovePlaylistArgs e)
+        {
+            playlistIds.Remove(e.Id);
         }
 
         private void OnPositionChange(object sender, PlaylistChangeArgs<TimeSpan> e)
@@ -240,7 +248,7 @@ namespace AudioPlayerBackend.Player
             }
         }
 
-        private async void OnSongsChange(object sender, PlaylistChangeArgs<System.Collections.Generic.IList<Song>> e)
+        private async void OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
         {
             if (e.Id == currentPlaylistId)
             {

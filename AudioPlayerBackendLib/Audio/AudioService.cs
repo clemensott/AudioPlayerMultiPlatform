@@ -395,12 +395,12 @@ namespace AudioPlayerBackend.Audio
             }
             else if (currentPlaylist.Loop == LoopType.Next)
             {
-                CurrentPlaylist = this.GetAllPlaylists().Next(currentPlaylist).next;
+                //CurrentPlaylist = this.GetAllPlaylists().Next(currentPlaylist).next;
                 ChangeCurrentSongOrRestart(currentPlaylist, newCurrentSong);
             }
             else if (currentPlaylist.Loop == LoopType.Stop)
             {
-                CurrentPlaylist = this.GetAllPlaylists().Next(currentPlaylist).next;
+                //CurrentPlaylist = this.GetAllPlaylists().Next(currentPlaylist).next;
                 PlayState = PlaybackState.Paused;
                 ChangeCurrentSongOrRestart(currentPlaylist, newCurrentSong);
             }

@@ -3,7 +3,8 @@
     public enum FileMediaSourceRootUpdateType
     {
         NoUpdate,
-        OnlySongs,
-        All,
+        Songs,
+        Files,
+        FilesAndFolders
     }
 }

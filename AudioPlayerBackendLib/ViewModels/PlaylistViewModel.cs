@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+﻿using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,13 +14,14 @@ namespace AudioPlayerBackend.ViewModels
         private readonly IServicedPlaylistsRepo playlistsRepo;
         private bool isRunning, isLoaded;
         private Guid? id;
+        private PlaylistType type;
         private string name;
         private OrderType shuffle;
         private LoopType loop;
         private double playbackRate;
         private TimeSpan position, duration;
         private Song? currentSong;
-        private IList<Song> songs;
+        private ICollection<Song> songs;
 
         public bool IsLoaded
         {
@@ -42,6 +44,18 @@ namespace AudioPlayerBackend.ViewModels
 
                 id = value;
                 OnPropertyChanged(nameof(Id));
+            }
+        }
+
+        public PlaylistType Type
+        {
+            get => type;
+            private set
+            {
+                if (value == type) return;
+
+                type = value;
+                OnPropertyChanged(nameof(Type));
             }
         }
 
@@ -129,7 +143,7 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public IList<Song> Songs
+        public ICollection<Song> Songs
         {
             get => songs;
             private set

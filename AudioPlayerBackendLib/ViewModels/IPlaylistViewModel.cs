@@ -27,7 +27,7 @@ namespace AudioPlayerBackend.ViewModels
 
         Song? CurrentSong { get; }
 
-        IList<Song> Songs { get; }
+        ICollection<Song> Songs { get; }
 
         Task SetPlaylistId(Guid? id);
 

@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackend.Audio.MediaSource;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -42,7 +42,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
         Task SendSongsChange(Guid id, ICollection<Song> songs);
         event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
 
-        Task SendFileMedisSourcesChange(Guid id, ICollection<FileMediaSource> fileMediaSources);
-        event EventHandler<PlaylistChangeArgs<ICollection<FileMediaSource>>> OnFileMedisSourcesChange;
+        Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources);
+        event EventHandler<PlaylistChangeArgs<FileMediaSources>> OnFileMedisSourcesChange;
     }
 }
