@@ -216,7 +216,7 @@ namespace AudioPlayerFrontend
                     if (lbxSongs.SelectedItem is Song)
                     {
                         SearchPlaylistAddType addType = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)
-                            ? SearchPlaylistAddType.FristInPlaylist : SearchPlaylistAddType.LastInPlaylist;
+                            ? SearchPlaylistAddType.FirstInPlaylist : SearchPlaylistAddType.LastInPlaylist;
                         Song addSong = (Song)lbxSongs.SelectedItem;
                         viewModel.SongSearuch.AddSongsToSearchPlaylist(new Song[] { addSong }, addType);
                         viewModel.PlayState = PlaybackState.Playing;
@@ -253,9 +253,9 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private void OnPrevious(object sender, EventArgs e)
+        private async void OnPrevious(object sender, EventArgs e)
         {
-            viewModel.CurrentPlaylist.SetPreviousSong();
+            await viewModel.CurrentPlaylist.SetPreviousSong();
         }
 
         private void OnTogglePlayPause(object sender, EventArgs e)
@@ -263,9 +263,9 @@ namespace AudioPlayerFrontend
             viewModel.SetTogglePlayState();
         }
 
-        private void OnNext(object sender, EventArgs e)
+        private async void OnNext(object sender, EventArgs e)
         {
-            viewModel.CurrentPlaylist.SetNextSong();
+            await viewModel.CurrentPlaylist.SetNextSong();
         }
 
         private void OnPlay(object sender, EventArgs e)
@@ -436,11 +436,11 @@ namespace AudioPlayerFrontend
             double durationSeconds = slider.Maximum;
             IPlaylistViewModel currentPlaylist = viewModel.CurrentPlaylist;
 
-            if (currentPlaylist.Id.HasValue && currentPlaylist.CurrentSong.HasValue &&
+            if (currentPlaylist.Id.HasValue && currentPlaylist.CurrentSong.TryHasValue(out Song currentSong) &&
                 Math.Abs(currentPlaylist.Duration.TotalSeconds - durationSeconds) < 0.01 &&
                 Math.Abs(currentPlaylist.Position.TotalSeconds - positionSeconds) > 0.01)
             {
-                currentPlaylist.SendRequestSong(RequestSong.Get(currentPlaylist.CurrentSong.Value, TimeSpan.FromSeconds(positionSeconds)));
+                currentPlaylist.SendRequestSong(RequestSong.Get(currentSong, TimeSpan.FromSeconds(positionSeconds)));
             }
         }
     }

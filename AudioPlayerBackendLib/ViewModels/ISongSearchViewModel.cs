@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.ViewModels
 {
-    public interface ISongSearchViewModel : INotifyPropertyChanged
+    public interface ISongSearchViewModel : IAudioService, INotifyPropertyChanged
     {
         bool IsEnabled { get; }
 
@@ -16,12 +16,6 @@ namespace AudioPlayerBackend.ViewModels
         string SearchKey { get; set; }
 
         IEnumerable<Song> SearchSongs { get; }
-
-        void Enable();
-
-        void Disable();
-
-        void Dispose();
 
         Task AddSongsToSearchPlaylist(IEnumerable<Song> songs, SearchPlaylistAddType addType);
     }

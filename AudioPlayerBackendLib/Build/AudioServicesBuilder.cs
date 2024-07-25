@@ -207,8 +207,7 @@ namespace AudioPlayerBackend.Build
             ISongSearchViewModel songSearchViewModel = libraryViewModel.SongSearuch;
             if (config.IsSearchShuffle.HasValue)
             {
-                if (config.IsSearchShuffle.Value) songSearchViewModel.Enable();
-                else songSearchViewModel.Disable();
+                songSearchViewModel.IsSearchShuffle = config.IsSearchShuffle.Value;
             };
             if (config.SearchKey != null) songSearchViewModel.SearchKey = config.SearchKey;
         }

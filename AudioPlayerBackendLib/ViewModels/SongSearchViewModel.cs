@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.ViewModels
@@ -16,28 +17,126 @@ namespace AudioPlayerBackend.ViewModels
         private readonly IServicedLibraryRepo libraryRepo;
         private readonly IServicedPlaylistsRepo playlistsRepo;
 
-        public bool IsEnabled => throw new NotImplementedException();
+        private readonly IDictionary<Guid, ICollection<Song>> allSongs;
 
-        public bool IsSearching => throw new NotImplementedException();
+
+        private bool isEnabled, isSearching, isSearchShuffle;
+        private string searchKey;
+        private IEnumerable<Song> searchSongs;
+
+        public bool IsEnabled
+        {
+            get => isEnabled;
+            private set
+            {
+                if (value == isEnabled) return;
+
+                isEnabled = value;
+                OnPropertyChanged(nameof(IsEnabled));
+            }
+        }
+
+        public bool IsSearching
+        {
+            get => isSearching;
+            private set
+            {
+                if (value == isSearching) return;
+
+                isSearching = value;
+                OnPropertyChanged(nameof(IsSearching));
+            }
+        }
 
         public bool IsSearchShuffle
         {
-            get => throw new NotImplementedException();
-            set => throw new NotImplementedException();
+            get => isSearchShuffle;
+            set
+            {
+                if (value == isSearchShuffle) return;
+
+                isSearchShuffle = value;
+                OnPropertyChanged(nameof(IsSearchShuffle));
+            }
         }
 
         public string SearchKey
         {
-            get => throw new NotImplementedException();
-            set => throw new NotImplementedException();
+            get => searchKey;
+            set
+            {
+                if (value == searchKey) return;
+
+                searchKey = value;
+                OnPropertyChanged(nameof(SearchKey));
+
+                IsSearching = SongsHelper.GetIsSearching(SearchKey);
+                UpdateSearchSongs();
+            }
         }
 
-        public IEnumerable<Song> SearchSongs => throw new NotImplementedException();
+        public IEnumerable<Song> SearchSongs
+        {
+            get => searchSongs;
+            private set
+            {
+                if (value == searchSongs) return;
+
+                searchSongs = value;
+                OnPropertyChanged(nameof(SearchSongs));
+            }
+        }
 
         public SongSearchViewModel(IServicedLibraryRepo libraryRepo, IServicedPlaylistsRepo playlistsRepo)
         {
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
+
+            allSongs = new Dictionary<Guid, ICollection<Song>>();
+            SearchSongs = Enumerable.Empty<Song>();
+        }
+
+        private async Task AddSongsToNewSearchPlaylist(IEnumerable<Song> songs, SearchPlaylistAddType addType, Guid? currentPlaylistId)
+        {
+            bool setNextSongInOldPlaylist;
+            TimeSpan position, duration;
+            RequestSong? requestedSong;
+            ICollection<Song> newSongs;
+
+            Playlist currentPlaylist = currentPlaylistId.TryHasValue(out Guid id) ? await playlistsRepo.GetPlaylist(id) : null;
+            Song? currentSong = currentPlaylist?.GetCurrentSong();
+
+            if (addType == SearchPlaylistAddType.FirstInPlaylist || !currentSong.HasValue)
+            {
+                setNextSongInOldPlaylist = false;
+
+                newSongs = songs.ToArray();
+                requestedSong = RequestSong.Start(songs.First());
+                position = currentPlaylist.Position;
+                duration = currentPlaylist.Duration;
+            }
+            else
+            {
+                setNextSongInOldPlaylist = true;
+
+                requestedSong = RequestSong.Get(currentSong.Value, null, currentPlaylist.Duration);
+                newSongs = songs.Insert(0, currentSong.Value).ToArray();
+            }
+
+            Playlist playlist = new Playlist(Guid.NewGuid(), PlaylistType.Custom | PlaylistType.Search, "Custom",
+                OrderType.Custom, LoopType.Next, 1, position, duration, requestedSong, null, newSongs, null);
+
+            await playlistsRepo.SendInsertPlaylist(playlist, -1);
+            await libraryRepo.SendCurrentPlaylistIdChange(playlist.Id);
+
+            if (setNextSongInOldPlaylist)
+            {
+                await playlistsRepo.SendCurrentSongIdChange(currentPlaylist.Id,
+                    currentPlaylist.Songs.Cast<Song?>().NextOrDefault(currentSong).next?.Id);
+
+                await playlistsRepo.SendPositionChange(currentPlaylist.Id, TimeSpan.Zero);
+                await playlistsRepo.SendRequestSongChange(currentPlaylist.Id, RequestSong.Start(currentSong));
+            }
         }
 
         private async Task AddSongsToSearchPlaylist(IEnumerable<Song> songs, SearchPlaylistAddType addType, PlaylistInfo searchPlaylist)
@@ -100,34 +199,7 @@ namespace AudioPlayerBackend.ViewModels
 
             if (searchPlaylist == null)
             {
-                IPlaylist playlist = AudioPlayerServiceProvider.Current.GetAudioCreateService().CreatePlaylist(Guid.NewGuid());
-                playlist.Name = "Custom";
-                playlist.Loop = LoopType.Next;
-                playlist.Shuffle = OrderType.Custom;
-
-                if (prepend || !currentSong.HasValue)
-                {
-                    playlist.Songs = songs.ToArray();
-                    playlist.WannaSong = RequestSong.Start(songs.First());
-                    playlist.Duration = currentPlaylist.Duration;
-                    playlist.Position = currentPlaylist.Position;
-
-                    service.Playlists.Add(playlist);
-                    service.CurrentPlaylist = playlist;
-                }
-                else
-                {
-                    playlist.Songs = songs.Insert(0, currentSong.Value).ToArray();
-                    playlist.WannaSong = RequestSong.Get(currentSong.Value, null, currentPlaylist.Duration);
-
-                    service.Playlists.Add(playlist);
-                    service.CurrentPlaylist = playlist;
-
-                    currentPlaylist.CurrentSong = currentPlaylist.Songs.Cast<Song?>()
-                        .NextOrDefault(currentSong).next;
-                    currentPlaylist.Position = TimeSpan.Zero;
-                    currentPlaylist.WannaSong = RequestSong.Start(currentPlaylist.CurrentSong);
-                }
+                await AddSongsToNewSearchPlaylist(songs, addType, library.CurrentPlaylistId);
             }
             else if (searchPlaylist.Id == library.CurrentPlaylistId)
             {
@@ -139,19 +211,67 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public void Disable()
+        private async Task UpdateSearchSongs()
         {
-            throw new NotImplementedException();
+            string searchKey = SearchKey;
+            Song[] searchSongs = await Task.Run(() =>
+            {
+                // TODO shuffle songs before hand and not every search
+                IEnumerable<Song> shuffledSongs = SongsHelper.GetShuffledSongs(allSongs.Values);
+                return SongsHelper.GetSearchSongs(shuffledSongs, IsSearchShuffle, searchKey).Take(50).ToArray();
+            });
+            if (searchKey == SearchKey) SearchSongs = searchSongs;
         }
 
-        public void Dispose()
+        public async Task Start()
         {
-            throw new NotImplementedException();
+            IsEnabled = true;
+            SubscribePlaylistsRepo();
+
+            await LoadAllSongs();
         }
 
-        public void Enable()
+        private void SubscribePlaylistsRepo()
         {
-            throw new NotImplementedException();
+            playlistsRepo.OnSongsChange += OnSongsChange;
+        }
+
+        private void UnsubscribePlaylistsRepo()
+        {
+            playlistsRepo.OnSongsChange -= OnSongsChange;
+        }
+
+        private void OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
+        {
+            allSongs[e.Id] = e.NewValue;
+        }
+
+        private async Task LoadAllSongs()
+        {
+            Library library = await libraryRepo.GetLibrary();
+            foreach (Guid id in library.Playlists.Where(p => p.Type.HasFlag(PlaylistType.SourcePlaylist)).Select(p => p.Id))
+            {
+                Playlist playlist = await playlistsRepo.GetPlaylist(id);
+                allSongs[playlist.Id] = playlist.Songs;
+            }
+        }
+
+        public async Task Stop()
+        {
+            IsEnabled = false;
+            UnsubscribePlaylistsRepo();
+            allSongs.Clear();
+            SearchSongs = Enumerable.Empty<Song>();
+
+            await Task.CompletedTask;
+        }
+
+        public async Task Dispose()
+        {
+            await Stop();
+
+            libraryRepo.Dispose();
+            playlistsRepo.Dispose();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

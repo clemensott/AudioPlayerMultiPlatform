@@ -1,18 +1,19 @@
-﻿using StdOttStandard.Linq;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using StdOttStandard.Linq;
 using StdOttStandard.Linq.Sort;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AudioPlayerBackend.Audio
+namespace AudioPlayerBackend.AudioLibrary
 {
     static class SongsHelper
     {
         private static readonly Random ran = new Random();
 
-        public static IEnumerable<Song> GetShuffledSongs(IEnumerable<IPlaylistBase> playlists)
+        public static IEnumerable<Song> GetShuffledSongs(IEnumerable<IEnumerable<Song>> allSongs)
         {
-            return playlists.SelectMany(p => p.Songs).Distinct().OrderBy(s => ran.Next());
+            return allSongs.SelectMany(songs => songs).Distinct().OrderBy(s => ran.Next());
         }
 
         public static bool GetIsSearching(string searchKey)
@@ -20,7 +21,7 @@ namespace AudioPlayerBackend.Audio
             return !string.IsNullOrEmpty(searchKey);
         }
 
-        public static IEnumerable<Song> GetAllSongs(IPlaylistBase playlist)
+        public static IEnumerable<Song> GetAllSongs(Playlist playlist)
         {
             return GetAllSongs(playlist.Songs, playlist.Shuffle);
         }
@@ -40,11 +41,6 @@ namespace AudioPlayerBackend.Audio
             }
 
             throw new ArgumentException("Type is not implemented: " + shuffle, nameof(shuffle));
-        }
-
-        public static IEnumerable<Song> GetSearchSongs(IAudioService service)
-        {
-            return GetSearchSongs(service.AllSongs, service.IsSearchShuffle, service.SearchKey);
         }
 
         public static IEnumerable<Song> GetSearchSongs(IEnumerable<Song> allSongsShuffled, bool isSearchShuffle, string searchKey)
@@ -125,20 +121,20 @@ namespace AudioPlayerBackend.Audio
             return (found ? (Song?)next : null, overflow);
         }
 
-        public static (Song? song, bool overflow) GetNextSong(IPlaylistBase playlist, Song? currentSong = null)
+        public static (Song? song, bool overflow) GetNextSong(Playlist playlist, Song? currentSong = null)
         {
-            if (!currentSong.HasValue) currentSong = playlist?.CurrentSong;
+            if (!currentSong.HasValue) currentSong = playlist?.GetCurrentSong();
             return GetNextSong(playlist.Songs, playlist.Shuffle, currentSong);
         }
 
-        public static (Song? song, bool underflow) GetPreviousSong(IPlaylistBase playlist)
+        public static (Song? song, bool underflow) GetPreviousSong(IEnumerable<Song> allSongsShuffled, OrderType shuffle, Song? currentSong)
         {
-            if (!(playlist?.CurrentSong).HasValue) return (null, false);
+            if (!currentSong.HasValue) return (null, false);
 
-            (Song next, bool found, bool underflow) = GetAllSongs(playlist)
-                .PreviousOrDefault(playlist.CurrentSong.Value);
+            (Song previous, bool found, bool underflow) = GetAllSongs(allSongsShuffled, shuffle)
+                .PreviousOrDefault(currentSong.Value);
 
-            return (found ? (Song?)next : null, underflow);
+            return (found ? (Song?)previous : null, underflow);
         }
     }
 }
