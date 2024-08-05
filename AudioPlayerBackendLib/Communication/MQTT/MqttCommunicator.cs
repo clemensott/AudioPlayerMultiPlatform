@@ -475,12 +475,12 @@ namespace AudioPlayerBackend.Communication.MQTT
 
                         case "next":
                             service = Service as IAudioService;
-                            if (service != null) service.SetNextSong();
+                            //if (service != null) service.SetNextSong();
                             break;
 
                         case "previous":
                             service = Service as IAudioService;
-                            if (service != null) service.SetPreviousSong();
+                            //if (service != null) service.SetPreviousSong();
                             break;
 
                         default:

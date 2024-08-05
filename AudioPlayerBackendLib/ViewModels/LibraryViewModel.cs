@@ -87,7 +87,7 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public ISongSearchViewModel SongSearuch { get; }
+        public ISongSearchViewModel SongSearch { get; }
 
         public LibraryViewModel(AudioServicesBuildConfig config, IServicedLibraryRepo libraryRepo,
             IServicedPlaylistsRepo playlistsRepo, IPlaylistViewModel playlistViewModel,
@@ -97,7 +97,8 @@ namespace AudioPlayerBackend.ViewModels
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
             CurrentPlaylist = playlistViewModel;
-            SongSearuch = songSearchViewModel;
+            SongSearch = songSearchViewModel;
+            Playlists = new ObservableCollection<PlaylistInfo>();
         }
 
         public async Task Start()
@@ -192,7 +193,7 @@ namespace AudioPlayerBackend.ViewModels
         {
             libraryRepo.Dispose();
             await CurrentPlaylist.Dispose();
-            SongSearuch.Dispose();
+            SongSearch.Dispose();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

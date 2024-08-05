@@ -12,7 +12,7 @@ namespace AudioPlayerBackend.ViewModels
         Guid? Id { get; }
 
         string Name { get; }
-        
+
         PlaylistType Type { get; }
 
         OrderType Shuffle { get; set; }
@@ -26,6 +26,8 @@ namespace AudioPlayerBackend.ViewModels
         TimeSpan Duration { get; }
 
         Song? CurrentSong { get; }
+
+        RequestSong? RequestedSong { get; set; }
 
         ICollection<Song> Songs { get; }
 

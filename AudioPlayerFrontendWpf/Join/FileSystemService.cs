@@ -1,5 +1,5 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Audio.MediaSource;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.FileSystem;
 using StdOttStandard.Linq;
 using System;
@@ -13,6 +13,12 @@ namespace AudioPlayerFrontend.Join
     class FileSystemService : IFileSystemService
     {
         private static readonly Random ran = new Random();
+        private readonly IServicedPlaylistsRepo playlistsRepo;
+
+        public FileSystemService(IServicedPlaylistsRepo playlistsRepo)
+        {
+            this.playlistsRepo = playlistsRepo;
+        }
 
         public Task<string> ReadTextFile(string fileName)
         {
@@ -25,35 +31,61 @@ namespace AudioPlayerFrontend.Join
             return Task.CompletedTask;
         }
 
-        public async Task UpdateSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots)
+        public Task UpdateLibrary()
         {
-            List<Song> songs = playlist.Songs.ToList();
-            playlist.Songs = await Task.Run(() =>
+            return ReloadLibrary();
+        }
+
+        public Task ReloadLibrary()
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task UpdateSourcePlaylist(Guid id)
+        {
+            Playlist playlist = await playlistsRepo.GetPlaylist(id);
+            List<Song> oldSongs = playlist.Songs?.ToList() ?? new List<Song>();
+            Song[] newSongs = await Task.Run(() =>
             {
-                IEnumerable<string> allFiles = LoadAllFilePaths(playlist.FileMediaSources, roots);
+                IEnumerable<string> allFiles = LoadAllFilePaths(playlist.FileMediaSources);
                 Dictionary<string, string> dict = allFiles.Distinct().ToDictionary(f => f);
 
-                for (int i = songs.Count - 1; i >= 0; i--)
+                for (int i = oldSongs.Count - 1; i >= 0; i--)
                 {
-                    if (dict.ContainsKey(songs[i].FullPath)) dict.Remove(songs[i].FullPath);
-                    else songs.RemoveAt(i);
+                    if (dict.ContainsKey(oldSongs[i].FullPath)) dict.Remove(oldSongs[i].FullPath);
+                    else oldSongs.RemoveAt(i);
                 }
 
                 foreach (Song song in dict.Keys.Select(CreateSong))
                 {
-                    songs.Insert(ran.Next(songs.Count + 1), song);
+                    oldSongs.Insert(ran.Next(oldSongs.Count + 1), song);
                 }
 
-                return songs.ToArray();
+                return oldSongs.ToArray();
             });
+
+            await playlistsRepo.SendSongsChange(id, newSongs);
         }
 
-        public async Task ReloadSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots)
+        public async Task ReloadSourcePlaylist(Guid id)
         {
-            List<Song> songs = playlist.Songs.ToList();
-            playlist.Songs = await Task.Run(() =>
+            Playlist playlist = await playlistsRepo.GetPlaylist(id);
+            Song[] newSongs = await ReloadSourcePlaylist(playlist.FileMediaSources);
+
+            await playlistsRepo.SendSongsChange(id, newSongs);
+        }
+
+        public Task<Song[]> ReloadSourcePlaylist(FileMediaSources fileMediaSources)
+        {
+            return ReloadSourcePlaylist(fileMediaSources, null);
+        }
+
+        private Task<Song[]> ReloadSourcePlaylist(FileMediaSources fileMediaSources, IEnumerable<Song> oldSongs)
+        {
+            List<Song> songs = oldSongs?.ToList() ?? new List<Song>();
+            return Task.Run(() =>
             {
-                IEnumerable<string> allFiles = LoadAllFilePaths(playlist.FileMediaSources, roots);
+                IEnumerable<string> allFiles = LoadAllFilePaths(fileMediaSources);
                 IEnumerable<Song> allSongs = allFiles.Distinct().Select(CreateSong);
                 Dictionary<string, Song> loadedSongs = allSongs.ToDictionary(s => s.FullPath);
 
@@ -77,12 +109,12 @@ namespace AudioPlayerFrontend.Join
             });
         }
 
-        private IEnumerable<string> LoadAllFilePaths(FileMediaSource[] sources, FileMediaSourceRoot[] roots)
+        private IEnumerable<string> LoadAllFilePaths(FileMediaSources sources)
         {
             try
             {
-                return sources.ToNotNull()
-                    .Select(s => GetFileMediaSourcePath(s, roots))
+                return sources.Sources
+                    .Select(s => GetFileMediaSourcePath(s, sources.Root))
                     .Where(p => !string.IsNullOrWhiteSpace(p))
                     .SelectMany(LoadFilePaths).ToArray();
             }
@@ -92,10 +124,8 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        private string GetFileMediaSourcePath(FileMediaSource source, FileMediaSourceRoot[] roots)
+        private string GetFileMediaSourcePath(FileMediaSource source, FileMediaSourceRoot root)
         {
-            if (!roots.ToNotNull().TryFirst(r => r.Id == source.RootId, out FileMediaSourceRoot root)) return null;
-
             string rootPath = GetPathFromFileMediaSourceRoot(root);
             if (string.IsNullOrWhiteSpace(rootPath)) return null;
 
@@ -107,11 +137,11 @@ namespace AudioPlayerFrontend.Join
             switch (root.Type)
             {
                 case FileMediaSourceRootType.Path:
-                    return root.Value;
+                    return root.Path;
 
                 case FileMediaSourceRootType.KnownFolder:
                     return GetLocalKnownFolders()
-                        .TryFirst(f => f.Value == root.Value, out LocalKnownFolder folder)
+                        .TryFirst(f => f.Value == root.Path, out LocalKnownFolder folder)
                         ? folder.CurrentFullPath : null;
 
                 default:

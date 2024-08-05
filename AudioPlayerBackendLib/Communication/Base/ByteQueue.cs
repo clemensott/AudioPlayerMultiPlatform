@@ -388,8 +388,8 @@ namespace AudioPlayerBackend.Communication.Base
             service.Playlists = DequeuePlaylists(createPlaylistFunc);
 
             Guid currentPlaylistId = DequeueGuid();
-            service.CurrentPlaylist = service.GetAllPlaylists()
-                .FirstOrDefault(p => p.ID == currentPlaylistId) ?? service.GetAllPlaylists().FirstOrDefault();
+            //service.CurrentPlaylist = service.GetAllPlaylists()
+                //.FirstOrDefault(p => p.ID == currentPlaylistId) ?? service.GetAllPlaylists().FirstOrDefault();
 
             service.Volume = DequeueFloat();
             service.PlayState = (PlaybackState)DequeueInt();

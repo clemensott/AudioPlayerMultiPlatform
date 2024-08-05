@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AudioPlayerFrontend"
         xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
-        xmlns:audio="clr-namespace:AudioPlayerBackend.Audio;assembly=AudioPlayerBackendLib"
+        xmlns:audio="clr-namespace:AudioPlayerBackend.AudioLibrary.PlaylistRepo;assembly=AudioPlayerBackendLib"
         mc:Ignorable="d"
         Title="AddSourcePlaylistWindow" MinHeight="400" MinWidth="400" Height="450" Width="700"
         Loaded="Window_Loaded" Unloaded="Window_Unloaded">

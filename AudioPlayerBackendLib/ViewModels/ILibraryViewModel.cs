@@ -21,7 +21,7 @@ namespace AudioPlayerBackend.ViewModels
 
         ObservableCollection<PlaylistInfo> Playlists { get; }
 
-        ISongSearchViewModel SongSearuch { get; }
+        ISongSearchViewModel SongSearch { get; }
 
         double Volume { get; set; }
 

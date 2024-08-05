@@ -66,15 +66,15 @@ namespace AudioPlayerBackend.Build
 
         private async Task SetAudioServices(AudioServices audioServices)
         {
-            foreach (ICommunicator communicator in this.audioServices?.GetCommunicators().ToNotNull())
+            foreach (ICommunicator communicator in (this.audioServices?.GetCommunicators()).ToNotNull())
             {
                 communicator.Disconnected -= OnDisconnected;
             }
 
-            await (this.audioServices.Dispose() ?? Task.CompletedTask);
+            await (this.audioServices?.Dispose() ?? Task.CompletedTask);
             this.audioServices = audioServices;
 
-            foreach (ICommunicator communicator in this.audioServices?.GetCommunicators().ToNotNull())
+            foreach (ICommunicator communicator in (this.audioServices?.GetCommunicators()).ToNotNull())
             {
                 communicator.Disconnected += OnDisconnected;
             }

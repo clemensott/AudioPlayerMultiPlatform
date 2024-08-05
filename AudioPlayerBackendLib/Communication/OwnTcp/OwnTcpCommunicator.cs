@@ -371,12 +371,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                         case "next":
                             service = Service as IAudioService;
-                            service?.SetNextSong();
+                            //service?.SetNextSong();
                             break;
 
                         case "previous":
                             service = Service as IAudioService;
-                            service?.SetPreviousSong();
+                            //service?.SetPreviousSong();
                             break;
 
                         default:

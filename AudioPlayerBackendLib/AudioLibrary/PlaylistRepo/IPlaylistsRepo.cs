@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 {
-    public interface IPlaylistsRepo
+    public interface IPlaylistsRepo : IAudioService
     {
         Task<Playlist> GetPlaylist(Guid id);
 

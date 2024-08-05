@@ -5,7 +5,7 @@ namespace AudioPlayerBackend.AudioLibrary
 {
     internal class RepoService<T>
     {
-        private readonly IList<T> repos;
+        private readonly IList<T> repos = new List<T>();
 
         public IEnumerable<T> GetRepos()
         {

@@ -90,8 +90,6 @@ namespace AudioPlayerFrontend
             {
                 PlaylistInfo selectedPlaylistInfo = (PlaylistInfo)lbxPlaylists.SelectedItem;
                 string[] newAllPaths;
-                FileMediaSourceRoot[] newAllRoots;
-                FileMediaSource[] newFileMediaSources;
                 if (rbnAppend.IsChecked == true)
                 {
                     Playlist playlist = await viewModel.PlaylistsRepo.GetPlaylist(selectedPlaylistInfo.Id);
@@ -103,7 +101,7 @@ namespace AudioPlayerFrontend
                 }
 
                 FileMediaSources fileMediaSources = FileMediaSourcesHelper.ExtractFileMediaSources(newAllPaths);
-                await viewModel.PlaylistsRepo.SendFileMedisSourcesChange(selectedPlaylistInfo.Id, newFileMediaSources);
+                await viewModel.PlaylistsRepo.SendFileMedisSourcesChange(selectedPlaylistInfo.Id, fileMediaSources);
                 await fileSystemService.UpdateSourcePlaylist(selectedPlaylistInfo.Id);
             }
 

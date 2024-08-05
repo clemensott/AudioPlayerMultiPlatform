@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.Audio.MediaSource;
-using AudioPlayerBackend.Player;
+﻿using AudioPlayerBackend.Player;
 using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
@@ -20,7 +19,6 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
         public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
         public event EventHandler<AudioLibraryChangeArgs<IList<PlaylistInfo>>> OnPlaylistsChange;
-        public event EventHandler<AudioLibraryChangeArgs<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
 
         public ServicedLibraryRepo(ILibraryRepo baseRepo, ILibraryRepoService parent)
         {
@@ -63,6 +61,22 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         public void Dispose()
         {
             parent.AddRepo(this);
+        }
+
+        public Task Start()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task Stop()
+        {
+            throw new NotImplementedException();
+        }
+
+        Task IAudioService.Dispose()
+        {
+            Dispose();
+            return Task.CompletedTask;
         }
     }
 }

@@ -25,8 +25,11 @@ namespace AudioPlayerBackend.Build
 
         public IEnumerable<ICommunicator> GetCommunicators()
         {
-            yield return ServiceProvider.GetService<IClientCommunicator>();
-            yield return ServiceProvider.GetService<IServerCommunicator>();
+            IClientCommunicator client = ServiceProvider.GetService<IClientCommunicator>();
+            if (client != null) yield return client;
+
+            IServerCommunicator server = ServiceProvider.GetService<IServerCommunicator>();
+            if (server != null) yield return server;
         }
 
         public ILibraryViewModel GetViewModel()

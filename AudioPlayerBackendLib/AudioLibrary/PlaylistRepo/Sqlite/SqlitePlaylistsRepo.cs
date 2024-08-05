@@ -94,5 +94,20 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         {
             throw new NotImplementedException();
         }
+
+        public Task Start()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task Stop()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task Dispose()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

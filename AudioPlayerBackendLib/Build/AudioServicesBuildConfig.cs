@@ -21,8 +21,6 @@ namespace AudioPlayerBackend.Build
         private float? volume;
         private CommunicatorProtocol communicatorProtocol;
         private ServiceCollection additionalServices;
-        private readonly IPlayerCreateService playerCreateService;
-        private readonly IInvokeDispatcherService dispatcher;
 
         public bool BuildStandalone { get; private set; }
 
@@ -176,8 +174,7 @@ namespace AudioPlayerBackend.Build
 
         public AudioServicesBuildConfig()
         {
-            playerCreateService = AudioPlayerServiceProvider.Current.GetPlayerCreateService();
-            dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
+            additionalServices = new ServiceCollection();
 
             WithStandalone();
         }
@@ -234,8 +231,8 @@ namespace AudioPlayerBackend.Build
         {
             //return WithShuffle(GetSharedValueOrNull(viewModel.GetAllPlaylists().Select(p => p.Shuffle)))
             return WithShuffle(null)
-                .WithIsSearchShuffle(viewModel.SongSearuch.IsSearchShuffle)
-                .WithSearchKey(viewModel.SongSearuch.SearchKey)
+                .WithIsSearchShuffle(viewModel.SongSearch.IsSearchShuffle)
+                .WithSearchKey(viewModel.SongSearch.SearchKey)
                 //.WithPlay(service.PlayState == PlaybackState.Playing)
                 .WithVolume((float)viewModel.Volume);
         }
@@ -379,9 +376,7 @@ namespace AudioPlayerBackend.Build
 
         private void OnPropertyChanged(string name)
         {
-            if (PropertyChanged == null) return;
-
-            dispatcher.InvokeDispatcher(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

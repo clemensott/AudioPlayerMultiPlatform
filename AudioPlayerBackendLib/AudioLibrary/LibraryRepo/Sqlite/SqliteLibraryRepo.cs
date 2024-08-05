@@ -1,6 +1,4 @@
-﻿using AudioPlayerBackend.Audio.MediaSource;
-using AudioPlayerBackend.AudioLibrary.LibraryRepo;
-using AudioPlayerBackend.Player;
+﻿using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -13,7 +11,6 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
         public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
         public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
         public event EventHandler<AudioLibraryChangeArgs<IList<PlaylistInfo>>> OnPlaylistsChange;
-        public event EventHandler<AudioLibraryChangeArgs<IList<FileMediaSourceRoot>>> OnFileMediaSourceRootsChange;
 
         public Task<Library> GetLibrary()
         {
@@ -40,7 +37,17 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
             throw new NotImplementedException();
         }
 
-        public Task SendFileMediaSourceRootsChange(IList<FileMediaSourceRoot> fileMediaSourceRoots)
+        public Task Start()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task Stop()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task Dispose()
         {
             throw new NotImplementedException();
         }

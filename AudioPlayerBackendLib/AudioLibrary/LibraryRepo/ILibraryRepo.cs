@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 {
-    public interface ILibraryRepo
+    public interface ILibraryRepo : IAudioService
     {
         Task<Library> GetLibrary();
 

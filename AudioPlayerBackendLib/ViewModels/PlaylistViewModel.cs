@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.ViewModels
@@ -22,6 +21,7 @@ namespace AudioPlayerBackend.ViewModels
         private double playbackRate;
         private TimeSpan position, duration;
         private Song? currentSong;
+        private RequestSong? requestedSong;
         private ICollection<Song> songs;
 
         public bool IsLoaded
@@ -141,6 +141,18 @@ namespace AudioPlayerBackend.ViewModels
 
                 currentSong = value;
                 OnPropertyChanged(nameof(CurrentSong));
+            }
+        }
+
+        public RequestSong? RequestedSong
+        {
+            get => requestedSong;
+            set
+            {
+                if (Equals(value, requestedSong)) return;
+
+                requestedSong = value;
+                OnPropertyChanged(nameof(RequestedSong));
             }
         }
 

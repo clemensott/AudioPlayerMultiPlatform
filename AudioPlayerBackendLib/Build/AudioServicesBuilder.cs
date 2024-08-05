@@ -84,6 +84,7 @@ namespace AudioPlayerBackend.Build
 
                     audioServices = BuildAudioServices();
 
+                    await audioServices.Start();
                     await CompleteServices(audioServices);
 
                     if (CompleteToken.IsEnded.HasValue) return;
@@ -94,10 +95,7 @@ namespace AudioPlayerBackend.Build
                 {
                     CompleteToken.Exception = e;
 
-                    foreach (IAudioService service in audioServices?.Services.ToNotNull())
-                    {
-                        await service.Dispose();
-                    }
+                    await audioServices.Dispose();
 
                     if (CompleteToken.IsEnded.HasValue) return;
 
@@ -114,7 +112,12 @@ namespace AudioPlayerBackend.Build
         {
             IServiceProvider serviceProvider = BuildServiceProvider();
 
-            IList<IAudioService> serviceList = new List<IAudioService>();
+            IList<IAudioService> serviceList = new List<IAudioService>()
+            {
+                serviceProvider.GetService<ILibraryRepo>(),
+                serviceProvider.GetService<IPlaylistsRepo>(),
+            };
+
             if (config.BuildStandalone || config.BuildServer)
             {
                 serviceList.Add(serviceProvider.GetService<IPlayerService>());
@@ -162,8 +165,8 @@ namespace AudioPlayerBackend.Build
             services.AddSingleton<IPlaylistsRepoService, PlaylistsRepoService>();
             services.AddSingleton<IServicedPlaylistsRepo, ServicedPlaylistsRepo>();
 
-            services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
-            services.AddSingleton<IClientCommunicator, OwnTcpClientCommunicator>();
+            if (config.BuildServer) services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
+            //services.AddSingleton<IClientCommunicator, OwnTcpClientCommunicator>();
 
             services.AddTransient<IPlayerService, AudioPlayerService>();
 
@@ -184,27 +187,35 @@ namespace AudioPlayerBackend.Build
 
         public async Task CompleteServices(AudioServices audioServices)
         {
-            using (IServicedLibraryRepo libraryRepo = audioServices.GetServicedLibraryRepo())
+            IServicedLibraryRepo libraryRepo = null;
+            IServicedPlaylistsRepo playlistsRepo = null;
+
+            try
             {
+                libraryRepo = audioServices.GetServicedLibraryRepo();
+
                 if (config.Shuffle.HasValue)
                 {
                     Library library = await libraryRepo.GetLibrary();
 
-                    using (IServicedPlaylistsRepo playlistsRepo = audioServices.GetServicedPlaylistsRepo())
+                    playlistsRepo = audioServices.GetServicedPlaylistsRepo();
+                    foreach (PlaylistInfo playlist in library.Playlists)
                     {
-                        foreach (PlaylistInfo playlist in library.Playlists)
-                        {
-                            await playlistsRepo.SendShuffleChange(playlist.Id, config.Shuffle.Value);
-                        }
+                        await playlistsRepo.SendShuffleChange(playlist.Id, config.Shuffle.Value);
                     }
                 }
 
                 if (config.Play.HasValue) await libraryRepo.SendPlayStateChange(config.Play.Value ? PlaybackState.Playing : PlaybackState.Paused);
                 if (config.Volume.HasValue) await libraryRepo.SendVolumeChange(config.Volume.Value);
             }
+            finally
+            {
+                await (libraryRepo?.Dispose() ?? Task.CompletedTask);
+                await (playlistsRepo?.Dispose() ?? Task.CompletedTask);
+            }
 
             ILibraryViewModel libraryViewModel = audioServices.ServiceProvider.GetService<ILibraryViewModel>();
-            ISongSearchViewModel songSearchViewModel = libraryViewModel.SongSearuch;
+            ISongSearchViewModel songSearchViewModel = libraryViewModel.SongSearch;
             if (config.IsSearchShuffle.HasValue)
             {
                 songSearchViewModel.IsSearchShuffle = config.IsSearchShuffle.Value;

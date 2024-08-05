@@ -107,6 +107,7 @@ namespace AudioPlayerFrontend
 
             //if (result.TryGetFirstValidOptionParseds(disableUiOpt, out _)) viewModel.IsUiEnabled = false;
 
+            servicesBuildConfig.AdditionalServices.TryAddSingleton<IPlayer, Player>();
             servicesBuildConfig.AdditionalServices.TryAddSingleton<IFileSystemService, FileSystemService>();
             servicesBuildConfig.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, InvokeDispatcherService>();
 
@@ -218,17 +219,17 @@ namespace AudioPlayerFrontend
                         SearchPlaylistAddType addType = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)
                             ? SearchPlaylistAddType.FirstInPlaylist : SearchPlaylistAddType.LastInPlaylist;
                         Song addSong = (Song)lbxSongs.SelectedItem;
-                        viewModel.SongSearuch.AddSongsToSearchPlaylist(new Song[] { addSong }, addType);
+                        viewModel.SongSearch.AddSongsToSearchPlaylist(new Song[] { addSong }, addType);
                         viewModel.PlayState = PlaybackState.Playing;
                     }
                     break;
 
                 case Key.Escape:
-                    viewModel.SongSearuch.SearchKey = string.Empty;
+                    viewModel.SongSearch.SearchKey = string.Empty;
                     break;
 
                 case Key.Up:
-                    if (lbxSongs.Items.Count > 0 && viewModel.SongSearuch.IsSearching)
+                    if (lbxSongs.Items.Count > 0 && viewModel.SongSearch.IsSearching)
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
@@ -238,7 +239,7 @@ namespace AudioPlayerFrontend
                     break;
 
                 case Key.Down:
-                    if (lbxSongs.Items.Count > 0 && viewModel.SongSearuch.IsSearching)
+                    if (lbxSongs.Items.Count > 0 && viewModel.SongSearch.IsSearching)
                     {
                         isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
@@ -362,20 +363,20 @@ namespace AudioPlayerFrontend
 
         private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert7EventArgs args)
         {
-            if (args.Input0 == null || args.Input3 == null || args.Input4 == null || args.Input5 == null || args.Input6 == null) return null;
+            if (args.Input2 == null || args.Input3 == null || args.Input4 == null || args.Input5 == null) return null;
 
-            Song? currentSong = (Song?)args.Input1;
-            RequestSong? wannaSong = (RequestSong?)args.Input2;
-            IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input3;
-            IEnumerable<Song> searchSongs = (IEnumerable<Song>)args.Input4;
-            bool isSearching = (bool)args.Input5;
-            int indexLbx = (int)args.Input6;
+            Song? currentSong = (Song?)args.Input0;
+            RequestSong? requestedSong = (RequestSong?)args.Input1;
+            IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input2;
+            IEnumerable<Song> searchSongs = (IEnumerable<Song>)args.Input3;
+            bool isSearching = (bool)args.Input4;
+            int indexLbx = (int)args.Input5;
 
-            object songsLbx = MicCurrentSongIndex_ConvertRef(currentSong, ref wannaSong,
+            object songsLbx = MicCurrentSongIndex_ConvertRef(currentSong, ref requestedSong,
                 allSongs, searchSongs, isSearching, ref indexLbx, args.ChangedValueIndex);
 
-            args.Input2 = wannaSong;
-            args.Input6 = indexLbx;
+            args.Input1 = requestedSong;
+            args.Input5 = indexLbx;
 
             return songsLbx;
         }
