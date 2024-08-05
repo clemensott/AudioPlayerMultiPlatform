@@ -1,10 +1,10 @@
-﻿using System;
+﻿using System.Collections.Generic;
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 {
     public interface IPlaylistsRepoService
     {
-        void ForEachRepoExcept(Action<IServicedPlaylistsRepo> action, IServicedPlaylistsRepo repo);
+        IEnumerable<IServicedPlaylistsRepo> GetRepos();
 
         void AddRepo(IServicedPlaylistsRepo repo);
 

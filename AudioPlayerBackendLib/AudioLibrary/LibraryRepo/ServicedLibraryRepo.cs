@@ -1,7 +1,9 @@
 ﻿using AudioPlayerBackend.Audio.MediaSource;
 using AudioPlayerBackend.Player;
+using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
@@ -32,29 +34,29 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
             return baseRepo.GetLibrary();
         }
 
-        private void ForEachRepoExcept(Action<ServicedLibraryRepo> action)
+        private void ForEachRepo(Action<ServicedLibraryRepo> action)
         {
-            parent.ForEachRepoExcept(repo => action(repo as ServicedLibraryRepo), this);
+            parent.GetRepos().OfType<ServicedLibraryRepo>().ForEach(action);
         }
 
         public Task SendPlayStateChange(PlaybackState playState)
         {
             var args = new AudioLibraryChangeArgs<PlaybackState>(playState);
-            ForEachRepoExcept(repo => repo.OnPlayStateChange?.Invoke(this, args));
+            ForEachRepo(repo => repo.OnPlayStateChange?.Invoke(this, args));
             return baseRepo.SendPlayStateChange(playState);
         }
 
         public Task SendVolumeChange(double volume)
         {
             var args = new AudioLibraryChangeArgs<double>(volume);
-            ForEachRepoExcept(repo => repo.OnVolumeChange?.Invoke(this, args));
+            ForEachRepo(repo => repo.OnVolumeChange?.Invoke(this, args));
             return baseRepo.SendVolumeChange(volume);
         }
 
         public Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
         {
             var args = new AudioLibraryChangeArgs<Guid?>(currentPlaylistId);
-            ForEachRepoExcept(repo => repo.OnCurrentPlaylistIdChange?.Invoke(this, args));
+            ForEachRepo(repo => repo.OnCurrentPlaylistIdChange?.Invoke(this, args));
             return baseRepo.SendCurrentPlaylistIdChange(currentPlaylistId);
         }
 

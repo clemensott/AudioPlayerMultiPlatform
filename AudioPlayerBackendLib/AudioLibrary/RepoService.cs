@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace AudioPlayerBackend.AudioLibrary
 {
@@ -7,12 +7,9 @@ namespace AudioPlayerBackend.AudioLibrary
     {
         private readonly IList<T> repos;
 
-        public void ForEachRepoExcept(Action<T> action, T exceptRepo)
+        public IEnumerable<T> GetRepos()
         {
-            foreach (T repo in repos)
-            {
-                if (!Equals(repo, exceptRepo)) action(repo);
-            }
+            return repos.AsEnumerable();
         }
 
         public void AddRepo(T repo)
