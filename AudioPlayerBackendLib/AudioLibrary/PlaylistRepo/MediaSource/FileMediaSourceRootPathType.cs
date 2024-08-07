@@ -1,6 +1,6 @@
 ﻿namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource
 {
-    public enum FileMediaSourceRootType
+    public enum FileMediaSourceRootPathType
     {
         KnownFolder,
         Path,

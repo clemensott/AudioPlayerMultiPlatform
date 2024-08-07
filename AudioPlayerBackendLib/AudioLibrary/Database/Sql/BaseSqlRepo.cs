@@ -1,13 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.AudioLibrary.Database.Sql
 {
-    public abstract class BaseRepo : IAudioService
+    public abstract class BaseSqlRepo : IAudioService
     {
         protected ISqlExecuteService sqlExecuteService;
 
-        internal BaseRepo(ISqlExecuteService sqlExecuteService)
+        internal BaseSqlRepo(ISqlExecuteService sqlExecuteService)
         {
             this.sqlExecuteService = sqlExecuteService;
         }
@@ -15,6 +16,34 @@ namespace AudioPlayerBackend.AudioLibrary.Database.Sql
         protected KeyValuePair<string, object> CreateParam(string key, object value)
         {
             return new KeyValuePair<string, object>(key, value);
+        }
+
+        protected KeyValuePair<string, object>[] CreateParams(string key1, object value1)
+        {
+            return new KeyValuePair<string, object>[]
+            {
+                CreateParam(key1, value1),
+            };
+        }
+
+        protected KeyValuePair<string, object>[] CreateParams(string key1, object value1, string key2, object value2)
+        {
+            return new KeyValuePair<string, object>[]
+            {
+                CreateParam(key1, value1),
+                CreateParam(key2, value2),
+            };
+        }
+
+        protected KeyValuePair<string, object>[] CreateParams(string key1, object value1, 
+            string key2, object value2, string key3, object value3)
+        {
+            return new KeyValuePair<string, object>[]
+            {
+                CreateParam(key1, value1),
+                CreateParam(key2, value2),
+                CreateParam(key3, value3),
+            };
         }
 
         public static long? ToNullableLong(bool? value)

@@ -7,6 +7,14 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 {
     public class Library
     {
+        public Library(PlaybackState playState, double volume, Guid? currentPlaylistId, ICollection<PlaylistInfo> playlists)
+        {
+            PlayState = playState;
+            Volume = volume;
+            CurrentPlaylistId = currentPlaylistId;
+            Playlists = playlists;
+        }
+
         public PlaybackState PlayState { get; }
 
         public double Volume { get; }

@@ -39,8 +39,9 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             FullPath = path;
         }
 
-        public Song(int index, string title, string artist, string fullPath) : this()
+        public Song(Guid id, int index, string title, string artist, string fullPath) : this()
         {
+            Id = id;
             Index = index;
             Title = title;
             Artist = artist;

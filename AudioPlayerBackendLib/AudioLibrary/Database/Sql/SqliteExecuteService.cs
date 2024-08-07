@@ -5,25 +5,36 @@ using System.Data.Common;
 using System.Data;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Build;
+using AudioPlayerBackend.FileSystem;
 
 namespace AudioPlayerBackend.AudioLibrary.Database.Sql
 {
     class SqliteExecuteService : ISqlExecuteService
     {
-        private readonly string connectionString;
+        private readonly string dataFilePath;
+        private string connectionString;
+        private readonly IFileSystemService fileSystemService;
         private SqliteConnection connection;
 
-        public SqliteExecuteService(AudioServicesBuildConfig config)
+        public SqliteExecuteService(AudioServicesBuildConfig config, IFileSystemService fileSystemService)
         {
-            connectionString = $"Filename={config.DataFilePath}";
+            dataFilePath = config.DataFilePath;
+            connectionString = null;
+            this.fileSystemService = fileSystemService;
         }
 
         private async Task<SqliteCommand> GetCommand(string sql, IEnumerable<KeyValuePair<string, object>> parameters)
         {
+            if (connectionString == null)
+            {
+                string fullFilePath = await fileSystemService.CreateFileIfNotExits(dataFilePath);
+                connectionString = $"Filename={fullFilePath}";
+            }
+
             if (connection == null || connection.State == ConnectionState.Closed)
             {
                 connection?.Close();
-                connection = new SqliteConnection(this.connectionString);
+                connection = new SqliteConnection(connectionString);
                 await connection.OpenAsync();
             }
 

@@ -413,9 +413,9 @@ namespace AudioPlayerFrontend
 
         private async void MimReloadSongs_Click(object sender, RoutedEventArgs e)
         {
-            IFileSystemService fileSystemService = audioServices.GetFileSystemService();
+            IUpdateLibraryService updateLibraryService = audioServices.GetUpdateLibraryService();
             PlaylistInfo playlist = FrameworkUtils.GetDataContext<PlaylistInfo>(sender);
-            await fileSystemService.ReloadSourcePlaylist(playlist.Id);
+            await updateLibraryService.ReloadSourcePlaylist(playlist.Id);
         }
 
         private async void MimRemixSongs_Click(object sender, RoutedEventArgs e)

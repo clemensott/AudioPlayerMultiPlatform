@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Windows;
-using AudioPlayerBackend;
 using AudioPlayerBackend.AudioLibrary;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
@@ -19,14 +18,14 @@ namespace AudioPlayerFrontend
     /// </summary>
     public partial class AddSourcePlaylistWindow : Window
     {
-        private readonly IFileSystemService fileSystemService;
+        private readonly IUpdateLibraryService updateLibraryService;
         private readonly AddSourcePlaylistViewModel viewModel;
 
         public AddSourcePlaylistWindow(string[] sources, AudioServices audioServices)
         {
             InitializeComponent();
 
-            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
+            updateLibraryService = audioServices.GetUpdateLibraryService();
             viewModel = new AddSourcePlaylistViewModel(audioServices);
             viewModel.Sources = sources;
 
@@ -79,7 +78,7 @@ namespace AudioPlayerFrontend
             if ((bool)micNewPlaylist.Output)
             {
                 FileMediaSources fileMediaSources = FileMediaSourcesHelper.ExtractFileMediaSources(newPaths);
-                Song[] songs = await fileSystemService.ReloadSourcePlaylist(fileMediaSources);
+                Song[] songs = await updateLibraryService.ReloadSourcePlaylist(fileMediaSources);
                 Playlist newPlaylist = new Playlist(Guid.NewGuid(), PlaylistType.SourcePlaylist, viewModel.Name,
                     viewModel.Shuffle, viewModel.Loop, 1, TimeSpan.Zero, TimeSpan.Zero, null, null, songs, fileMediaSources);
 
@@ -102,7 +101,7 @@ namespace AudioPlayerFrontend
 
                 FileMediaSources fileMediaSources = FileMediaSourcesHelper.ExtractFileMediaSources(newAllPaths);
                 await viewModel.PlaylistsRepo.SendFileMedisSourcesChange(selectedPlaylistInfo.Id, fileMediaSources);
-                await fileSystemService.UpdateSourcePlaylist(selectedPlaylistInfo.Id);
+                await updateLibraryService.UpdateSourcePlaylist(selectedPlaylistInfo.Id);
             }
 
             Close();

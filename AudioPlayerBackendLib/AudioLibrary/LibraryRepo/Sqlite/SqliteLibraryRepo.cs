@@ -1,55 +1,103 @@
-﻿using AudioPlayerBackend.Player;
+﻿using AudioPlayerBackend.AudioLibrary.Database.Sql;
+using AudioPlayerBackend.Extensions;
+using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
 {
-    internal class SqliteLibraryRepo : ILibraryRepo
+    internal class SqliteLibraryRepo : BaseSqlRepo, ILibraryRepo
     {
         public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> OnPlayStateChange;
         public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
         public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
-        public event EventHandler<AudioLibraryChangeArgs<IList<PlaylistInfo>>> OnPlaylistsChange;
 
-        public Task<Library> GetLibrary()
+        public SqliteLibraryRepo(ISqlExecuteService sqlExecuteService) : base(sqlExecuteService)
         {
-            throw new NotImplementedException();
         }
 
-        public Task SendPlayStateChange(PlaybackState playState)
+        public async Task<Library> GetLibrary()
         {
-            throw new NotImplementedException();
+            const string librarySql = @"
+                SELECT play_state, volume, current_playlist_id
+                FROM libaries
+                LIMIT 1;
+            ";
+
+            var lib = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
+            {
+                PlaybackState playState = (PlaybackState)reader.GetInt64("play_state");
+                double volume = reader.GetDouble("volume");
+                string currentPlaylistIdText = reader.GetStringNullable("current_playlist_id");
+                Guid? currentPlaylistId = reader.GetGuidNullableFromString("current_playlist_id");
+
+                return (playState, volume, currentPlaylistId);
+            }, librarySql);
+
+            const string playlistsSql = @"
+                SELECT id, type, name, songs_count
+                FROM playlists;
+            ";
+
+            IList<PlaylistInfo> playlists = await sqlExecuteService.ExecuteReadAllAsync(reader =>
+            {
+                Guid id = reader.GetGuidFromString("id");
+                PlaylistType type = (PlaylistType)reader.GetInt64("type");
+                string name = reader.GetString("name");
+                int songsCount = (int)reader.GetInt64("songs_count");
+
+                return new PlaylistInfo(id, type, name, songsCount);
+            }, playlistsSql);
+
+            return new Library(lib.playState, lib.volume, lib.currentPlaylistId, playlists);
         }
 
-        public Task SendVolumeChange(double volume)
+        private Task UpdateLibraryValue(string columnName, object value)
         {
-            throw new NotImplementedException();
+            string sql = $@"
+                UPDATE libaries
+                SET {columnName} = @value
+                WHERE 1;
+            ";
+            KeyValuePair<string, object>[] parameters = CreateParams("value", value);
+
+            return sqlExecuteService.ExecuteNonQueryAsync(sql, parameters);
         }
 
-        public Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
+        public async Task SendPlayStateChange(PlaybackState playState)
         {
-            throw new NotImplementedException();
+            await UpdateLibraryValue("play_state", (long)playState);
+            OnPlayStateChange?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
         }
 
-        public Task SendPlaylistsChange(IList<PlaylistInfo> playlists)
+        public async Task SendVolumeChange(double volume)
         {
-            throw new NotImplementedException();
+            await UpdateLibraryValue("volume", volume);
+            OnVolumeChange?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
+        }
+
+        public async Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
+        {
+            await UpdateLibraryValue("current_playlist_id", currentPlaylistId?.ToString());
+            OnCurrentPlaylistIdChange?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
+
         }
 
         public Task Start()
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         public Task Stop()
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         public Task Dispose()
         {
-            throw new NotImplementedException();
+            sqlExecuteService.Dispose();
+            return Task.CompletedTask;
         }
     }
 }

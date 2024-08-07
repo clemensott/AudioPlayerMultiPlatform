@@ -13,7 +13,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource
         /// <summary>
         /// Type of value in propety Value.
         /// </summary>
-        public FileMediaSourceRootType Type { get; }
+        public FileMediaSourceRootPathType PathType { get; }
 
         /// <summary>
         /// Path in local file system. Can start with a known folder, e.g. "Music:\Classic"
@@ -21,12 +21,12 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource
         public string Path { get; }
 
         public FileMediaSourceRoot(Guid id, FileMediaSourceRootUpdateType updateType, string name,
-            FileMediaSourceRootType type, string path)
+            FileMediaSourceRootPathType pathType, string path)
         {
             Id = id;
             UpdateType = updateType;
             Name = name;
-            Type = type;
+            PathType = pathType;
             Path = path;
         }
     }

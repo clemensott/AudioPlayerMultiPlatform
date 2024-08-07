@@ -42,6 +42,11 @@ namespace AudioPlayerBackend.Build
             return ServiceProvider.GetService<IFileSystemService>();
         }
 
+        public IUpdateLibraryService GetUpdateLibraryService()
+        {
+            return ServiceProvider.GetService<IUpdateLibraryService>();
+        }
+
         public IServicedLibraryRepo GetServicedLibraryRepo()
         {
             return ServiceProvider.GetService<IServicedLibraryRepo>();
