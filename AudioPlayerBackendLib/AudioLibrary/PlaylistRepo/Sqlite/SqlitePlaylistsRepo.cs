@@ -4,6 +4,7 @@ using AudioPlayerBackend.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
@@ -65,7 +66,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 WHERE id = @id;
             ";
             var playlistParameters = CreateParams("id", playlistId.ToString());
-            var playlist = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
+            (Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop, double playbackRate, TimeSpan position, TimeSpan duration, Guid? currentSongId, RequestSong? requestedSong, Guid? fileMediaSourceRootId) playlist = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
             {
                 Guid id = reader.GetGuidFromString("id");
                 PlaylistType type = (PlaylistType)reader.GetInt64("type");
@@ -116,7 +117,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 fileMediaSources = new FileMediaSources(fileMediaSourceRoot, fileMediaSourceEntries);
             }
 
-            return new Playlist(playlist.id, playlist.type, playlist.name, playlist.shuffle, playlist.loop, 
+            return new Playlist(playlist.id, playlist.type, playlist.name, playlist.shuffle, playlist.loop,
                 playlist.playbackRate, playlist.position, playlist.duration, playlist.requestedSong,
                 playlist.currentSongId, songs, fileMediaSources);
 
@@ -167,9 +168,42 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
         public Task SendInsertPlaylist(Playlist playlist, int index)
         {
+            if (playlist.FileMediaSources != null)
+            {
+                const string fileMediaSourceRootSql = @"
+                    INSERT OR REPLACE INTO file_media_source_roots (id, update_type, name, path_type, path)
+                    VALUES (@id, @updateType, @name, @pathType, @path);
+                ";
+            }
+
             const string playlistSql = @"
-                INSERT INTO playlists ()
+                INSERT INTO playlists (id, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
+                    requested_song_id, requested_song_index, requested_song_title, requested_song_artist,
+                    requested_song_full_path, requested_song_position, requested_song_duration,
+                    file_media_source_root_id)
+                VALUES (@id, @type, @name, @shuffle, @loop, @playbackRate, @position, @duration, @currentSongId,
+                    @requestedSongId, @requestedSongIndex, @requestedSongTitle, @requestedSongArtist,
+                    @requestedSongFullPath, @requestedSongPosition, @requestedSongDuration,
+                    @fileMediaSourceRootId);
             ";
+
+            if (playlist.FileMediaSources?.Sources.Count > 0)
+            {
+                string fileMediaSourcesSqlValues = string.Join(",", playlist.FileMediaSources.Sources.Select((_, i) => $"(@rel{i})"));
+                string fileMediaSourcesSql = $@"
+                    INSERT INTO file_media_sources (relative_path)
+                    VALUES {fileMediaSourcesSqlValues};
+                ";
+            }
+
+            if (playlist.Songs.Count > 0)
+            {
+                string songsSqlValues = string.Join(",", playlist.FileMediaSources.Sources.Select((_, i) => $"(@id{i},@x{i},@t{i},@a{i},@p{i})"));
+                string fileMediaSourcesSql = $@"
+                    INSERT INTO songs (id, index_value, title, artist, full_path)
+                    VALUES {songsSqlValues};
+                ";
+            }
         }
 
         public Task SendRemovePlaylist(Guid id)

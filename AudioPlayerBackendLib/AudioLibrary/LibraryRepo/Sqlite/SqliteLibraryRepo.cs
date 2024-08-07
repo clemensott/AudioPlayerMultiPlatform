@@ -25,7 +25,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
                 LIMIT 1;
             ";
 
-            var lib = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
+            (PlaybackState playState, double volume, Guid? currentPlaylistId) lib = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
             {
                 PlaybackState playState = (PlaybackState)reader.GetInt64("play_state");
                 double volume = reader.GetDouble("volume");
