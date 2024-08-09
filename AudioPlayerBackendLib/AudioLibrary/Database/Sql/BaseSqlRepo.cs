@@ -13,12 +13,12 @@ namespace AudioPlayerBackend.AudioLibrary.Database.Sql
             this.sqlExecuteService = sqlExecuteService;
         }
 
-        protected KeyValuePair<string, object> CreateParam(string key, object value)
+        protected static KeyValuePair<string, object> CreateParam(string key, object value)
         {
             return new KeyValuePair<string, object>(key, value);
         }
 
-        protected KeyValuePair<string, object>[] CreateParams(string key1, object value1)
+        protected static KeyValuePair<string, object>[] CreateParams(string key1, object value1)
         {
             return new KeyValuePair<string, object>[]
             {
@@ -26,7 +26,7 @@ namespace AudioPlayerBackend.AudioLibrary.Database.Sql
             };
         }
 
-        protected KeyValuePair<string, object>[] CreateParams(string key1, object value1, string key2, object value2)
+        protected static KeyValuePair<string, object>[] CreateParams(string key1, object value1, string key2, object value2)
         {
             return new KeyValuePair<string, object>[]
             {
@@ -35,7 +35,7 @@ namespace AudioPlayerBackend.AudioLibrary.Database.Sql
             };
         }
 
-        protected KeyValuePair<string, object>[] CreateParams(string key1, object value1, 
+        protected static KeyValuePair<string, object>[] CreateParams(string key1, object value1, 
             string key2, object value2, string key3, object value3)
         {
             return new KeyValuePair<string, object>[]

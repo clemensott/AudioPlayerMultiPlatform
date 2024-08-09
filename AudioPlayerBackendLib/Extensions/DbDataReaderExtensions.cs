@@ -73,5 +73,16 @@ namespace AudioPlayerBackend.Extensions
         {
             return new TimeSpan(reader.GetInt64(name));
         }
+
+        public static TimeSpan? GetTimespanNullableFromInt64(this DbDataReader reader, string name)
+        {
+            int ordinal = reader.GetOrdinal(name);
+            if (reader.IsDBNull(ordinal))
+            {
+                return null;
+            }
+
+            return new TimeSpan(reader.GetInt64(ordinal));
+        }
     }
 }

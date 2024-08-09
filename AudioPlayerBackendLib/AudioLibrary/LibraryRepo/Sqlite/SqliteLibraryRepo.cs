@@ -37,7 +37,8 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
 
             const string playlistsSql = @"
                 SELECT id, type, name, songs_count
-                FROM playlists;
+                FROM playlists
+                ORDER BY index_value;
             ";
 
             IList<PlaylistInfo> playlists = await sqlExecuteService.ExecuteReadAllAsync(reader =>

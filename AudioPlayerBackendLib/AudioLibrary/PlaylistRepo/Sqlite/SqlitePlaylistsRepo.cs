@@ -128,9 +128,9 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
                 int songIndex = (int)reader.GetInt64("requested_song_index");
                 string songTitle = reader.GetString("requested_song_index");
-                string songArtist = reader.GetString("requested_song_artist");
+                string songArtist = reader.GetStringNullable("requested_song_artist");
                 string songFullPath = reader.GetString("requested_song_full_path");
-                TimeSpan requestPosition = reader.GetTimespanFromInt64("requested_song_position");
+                TimeSpan? requestPosition = reader.GetTimespanNullableFromInt64("requested_song_position");
                 TimeSpan requestDuration = reader.GetTimespanFromInt64("requested_song_duration");
 
                 Song song = new Song(songId.Value, songIndex, songTitle, songArtist, songFullPath);
@@ -166,109 +166,274 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             }
         }
 
-        public Task SendInsertPlaylist(Playlist playlist, int index)
+        private async Task UpsertFileMediaSourceRoot(FileMediaSourceRoot root)
         {
-            if (playlist.FileMediaSources != null)
+            const string fileMediaSourceRootSql = @"
+                INSERT OR REPLACE INTO file_media_source_roots (id, update_type, name, path_type, path)
+                VALUES (@id, @updateType, @name, @pathType, @path);
+            ";
+            var fileMediaSourceRootParameters = new KeyValuePair<string, object>[]
             {
-                const string fileMediaSourceRootSql = @"
-                    INSERT OR REPLACE INTO file_media_source_roots (id, update_type, name, path_type, path)
-                    VALUES (@id, @updateType, @name, @pathType, @path);
-                ";
-            }
+                    CreateParam("id", root.Id.ToString()),
+                    CreateParam("updateType", (long)root.UpdateType),
+                    CreateParam("name", root.Name),
+                    CreateParam("pathType", (long)root.PathType),
+                    CreateParam("path", root.Path),
+            };
+            await sqlExecuteService.ExecuteNonQueryAsync(fileMediaSourceRootSql, fileMediaSourceRootParameters);
+        }
 
+        private async Task InsertPlaylist(Playlist playlist, int index)
+        {
             const string playlistSql = @"
-                INSERT INTO playlists (id, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
+                INSERT INTO playlists (id, index_value, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
                     requested_song_id, requested_song_index, requested_song_title, requested_song_artist,
                     requested_song_full_path, requested_song_position, requested_song_duration,
                     file_media_source_root_id)
-                VALUES (@id, @type, @name, @shuffle, @loop, @playbackRate, @position, @duration, @currentSongId,
+                VALUES (@id, @index, @type, @name, @shuffle, @loop, @playbackRate, @position, @duration, @currentSongId,
                     @requestedSongId, @requestedSongIndex, @requestedSongTitle, @requestedSongArtist,
                     @requestedSongFullPath, @requestedSongPosition, @requestedSongDuration,
                     @fileMediaSourceRootId);
             ";
-
-            if (playlist.FileMediaSources?.Sources.Count > 0)
+            var playlistParameters = new KeyValuePair<string, object>[]
             {
-                string fileMediaSourcesSqlValues = string.Join(",", playlist.FileMediaSources.Sources.Select((_, i) => $"(@rel{i})"));
-                string fileMediaSourcesSql = $@"
-                    INSERT INTO file_media_sources (relative_path)
-                    VALUES {fileMediaSourcesSqlValues};
-                ";
+                CreateParam("id", playlist.Id.ToString()),
+                CreateParam("index", index),
+                CreateParam("type", (long)playlist.Type),
+                CreateParam("name", playlist.Name),
+                CreateParam("shuffle", (long)playlist.Shuffle),
+                CreateParam("loop", (long)playlist.Loop),
+                CreateParam("playbackRate", playlist.PlaybackRate),
+                CreateParam("position", playlist.Position.Ticks),
+                CreateParam("duration", playlist.Duration.Ticks),
+                CreateParam("currentSongId", playlist.CurrentSongId?.ToString()),
+                CreateParam("requestedSongId", playlist.RequestSong?.Song.Id.ToString()),
+                CreateParam("requestedSongIndex", playlist.RequestSong?.Song.Index),
+                CreateParam("requestedSongTitle", playlist.RequestSong?.Song.Title),
+                CreateParam("requestedSongArtist", playlist.RequestSong?.Song.Artist),
+                CreateParam("requestedSongFullPath", playlist.RequestSong?.Song.FullPath),
+                CreateParam("requestedSongPosition", playlist.RequestSong?.Position?.Ticks),
+                CreateParam("requestedSongDuration", playlist.RequestSong?.Duration.Ticks),
+                CreateParam("fileMediaSourceRootId", playlist.FileMediaSources?.Root.Id),
+            };
+            await sqlExecuteService.ExecuteNonQueryAsync(playlistSql, playlistParameters);
+        }
+
+        private async Task UpsertPlaylistSongs(Guid playlistId, ICollection<Song> songs)
+        {
+            string songsSqlValues = string.Join(",", songs.Select((_, i) => $"(@id{i},@t{i},@a{i},@p{i})"));
+            string songsSql = $@"
+                INSERT OR REPLACE INTO songs (id, title, artist, full_path)
+                VALUES {songsSqlValues};
+            ";
+            var songsParameters = songs.SelectMany((song, i) => new KeyValuePair<string, object>[]
+            {
+                    CreateParam($"id{i}", song.Id.ToString()),
+                    CreateParam($"t{i}", song.Title),
+                    CreateParam($"a{i}", song.Artist),
+                    CreateParam($"p{i}", song.FullPath),
+            });
+            await sqlExecuteService.ExecuteNonQueryAsync(songsSql, songsParameters);
+
+            string playlistSongsSqlValues = string.Join(",", songs.Select((_, i) => $"(@pid,@x{i},@sid{i})"));
+            string playlistSongsSql = $@"
+                INSERT INTO playlist_songs (playlist_id, index_value, song_id)
+                VALUES {playlistSongsSqlValues};
+            ";
+            var playlistSongsParameters = CreateParams("pid", playlistId.ToString())
+                .Concat(songs.SelectMany((song, i) => CreateParams($"x{i}", song.Index, $"sid{i}", song.Id.ToString())));
+            await sqlExecuteService.ExecuteNonQueryAsync(playlistSongsSql, playlistSongsParameters);
+        }
+
+        private async Task InsertFileMediaSources(Guid playlistId, ICollection<FileMediaSource> sources)
+        {
+            string fileMediaSourcesSqlValues = string.Join(",", sources.Select((_, i) => $"(@pid,@rel{i})"));
+            string fileMediaSourcesSql = $@"
+                INSERT INTO file_media_sources (playlist_id, relative_path)
+                VALUES {fileMediaSourcesSqlValues};
+            ";
+            var fileMediaSourcesParameters = CreateParams("pid", playlistId.ToString())
+                .Concat(sources.Select((source, i) => CreateParam($"rel{i}", source.RelativePath)));
+            await sqlExecuteService.ExecuteNonQueryAsync(fileMediaSourcesSql, fileMediaSourcesParameters);
+        }
+
+        public async Task SendInsertPlaylist(Playlist playlist, int index)
+        {
+            if (playlist.FileMediaSources != null) await UpsertFileMediaSourceRoot(playlist.FileMediaSources.Root);
+
+            await InsertPlaylist(playlist, index);
+
+            if (playlist.FileMediaSources?.Sources.Count > 0) await InsertFileMediaSources(playlist.Id, playlist.FileMediaSources.Sources);
+            if (playlist.Songs.Count > 0) await UpsertPlaylistSongs(playlist.Id, playlist.Songs);
+
+            OnInsertPlaylist?.Invoke(this, new InsertPlaylistArgs(index, playlist));
+        }
+
+        private async Task DeletePlaylistSongs(Guid playlistId)
+        {
+            const string playlistSongsSql = @"
+                DELETE FROM playlist_songs
+                WHERE playlist_id = @id;
+            ";
+            var playlistSongsParameters = CreateParams("id", playlistId.ToString());
+            await sqlExecuteService.ExecuteNonQueryAsync(playlistSongsSql, playlistSongsParameters);
+        }
+
+        private async Task DeleteUnuusedSongs()
+        {
+            const string songsSql = @"
+                DELETE FROM songs
+                WHERE id NOT IN (SELECT ps.song_id FROM playlist_songs ps)
+                    AND id NOT IN (SELECT p.requested_song_id FROM playlists p)
+                    AND id NOT IN (SELECT p.current_song_id FROM playlists p);
+            ";
+            await sqlExecuteService.ExecuteNonQueryAsync(songsSql);
+        }
+
+        private async Task DeleteFileMediaSources(Guid playlistId)
+        {
+            const string fileMediaSourcesSql = @"
+                DELETE FROM file_media_sources
+                WHERE playlist_id = @id;
+            ";
+            var fileMediaSourcesParameters = CreateParams("id", playlistId.ToString());
+            await sqlExecuteService.ExecuteNonQueryAsync(fileMediaSourcesSql, fileMediaSourcesParameters);
+        }
+
+        private async Task DeletePlaylist(Guid playlistId)
+        {
+            const string playlistSql = @"
+                DELETE FROM playlists
+                WHERE id = @id;
+            ";
+            var playlistParameters = CreateParams("id", playlistId.ToString());
+            await sqlExecuteService.ExecuteNonQueryAsync(playlistSql, playlistParameters);
+        }
+
+        private async Task DeleteUnuusedFileMediaSourceRoots()
+        {
+            const string fileMediaSourceRootSql = @"
+                DELETE FROM file_media_source_roots
+                WHERE id NOT IN (SELECT p.file_media_source_root_id FROM playlists p);
+            ";
+            await sqlExecuteService.ExecuteNonQueryAsync(fileMediaSourceRootSql);
+        }
+
+        public async Task SendRemovePlaylist(Guid playlistId)
+        {
+            await DeletePlaylistSongs(playlistId);
+            await DeleteUnuusedSongs();
+            await DeleteFileMediaSources(playlistId);
+            await DeletePlaylist(playlistId);
+            await DeleteUnuusedFileMediaSourceRoots();
+
+            OnRemovePlaylist?.Invoke(this, new RemovePlaylistArgs(playlistId));
+        }
+
+        private Task UpdatePlaylistValue(string columnName, Guid playlistId, object value)
+        {
+            string sql = $@"
+                UPDATE playlists
+                SET {columnName} = @value
+                WHERE id = @id;
+            ";
+            KeyValuePair<string, object>[] parameters = CreateParams("id", playlistId.ToString(), "value", value);
+            return sqlExecuteService.ExecuteNonQueryAsync(sql, parameters);
+        }
+
+        public async Task SendNameChange(Guid playlistId, string name)
+        {
+            await UpdatePlaylistValue("name", playlistId, name);
+            OnNameChange?.Invoke(this, new PlaylistChangeArgs<string>(playlistId, name));
+        }
+
+        public async Task SendShuffleChange(Guid playlistId, OrderType shuffle)
+        {
+            await UpdatePlaylistValue("shuffle", playlistId, (long)shuffle);
+            OnShuffleChange?.Invoke(this, new PlaylistChangeArgs<OrderType>(playlistId, shuffle));
+        }
+
+        public async Task SendLoopChange(Guid playlistId, LoopType loop)
+        {
+            await UpdatePlaylistValue("loop", playlistId, (long)loop);
+            OnLoopChange?.Invoke(this, new PlaylistChangeArgs<LoopType>(playlistId, loop));
+        }
+
+        public async Task SendPlaybackRateChange(Guid playlistId, double playbackRate)
+        {
+            await UpdatePlaylistValue("playback_rate", playlistId, playbackRate);
+            OnPlaybackRateChange?.Invoke(this, new PlaylistChangeArgs<double>(playlistId, playbackRate));
+        }
+
+        public async Task SendPositionChange(Guid playlistId, TimeSpan position)
+        {
+            await UpdatePlaylistValue("position", playlistId, position.Ticks);
+            OnPositionChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, position));
+        }
+
+        public async Task SendDurationChange(Guid playlistId, TimeSpan duration)
+        {
+            await UpdatePlaylistValue("duration", playlistId, duration.Ticks);
+            OnDurationChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, duration));
+        }
+
+        public async Task SendCurrentSongIdChange(Guid playlistId, Guid? currentSongId)
+        {
+            await UpdatePlaylistValue("current_song_id", playlistId, currentSongId?.ToString());
+            OnCurrentSongIdChange?.Invoke(this, new PlaylistChangeArgs<Guid?>(playlistId, currentSongId));
+        }
+
+        public async Task SendRequestSongChange(Guid playlistId, RequestSong? requestSong)
+        {
+            string sql = $@"
+                UPDATE playlists
+                SET requested_song_id = @requestedSongId
+                    requested_song_index = @requestedSongIndex,
+                    requested_song_title = @requestedSongTitle,
+                    requested_song_artist = @requestedSongArtist,
+                    requested_song_full_path = @requestedSongFullPath,
+                    requested_song_position = @requestedSongPosition,
+                    requested_song_duration = @requestedSongDuration
+                WHERE id = @id;
+            ";
+            KeyValuePair<string, object>[] parameters = new KeyValuePair<string, object>[]
+            {
+                CreateParam("id", playlistId.ToString()),
+                CreateParam("requestedSongId", requestSong?.Song.Id.ToString()),
+                CreateParam("requestedSongIndex", requestSong?.Song.Index),
+                CreateParam("requestedSongTitle", requestSong?.Song.Title),
+                CreateParam("requestedSongArtist", requestSong?.Song.Artist),
+                CreateParam("requestedSongFullPath", requestSong?.Song.FullPath),
+                CreateParam("requestedSongPosition", requestSong?.Position?.Ticks),
+                CreateParam("requestedSongDuration", requestSong?.Duration.Ticks),
+            };
+            await sqlExecuteService.ExecuteNonQueryAsync(sql, parameters);
+
+            OnRequestSongChange?.Invoke(this, new PlaylistChangeArgs<RequestSong?>(playlistId, requestSong));
+        }
+
+        public async Task SendSongsChange(Guid playlistId, ICollection<Song> songs)
+        {
+            await DeletePlaylistSongs(playlistId);
+            if (songs?.Count > 0) await UpsertPlaylistSongs(playlistId, songs);
+            await DeleteUnuusedSongs();
+
+            OnSongsChange?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));
+        }
+
+        public async Task SendFileMedisSourcesChange(Guid playlistId, FileMediaSources fileMediaSources)
+        {
+            await DeleteFileMediaSources(playlistId);
+            if (fileMediaSources != null)
+            {
+                await UpsertFileMediaSourceRoot(fileMediaSources.Root);
+                await InsertFileMediaSources(playlistId, fileMediaSources.Sources);
             }
 
-            if (playlist.Songs.Count > 0)
-            {
-                string songsSqlValues = string.Join(",", playlist.FileMediaSources.Sources.Select((_, i) => $"(@id{i},@x{i},@t{i},@a{i},@p{i})"));
-                string fileMediaSourcesSql = $@"
-                    INSERT INTO songs (id, index_value, title, artist, full_path)
-                    VALUES {songsSqlValues};
-                ";
-            }
-        }
+            await UpdatePlaylistValue("file_media_source_root_id", playlistId, fileMediaSources?.Root.Id.ToString());
+            await DeleteUnuusedFileMediaSourceRoots();
 
-        public Task SendRemovePlaylist(Guid id)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendCurrentSongIdChange(Guid id, Guid currentSongId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendCurrentSongIdChange(Guid id, Guid? currentSongId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendDurationChange(Guid id, TimeSpan duration)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendLoopChange(Guid id, LoopType loop)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendNameChange(Guid id, string name)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendPlaybackRateChange(Guid id, double playbackRate)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendPositionChange(Guid id, TimeSpan position)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendRequestSongChange(Guid id, RequestSong requestSong)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendRequestSongChange(Guid id, RequestSong? requestSong)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendShuffleChange(Guid id, OrderType shuffle)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendSongsChange(Guid id, ICollection<Song> songs)
-        {
-            throw new NotImplementedException();
+            OnFileMedisSourcesChange?.Invoke(this, new PlaylistChangeArgs<FileMediaSources>(playlistId, fileMediaSources));
         }
     }
 }
