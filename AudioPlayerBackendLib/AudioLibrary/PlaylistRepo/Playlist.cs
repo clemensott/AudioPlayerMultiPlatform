@@ -31,6 +31,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         public FileMediaSources FileMediaSources { get; }
 
+        public Guid NextPlaylist { get; }
+
         public Playlist(Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop,
             double playbackRate, TimeSpan position, TimeSpan duration, RequestSong? requestSong,
             Guid? currentSongId, ICollection<Song> songs, FileMediaSources fileMediaSources)

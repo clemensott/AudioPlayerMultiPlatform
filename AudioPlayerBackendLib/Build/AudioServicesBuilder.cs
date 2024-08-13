@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.AudioLibrary.Database.Sql;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite;
@@ -114,8 +115,10 @@ namespace AudioPlayerBackend.Build
 
             IList<IAudioService> serviceList = new List<IAudioService>()
             {
-                serviceProvider.GetService<ILibraryRepo>(),
+                // playlist repo must be before library repo
+                // because the order in which the init sqls run are important
                 serviceProvider.GetService<IPlaylistsRepo>(),
+                serviceProvider.GetService<ILibraryRepo>(),
             };
 
             if (config.BuildStandalone || config.BuildServer)
@@ -150,6 +153,7 @@ namespace AudioPlayerBackend.Build
 
             if (config.BuildStandalone || config.BuildServer)
             {
+                services.AddSingleton<ISqlExecuteService, SqliteExecuteService>();
                 services.AddSingleton<ILibraryRepo, SqliteLibraryRepo>();
                 services.AddSingleton<IPlaylistsRepo, SqlitePlaylistsRepo>();
             }

@@ -60,7 +60,7 @@ namespace AudioPlayerFrontend
         {
             ICollection<FileMediaSource> sources = children.Select(child => new FileMediaSource(child)).ToArray();
             FileMediaSourceRoot root = new FileMediaSourceRoot(Guid.NewGuid(), FileMediaSourceRootUpdateType.Files,
-                rootPath, FileMediaSourceRootType.Path, rootPath);
+                rootPath, FileMediaSourceRootPathType.Path, rootPath);
             return new FileMediaSources(root, sources);
         }
 

@@ -82,8 +82,8 @@ namespace AudioPlayerFrontend
                 Playlist newPlaylist = new Playlist(Guid.NewGuid(), PlaylistType.SourcePlaylist, viewModel.Name,
                     viewModel.Shuffle, viewModel.Loop, 1, TimeSpan.Zero, TimeSpan.Zero, null, null, songs, fileMediaSources);
 
-                await viewModel.PlaylistsRepo.SendInsertPlaylist(newPlaylist, -1);
-                await viewModel.LibraryRepo.SendCurrentPlaylistIdChange(newPlaylist.Id);
+                await viewModel.playlistsRepo.SendInsertPlaylist(newPlaylist, -1);
+                await viewModel.libraryRepo.SendCurrentPlaylistIdChange(newPlaylist.Id);
             }
             else
             {
@@ -91,7 +91,7 @@ namespace AudioPlayerFrontend
                 string[] newAllPaths;
                 if (rbnAppend.IsChecked == true)
                 {
-                    Playlist playlist = await viewModel.PlaylistsRepo.GetPlaylist(selectedPlaylistInfo.Id);
+                    Playlist playlist = await viewModel.playlistsRepo.GetPlaylist(selectedPlaylistInfo.Id);
                     newAllPaths = playlist.FileMediaSources.Sources.Select(s => s.RelativePath).Concat(newPaths).ToArray();
                 }
                 else
@@ -100,7 +100,7 @@ namespace AudioPlayerFrontend
                 }
 
                 FileMediaSources fileMediaSources = FileMediaSourcesHelper.ExtractFileMediaSources(newAllPaths);
-                await viewModel.PlaylistsRepo.SendFileMedisSourcesChange(selectedPlaylistInfo.Id, fileMediaSources);
+                await viewModel.playlistsRepo.SendFileMedisSourcesChange(selectedPlaylistInfo.Id, fileMediaSources);
                 await updateLibraryService.UpdateSourcePlaylist(selectedPlaylistInfo.Id);
             }
 

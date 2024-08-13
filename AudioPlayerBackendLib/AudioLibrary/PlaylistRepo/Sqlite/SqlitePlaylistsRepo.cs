@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.AudioLibrary.Database.Sql;
+﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.AudioLibrary.Database.Sql;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.Extensions;
 using System;
@@ -28,12 +29,23 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         {
         }
 
-        public async Task Init()
+        public override async Task Start()
         {
             const string sql = @"
+                CREATE TABLE IF NOT EXISTS file_media_source_roots
+                (
+                    id          TEXT PRIMARY KEY,
+                    update_type INTEGER NOT NULL,
+                    name        TEXT    NOT NULL,
+                    path_type   INTEGER NOT NULL,
+                    path        TEXT    NOT NULL,
+                    created     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
                 CREATE TABLE IF NOT EXISTS playlists
                 (
                     id                        TEXT PRIMARY KEY,
+                    index_value               INTEGER NOT NULL,
                     type                      INTEGER NOT NULL,
                     name                      TEXT    NOT NULL,
                     shuffle                   INTEGER NOT NULL,
@@ -41,28 +53,62 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                     playback_rate             REAL    NOT NULL,
                     position                  INTEGER NOT NULL,
                     duration                  INTEGER NOT NULL,
-                    current_song_id           TEXT,
-                    requested_song_id         TEXT,
-                    requested_song_index      INTEGER,
-                    requested_song_title      TEXT,
-                    requested_song_artist     TEXT,
-                    requested_song_full_path  TEXT,
+                    current_song_id           TEXT REFERENCES songs (id),
+                    requested_song_id         TEXT REFERENCES songs (id),
                     requested_song_position   INTEGER,
                     requested_song_duration   INTEGER,
-                    file_media_source_root_id TEXT,
+                    songs_count               INT     NOT NULL DEFAULT 0,
+                    file_media_source_root_id TEXT REFERENCES file_media_source_roots (id),
                     created                   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS next_playlists
+                (
+                    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                    playlist_id      TEXT NOT NULL UNIQUE REFERENCES playlists (id),
+                    next_playlist_id TEXT NOT NULL REFERENCES playlists (id),
+                    created          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS file_media_sources
+                (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    playlist_id   TEXT NOT NULL REFERENCES playlists (id),
+                    relative_path TEXT NOT NULL,
+                    created       TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS songs
+                (
+                    id        TEXT PRIMARY KEY,
+                    title     TEXT NOT NULL,
+                    artist    TEXT,
+                    full_path TEXT NOT NULL,
+                    created   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS playlist_songs
+                (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    playlist_id TEXT    NOT NULL REFERENCES playlists (id),
+                    song_id     TEXT    NOT NULL REFERENCES songs (id),
+                    index_value INTEGER NOT NULL,
+                    created     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
             ";
+            await sqlExecuteService.ExecuteNonQueryAsync(sql);
         }
 
         public async Task<Playlist> GetPlaylist(Guid playlistId)
         {
             string playlistSql = $@"
-                SELECT id, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
-                    requested_song_id, requested_song_index, requested_song_title, requested_song_artist,
-                    requested_song_full_path, requested_song_position, requested_song_duration,
-                    file_media_source_root_id
-                FROM playlists
+                SELECT p.id, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
+                    requested_song_id, rs.title as requested_song_title, rs.artist as requested_song_artist,
+                    rs.full_path as requested_song_full_path, requested_song_position, requested_song_duration,
+                    file_media_source_root_id, np.next_playlist_id
+                FROM playlists p
+                    LEFT JOIN songs rs ON p.requested_song_id = rs.id
+                    LEFT JOIN next_playlists np ON p.id = np.playlist_id
                 WHERE id = @id;
             ";
             var playlistParameters = CreateParams("id", playlistId.ToString());
@@ -79,6 +125,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 Guid? currentSongId = reader.GetGuidNullableFromString("current_song_id");
                 RequestSong? requestedSong = GetRequestedSong(reader);
                 Guid? fileMediaSourceRootId = reader.GetGuidNullableFromString("file_media_source_root_id");
+                Guid? nextPlaylistId = reader.GetGuidNullableFromString("next_playlist_id");
 
                 return (id, type, name, shuffle, loop, playbackRate, position, duration,
                     currentSongId, requestedSong, fileMediaSourceRootId);
@@ -123,11 +170,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
             RequestSong? GetRequestedSong(DbDataReader reader)
             {
-                Guid? songId = reader.GetGuidNullableFromString("id");
+                Guid? songId = reader.GetGuidNullableFromString("requested_song_id");
                 if (!songId.HasValue) return null;
 
-                int songIndex = (int)reader.GetInt64("requested_song_index");
-                string songTitle = reader.GetString("requested_song_index");
+                const int songIndex = 0;
+                string songTitle = reader.GetString("requested_song_title");
                 string songArtist = reader.GetStringNullable("requested_song_artist");
                 string songFullPath = reader.GetString("requested_song_full_path");
                 TimeSpan? requestPosition = reader.GetTimespanNullableFromInt64("requested_song_position");
@@ -189,11 +236,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 INSERT INTO playlists (id, index_value, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
                     requested_song_id, requested_song_index, requested_song_title, requested_song_artist,
                     requested_song_full_path, requested_song_position, requested_song_duration,
-                    file_media_source_root_id)
+                    songs_count, file_media_source_root_id)
                 VALUES (@id, @index, @type, @name, @shuffle, @loop, @playbackRate, @position, @duration, @currentSongId,
                     @requestedSongId, @requestedSongIndex, @requestedSongTitle, @requestedSongArtist,
                     @requestedSongFullPath, @requestedSongPosition, @requestedSongDuration,
-                    @fileMediaSourceRootId);
+                    @songsCount, @fileMediaSourceRootId);
             ";
             var playlistParameters = new KeyValuePair<string, object>[]
             {
@@ -215,6 +262,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 CreateParam("requestedSongPosition", playlist.RequestSong?.Position?.Ticks),
                 CreateParam("requestedSongDuration", playlist.RequestSong?.Duration.Ticks),
                 CreateParam("fileMediaSourceRootId", playlist.FileMediaSources?.Root.Id),
+                CreateParam("songsCount", playlist.Songs?.Count ?? 0),
             };
             await sqlExecuteService.ExecuteNonQueryAsync(playlistSql, playlistParameters);
         }
@@ -416,6 +464,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         {
             await DeletePlaylistSongs(playlistId);
             if (songs?.Count > 0) await UpsertPlaylistSongs(playlistId, songs);
+            await UpdatePlaylistValue("songs_count", playlistId, (long)(songs?.Count ?? 0));
             await DeleteUnuusedSongs();
 
             OnSongsChange?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));

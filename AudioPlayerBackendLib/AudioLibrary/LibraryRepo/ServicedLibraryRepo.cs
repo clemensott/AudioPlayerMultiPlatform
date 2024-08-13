@@ -65,12 +65,12 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 
         public Task Start()
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         public Task Stop()
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         Task IAudioService.Dispose()

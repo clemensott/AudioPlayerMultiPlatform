@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.AudioLibrary.Database.Sql
@@ -56,10 +55,7 @@ namespace AudioPlayerBackend.AudioLibrary.Database.Sql
             return null;
         }
 
-        public Task Start()
-        {
-            return Task.CompletedTask;
-        }
+        public abstract Task Start();
 
         public Task Stop()
         {

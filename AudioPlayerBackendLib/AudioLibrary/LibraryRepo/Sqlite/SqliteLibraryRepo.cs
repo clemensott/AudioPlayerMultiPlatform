@@ -17,11 +17,33 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
         {
         }
 
+        public override async Task Start()
+        {
+            // IMPRTANT: this sql must run after the init sql in playlists repo
+            //           because this sql builds on the other
+            const string sql = @"
+                CREATE TABLE IF NOT EXISTS libraries
+                (
+                    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                    play_state          INTEGER NOT NULL,
+                    volume              REAL    NOT NULL,
+                    current_playlist_id TEXT REFERENCES playlists (id),
+                    created             TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                INSERT INTO libraries (play_state, volume, current_playlist_id)
+                SELECT 2, 1, null
+                FROM (SELECT 1) as d
+                WHERE NOT EXISTS(SELECT id FROM libraries);
+            ";
+            await sqlExecuteService.ExecuteNonQueryAsync(sql);
+        }
+
         public async Task<Library> GetLibrary()
         {
             const string librarySql = @"
                 SELECT play_state, volume, current_playlist_id
-                FROM libaries
+                FROM libraries
                 LIMIT 1;
             ";
 
@@ -57,7 +79,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
         private Task UpdateLibraryValue(string columnName, object value)
         {
             string sql = $@"
-                UPDATE libaries
+                UPDATE libraries
                 SET {columnName} = @value
                 WHERE 1;
             ";
@@ -83,22 +105,6 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
             await UpdateLibraryValue("current_playlist_id", currentPlaylistId?.ToString());
             OnCurrentPlaylistIdChange?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
 
-        }
-
-        public Task Start()
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task Stop()
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task Dispose()
-        {
-            sqlExecuteService.Dispose();
-            return Task.CompletedTask;
         }
     }
 }

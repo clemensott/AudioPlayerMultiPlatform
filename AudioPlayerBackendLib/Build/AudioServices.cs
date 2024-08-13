@@ -57,9 +57,12 @@ namespace AudioPlayerBackend.Build
             return ServiceProvider.GetService<IServicedPlaylistsRepo>();
         }
 
-        public Task Start()
+        public async Task Start()
         {
-            return Task.WhenAll(Services.Select(s => s.Start()));
+            foreach (IAudioService service in Services)
+            {
+                await service.Start();
+            }
         }
 
         public Task Stop()

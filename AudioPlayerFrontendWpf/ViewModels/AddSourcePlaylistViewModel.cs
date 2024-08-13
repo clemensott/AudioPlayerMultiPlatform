@@ -10,6 +10,9 @@ namespace AudioPlayerFrontend.ViewModels
 {
     public class AddSourcePlaylistViewModel : INotifyPropertyChanged, IAudioService
     {
+        private readonly IServicedLibraryRepo libraryRepo;
+        public readonly IServicedPlaylistsRepo playlistsRepo;
+
         private string name;
         private string[] sources;
         private LoopType loop;
@@ -76,14 +79,10 @@ namespace AudioPlayerFrontend.ViewModels
             }
         }
 
-        public IServicedLibraryRepo LibraryRepo { get; }
-
-        public IServicedPlaylistsRepo PlaylistsRepo { get; }
-
         public AddSourcePlaylistViewModel(AudioServices audioServices)
         {
-            LibraryRepo = audioServices.GetServicedLibraryRepo();
-            PlaylistsRepo = audioServices.GetServicedPlaylistsRepo();
+            libraryRepo = audioServices.GetServicedLibraryRepo();
+            playlistsRepo = audioServices.GetServicedPlaylistsRepo();
 
             Loop = LoopType.CurrentPlaylist;
         }
@@ -104,8 +103,8 @@ namespace AudioPlayerFrontend.ViewModels
         {
             await Stop();
 
-            LibraryRepo.Dispose();
-            PlaylistsRepo.Dispose();
+            await libraryRepo.Dispose();
+            await playlistsRepo.Dispose();
         }
 
 
