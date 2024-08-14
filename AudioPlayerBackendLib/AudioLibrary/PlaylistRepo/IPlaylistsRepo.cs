@@ -9,7 +9,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
     {
         Task<Playlist> GetPlaylist(Guid id);
 
-        Task SendInsertPlaylist(Playlist playlist, int index);
+        Task SendInsertPlaylist(Playlist playlist, int? index);
         event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
 
         Task SendRemovePlaylist(Guid id);

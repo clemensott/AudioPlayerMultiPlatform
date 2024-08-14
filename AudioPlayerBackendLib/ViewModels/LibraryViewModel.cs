@@ -109,6 +109,7 @@ namespace AudioPlayerBackend.ViewModels
             PlayState = library.PlayState;
             Volume = library.Volume;
             Playlists = new ObservableCollection<PlaylistInfo>(library.Playlists);
+            CurrentPlaylistIndex = Playlists.IndexOf(p => p.Id == library.CurrentPlaylistId);
 
             await CurrentPlaylist.SetPlaylistId(library.CurrentPlaylistId);
             await CurrentPlaylist.Start();
@@ -160,7 +161,9 @@ namespace AudioPlayerBackend.ViewModels
 
         private void PlaylistsRepo_OnInsertPlaylist(object sender, InsertPlaylistArgs e)
         {
-            Playlists.Insert(e.Index, e.Playlist.ToPlaylistInfo());
+            PlaylistInfo playlistInfo = e.Playlist.ToPlaylistInfo();
+            if (e.Index.HasValue) Playlists.Insert(e.Index.Value, playlistInfo);
+            else Playlists.Add(playlistInfo);
         }
 
         private void PlaylistsRepo_OnRemovePlaylist(object sender, RemovePlaylistArgs e)

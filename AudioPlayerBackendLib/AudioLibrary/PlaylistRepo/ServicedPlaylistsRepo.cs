@@ -42,7 +42,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             parent.GetRepos().OfType<ServicedPlaylistsRepo>().ForEach(action);
         }
 
-        public async Task SendInsertPlaylist(Playlist playlist, int index)
+        public async Task SendInsertPlaylist(Playlist playlist, int? index)
         {
             await baseRepo.SendInsertPlaylist(playlist, index);
             var args = new InsertPlaylistArgs(index, playlist);

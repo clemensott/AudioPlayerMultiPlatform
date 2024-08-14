@@ -51,7 +51,7 @@ namespace AudioPlayerBackend.Player
 
             Library library = await libraryRepo.GetLibrary();
             currentPlaylistId = library.CurrentPlaylistId;
-            playlistIds = library.Playlists.Select(p => p.Id).ToArray();
+            playlistIds = library.Playlists.Select(p => p.Id).ToList();
 
             await ChangeCurrentPlaylist(currentPlaylistId);
 
@@ -227,7 +227,8 @@ namespace AudioPlayerBackend.Player
 
         private void OnInsertPlaylist(object sender, InsertPlaylistArgs e)
         {
-            playlistIds.Insert(e.Index, e.Playlist.Id);
+            if (e.Index.HasValue) playlistIds.Insert(e.Index.Value, e.Playlist.Id);
+            else playlistIds.Add(e.Playlist.Id);
         }
 
         private void OnRemovePlaylist(object sender, RemovePlaylistArgs e)

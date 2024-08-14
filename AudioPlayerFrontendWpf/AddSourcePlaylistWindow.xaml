@@ -31,7 +31,8 @@
             </Grid.RowDefinitions>
 
             <TextBlock Text="Sources:" FontWeight="SemiBold" Margin="3,0"/>
-            <TextBox Grid.Row="1" Name="tbxSources" AcceptsReturn="True"/>
+            <TextBox Grid.Row="1" Name="tbxSources" AcceptsReturn="True"
+                     Text="{Binding Sources,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}" />
         </Grid>
 
         <Grid Grid.Row="1" Visibility="{Binding SourcePlaylists.Count,Converter={StaticResource visCon}}"
@@ -42,7 +43,8 @@
             </Grid.RowDefinitions>
 
             <ListBox Name="lbxPlaylists" SelectionMode="Single" Margin="3"
-                     MaxHeight="100" ItemsSource="{Binding SourcePlaylists}">
+                     MaxHeight="100" ItemsSource="{Binding SourcePlaylists}"
+                     SelectedItem="{Binding SelectedPlaylistId,Mode=TwoWay}">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Name}"/>
@@ -52,17 +54,18 @@
 
             <StackPanel Grid.Row="1" Orientation="Horizontal">
                 <RadioButton Name="rbnAppend" Content="Append" GroupName="Action"
-                             IsChecked="True" Margin="5,3"/>
+                             IsChecked="{Binding AppendSources,Mode=TwoWay}" Margin="5,3"/>
                 <RadioButton Content="Replace" GroupName="Action" Margin="5,3"/>
             </StackPanel>
         </Grid>
 
         <CheckBox Grid.Row="2" x:Name="cbxNewPlaylist" Content="New Playlist" Margin="3,10,3,3"
-                  Visibility="{Binding SourcePlaylists.Count,Converter={StaticResource visCon}}"/>
+                  Visibility="{Binding SourcePlaylists.Count,Converter={StaticResource visCon}}" />
 
         <con:MultipleInputs2Converter x:Name="micNewPlaylist" 
                                       Input0="{Binding SourcePlaylists.Count}"
                                       Input1="{Binding ElementName=cbxNewPlaylist,Path=IsChecked}"
+                                      Output="{Binding NewPlaylist,Mode=TwoWay}"
                                       Convert="MicNewPlaylist_Convert"/>
 
         <Grid Grid.Row="3" Name="gidNewPlaylist" Margin="3"

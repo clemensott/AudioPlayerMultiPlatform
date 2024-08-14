@@ -175,7 +175,7 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task SetPlaylistId(Guid? id)
         {
-            Id = Id;
+            Id = id;
             if (isRunning)
             {
                 await LoadPlaylistData();
@@ -197,7 +197,7 @@ namespace AudioPlayerBackend.ViewModels
         {
             if (Id.TryHasValue(out Guid id))
             {
-                var playlist = await playlistsRepo.GetPlaylist(id);
+                Playlist playlist = await playlistsRepo.GetPlaylist(id);
                 Name = playlist.Name;
                 Shuffle = playlist.Shuffle;
                 Loop = playlist.Loop;

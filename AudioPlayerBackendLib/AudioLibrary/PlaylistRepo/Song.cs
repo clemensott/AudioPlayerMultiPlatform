@@ -20,6 +20,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         public Song(string path)
         {
+            Id = Guid.NewGuid();
             Index = -1;
 
             string fileName = Path.GetFileNameWithoutExtension(path);

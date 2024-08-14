@@ -25,7 +25,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             throw new NotImplementedException();
         }
 
-        public Task SendInsertPlaylist(Playlist playlist, int index)
+        public Task SendInsertPlaylist(Playlist playlist, int? index)
         {
             throw new NotImplementedException();
         }

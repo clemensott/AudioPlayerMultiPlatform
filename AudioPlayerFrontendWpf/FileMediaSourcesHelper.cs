@@ -33,7 +33,7 @@ namespace AudioPlayerFrontend
 
             if (index + 1 >= path.Length) return (path, string.Empty);
 
-            string root = path.Remove(index - 1);
+            string root = path.Remove(Math.Max(index - 1, 0));
             string relative = path.Substring(index);
 
             return (root, relative);

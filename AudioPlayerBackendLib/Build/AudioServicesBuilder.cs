@@ -177,7 +177,7 @@ namespace AudioPlayerBackend.Build
             services.AddTransient<UpdateLibraryService>();
             services.AddTransient<AutoUpdateLibraryService>();
 
-            services.AddTransient<ILibraryViewModel, LibraryViewModel>();
+            services.AddSingleton<ILibraryViewModel, LibraryViewModel>();
             services.AddTransient<IPlaylistViewModel, PlaylistViewModel>();
             services.AddTransient<ISongSearchViewModel, SongSearchViewModel>();
 

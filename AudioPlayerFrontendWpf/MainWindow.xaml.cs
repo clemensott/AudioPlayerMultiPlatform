@@ -110,6 +110,7 @@ namespace AudioPlayerFrontend
             servicesBuildConfig.AdditionalServices.TryAddSingleton<IPlayer, Player>();
             servicesBuildConfig.AdditionalServices.TryAddSingleton<IFileSystemService, FileSystemService>();
             servicesBuildConfig.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, InvokeDispatcherService>();
+            servicesBuildConfig.AdditionalServices.TryAddSingleton<IUpdateLibraryService, UpdateLibraryService>();
 
             audioServicesHandler.ServicesBuild += AudioServicesHandler_ServicesBuild;
             audioServicesHandler.Stopped += AudioServicesHandler_Stopped;
@@ -136,7 +137,7 @@ namespace AudioPlayerFrontend
             {
                 BuildHotKeys();
                 audioServices = newAudioServices;
-                DataContext = viewModel = audioServices.ServiceProvider.GetService<ILibraryViewModel>();
+                DataContext = viewModel = audioServices.GetViewModel();
             }
         }
 
