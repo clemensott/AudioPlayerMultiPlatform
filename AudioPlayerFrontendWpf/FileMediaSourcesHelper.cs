@@ -32,7 +32,7 @@ namespace AudioPlayerFrontend
         private static string TrimRootPath(string path, string rootPath)
         {
             return path.Length > rootPath.Length
-                ? rootPath.Remove(rootPath.Length + 1)
+                ? path.Remove(rootPath.Length + 1)
                 : string.Empty;
         }
 
