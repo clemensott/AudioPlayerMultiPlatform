@@ -319,7 +319,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 VALUES {playlistSongsSqlValues};
             ";
             var playlistSongsParameters = CreateParams("pid", playlistId.ToString())
-                .Concat(songs.SelectMany((song, i) => CreateParams($"x{i}", song.Index, $"sid{i}", song.Id.ToString())));
+                .Concat(songs.SelectMany((song, i) => CreateParams($"x{i}", i, $"sid{i}", song.Id.ToString())));
             await sqlExecuteService.ExecuteNonQueryAsync(playlistSongsSql, playlistSongsParameters);
         }
 

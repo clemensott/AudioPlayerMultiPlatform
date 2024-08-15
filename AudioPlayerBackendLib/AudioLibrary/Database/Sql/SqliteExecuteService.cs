@@ -27,7 +27,9 @@ namespace AudioPlayerBackend.AudioLibrary.Database.Sql
         {
             if (connectionString == null)
             {
-                string fullFilePath = await fileSystemService.CreateFileIfNotExits(dataFilePath);
+                string fullFilePath = string.IsNullOrWhiteSpace(dataFilePath)
+                    ? ":memory:"
+                    : await fileSystemService.CreateFileIfNotExits(dataFilePath);
                 connectionString = $"Filename={fullFilePath}";
             }
 

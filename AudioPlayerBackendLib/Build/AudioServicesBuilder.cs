@@ -165,9 +165,9 @@ namespace AudioPlayerBackend.Build
             else throw new NotSupportedException("Mode not supported");
 
             services.AddSingleton<ILibraryRepoService, LibraryRepoService>();
-            services.AddSingleton<IServicedLibraryRepo, ServicedLibraryRepo>();
+            services.AddTransient<IServicedLibraryRepo, ServicedLibraryRepo>();
             services.AddSingleton<IPlaylistsRepoService, PlaylistsRepoService>();
-            services.AddSingleton<IServicedPlaylistsRepo, ServicedPlaylistsRepo>();
+            services.AddTransient<IServicedPlaylistsRepo, ServicedPlaylistsRepo>();
 
             if (config.BuildServer) services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
             //services.AddSingleton<IClientCommunicator, OwnTcpClientCommunicator>();

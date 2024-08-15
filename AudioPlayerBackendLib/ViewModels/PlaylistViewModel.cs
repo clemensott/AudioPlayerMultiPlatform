@@ -1,6 +1,7 @@
 ﻿using AudioPlayerBackend.AudioLibrary;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using StdOttStandard;
+using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,7 +23,7 @@ namespace AudioPlayerBackend.ViewModels
         private TimeSpan position, duration;
         private Song? currentSong;
         private RequestSong? requestedSong;
-        private ICollection<Song> songs;
+        private ICollection<Song> shuffledSongs, songs;
 
         public bool IsLoaded
         {
@@ -81,7 +82,9 @@ namespace AudioPlayerBackend.ViewModels
 
                 shuffle = value;
                 OnPropertyChanged(nameof(Shuffle));
+
                 SendShuffle(value);
+                UpdateSongs();
             }
         }
 
@@ -199,6 +202,8 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task SetPlaylistId(Guid? id)
         {
+            if (Id == id) return;
+
             Id = id;
             if (isRunning)
             {
@@ -217,6 +222,7 @@ namespace AudioPlayerBackend.ViewModels
             playlistsRepo.OnPositionChange += OnPositionChange;
             playlistsRepo.OnDurationChange += OnDurationChange;
             playlistsRepo.OnCurrentSongIdChange += OnCurrentSongIdChange;
+            playlistsRepo.OnSongsChange += OnSongsChange;
 
             await LoadPlaylistData();
         }
@@ -232,6 +238,7 @@ namespace AudioPlayerBackend.ViewModels
             playlistsRepo.OnPositionChange -= OnPositionChange;
             playlistsRepo.OnDurationChange -= OnDurationChange;
             playlistsRepo.OnCurrentSongIdChange -= OnCurrentSongIdChange;
+            playlistsRepo.OnSongsChange -= OnSongsChange;
 
             Name = string.Empty;
             Shuffle = OrderType.ByTitleAndArtist;
@@ -240,6 +247,7 @@ namespace AudioPlayerBackend.ViewModels
             Position = TimeSpan.Zero;
             Duration = TimeSpan.Zero;
             CurrentSong = null;
+            shuffledSongs = Array.Empty<Song>();
             Songs = Array.Empty<Song>();
 
             IsLoaded = false;
@@ -282,6 +290,15 @@ namespace AudioPlayerBackend.ViewModels
             if (Id == e.Id) SetCurrentSongById(e.NewValue);
         }
 
+        private void OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
+        {
+            if (Id == e.Id)
+            {
+                shuffledSongs = e.NewValue;
+                UpdateSongs();
+            }
+        }
+
         private async Task LoadPlaylistData()
         {
             if (Id.TryHasValue(out Guid id))
@@ -293,8 +310,9 @@ namespace AudioPlayerBackend.ViewModels
                 PlaybackRate = playlist.PlaybackRate;
                 Position = playlist.Position;
                 Duration = playlist.Duration;
-                Songs = playlist.Songs;
+                shuffledSongs = playlist.Songs;
                 SetCurrentSongById(playlist.CurrentSongId);
+                UpdateSongs();
 
                 IsLoaded = true;
             }
@@ -302,7 +320,12 @@ namespace AudioPlayerBackend.ViewModels
 
         private void SetCurrentSongById(Guid? currentSongId)
         {
-            CurrentSong = Songs.Cast<Song?>().FirstOrDefault(s => s?.Id == currentSongId);
+            CurrentSong = shuffledSongs.Cast<Song?>().FirstOrDefault(s => s?.Id == currentSongId);
+        }
+
+        private void UpdateSongs()
+        {
+            Songs = SongsHelper.GetAllSongs(shuffledSongs.ToNotNull(), Shuffle).ToArray();
         }
 
         public Task Dispose()

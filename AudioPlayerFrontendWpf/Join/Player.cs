@@ -11,6 +11,7 @@ namespace AudioPlayerFrontend.Join
 {
     class Player : IPlayer
     {
+        private RequestSong setRequestSong;
         private RequestSong? requestSong;
         private PlaybackState playState;
         private readonly MediaElement mediaElement;
@@ -72,17 +73,24 @@ namespace AudioPlayerFrontend.Join
 
         private void MediaElement_MediaOpened(object sender, RoutedEventArgs e)
         {
-            Source = requestSong.Value.Song;
-            if (requestSong.Value.Position.HasValue && mediaElement.NaturalDuration.HasTimeSpan &&
-                requestSong.Value.Duration == mediaElement.NaturalDuration.TimeSpan)
+            try
             {
-                SetPosition(requestSong.Value.Position.Value);
-            }
-            else lastPosition = Position;
+                AudioPlayerBackend.Logs.Log($"MediaElement_MediaOpened1: {setRequestSong.Song.FullPath}");
+                Source = setRequestSong.Song;
+                if (setRequestSong.Position.HasValue && mediaElement.NaturalDuration.HasTimeSpan &&
+                    setRequestSong.Duration == mediaElement.NaturalDuration.TimeSpan)
+                {
+                    SetPosition(setRequestSong.Position.Value);
+                }
+                else lastPosition = Position;
 
-            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, requestSong.Value.Song));
-            ExecutePlayState();
-            handleSem.Release();
+                MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, setRequestSong.Song));
+                ExecutePlayState();
+            }
+            finally
+            {
+                handleSem.Release();
+            }
         }
 
         private void SetPosition(TimeSpan pos)
@@ -105,11 +113,17 @@ namespace AudioPlayerFrontend.Join
 
         private void MediaElement_MediaFailed(object sender, ExceptionRoutedEventArgs e)
         {
-            AudioPlayerBackend.Logs.Log($"MediaElement_MediaFailed1: {e.ErrorException}");
-            AudioPlayerBackend.Logs.Log($"MediaElement_MediaFailed2: {Position} / {Duration} | {Source?.FullPath} | {PlayState}");
-            Source = null;
-            MediaFailed?.Invoke(this, new MediaFailedEventArgs(requestSong?.Song, e.ErrorException));
-            handleSem.Release();
+            try
+            {
+                AudioPlayerBackend.Logs.Log($"MediaElement_MediaFailed1: {e.ErrorException}");
+                AudioPlayerBackend.Logs.Log($"MediaElement_MediaFailed2: {Position} / {Duration} | {Source?.FullPath} | {PlayState}");
+                Source = null;
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(setRequestSong.Song, e.ErrorException));
+            }
+            finally
+            {
+                handleSem.Release();
+            }
         }
 
         private void MediaElement_MediaEnded(object sender, RoutedEventArgs e)
@@ -180,15 +194,13 @@ namespace AudioPlayerFrontend.Join
             try
             {
                 AudioPlayerBackend.Logs.Log($"Player.Set8: {wanna.Song.FullPath}");
+                setRequestSong = wanna;
                 mediaElement.Source = new Uri(wanna.Song.FullPath);
             }
             catch (Exception e)
             {
                 Source = null;
                 MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
-            }
-            finally
-            {
                 handleSem.Release();
             }
         }

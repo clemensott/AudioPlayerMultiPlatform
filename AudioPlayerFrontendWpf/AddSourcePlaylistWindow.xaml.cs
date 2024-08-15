@@ -8,6 +8,7 @@ using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.FileSystem;
+using AudioPlayerFrontend.Join;
 using AudioPlayerFrontend.ViewModels;
 using StdOttStandard.Converter.MultipleInputs;
 
@@ -93,7 +94,7 @@ namespace AudioPlayerFrontend
                 if (viewModel.AppendSources)
                 {
                     Playlist playlist = await viewModel.PlaylistsRepo.GetPlaylist(selectedPlaylistInfo.Id);
-                    newAllPaths = playlist.FileMediaSources.Sources.Select(s => s.RelativePath).Concat(newPaths).ToArray();
+                    newAllPaths = UpdateLibraryService.LoadAllFilePaths(playlist.FileMediaSources).Concat(newPaths).ToArray();
                 }
                 else
                 {

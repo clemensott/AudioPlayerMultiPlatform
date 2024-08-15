@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerFrontend.Join
 {
-    internal class UpdateLibraryService: IUpdateLibraryService
+    internal class UpdateLibraryService : IUpdateLibraryService
     {
         private static readonly Random ran = new Random();
         private readonly IServicedPlaylistsRepo playlistsRepo;
@@ -98,7 +98,7 @@ namespace AudioPlayerFrontend.Join
             });
         }
 
-        private IEnumerable<string> LoadAllFilePaths(FileMediaSources sources)
+        public static IEnumerable<string> LoadAllFilePaths(FileMediaSources sources)
         {
             try
             {
@@ -113,7 +113,7 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        private string GetFileMediaSourcePath(FileMediaSource source, FileMediaSourceRoot root)
+        private static string GetFileMediaSourcePath(FileMediaSource source, FileMediaSourceRoot root)
         {
             string rootPath = GetPathFromFileMediaSourceRoot(root);
             if (string.IsNullOrWhiteSpace(rootPath)) return null;
@@ -121,7 +121,7 @@ namespace AudioPlayerFrontend.Join
             return Path.Combine(rootPath, source.RelativePath);
         }
 
-        private string GetPathFromFileMediaSourceRoot(FileMediaSourceRoot root)
+        private static string GetPathFromFileMediaSourceRoot(FileMediaSourceRoot root)
         {
             switch (root.PathType)
             {
@@ -162,7 +162,7 @@ namespace AudioPlayerFrontend.Join
             return new Song(path);
         }
 
-        public IEnumerable<LocalKnownFolder> GetLocalKnownFolders()
+        public static IEnumerable<LocalKnownFolder> GetLocalKnownFolders()
         {
             yield return CreateLocalKnownFolder(Environment.SpecialFolder.MyMusic, "My Music");
             yield return CreateLocalKnownFolder(Environment.SpecialFolder.MyVideos, "My Videos");

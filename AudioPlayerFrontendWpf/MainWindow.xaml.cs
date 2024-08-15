@@ -255,6 +255,16 @@ namespace AudioPlayerFrontend
             }
         }
 
+        private async void TbxSearch_GotFocus(object sender, RoutedEventArgs e)
+        {
+            await viewModel.SongSearch.Start();
+        }
+
+        private async void TbxSearch_LostFocus(object sender, RoutedEventArgs e)
+        {
+            await viewModel.SongSearch.Stop();
+        }
+
         private async void OnPrevious(object sender, EventArgs e)
         {
             await viewModel.CurrentPlaylist.SetPreviousSong();

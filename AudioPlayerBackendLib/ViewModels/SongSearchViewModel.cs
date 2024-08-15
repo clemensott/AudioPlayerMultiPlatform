@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.ViewModels
@@ -126,7 +125,7 @@ namespace AudioPlayerBackend.ViewModels
             Playlist playlist = new Playlist(Guid.NewGuid(), PlaylistType.Custom | PlaylistType.Search, "Custom",
                 OrderType.Custom, LoopType.Next, 1, position, duration, requestedSong, null, newSongs, null);
 
-            await playlistsRepo.SendInsertPlaylist(playlist, -1);
+            await playlistsRepo.SendInsertPlaylist(playlist, null);
             await libraryRepo.SendCurrentPlaylistIdChange(playlist.Id);
 
             if (setNextSongInOldPlaylist)
@@ -181,10 +180,13 @@ namespace AudioPlayerBackend.ViewModels
                 Song[] newSongs = songs.Insert(0, currentSong.Value).Distinct().ToArray();
                 await playlistsRepo.SendSongsChange(searchPlaylist.Id, newSongs);
 
-                RequestSong requestSong = RequestSong.Get(currentSong.Value, null, currentPlaylist.Duration);
-                await playlistsRepo.SendRequestSongChange(searchPlaylist.Id, requestSong);
+                RequestSong searchRequestSong = RequestSong.Get(currentSong.Value, null, currentPlaylist.Duration);
+                await playlistsRepo.SendRequestSongChange(searchPlaylist.Id, searchRequestSong);
 
                 await libraryRepo.SendCurrentPlaylistIdChange(searchPlaylist.Id);
+
+                RequestSong? currentPlaylistRequestSong = RequestSong.Start(SongsHelper.GetNextSong(currentPlaylist).song);
+                await playlistsRepo.SendRequestSongChange(currentPlaylist.Id, currentPlaylistRequestSong);
             }
         }
 
@@ -270,8 +272,8 @@ namespace AudioPlayerBackend.ViewModels
         {
             await Stop();
 
-            libraryRepo.Dispose();
-            playlistsRepo.Dispose();
+            await libraryRepo.Dispose();
+            await playlistsRepo.Dispose();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

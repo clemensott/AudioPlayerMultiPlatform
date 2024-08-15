@@ -149,9 +149,7 @@ namespace AudioPlayerFrontend.ViewModels
 
         private void PlaylistsRepo_OnInsertPlaylist(object sender, InsertPlaylistArgs e)
         {
-            PlaylistInfo playlistInfo = e.Playlist.ToPlaylistInfo();
-            if (e.Index.HasValue) SourcePlaylists.Insert(e.Index.Value, playlistInfo);
-            else SourcePlaylists.Add(playlistInfo);
+            SourcePlaylists.Insert(e.Index ?? SourcePlaylists.Count, e.Playlist.ToPlaylistInfo());
         }
 
         private void PlaylistsRepo_OnRemovePlaylist(object sender, RemovePlaylistArgs e)
