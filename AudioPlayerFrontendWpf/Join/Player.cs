@@ -186,6 +186,9 @@ namespace AudioPlayerFrontend.Join
             {
                 Source = null;
                 MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
+            }
+            finally
+            {
                 handleSem.Release();
             }
         }

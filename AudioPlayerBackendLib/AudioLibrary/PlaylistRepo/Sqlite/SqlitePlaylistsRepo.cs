@@ -251,6 +251,25 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         {
             if (playlist.RequestSong.TryHasValue(out RequestSong requestedSong)) await UpsertSong(requestedSong.Song);
 
+            if (index.HasValue)
+            {
+                const string moveIndexesSql = @"
+                    UPDATE playlists
+                    SET index_value = index_value + 1
+                    WHERE index_value >= @index;
+                ";
+                var moveIndexesParameters = CreateParams("index", index);
+                await sqlExecuteService.ExecuteNonQueryAsync(moveIndexesSql, moveIndexesParameters);
+            }
+            else
+            {
+                const string nextIndexSql = @"
+                    SELECT COALESCE(MAX(index_value), -1) + 1
+                    FROM playlists;
+                ";
+                index = (int)await sqlExecuteService.ExecuteScalarAsync<long>(nextIndexSql);
+            }
+
             const string playlistSql = @"
                 INSERT INTO playlists (id, index_value, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
                     requested_song_id, requested_song_position, requested_song_duration, songs_count, file_media_source_root_id)
@@ -260,8 +279,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             var playlistParameters = new KeyValuePair<string, object>[]
             {
                 CreateParam("id", playlist.Id.ToString()),
-                // existing index_values are multiple of two so there is always room between them
-                CreateParam("index", index.HasValue ? index.Value * 2 + 1: int.MaxValue),
+                CreateParam("index", index.Value),
                 CreateParam("type", (long)playlist.Type),
                 CreateParam("name", playlist.Name),
                 CreateParam("shuffle", (long)playlist.Shuffle),
@@ -277,14 +295,6 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 CreateParam("songsCount", playlist.Songs?.Count ?? 0),
             };
             await sqlExecuteService.ExecuteNonQueryAsync(playlistSql, playlistParameters);
-
-            // correct index_values and make them a multiple of two so there is always room between them
-            const string correctPlaylistIndexesSql = @"
-                UPDATE playlists
-                SET index_value = (SELECT COUNT(sub.id) * 2 FROM playlists sub WHERE sub.index_value <= index_value)
-                WHERE 1;
-            ";
-            await sqlExecuteService.ExecuteNonQueryAsync(correctPlaylistIndexesSql);
         }
 
         private async Task UpsertPlaylistSongs(Guid playlistId, ICollection<Song> songs)
@@ -370,6 +380,14 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
         private async Task DeletePlaylist(Guid playlistId)
         {
+            const string moveIndexesSql = @"
+                UPDATE playlists
+                SET index_value = index_value - 1
+                WHERE index_value > (SELECT sub.index_value FROM playlists AS sub WHERE sub.id = @id);
+            ";
+            var moveIndexesParameters = CreateParams("id", playlistId.ToString());
+            await sqlExecuteService.ExecuteNonQueryAsync(moveIndexesSql, moveIndexesParameters);
+
             const string playlistSql = @"
                 DELETE FROM playlists
                 WHERE id = @id;

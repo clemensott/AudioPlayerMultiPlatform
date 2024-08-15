@@ -194,9 +194,9 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Dispose()
         {
-            libraryRepo.Dispose();
+            await libraryRepo.Dispose();
             await CurrentPlaylist.Dispose();
-            SongSearch.Dispose();
+            await SongSearch.Dispose();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

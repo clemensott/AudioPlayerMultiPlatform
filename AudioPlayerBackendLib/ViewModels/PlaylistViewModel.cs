@@ -27,7 +27,7 @@ namespace AudioPlayerBackend.ViewModels
         public bool IsLoaded
         {
             get => isLoaded;
-            set
+            private set
             {
                 if (value == isLoaded) return;
 
@@ -81,6 +81,7 @@ namespace AudioPlayerBackend.ViewModels
 
                 shuffle = value;
                 OnPropertyChanged(nameof(Shuffle));
+                SendShuffle(value);
             }
         }
 
@@ -93,6 +94,7 @@ namespace AudioPlayerBackend.ViewModels
 
                 loop = value;
                 OnPropertyChanged(nameof(Loop));
+                SendLoop(value);
             }
         }
 
@@ -105,13 +107,14 @@ namespace AudioPlayerBackend.ViewModels
 
                 playbackRate = value;
                 OnPropertyChanged(nameof(PlaybackRate));
+                SendPlaybackRate(value);
             }
         }
 
         public TimeSpan Position
         {
             get => position;
-            set
+            private set
             {
                 if (value == position) return;
 
@@ -123,7 +126,7 @@ namespace AudioPlayerBackend.ViewModels
         public TimeSpan Duration
         {
             get => duration;
-            set
+            private set
             {
                 if (value == duration) return;
 
@@ -153,6 +156,7 @@ namespace AudioPlayerBackend.ViewModels
 
                 requestedSong = value;
                 OnPropertyChanged(nameof(RequestedSong));
+                SendRequestSong(value);
             }
         }
 
@@ -173,6 +177,26 @@ namespace AudioPlayerBackend.ViewModels
             this.playlistsRepo = playlistsRepo;
         }
 
+        public async Task SendShuffle(OrderType shuffle)
+        {
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendShuffleChange(id, shuffle);
+        }
+
+        public async Task SendLoop(LoopType loop)
+        {
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendLoopChange(id, loop);
+        }
+
+        public async Task SendPlaybackRate(double playbackRate)
+        {
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendPlaybackRateChange(id, playbackRate);
+        }
+
+        public async Task SendRequestSong(RequestSong? requestSong)
+        {
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendRequestSongChange(id, requestSong);
+        }
+
         public async Task SetPlaylistId(Guid? id)
         {
             Id = id;
@@ -182,15 +206,80 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public Task SendRequestSong(RequestSong? requestSong)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task Start()
+        public async Task Start()
         {
             isRunning = true;
+
+            playlistsRepo.OnNameChange += OnNameChange;
+            playlistsRepo.OnShuffleChange += OnShuffleChange;
+            playlistsRepo.OnLoopChange += OnLoopChange;
+            playlistsRepo.OnPlaybackRateChange += OnPlaybackRateChange;
+            playlistsRepo.OnPositionChange += OnPositionChange;
+            playlistsRepo.OnDurationChange += OnDurationChange;
+            playlistsRepo.OnCurrentSongIdChange += OnCurrentSongIdChange;
+
+            await LoadPlaylistData();
+        }
+
+        public Task Stop()
+        {
+            isRunning = false;
+
+            playlistsRepo.OnNameChange -= OnNameChange;
+            playlistsRepo.OnShuffleChange -= OnShuffleChange;
+            playlistsRepo.OnLoopChange -= OnLoopChange;
+            playlistsRepo.OnPlaybackRateChange -= OnPlaybackRateChange;
+            playlistsRepo.OnPositionChange -= OnPositionChange;
+            playlistsRepo.OnDurationChange -= OnDurationChange;
+            playlistsRepo.OnCurrentSongIdChange -= OnCurrentSongIdChange;
+
+            Name = string.Empty;
+            Shuffle = OrderType.ByTitleAndArtist;
+            Loop = LoopType.CurrentPlaylist;
+            PlaybackRate = 1;
+            Position = TimeSpan.Zero;
+            Duration = TimeSpan.Zero;
+            CurrentSong = null;
+            Songs = Array.Empty<Song>();
+
+            IsLoaded = false;
+
             return Task.CompletedTask;
+        }
+
+        private void OnNameChange(object sender, PlaylistChangeArgs<string> e)
+        {
+            if (Id == e.Id) Name = e.NewValue;
+        }
+
+        private void OnShuffleChange(object sender, PlaylistChangeArgs<OrderType> e)
+        {
+            if (Id == e.Id) Shuffle = e.NewValue;
+        }
+
+        private void OnLoopChange(object sender, PlaylistChangeArgs<LoopType> e)
+        {
+            if (Id == e.Id) Loop = e.NewValue;
+        }
+
+        private void OnPlaybackRateChange(object sender, PlaylistChangeArgs<double> e)
+        {
+            if (Id == e.Id) PlaybackRate = e.NewValue;
+        }
+
+        private void OnPositionChange(object sender, PlaylistChangeArgs<TimeSpan> e)
+        {
+            if (Id == e.Id) Position = e.NewValue;
+        }
+
+        private void OnDurationChange(object sender, PlaylistChangeArgs<TimeSpan> e)
+        {
+            if (Id == e.Id) Duration = e.NewValue;
+        }
+
+        private void OnCurrentSongIdChange(object sender, PlaylistChangeArgs<Guid?> e)
+        {
+            if (Id == e.Id) SetCurrentSongById(e.NewValue);
         }
 
         private async Task LoadPlaylistData()
@@ -204,15 +293,16 @@ namespace AudioPlayerBackend.ViewModels
                 PlaybackRate = playlist.PlaybackRate;
                 Position = playlist.Position;
                 Duration = playlist.Duration;
-                CurrentSong = playlist.Songs.Cast<Song?>().FirstOrDefault(s => s?.Id == playlist.CurrentSongId);
                 Songs = playlist.Songs;
+                SetCurrentSongById(playlist.CurrentSongId);
+
+                IsLoaded = true;
             }
         }
 
-        public Task Stop()
+        private void SetCurrentSongById(Guid? currentSongId)
         {
-            isRunning = false;
-            return Task.CompletedTask;
+            CurrentSong = Songs.Cast<Song?>().FirstOrDefault(s => s?.Id == currentSongId);
         }
 
         public Task Dispose()

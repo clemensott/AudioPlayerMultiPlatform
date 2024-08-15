@@ -50,10 +50,9 @@ namespace AudioPlayerBackend.Player
             SubscribePlaylistsRepo();
 
             Library library = await libraryRepo.GetLibrary();
-            currentPlaylistId = library.CurrentPlaylistId;
             playlistIds = library.Playlists.Select(p => p.Id).ToList();
 
-            await ChangeCurrentPlaylist(currentPlaylistId);
+            await ChangeCurrentPlaylist(library.CurrentPlaylistId);
 
             Player.PlayState = library.PlayState;
             await libraryRepo.SendVolumeChange(Player.Volume);
@@ -65,16 +64,23 @@ namespace AudioPlayerBackend.Player
             UnsubscribeLibraryRepo();
             UnsubscribePlaylistsRepo();
 
+            if (currentPlaylistId.HasValue && requestSong.HasValue)
+            {
+                await playlistsRepo.SendRequestSongChange(currentPlaylistId.Value, RequestSong.Get(requestSong.Value.Song, position));
+            }
+
             await Player.Stop();
         }
 
         private async Task ChangeCurrentPlaylist(Guid? newCurrentPlaylistId)
         {
+            if (currentPlaylistId == newCurrentPlaylistId) return;
+
             if (currentPlaylistId.TryHasValue(out Guid oldPlaylistId))
             {
                 var oldPlaylist = await playlistsRepo.GetPlaylist(newCurrentPlaylistId.Value);
                 Song? currentSong = oldPlaylist.Songs.Cast<Song?>().FirstOrDefault(s => s?.Id == oldPlaylist.CurrentSongId);
-                await SendRequestSongChange(oldPlaylistId, RequestSong.Get(currentSong, oldPlaylist.Position, oldPlaylist.Duration));
+                await playlistsRepo.SendRequestSongChange(oldPlaylistId, RequestSong.Get(currentSong, oldPlaylist.Position, oldPlaylist.Duration));
             }
 
             currentPlaylistId = newCurrentPlaylistId;
@@ -83,13 +89,13 @@ namespace AudioPlayerBackend.Player
                 var currentPlaylist = await playlistsRepo.GetPlaylist(newCurrentPlaylistId.Value);
                 shuffle = currentPlaylist.Shuffle;
                 loop = currentPlaylist.Loop;
+                requestSong = currentPlaylist.RequestSong;
                 songs = currentPlaylist.Songs;
             }
             else songs = new Song[0];
 
-            await CheckCurrentSong();
-            await UpdateCurrentSong();
-
+            // if a request song has been set by CheckRequestedSong then UpdateCurrentSong got called already
+            if (!await CheckRequestedSong()) await UpdateCurrentSong();
         }
 
         private async Task CheckUpdateCurrentSong()
@@ -112,11 +118,11 @@ namespace AudioPlayerBackend.Player
                 if (!Player.Source.HasValue ||
                     Player.Source?.Id != currentSongId ||
                     position.Seconds == Player.Position.Seconds ||
-                    currentPlaylistId.HasValue) return;
+                    !currentPlaylistId.HasValue) return;
 
                 Guid playlistId = currentPlaylistId.Value;
                 position = Player.Position;
-                SendPositionChange(playlistId, position);
+                playlistsRepo.SendPositionChange(playlistId, position);
                 playlistsRepo.SendDurationChange(playlistId, Player.Duration);
             }
             catch (Exception e)
@@ -149,8 +155,8 @@ namespace AudioPlayerBackend.Player
             {
                 Guid playlistId = currentPlaylistId.Value;
 
-                await SendCurrentSongIdChange(playlistId, e.Source.Id);
-                await SendPositionChange(playlistId, e.Position);
+                await playlistsRepo.SendCurrentSongIdChange(playlistId, e.Source.Id);
+                await playlistsRepo.SendPositionChange(playlistId, e.Position);
                 await playlistsRepo.SendDurationChange(playlistId, e.Duration);
             }
         }
@@ -211,6 +217,7 @@ namespace AudioPlayerBackend.Player
             playlistsRepo.OnRemovePlaylist += OnRemovePlaylist;
             playlistsRepo.OnPositionChange += OnPositionChange;
             playlistsRepo.OnPlaybackRateChange += OnPlaybackRateChange;
+            playlistsRepo.OnCurrentSongIdChange += OnCurrentSongIdChange;
             playlistsRepo.OnRequestSongChange += OnRequestSongChange;
             playlistsRepo.OnSongsChange += OnSongsChange;
         }
@@ -221,6 +228,7 @@ namespace AudioPlayerBackend.Player
             playlistsRepo.OnRemovePlaylist -= OnRemovePlaylist;
             playlistsRepo.OnPositionChange -= OnPositionChange;
             playlistsRepo.OnPlaybackRateChange -= OnPlaybackRateChange;
+            playlistsRepo.OnCurrentSongIdChange -= OnCurrentSongIdChange;
             playlistsRepo.OnRequestSongChange -= OnRequestSongChange;
             playlistsRepo.OnSongsChange -= OnSongsChange;
         }
@@ -241,6 +249,11 @@ namespace AudioPlayerBackend.Player
             if (e.Id == currentPlaylistId) position = e.NewValue;
         }
 
+        private void OnCurrentSongIdChange(object sender, PlaylistChangeArgs<Guid?> e)
+        {
+            if (currentPlaylistId == e.Id) currentSongId = e.NewValue;
+        }
+
         private async void OnRequestSongChange(object sender, PlaylistChangeArgs<RequestSong?> e)
         {
             if (e.Id == currentPlaylistId)
@@ -255,19 +268,30 @@ namespace AudioPlayerBackend.Player
             if (e.Id == currentPlaylistId)
             {
                 songs = e.NewValue;
-                await CheckCurrentSong();
+                await CheckRequestedSong();
             }
         }
 
-        private async Task CheckCurrentSong()
+        /// <summary>
+        /// Checks if playlists has an requested song and if not sets first song
+        /// </summary>
+        /// <returns>Has set an requested song</returns>
+        private async Task<bool> CheckRequestedSong()
         {
-            if (!currentPlaylistId.TryHasValue(out Guid playlistId)) return;
+            if (!currentPlaylistId.TryHasValue(out Guid playlistId)) return false;
 
-            if (songs == null || songs.Count == 0) await SendRequestSongChange(playlistId, null);
+            if (songs == null || songs.Count == 0)
+            {
+                await playlistsRepo.SendRequestSongChange(playlistId, null);
+                return true;
+            }
             else if (!requestSong.HasValue || !songs.Contains(requestSong.Value.Song))
             {
-                await SendRequestSongChange(playlistId, RequestSong.Start(songs.First()));
+                await playlistsRepo.SendRequestSongChange(playlistId, RequestSong.Start(songs.First()));
+                return true;
             }
+
+            return false;
         }
 
         private async Task UpdateCurrentSong()
@@ -278,10 +302,11 @@ namespace AudioPlayerBackend.Player
             if (currentPlaylistId.TryHasValue(out Guid playlistId))
             {
                 RequestSong? setRequestSong = requestSong;
+                await Player.Set(setRequestSong);
 
                 if (requestSong.Equals(setRequestSong))
                 {
-                    await SendCurrentSongIdChange(playlistId, setRequestSong?.Song.Id);
+                    await playlistsRepo.SendCurrentSongIdChange(playlistId, setRequestSong?.Song.Id);
                 }
             }
             else await Player.Set(null);
@@ -317,7 +342,7 @@ namespace AudioPlayerBackend.Player
             if (loop == LoopType.CurrentSong)
             {
                 RequestSong? requestSong = RequestSong.Start(songs.Cast<Song?>().FirstOrDefault(s => s?.Id == currentSongId));
-                await SendRequestSongChange(playlistId, requestSong);
+                await playlistsRepo.SendRequestSongChange(playlistId, requestSong);
                 return;
             }
 
@@ -350,10 +375,10 @@ namespace AudioPlayerBackend.Player
         {
             if (newCurrentPlaylistId.HasValue)
             {
-                await SendRequestSongChange(newCurrentPlaylistId.Value, RequestSong.Start(newCurrentSong));
+                await playlistsRepo.SendRequestSongChange(newCurrentPlaylistId.Value, RequestSong.Start(newCurrentSong));
             }
 
-            await SendCurrentPlaylistIdChange(newCurrentPlaylistId);
+            await libraryRepo.SendCurrentPlaylistIdChange(newCurrentPlaylistId);
         }
 
         private Task SendPlayStateChange(PlaybackState playState)
@@ -362,40 +387,12 @@ namespace AudioPlayerBackend.Player
             return libraryRepo.SendPlayStateChange(playState);
         }
 
-        private async Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
-        {
-            await libraryRepo.SendCurrentPlaylistIdChange(currentPlaylistId);
-            await ChangeCurrentPlaylist(currentPlaylistId);
-        }
-
-        private Task SendPositionChange(Guid playlistId, TimeSpan position)
-        {
-            if (currentPlaylistId == playlistId) this.position = position;
-            return playlistsRepo.SendPositionChange(playlistId, position);
-        }
-
-        private async Task SendRequestSongChange(Guid playlistId, RequestSong? requestSong)
-        {
-            await playlistsRepo.SendRequestSongChange(playlistId, requestSong);
-            if (playlistId == currentPlaylistId)
-            {
-                this.requestSong = requestSong;
-                await UpdateCurrentSong();
-            }
-        }
-
-        private Task SendCurrentSongIdChange(Guid playlistId, Guid? currentSongId)
-        {
-            if (currentPlaylistId == playlistId) this.currentSongId = currentSongId;
-            return playlistsRepo.SendCurrentSongIdChange(playlistId, currentPlaylistId);
-        }
-
         public async Task Dispose()
         {
             await Stop();
 
-            libraryRepo.Dispose();
-            playlistsRepo.Dispose();
+            await libraryRepo.Dispose();
+            await playlistsRepo.Dispose();
             timer.Dispose();
             Player.Dispose();
         }

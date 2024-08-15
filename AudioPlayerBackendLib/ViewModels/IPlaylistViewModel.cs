@@ -21,7 +21,7 @@ namespace AudioPlayerBackend.ViewModels
 
         double PlaybackRate { get; set; }
 
-        TimeSpan Position { get; set; }
+        TimeSpan Position { get; }
 
         TimeSpan Duration { get; }
 

@@ -392,8 +392,8 @@ namespace AudioPlayerFrontend
             else if (!currentPlaylist.Type.HasFlag(PlaylistType.Search)) songs = searchSongs;
             else songs = searchSongs.Except(allSongs);
 
-            if (changedInput == 6 && lbxIndex != -1 && (isSearching || isChangingSelectedSongIndex)) ;
-            else if (changedInput == 6 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))
+            if (changedInput == 5 && lbxIndex != -1 && (isSearching || isChangingSelectedSongIndex)) ;
+            else if (changedInput == 5 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))
             {
                 requestSong = RequestSong.Start(songs.ElementAt(lbxIndex));
             }

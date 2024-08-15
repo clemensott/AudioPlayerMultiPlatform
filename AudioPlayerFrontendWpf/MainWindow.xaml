@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:AudioPlayerFrontend"
         xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        xmlns:audio="clr-namespace:AudioPlayerBackend.Audio;assembly=AudioPlayerBackendLib"
+        xmlns:audio="clr-namespace:AudioPlayerBackend.AudioLibrary.PlaylistRepo;assembly=AudioPlayerBackendLib"
         mc:Ignorable="d"
         Title="Hotkey Music"
         MinHeight="300" MinWidth="450"
