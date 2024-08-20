@@ -12,6 +12,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
         public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> OnPlayStateChange;
         public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
         public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
+        public event EventHandler<AudioLibraryChangeArgs<DateTime?>> OnFoldersLastUpdatedChange;
 
         public SqliteLibraryRepo(ISqlExecuteService sqlExecuteService) : base(sqlExecuteService)
         {
@@ -24,11 +25,12 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
             const string sql = @"
                 CREATE TABLE IF NOT EXISTS libraries
                 (
-                    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-                    play_state          INTEGER NOT NULL,
-                    volume              REAL    NOT NULL,
-                    current_playlist_id TEXT REFERENCES playlists (id),
-                    created             TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+                    play_state           INTEGER NOT NULL,
+                    volume               REAL    NOT NULL,
+                    current_playlist_id  TEXT REFERENCES playlists (id),
+                    folders_last_updated INTEGER,
+                    created              TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
                 INSERT INTO libraries (play_state, volume, current_playlist_id)
@@ -105,6 +107,12 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
             await UpdateLibraryValue("current_playlist_id", currentPlaylistId?.ToString());
             OnCurrentPlaylistIdChange?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
 
+        }
+
+        public async Task SendFoldersLastUpdatedChange(DateTime? foldersLastUpdated)
+        {
+            await UpdateLibraryValue("folders_last_updated", foldersLastUpdated?.Ticks);
+            OnFoldersLastUpdatedChange?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
         }
     }
 }

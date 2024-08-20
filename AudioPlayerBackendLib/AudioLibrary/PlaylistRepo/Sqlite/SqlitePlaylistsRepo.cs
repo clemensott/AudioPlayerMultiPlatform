@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.AudioLibrary.Database.Sql;
+﻿using AudioPlayerBackend.Audio;
+using AudioPlayerBackend.AudioLibrary.Database.Sql;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.Extensions;
 using StdOttStandard;
@@ -24,6 +25,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         public event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
         public event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
         public event EventHandler<PlaylistChangeArgs<FileMediaSources>> OnFileMedisSourcesChange;
+        public event EventHandler<PlaylistChangeArgs<DateTime?>> OnFilesLastUpdatedChange;
+        public event EventHandler<PlaylistChangeArgs<DateTime?>> OnSongsLastUpdatedChange;
 
         public SqlitePlaylistsRepo(ISqlExecuteService sqlExecuteService) : base(sqlExecuteService)
         {
@@ -59,6 +62,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                     requested_song_duration   INTEGER,
                     songs_count               INT     NOT NULL DEFAULT 0,
                     file_media_source_root_id TEXT REFERENCES file_media_source_roots (id),
+                    files_last_updated        INTEGER,
+                    songs_last_updated        INTEGER,
                     created                   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -272,9 +277,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
             const string playlistSql = @"
                 INSERT INTO playlists (id, index_value, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
-                    requested_song_id, requested_song_position, requested_song_duration, songs_count, file_media_source_root_id)
+                    requested_song_id, requested_song_position, requested_song_duration, songs_count, file_media_source_root_id,
+                    files_last_updated, songs_last_updated)
                 VALUES (@id, @index, @type, @name, @shuffle, @loop, @playbackRate, @position, @duration, @currentSongId,
-                    @requestedSongId, @requestedSongPosition, @requestedSongDuration, @songsCount, @fileMediaSourceRootId);
+                    @requestedSongId, @requestedSongPosition, @requestedSongDuration, @songsCount, @fileMediaSourceRootId,
+                    @filesLastUpdated, @songsLastUpdated);
             ";
             var playlistParameters = new KeyValuePair<string, object>[]
             {
@@ -293,6 +300,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 CreateParam("requestedSongDuration", playlist.RequestSong?.Duration.Ticks),
                 CreateParam("fileMediaSourceRootId", playlist.FileMediaSources?.Root.Id.ToString()),
                 CreateParam("songsCount", playlist.Songs?.Count ?? 0),
+                CreateParam("filesLastUpdated", playlist.FilesLastUpdated?.Ticks),
+                CreateParam("songsLastUpdated", playlist.SongsLastUpdated?.Ticks),
             };
             await sqlExecuteService.ExecuteNonQueryAsync(playlistSql, playlistParameters);
         }
@@ -515,6 +524,18 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             await DeleteUnuusedFileMediaSourceRoots();
 
             OnFileMedisSourcesChange?.Invoke(this, new PlaylistChangeArgs<FileMediaSources>(playlistId, fileMediaSources));
+        }
+
+        public async Task SendFilesLastUpdatedChange(Guid playlistId, DateTime? filesLastUpdated)
+        {
+            await UpdatePlaylistValue("files_last_updated", playlistId, filesLastUpdated);
+            OnFilesLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, filesLastUpdated));
+        }
+
+        public async Task SendSongsLastUpdatedChange(Guid playlistId, DateTime? songsLastUpdated)
+        {
+            await UpdatePlaylistValue("songs_last_updated", playlistId, songsLastUpdated);
+            OnSongsLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, songsLastUpdated));
         }
     }
 }

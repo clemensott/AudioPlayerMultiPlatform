@@ -23,6 +23,8 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 
         public ICollection<PlaylistInfo> Playlists { get; }
 
+        public DateTime? FoldersLastUpdated { get; }
+
         public PlaylistInfo GetCurrentPlaylist()
         {
             if (!CurrentPlaylistId.HasValue) return null;

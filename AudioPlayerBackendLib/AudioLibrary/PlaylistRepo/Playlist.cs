@@ -33,6 +33,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         public Guid NextPlaylist { get; }
 
+        public DateTime? FilesLastUpdated { get; }
+
+        public DateTime? SongsLastUpdated { get; }
+
         public Playlist(Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop,
             double playbackRate, TimeSpan position, TimeSpan duration, RequestSong? requestSong,
             Guid? currentSongId, ICollection<Song> songs, FileMediaSources fileMediaSources)

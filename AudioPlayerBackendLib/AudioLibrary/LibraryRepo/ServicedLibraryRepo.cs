@@ -19,6 +19,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
         public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
         public event EventHandler<AudioLibraryChangeArgs<IList<PlaylistInfo>>> OnPlaylistsChange;
+        public event EventHandler<AudioLibraryChangeArgs<DateTime?>> OnFoldersLastUpdatedChange;
 
         public ServicedLibraryRepo(ILibraryRepo baseRepo, ILibraryRepoService parent)
         {
@@ -37,25 +38,36 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
             parent.GetRepos().OfType<ServicedLibraryRepo>().ForEach(action);
         }
 
-        public Task SendPlayStateChange(PlaybackState playState)
+        public async Task SendPlayStateChange(PlaybackState playState)
         {
+            await baseRepo.SendPlayStateChange(playState);
+
             var args = new AudioLibraryChangeArgs<PlaybackState>(playState);
             ForEachRepo(repo => repo.OnPlayStateChange?.Invoke(this, args));
-            return baseRepo.SendPlayStateChange(playState);
         }
 
-        public Task SendVolumeChange(double volume)
+        public async Task SendVolumeChange(double volume)
         {
+            await baseRepo.SendVolumeChange(volume);
+
             var args = new AudioLibraryChangeArgs<double>(volume);
             ForEachRepo(repo => repo.OnVolumeChange?.Invoke(this, args));
-            return baseRepo.SendVolumeChange(volume);
         }
 
-        public Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
+        public async Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
         {
+            await baseRepo.SendCurrentPlaylistIdChange(currentPlaylistId);
+
             var args = new AudioLibraryChangeArgs<Guid?>(currentPlaylistId);
             ForEachRepo(repo => repo.OnCurrentPlaylistIdChange?.Invoke(this, args));
-            return baseRepo.SendCurrentPlaylistIdChange(currentPlaylistId);
+        }
+
+        public async Task SendFoldersLastUpdatedChange(DateTime? foldersLastUpdated)
+        {
+            await baseRepo.SendFoldersLastUpdatedChange(foldersLastUpdated);
+
+            var args = new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated);
+            ForEachRepo(repo => repo.OnFoldersLastUpdatedChange?.Invoke(this, args));
         }
 
         public void Dispose()

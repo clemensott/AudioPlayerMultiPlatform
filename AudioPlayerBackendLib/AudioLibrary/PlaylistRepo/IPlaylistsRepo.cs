@@ -44,5 +44,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources);
         event EventHandler<PlaylistChangeArgs<FileMediaSources>> OnFileMedisSourcesChange;
+
+        Task SendFilesLastUpdatedChange(Guid id, DateTime? filesLastUpdated);
+        event EventHandler<PlaylistChangeArgs<DateTime?>> OnFilesLastUpdatedChange;
+
+        Task SendSongsLastUpdatedChange(Guid id, DateTime? songsLastUpdated);
+        event EventHandler<PlaylistChangeArgs<DateTime?>> OnSongsLastUpdatedChange;
     }
 }

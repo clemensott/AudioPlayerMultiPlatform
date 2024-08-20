@@ -12,6 +12,10 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 
         public int SongsCount { get; }
 
+        public DateTime? FilesLastUpdated { get; }
+        
+        public DateTime? SongsLastUpdated { get; }
+
         public PlaylistInfo(Guid id, PlaylistType type, string name, int songsCount)
         {
             Id = id;
