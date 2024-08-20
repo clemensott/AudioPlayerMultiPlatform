@@ -17,7 +17,6 @@ using StdOttFramework.RestoreWindow;
 using StdOttStandard.Converter.MultipleInputs;
 using StdOttFramework;
 using AudioPlayerBackend.FileSystem;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using AudioPlayerFrontend.Join;
 using AudioPlayerBackend.ViewModels;
@@ -208,6 +207,21 @@ namespace AudioPlayerFrontend
             if (e.Key == Key.F3) tbxSearch.Focus();
         }
 
+        private static SearchPlaylistAddType GetAddType()
+        {
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+            {
+                return SearchPlaylistAddType.FirstInPlaylist;
+            }
+
+            if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+            {
+                return SearchPlaylistAddType.NextInPlaylist;
+            }
+
+            return SearchPlaylistAddType.LastInPlaylist;
+        }
+
         private void TbxSearch_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             e.Handled = true;
@@ -217,9 +231,8 @@ namespace AudioPlayerFrontend
                 case Key.Enter:
                     if (lbxSongs.SelectedItem is Song)
                     {
-                        SearchPlaylistAddType addType = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)
-                            ? SearchPlaylistAddType.FirstInPlaylist : SearchPlaylistAddType.LastInPlaylist;
                         Song addSong = (Song)lbxSongs.SelectedItem;
+                        SearchPlaylistAddType addType = GetAddType();
                         viewModel.SongSearch.AddSongsToSearchPlaylist(new Song[] { addSong }, addType);
                         viewModel.PlayState = PlaybackState.Playing;
                     }

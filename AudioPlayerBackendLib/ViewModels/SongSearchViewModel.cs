@@ -15,13 +15,11 @@ namespace AudioPlayerBackend.ViewModels
     {
         private readonly IServicedLibraryRepo libraryRepo;
         private readonly IServicedPlaylistsRepo playlistsRepo;
-
         private readonly IDictionary<Guid, ICollection<Song>> allSongs;
-
 
         private bool isEnabled, isSearching, isSearchShuffle;
         private string searchKey;
-        private IEnumerable<Song> searchSongs;
+        private IEnumerable<Song> searchSongs, shuffledSongs;
 
         public bool IsEnabled
         {
@@ -151,7 +149,12 @@ namespace AudioPlayerBackend.ViewModels
                     break;
 
                 case SearchPlaylistAddType.NextInPlaylist:
-                    // TODO: implement
+                    int currentSongIndex = currentPlaylist.Songs.IndexOf(s => s.Id == currentPlaylist.CurrentSongId);
+                    IEnumerable<Song> beforeSongs = currentPlaylist.Songs.Take(currentSongIndex + 1);
+                    IEnumerable<Song> afterSongs = currentPlaylist.Songs.Skip(currentSongIndex + 1);
+
+                    newSongs = beforeSongs.Concat(songs).Concat(afterSongs).ToArray();
+                    await playlistsRepo.SendSongsChange(currentPlaylist.Id, newSongs);
                     break;
 
                 case SearchPlaylistAddType.LastInPlaylist:
@@ -216,12 +219,9 @@ namespace AudioPlayerBackend.ViewModels
         private async Task UpdateSearchSongs()
         {
             string searchKey = SearchKey;
-            Song[] searchSongs = await Task.Run(() =>
-            {
-                // TODO shuffle songs before hand and not every search
-                IEnumerable<Song> shuffledSongs = SongsHelper.GetShuffledSongs(allSongs.Values);
-                return SongsHelper.GetSearchSongs(shuffledSongs, IsSearchShuffle, searchKey).Take(50).ToArray();
-            });
+            Song[] searchSongs = await Task
+                .Run(() => SongsHelper.GetSearchSongs(shuffledSongs, IsSearchShuffle, searchKey).Take(50).ToArray());
+
             if (searchKey == SearchKey) SearchSongs = searchSongs;
         }
 
@@ -243,19 +243,32 @@ namespace AudioPlayerBackend.ViewModels
             playlistsRepo.OnSongsChange -= OnSongsChange;
         }
 
-        private void OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
+        private async void OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
         {
             allSongs[e.Id] = e.NewValue;
+            UpdateShuffledSongs();
+            await UpdateSearchSongs();
         }
 
         private async Task LoadAllSongs()
         {
             Library library = await libraryRepo.GetLibrary();
+            if (!IsEnabled) return;
+
             foreach (Guid id in library.Playlists.Where(p => p.Type.HasFlag(PlaylistType.SourcePlaylist)).Select(p => p.Id))
             {
                 Playlist playlist = await playlistsRepo.GetPlaylist(id);
+                if (!IsEnabled) return;
+
                 allSongs[playlist.Id] = playlist.Songs;
             }
+
+            UpdateShuffledSongs();
+        }
+
+        private void UpdateShuffledSongs()
+        {
+            shuffledSongs = SongsHelper.GetShuffledSongs(allSongs.Values);
         }
 
         public async Task Stop()
@@ -263,6 +276,7 @@ namespace AudioPlayerBackend.ViewModels
             IsEnabled = false;
             UnsubscribePlaylistsRepo();
             allSongs.Clear();
+            shuffledSongs = Enumerable.Empty<Song>();
             SearchSongs = Enumerable.Empty<Song>();
 
             await Task.CompletedTask;
