@@ -1,5 +1,6 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.Extensions;
 using StdOttStandard;
 using System;
 using System.Threading;
@@ -64,10 +65,11 @@ namespace AudioPlayerBackend.FileSystem
                 if (NeedsFoldersUpdate(library.FoldersLastUpdated)) await updateLibraryService.UpdateLibrary();
 
                 library = await libraryRepo.GetLibrary();
-                foreach (PlaylistInfo playlist in library.Playlists)
+                foreach (PlaylistInfo playlistInfo in library.Playlists.GetSourcePlaylists())
                 {
-                    if (NeedsFilesUpdate(playlist.FilesLastUpdated)) await updateLibraryService.UpdateSourcePlaylist(playlist.Id);
-                    if (NeedsSongsUpdate(playlist.SongsLastUpdated)) await updateLibraryService.ReloadSourcePlaylist(playlist.Id);
+                    Playlist playlist = await playlistRepo.GetPlaylist(playlistInfo.Id);
+                    if (NeedsFilesUpdate(playlistInfo.FilesLastUpdated)) await updateLibraryService.UpdateSourcePlaylist(playlistInfo.Id);
+                    if (NeedsSongsUpdate(playlistInfo.SongsLastUpdated)) await updateLibraryService.ReloadSourcePlaylist(playlistInfo.Id);
                 }
             }
             finally

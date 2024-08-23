@@ -511,6 +511,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             OnSongsChange?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));
         }
 
+        public Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task SendFileMedisSourcesChange(Guid playlistId, FileMediaSources fileMediaSources)
         {
             await DeleteFileMediaSources(playlistId);

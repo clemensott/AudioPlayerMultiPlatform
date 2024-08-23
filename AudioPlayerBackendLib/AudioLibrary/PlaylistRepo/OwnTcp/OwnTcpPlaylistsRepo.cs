@@ -19,6 +19,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
         public event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
         public event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
         public event EventHandler<PlaylistChangeArgs<FileMediaSources>> OnFileMedisSourcesChange;
+        public event EventHandler<PlaylistChangeArgs<DateTime?>> OnFilesLastUpdatedChange;
+        public event EventHandler<PlaylistChangeArgs<DateTime?>> OnSongsLastUpdatedChange;
 
         public Task<Playlist> GetPlaylist(Guid id)
         {
@@ -41,11 +43,6 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
         }
 
         public Task SendDurationChange(Guid id, TimeSpan duration)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources)
         {
             throw new NotImplementedException();
         }
@@ -91,6 +88,26 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
         }
 
         public Task SendSongsChange(Guid id, ICollection<Song> songs)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendFilesLastUpdatedChange(Guid id, DateTime? filesLastUpdated)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendSongsLastUpdatedChange(Guid id, DateTime? songsLastUpdated)
         {
             throw new NotImplementedException();
         }

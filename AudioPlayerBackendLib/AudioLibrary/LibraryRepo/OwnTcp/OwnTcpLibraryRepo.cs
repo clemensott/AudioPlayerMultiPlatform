@@ -11,6 +11,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
         public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
         public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
         public event EventHandler<AudioLibraryChangeArgs<IList<PlaylistInfo>>> OnPlaylistsChange;
+        public event EventHandler<AudioLibraryChangeArgs<DateTime?>> OnFoldersLastUpdatedChange;
 
         public Task<Library> GetLibrary()
         {
@@ -33,6 +34,11 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
         }
 
         public Task SendPlaylistsChange(IList<PlaylistInfo> playlists)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendFoldersLastUpdatedChange(DateTime? foldersLastUpdated)
         {
             throw new NotImplementedException();
         }

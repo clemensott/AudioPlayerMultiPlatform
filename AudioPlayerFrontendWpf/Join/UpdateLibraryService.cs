@@ -1,5 +1,6 @@
 ﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.Extensions;
 using AudioPlayerBackend.FileSystem;
 using StdOttStandard.Linq;
 using System;
@@ -7,32 +8,83 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using System.Windows.Shapes;
 
 namespace AudioPlayerFrontend.Join
 {
     internal class UpdateLibraryService : IUpdateLibraryService
     {
         private static readonly Random ran = new Random();
+        private readonly IServicedLibraryRepo libraryRepo;
         private readonly IServicedPlaylistsRepo playlistsRepo;
 
-        public UpdateLibraryService(IServicedPlaylistsRepo playlistsRepo)
+        public UpdateLibraryService(IServicedLibraryRepo libraryRepo, IServicedPlaylistsRepo playlistsRepo)
         {
+            this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
         }
 
         public Task UpdateLibrary()
         {
-            return ReloadLibrary();
+            throw new NotImplementedException();
         }
 
-        public Task ReloadLibrary()
+        public async Task ReloadLibrary()
         {
-            throw new NotImplementedException();
+            Library library = await libraryRepo.GetLibrary();
+
+            foreach (PlaylistInfo playlist in library.Playlists.GetSourcePlaylists())
+            {
+                await ReloadSourcePlaylist(playlist.Id);
+
+
+            }
+        }
+
+        private async Task UpdateFolders(Guid playlistId)
+        {
+            Playlist playlist = await playlistsRepo.GetPlaylist(playlistId);
+            FileMediaSources fileMediaSources = playlist.FileMediaSources;
+            if (fileMediaSources == null
+                || !fileMediaSources.Root.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders)) return;
+
+            FileMediaSourceRoot root = fileMediaSources.Root;
+            ICollection<FileMediaSource> allSources = await playlistsRepo.GetFileMediaSourcesOfRoot(root.Id);
+
+            foreach (FileMediaSource source in fileMediaSources.Sources)
+            {
+                string path = GetFileMediaSourcePath(source, root);
+                if (!Directory.Exists(path)) continue;
+
+                await CheckFolders(path.Length, path);
+            }
+
+            async Task CheckFolders(int rootLength, string folderPath)
+            {
+                foreach (string subFolderPath in Directory.GetDirectories(folderPath))
+                {
+                    string relativePath = subFolderPath.Substring(rootLength);
+                    if (allSources.Any(s => s.RelativePath == relativePath)) return;
+
+                    await TryCreatePlaylist(root, relativePath);
+                    await CheckFolders(subFolderPath);
+                }
+            }
+        }
+
+        private async Task TryCreatePlaylist(FileMediaSourceRoot root, string relativePath)
+        {
+
         }
 
         public async Task UpdateSourcePlaylist(Guid id)
         {
             Playlist playlist = await playlistsRepo.GetPlaylist(id);
+            FileMediaSources fileMediaSources = playlist.FileMediaSources;
+            if (fileMediaSources == null
+                || !fileMediaSources.Root.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Songs)) return;
+
             List<Song> oldSongs = playlist.Songs?.ToList() ?? new List<Song>();
             Song[] newSongs = await Task.Run(() =>
             {
@@ -53,15 +105,17 @@ namespace AudioPlayerFrontend.Join
                 return oldSongs.ToArray();
             });
 
-            await playlistsRepo.SendSongsChange(id, newSongs);
+            if (newSongs.Length > 0) await playlistsRepo.SendSongsChange(id, newSongs);
+            else await playlistsRepo.SendRemovePlaylist(id);
         }
 
         public async Task ReloadSourcePlaylist(Guid id)
         {
             Playlist playlist = await playlistsRepo.GetPlaylist(id);
-            Song[] newSongs = await ReloadSourcePlaylist(playlist.FileMediaSources);
+            Song[] newSongs = await ReloadSourcePlaylist(playlist.FileMediaSources, playlist.Songs);
 
-            await playlistsRepo.SendSongsChange(id, newSongs);
+            if (newSongs.Length > 0) await playlistsRepo.SendSongsChange(id, newSongs);
+            else await playlistsRepo.SendRemovePlaylist(id);
         }
 
         public Task<Song[]> ReloadSourcePlaylist(FileMediaSources fileMediaSources)
@@ -118,7 +172,8 @@ namespace AudioPlayerFrontend.Join
             string rootPath = GetPathFromFileMediaSourceRoot(root);
             if (string.IsNullOrWhiteSpace(rootPath)) return null;
 
-            return Path.Combine(rootPath, source.RelativePath);
+            return Path.Combine(rootPath, source.RelativePath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
 
         private static string GetPathFromFileMediaSourceRoot(FileMediaSourceRoot root)

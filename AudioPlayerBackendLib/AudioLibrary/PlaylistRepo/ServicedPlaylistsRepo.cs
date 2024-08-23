@@ -132,6 +132,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             ForEachRepo(repo => repo.OnSongsChange?.Invoke(this, args));
         }
 
+        public Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId)
+        {
+            return baseRepo.GetFileMediaSourcesOfRoot(rootId);
+        }
+
         public async Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources)
         {
             await baseRepo.SendFileMedisSourcesChange(id, fileMediaSources);

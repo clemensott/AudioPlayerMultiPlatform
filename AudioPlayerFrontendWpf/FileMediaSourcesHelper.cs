@@ -59,7 +59,7 @@ namespace AudioPlayerFrontend
         private static FileMediaSources CreateFileMediaSources(string rootPath, IEnumerable<string> children)
         {
             ICollection<FileMediaSource> sources = children.Select(child => new FileMediaSource(child)).ToArray();
-            FileMediaSourceRoot root = new FileMediaSourceRoot(Guid.NewGuid(), FileMediaSourceRootUpdateType.Files,
+            FileMediaSourceRoot root = new FileMediaSourceRoot(Guid.NewGuid(), FileMediaSourceRootUpdateType.Songs,
                 rootPath, FileMediaSourceRootPathType.Path, rootPath);
             return new FileMediaSources(root, sources);
         }
