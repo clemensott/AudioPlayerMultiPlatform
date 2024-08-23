@@ -31,7 +31,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         public FileMediaSources FileMediaSources { get; }
 
-        public Guid NextPlaylist { get; }
+        public Guid? NextPlaylist { get; }
 
         public DateTime? FilesLastUpdated { get; }
 
@@ -39,7 +39,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         public Playlist(Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop,
             double playbackRate, TimeSpan position, TimeSpan duration, RequestSong? requestSong,
-            Guid? currentSongId, ICollection<Song> songs, FileMediaSources fileMediaSources)
+            Guid? currentSongId, ICollection<Song> songs, FileMediaSources fileMediaSources,
+            Guid? nextPlaylist, DateTime? filesLastUpdated, DateTime? songsLastUpdated)
         {
             Id = id;
             Type = type;
@@ -53,6 +54,9 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             CurrentSongId = currentSongId;
             Songs = songs;
             FileMediaSources = fileMediaSources;
+            NextPlaylist = nextPlaylist;
+            FilesLastUpdated = filesLastUpdated;
+            SongsLastUpdated = songsLastUpdated;
         }
 
         public Song? GetCurrentSong()

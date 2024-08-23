@@ -120,8 +120,9 @@ namespace AudioPlayerBackend.ViewModels
                 newSongs = songs.Insert(0, currentSong.Value).ToArray();
             }
 
-            Playlist playlist = new Playlist(Guid.NewGuid(), PlaylistType.Custom | PlaylistType.Search, "Custom",
-                OrderType.Custom, LoopType.Next, 1, position, duration, requestedSong, null, newSongs, null);
+            PlaylistType playlistType = PlaylistType.Custom | PlaylistType.Search;
+            Playlist playlist = new Playlist(Guid.NewGuid(), playlistType, "Custom", OrderType.Custom, LoopType.Next, 1,
+                 position, duration, requestedSong, null, newSongs, null, null, null, null);
 
             await playlistsRepo.SendInsertPlaylist(playlist, null);
             await libraryRepo.SendCurrentPlaylistIdChange(playlist.Id);

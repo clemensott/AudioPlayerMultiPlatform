@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
-using System.Windows.Shapes;
+using AudioPlayerBackend.AudioLibrary;
 
 namespace AudioPlayerFrontend.Join
 {
@@ -25,21 +25,27 @@ namespace AudioPlayerFrontend.Join
             this.playlistsRepo = playlistsRepo;
         }
 
-        public Task UpdateLibrary()
+        public async Task UpdateLibrary()
         {
-            throw new NotImplementedException();
+            await UpdateReloadLibrary(false);
         }
 
         public async Task ReloadLibrary()
+        {
+            await UpdateReloadLibrary(true);
+        }
+
+        private async Task UpdateReloadLibrary(bool reload)
         {
             Library library = await libraryRepo.GetLibrary();
 
             foreach (PlaylistInfo playlist in library.Playlists.GetSourcePlaylists())
             {
-                await ReloadSourcePlaylist(playlist.Id);
-
-
+                await (reload ? ReloadSourcePlaylist(playlist.Id) : UpdateSourcePlaylist(playlist.Id));
+                await UpdateFolders(playlist.Id);
             }
+
+            await libraryRepo.SendFoldersLastUpdatedChange(DateTime.Now);
         }
 
         private async Task UpdateFolders(Guid playlistId)
@@ -64,18 +70,33 @@ namespace AudioPlayerFrontend.Join
             {
                 foreach (string subFolderPath in Directory.GetDirectories(folderPath))
                 {
-                    string relativePath = subFolderPath.Substring(rootLength);
+                    string relativePath = FileMediaSource.NormalizeRelativePath(subFolderPath.Substring(rootLength));
                     if (allSources.Any(s => s.RelativePath == relativePath)) return;
 
                     await TryCreatePlaylist(root, relativePath);
-                    await CheckFolders(subFolderPath);
+                    await CheckFolders(rootLength, subFolderPath);
                 }
             }
         }
 
         private async Task TryCreatePlaylist(FileMediaSourceRoot root, string relativePath)
         {
+            FileMediaSources fileMediaSources = new FileMediaSources(root, new FileMediaSource[]
+            {
+                new FileMediaSource(relativePath),
+            });
 
+            Song[] songs = await ReloadSourcePlaylist(fileMediaSources);
+            if (songs.Length == 0) return;
+
+            PlaylistType playlistType = PlaylistType.SourcePlaylist | PlaylistType.AutoSourcePlaylist;
+            string name = Path.GetFileName(relativePath);
+            Playlist playlist = new Playlist(Guid.NewGuid(), playlistType, name,
+                OrderType.ByTitleAndArtist, LoopType.CurrentPlaylist, 1,
+                TimeSpan.Zero, TimeSpan.Zero, null, null, songs, fileMediaSources,
+                null, DateTime.Now, DateTime.Now);
+
+            await playlistsRepo.SendInsertPlaylist(playlist, null);
         }
 
         public async Task UpdateSourcePlaylist(Guid id)

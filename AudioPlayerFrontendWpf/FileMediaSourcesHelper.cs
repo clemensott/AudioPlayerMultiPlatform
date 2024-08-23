@@ -1,6 +1,7 @@
 ﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace AudioPlayerFrontend
@@ -20,7 +21,10 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private static readonly char[] diretorySeparators = new char[] { '/', '\\' };
+        private static readonly char[] diretorySeparators = new char[] {
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar,
+        };
 
         private static (string root, string releative) SplitPath(string path, int depth)
         {
@@ -33,7 +37,7 @@ namespace AudioPlayerFrontend
 
             if (index + 1 >= path.Length) return (path, string.Empty);
 
-            string root = path.Remove(Math.Max(index - 1, 0));
+            string root = path.Remove(index);
             string relative = path.Substring(index);
 
             return (root, relative);
@@ -58,7 +62,10 @@ namespace AudioPlayerFrontend
 
         private static FileMediaSources CreateFileMediaSources(string rootPath, IEnumerable<string> children)
         {
-            ICollection<FileMediaSource> sources = children.Select(child => new FileMediaSource(child)).ToArray();
+            ICollection<FileMediaSource> sources = children
+                .Select(child=>FileMediaSource.NormalizeRelativePath(child))
+                .Select(child => new FileMediaSource(child))
+                .ToArray();
             FileMediaSourceRoot root = new FileMediaSourceRoot(Guid.NewGuid(), FileMediaSourceRootUpdateType.Songs,
                 rootPath, FileMediaSourceRootPathType.Path, rootPath);
             return new FileMediaSources(root, sources);

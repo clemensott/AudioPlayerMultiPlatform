@@ -84,5 +84,21 @@ namespace AudioPlayerBackend.Extensions
 
             return new TimeSpan(reader.GetInt64(ordinal));
         }
+
+        public static DateTime GetDateTimeFromInt64(this DbDataReader reader, string name)
+        {
+            return new DateTime(reader.GetInt64(name));
+        }
+
+        public static DateTime? GetDateTimeNullableFromInt64(this DbDataReader reader, string name)
+        {
+            int ordinal = reader.GetOrdinal(name);
+            if (reader.IsDBNull(ordinal))
+            {
+                return null;
+            }
+
+            return new DateTime(reader.GetInt64(ordinal));
+        }
     }
 }

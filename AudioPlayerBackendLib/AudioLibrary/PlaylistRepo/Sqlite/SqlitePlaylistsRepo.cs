@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.AudioLibrary.Database.Sql;
+﻿using AudioPlayerBackend.AudioLibrary.Database.Sql;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.Extensions;
 using StdOttStandard;
@@ -110,14 +109,14 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 SELECT p.id, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
                     requested_song_id, rs.title as requested_song_title, rs.artist as requested_song_artist,
                     rs.full_path as requested_song_full_path, requested_song_position, requested_song_duration,
-                    file_media_source_root_id, np.next_playlist_id
+                    file_media_source_root_id, np.next_playlist_id, p.files_last_updated, p.songs_last_updated
                 FROM playlists p
                     LEFT JOIN songs rs ON p.requested_song_id = rs.id
                     LEFT JOIN next_playlists np ON p.id = np.playlist_id
                 WHERE p.id = @id;
             ";
             var playlistParameters = CreateParams("id", playlistId.ToString());
-            (Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop, double playbackRate, TimeSpan position, TimeSpan duration, Guid? currentSongId, RequestSong? requestedSong, Guid? fileMediaSourceRootId) playlist = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
+            var playlist = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
             {
                 Guid id = reader.GetGuidFromString("id");
                 PlaylistType type = (PlaylistType)reader.GetInt64("type");
@@ -131,9 +130,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 RequestSong? requestedSong = GetRequestedSong(reader);
                 Guid? fileMediaSourceRootId = reader.GetGuidNullableFromString("file_media_source_root_id");
                 Guid? nextPlaylistId = reader.GetGuidNullableFromString("next_playlist_id");
+                DateTime? filesLastUpdated = reader.GetDateTimeNullableFromInt64("files_last_updated");
+                DateTime? songsLastUpdated = reader.GetDateTimeNullableFromInt64("songs_last_updated");
 
-                return (id, type, name, shuffle, loop, playbackRate, position, duration,
-                    currentSongId, requestedSong, fileMediaSourceRootId);
+                return (id, type, name, shuffle, loop, playbackRate, position, duration, currentSongId,
+                    requestedSong, fileMediaSourceRootId, nextPlaylistId, filesLastUpdated, songsLastUpdated);
             }, playlistSql, playlistParameters);
 
             const string songsSql = @"
@@ -172,7 +173,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
             return new Playlist(playlist.id, playlist.type, playlist.name, playlist.shuffle, playlist.loop,
                 playlist.playbackRate, playlist.position, playlist.duration, playlist.requestedSong,
-                playlist.currentSongId, songs, fileMediaSources);
+                playlist.currentSongId, songs, fileMediaSources, playlist.nextPlaylistId,
+                playlist.filesLastUpdated, playlist.songsLastUpdated);
 
             RequestSong? GetRequestedSong(DbDataReader reader)
             {
