@@ -136,7 +136,7 @@ namespace AudioPlayerBackend.Build
                 serviceList.Add(serviceProvider.GetService<IClientCommunicator>());
             }
 
-            if (config.BuildStandalone || config.BuildServer)
+            if (config.AutoUpdate && (config.BuildStandalone || config.BuildServer))
             {
                 serviceList.Add(serviceProvider.GetService<AutoUpdateLibraryService>());
             }

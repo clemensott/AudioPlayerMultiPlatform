@@ -1,5 +1,4 @@
 ﻿using System;
-using AudioPlayerBackend.Player;
 using StdOttStandard.CommandlineParser;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,6 +12,7 @@ namespace AudioPlayerBackend.Build
 {
     public class AudioServicesBuildConfig : INotifyPropertyChanged
     {
+        private bool autoUpdate;
         private bool? isSearchShuffle, play, isStreaming;
         private OrderType? shuffle;
         private int serverPort;
@@ -20,6 +20,7 @@ namespace AudioPlayerBackend.Build
         private string searchKey, serverAddress, dataFilePath;
         private float? volume;
         private CommunicatorProtocol communicatorProtocol;
+        private string[] autoUpdateRoots;
         private ServiceCollection additionalServices;
 
         public bool BuildStandalone { get; private set; }
@@ -27,6 +28,18 @@ namespace AudioPlayerBackend.Build
         public bool BuildServer { get; private set; }
 
         public bool BuildClient { get; private set; }
+
+        public bool AutoUpdate
+        {
+            get => autoUpdate;
+            set
+            {
+                if (value == autoUpdate) return;
+
+                autoUpdate = value;
+                OnPropertyChanged(nameof(AutoUpdate));
+            }
+        }
 
         public CommunicatorProtocol CommunicatorProtocol
         {
@@ -157,6 +170,19 @@ namespace AudioPlayerBackend.Build
 
                 volume = value;
                 OnPropertyChanged(nameof(Volume));
+            }
+        }
+
+        // TODO: make use of this
+        public string[] AutoUpdateRoots
+        {
+            get => autoUpdateRoots;
+            set
+            {
+                if (value == autoUpdateRoots) return;
+
+                autoUpdateRoots = value;
+                OnPropertyChanged(nameof(AutoUpdateRoots));
             }
         }
 
