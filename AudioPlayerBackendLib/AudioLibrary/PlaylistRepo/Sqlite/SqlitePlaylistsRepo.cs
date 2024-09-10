@@ -513,9 +513,23 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             OnSongsChange?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));
         }
 
-        public Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId)
+        public async Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId)
         {
-            throw new NotImplementedException();
+            const string sql = @"
+                SELECT relative_path
+                FROM file_media_sources fms
+                    JOIN playlists p on p.id = fms.playlist_id
+                WHERE p.file_media_source_root_id = @rootId;
+            ";
+            KeyValuePair<string, object>[] parameters = CreateParams("rootId", rootId.ToString());
+
+            return await sqlExecuteService.ExecuteReadAllAsync(GetFileMediaSource, sql, parameters);
+
+            FileMediaSource GetFileMediaSource(DbDataReader reader)
+            {
+                string relativePath = reader.GetString("relative_path");
+                return new FileMediaSource(relativePath);
+            }
         }
 
         public async Task SendFileMedisSourcesChange(Guid playlistId, FileMediaSources fileMediaSources)

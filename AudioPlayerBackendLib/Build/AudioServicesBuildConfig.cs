@@ -7,6 +7,7 @@ using StdOttStandard.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using AudioPlayerBackend.ViewModels;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AudioPlayerBackend.Build
 {
@@ -396,6 +397,19 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
+        private ServiceCollection CloneAdditionalServices()
+        {
+            if (AdditionalServices == null) return null;
+
+            var clone = new ServiceCollection();
+            foreach (ServiceDescriptor service in additionalServices)
+            {
+                clone.TryAdd(service);
+            }
+
+            return clone;
+        }
+
         public AudioServicesBuildConfig Clone()
         {
             return new AudioServicesBuildConfig()
@@ -403,6 +417,9 @@ namespace AudioPlayerBackend.Build
                 BuildClient = BuildClient,
                 BuildServer = BuildServer,
                 BuildStandalone = BuildStandalone,
+                AutoUpdate = AutoUpdate,
+                AutoUpdateRoots = AutoUpdateRoots?.ToArray(),
+                AdditionalServices = CloneAdditionalServices(),
                 ClientPort = ClientPort,
                 CommunicatorProtocol = CommunicatorProtocol,
                 DataFilePath = DataFilePath,
