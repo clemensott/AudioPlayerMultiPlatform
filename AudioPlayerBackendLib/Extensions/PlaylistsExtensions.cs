@@ -10,7 +10,8 @@ namespace AudioPlayerBackend.Extensions
     {
         public static PlaylistInfo ToPlaylistInfo(this Playlist playlist)
         {
-            return new PlaylistInfo(playlist.Id, playlist.Type, playlist.Name, playlist.Songs.Count);
+            return new PlaylistInfo(playlist.Id, playlist.Type, playlist.Name, playlist.Songs.Count,
+                playlist.FilesLastUpdated, playlist.SongsLastUpdated);
         }
 
         public static IEnumerable<PlaylistInfo> GetSourcePlaylists(this IEnumerable<PlaylistInfo> playlists)

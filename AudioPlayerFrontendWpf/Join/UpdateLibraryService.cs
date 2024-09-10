@@ -63,7 +63,7 @@ namespace AudioPlayerFrontend.Join
                 string path = GetFileMediaSourcePath(source, root);
                 if (!Directory.Exists(path)) continue;
 
-                await CheckFolders(path.Length, path);
+                await CheckFolders(root.Path.Length, path);
             }
 
             async Task CheckFolders(int rootLength, string folderPath)
@@ -126,7 +126,11 @@ namespace AudioPlayerFrontend.Join
                 return oldSongs.ToArray();
             });
 
-            if (newSongs.Length > 0) await playlistsRepo.SendSongsChange(id, newSongs);
+            if (newSongs.Length > 0)
+            {
+                await playlistsRepo.SendSongsChange(id, newSongs);
+                await playlistsRepo.SendFilesLastUpdatedChange(id, DateTime.Now);
+            }
             else await playlistsRepo.SendRemovePlaylist(id);
         }
 
@@ -135,7 +139,11 @@ namespace AudioPlayerFrontend.Join
             Playlist playlist = await playlistsRepo.GetPlaylist(id);
             Song[] newSongs = await ReloadSourcePlaylist(playlist.FileMediaSources, playlist.Songs);
 
-            if (newSongs.Length > 0) await playlistsRepo.SendSongsChange(id, newSongs);
+            if (newSongs.Length > 0)
+            {
+                await playlistsRepo.SendSongsChange(id, newSongs);
+                await playlistsRepo.SendSongsLastUpdatedChange(id, DateTime.Now);
+            }
             else await playlistsRepo.SendRemovePlaylist(id);
         }
 

@@ -182,7 +182,8 @@ namespace AudioPlayerBackend.ViewModels
         {
             int index = Playlists.IndexOf(p => p.Id == e.Id);
             PlaylistInfo playlist = Playlists[index];
-            Playlists[index] = new PlaylistInfo(playlist.Id, playlist.Type, playlist.Name, e.NewValue.Count);
+            Playlists[index] = new PlaylistInfo(playlist.Id, playlist.Type, playlist.Name, e.NewValue.Count, 
+                playlist.FilesLastUpdated, playlist.SongsLastUpdated);
         }
 
         private void UpdateCurrentPlaylistIndex()

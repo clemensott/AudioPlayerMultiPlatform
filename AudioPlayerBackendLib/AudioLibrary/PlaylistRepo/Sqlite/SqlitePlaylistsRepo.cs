@@ -2,6 +2,7 @@
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.Extensions;
 using StdOttStandard;
+using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -116,7 +117,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 WHERE p.id = @id;
             ";
             var playlistParameters = CreateParams("id", playlistId.ToString());
-            var playlist = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
+            (Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop, double playbackRate, TimeSpan position, TimeSpan duration, Guid? currentSongId, RequestSong? requestedSong, Guid? fileMediaSourceRootId, Guid? nextPlaylistId, DateTime? filesLastUpdated, DateTime? songsLastUpdated) playlist = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
             {
                 Guid id = reader.GetGuidFromString("id");
                 PlaylistType type = (PlaylistType)reader.GetInt64("type");
@@ -310,40 +311,46 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
         private async Task UpsertPlaylistSongs(Guid playlistId, ICollection<Song> songs)
         {
-            string songsSqlValues = string.Join(",", songs.Select((_, i) => $"(@id{i},@t{i},@a{i},@p{i})"));
-            string songsSql = $@"
-                INSERT OR REPLACE INTO songs (id, title, artist, full_path)
-                VALUES {songsSqlValues};
-            ";
-            var songsParameters = songs.SelectMany((song, i) => new KeyValuePair<string, object>[]
+            foreach (IList<Song> group in songs.ToGroupsOf(100))
             {
-                    CreateParam($"id{i}", song.Id.ToString()),
-                    CreateParam($"t{i}", song.Title),
-                    CreateParam($"a{i}", song.Artist),
-                    CreateParam($"p{i}", song.FullPath),
-            });
-            await sqlExecuteService.ExecuteNonQueryAsync(songsSql, songsParameters);
+                string songsSqlValues = string.Join(",", group.Select((_, i) => $"(@id{i},@t{i},@a{i},@p{i})"));
+                string songsSql = $@"
+                    INSERT OR REPLACE INTO songs (id, title, artist, full_path)
+                    VALUES {songsSqlValues};
+                ";
+                var songsParameters = group.SelectMany((song, i) => new KeyValuePair<string, object>[]
+                {
+                        CreateParam($"id{i}", song.Id.ToString()),
+                        CreateParam($"t{i}", song.Title),
+                        CreateParam($"a{i}", song.Artist),
+                        CreateParam($"p{i}", song.FullPath),
+                });
+                await sqlExecuteService.ExecuteNonQueryAsync(songsSql, songsParameters);
 
-            string playlistSongsSqlValues = string.Join(",", songs.Select((_, i) => $"(@pid,@x{i},@sid{i})"));
-            string playlistSongsSql = $@"
-                INSERT INTO playlist_songs (playlist_id, index_value, song_id)
-                VALUES {playlistSongsSqlValues};
-            ";
-            var playlistSongsParameters = CreateParams("pid", playlistId.ToString())
-                .Concat(songs.SelectMany((song, i) => CreateParams($"x{i}", i, $"sid{i}", song.Id.ToString())));
-            await sqlExecuteService.ExecuteNonQueryAsync(playlistSongsSql, playlistSongsParameters);
+                string playlistSongsSqlValues = string.Join(",", group.Select((_, i) => $"(@pid,@x{i},@sid{i})"));
+                string playlistSongsSql = $@"
+                    INSERT INTO playlist_songs (playlist_id, index_value, song_id)
+                    VALUES {playlistSongsSqlValues};
+                ";
+                var playlistSongsParameters = CreateParams("pid", playlistId.ToString())
+                    .Concat(group.SelectMany((song, i) => CreateParams($"x{i}", i, $"sid{i}", song.Id.ToString())));
+                await sqlExecuteService.ExecuteNonQueryAsync(playlistSongsSql, playlistSongsParameters);
+            }
         }
 
         private async Task InsertFileMediaSources(Guid playlistId, ICollection<FileMediaSource> sources)
         {
-            string fileMediaSourcesSqlValues = string.Join(",", sources.Select((_, i) => $"(@pid,@rel{i})"));
-            string fileMediaSourcesSql = $@"
-                INSERT INTO file_media_sources (playlist_id, relative_path)
-                VALUES {fileMediaSourcesSqlValues};
-            ";
-            var fileMediaSourcesParameters = CreateParams("pid", playlistId.ToString())
-                .Concat(sources.Select((source, i) => CreateParam($"rel{i}", source.RelativePath)));
-            await sqlExecuteService.ExecuteNonQueryAsync(fileMediaSourcesSql, fileMediaSourcesParameters);
+            foreach (IList<FileMediaSource> group in sources.ToGroupsOf(100))
+            {
+                string fileMediaSourcesSqlValues = string.Join(",", group.Select((_, i) => $"(@pid,@rel{i})"));
+                string fileMediaSourcesSql = $@"
+                    INSERT INTO file_media_sources (playlist_id, relative_path)
+                    VALUES {fileMediaSourcesSqlValues};
+                ";
+                var fileMediaSourcesParameters = CreateParams("pid", playlistId.ToString())
+                    .Concat(group.Select((source, i) => CreateParam($"rel{i}", source.RelativePath)));
+                await sqlExecuteService.ExecuteNonQueryAsync(fileMediaSourcesSql, fileMediaSourcesParameters);
+            }
         }
 
         public async Task SendInsertPlaylist(Playlist playlist, int? index)
@@ -549,13 +556,13 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
         public async Task SendFilesLastUpdatedChange(Guid playlistId, DateTime? filesLastUpdated)
         {
-            await UpdatePlaylistValue("files_last_updated", playlistId, filesLastUpdated);
+            await UpdatePlaylistValue("files_last_updated", playlistId, filesLastUpdated?.Ticks);
             OnFilesLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, filesLastUpdated));
         }
 
         public async Task SendSongsLastUpdatedChange(Guid playlistId, DateTime? songsLastUpdated)
         {
-            await UpdatePlaylistValue("songs_last_updated", playlistId, songsLastUpdated);
+            await UpdatePlaylistValue("songs_last_updated", playlistId, songsLastUpdated?.Ticks);
             OnSongsLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, songsLastUpdated));
         }
     }

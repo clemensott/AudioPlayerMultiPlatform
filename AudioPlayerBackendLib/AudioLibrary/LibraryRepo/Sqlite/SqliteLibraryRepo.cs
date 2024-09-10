@@ -44,23 +44,23 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
         public async Task<Library> GetLibrary()
         {
             const string librarySql = @"
-                SELECT play_state, volume, current_playlist_id
+                SELECT play_state, volume, current_playlist_id, folders_last_updated
                 FROM libraries
                 LIMIT 1;
             ";
 
-            (PlaybackState playState, double volume, Guid? currentPlaylistId) lib = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
+            (PlaybackState playState, double volume, Guid? currentPlaylistId, DateTime? foldersLastUpdated) lib = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
             {
                 PlaybackState playState = (PlaybackState)reader.GetInt64("play_state");
                 double volume = reader.GetDouble("volume");
-                string currentPlaylistIdText = reader.GetStringNullable("current_playlist_id");
                 Guid? currentPlaylistId = reader.GetGuidNullableFromString("current_playlist_id");
+                DateTime? foldersLastUpdated = reader.GetDateTimeNullableFromInt64("folders_last_updated");
 
-                return (playState, volume, currentPlaylistId);
+                return (playState, volume, currentPlaylistId, foldersLastUpdated);
             }, librarySql);
 
             const string playlistsSql = @"
-                SELECT id, type, name, songs_count
+                SELECT id, type, name, songs_count, files_last_updated, songs_last_updated
                 FROM playlists
                 ORDER BY index_value;
             ";
@@ -71,11 +71,13 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
                 PlaylistType type = (PlaylistType)reader.GetInt64("type");
                 string name = reader.GetString("name");
                 int songsCount = (int)reader.GetInt64("songs_count");
+                DateTime? filesLastUpdated = reader.GetDateTimeNullableFromInt64("files_last_updated");
+                DateTime? songsLastUpdated = reader.GetDateTimeNullableFromInt64("songs_last_updated");
 
-                return new PlaylistInfo(id, type, name, songsCount);
+                return new PlaylistInfo(id, type, name, songsCount, filesLastUpdated, songsLastUpdated);
             }, playlistsSql);
 
-            return new Library(lib.playState, lib.volume, lib.currentPlaylistId, playlists);
+            return new Library(lib.playState, lib.volume, lib.currentPlaylistId, playlists, lib.foldersLastUpdated);
         }
 
         private Task UpdateLibraryValue(string columnName, object value)

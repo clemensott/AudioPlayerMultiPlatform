@@ -18,16 +18,18 @@ namespace AudioPlayerBackend.FileSystem
         private readonly IServicedLibraryRepo libraryRepo;
         private readonly IServicedPlaylistsRepo playlistRepo;
         private readonly IUpdateLibraryService updateLibraryService;
+        private readonly IInvokeDispatcherService dispatcherService;
         private readonly Timer timer;
 
         private bool isCheckingForUpdates = false;
 
         public AutoUpdateLibraryService(IServicedLibraryRepo libraryRepo, IServicedPlaylistsRepo playlistRepo,
-            IUpdateLibraryService updateLibraryService)
+            IUpdateLibraryService updateLibraryService, IInvokeDispatcherService dispatcherService)
         {
             this.libraryRepo = libraryRepo;
             this.playlistRepo = playlistRepo;
             this.updateLibraryService = updateLibraryService;
+            this.dispatcherService = dispatcherService;
 
             timer = new Timer(OnTick, null, Timeout.Infinite, timerInterval);
         }
@@ -35,6 +37,11 @@ namespace AudioPlayerBackend.FileSystem
         private async void OnTick(object sender)
         {
             await CheckNeededUpdates();
+        }
+
+        private async Task InvokeDispatcher(Func<Task> func)
+        {
+            await await dispatcherService.InvokeDispatcher(func);
         }
 
         private static bool NeedsFoldersUpdate(DateTime? foldersLastUpdated)
@@ -57,19 +64,29 @@ namespace AudioPlayerBackend.FileSystem
 
         private async Task CheckNeededUpdates()
         {
-            if (!isCheckingForUpdates) return;
+            if (isCheckingForUpdates) return;
 
             try
             {
+                isCheckingForUpdates = true;
+
                 Library library = await libraryRepo.GetLibrary();
-                if (NeedsFoldersUpdate(library.FoldersLastUpdated)) await updateLibraryService.UpdateLibrary();
+                if (NeedsFoldersUpdate(library.FoldersLastUpdated))
+                {
+                    await InvokeDispatcher(() => updateLibraryService.UpdateLibrary());
+                }
 
                 library = await libraryRepo.GetLibrary();
                 foreach (PlaylistInfo playlistInfo in library.Playlists.GetSourcePlaylists())
                 {
-                    Playlist playlist = await playlistRepo.GetPlaylist(playlistInfo.Id);
-                    if (NeedsFilesUpdate(playlistInfo.FilesLastUpdated)) await updateLibraryService.UpdateSourcePlaylist(playlistInfo.Id);
-                    if (NeedsSongsUpdate(playlistInfo.SongsLastUpdated)) await updateLibraryService.ReloadSourcePlaylist(playlistInfo.Id);
+                    if (NeedsSongsUpdate(playlistInfo.SongsLastUpdated))
+                    {
+                        await InvokeDispatcher(() => updateLibraryService.ReloadSourcePlaylist(playlistInfo.Id));
+                    }
+                    else if (NeedsFilesUpdate(playlistInfo.FilesLastUpdated))
+                    {
+                        await InvokeDispatcher(() => updateLibraryService.UpdateSourcePlaylist(playlistInfo.Id));
+                    }
                 }
             }
             finally

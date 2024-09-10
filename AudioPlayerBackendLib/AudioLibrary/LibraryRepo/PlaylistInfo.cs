@@ -16,12 +16,14 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         
         public DateTime? SongsLastUpdated { get; }
 
-        public PlaylistInfo(Guid id, PlaylistType type, string name, int songsCount)
+        public PlaylistInfo(Guid id, PlaylistType type, string name, int songsCount, DateTime? filesLastUpdated, DateTime? songsLastUpdated)
         {
             Id = id;
             Type = type;
             Name = name;
             SongsCount = songsCount;
+            FilesLastUpdated = filesLastUpdated;
+            SongsLastUpdated = songsLastUpdated;
         }
     }
 }
