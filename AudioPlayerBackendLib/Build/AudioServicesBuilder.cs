@@ -63,7 +63,7 @@ namespace AudioPlayerBackend.Build
 
         public static AudioServicesBuilder Build(AudioServicesBuildConfig config, TimeSpan delayTime)
         {
-            AudioServicesBuilder build = new AudioServicesBuilder(config);
+            AudioServicesBuilder build = new AudioServicesBuilder(config.Clone());
             build.StartBuild(delayTime);
 
             return build;
