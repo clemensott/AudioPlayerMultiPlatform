@@ -1,7 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Audio.MediaSource;
-using AudioPlayerBackend.Player;
-using StdOttStandard.Linq;
+﻿using StdOttStandard.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -88,6 +85,16 @@ namespace AudioPlayerBackend.Communication.Base
             EnqueueRange(BitConverter.GetBytes(value));
         }
 
+        public float DequeueDouble()
+        {
+            return BitConverter.ToSingle(DequeueRange(sizeof(double)), 0);
+        }
+
+        public void Enqueue(double value)
+        {
+            EnqueueRange(BitConverter.GetBytes(value));
+        }
+
         public string DequeueString()
         {
             int length = DequeueInt();
@@ -114,6 +121,26 @@ namespace AudioPlayerBackend.Communication.Base
         public string[] DequeueStrings()
         {
             return DequeueArray(DequeueString);
+        }
+
+        public void Enqueue(DateTime? value)
+        {
+            EnqueueNullable(value, Enqueue);
+        }
+
+        public DateTime? DequeueDateTimeNullable()
+        {
+            return DequeueNullable(DequeueDateTime);
+        }
+
+        public void Enqueue(DateTime value)
+        {
+            Enqueue(value.Ticks);
+        }
+
+        public DateTime DequeueDateTime()
+        {
+            return new DateTime(DequeueLong());
         }
 
         public void Enqueue(Song song)

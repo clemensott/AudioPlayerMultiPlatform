@@ -1,10 +1,8 @@
-﻿using AudioPlayerBackend.AudioLibrary;
-using AudioPlayerBackend.AudioLibrary.LibraryRepo;
-using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AudioPlayerBackend.Extensions
+namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Extensions
 {
     public static class PlaylistsExtensions
     {

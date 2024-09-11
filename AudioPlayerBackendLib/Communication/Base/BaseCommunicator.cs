@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Audio.MediaSource;
-using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 using StdOttStandard.Linq;
 
@@ -15,128 +14,28 @@ namespace AudioPlayerBackend.Communication.Base
     {
         protected const string cmdString = "Command";
 
-        private bool isSyncing;
         private readonly Dictionary<string, byte[]> receivingDict = new Dictionary<string, byte[]>();
-        protected readonly Dictionary<Guid, IPlaylistBase> playlists = new Dictionary<Guid, IPlaylistBase>();
 
         public abstract event EventHandler<DisconnectedEventArgs> Disconnected;
+        public event EventHandler<ReceivedEventArgs> Received;
 
         public abstract bool IsOpen { get; }
 
         public abstract string Name { get; }
 
-        public bool IsSyncing
-        {
-            get => isSyncing;
-            protected set
-            {
-                if (value == isSyncing) return;
-
-                isSyncing = value;
-                OnPropertyChanged(nameof(IsSyncing));
-            }
-        }
-
-        public IAudioServiceBase Service { get; protected set; }
-
         protected BaseCommunicator()
         {
         }
 
-        public abstract Task OpenAsync(BuildStatusToken statusToken);
-
         public abstract Task SendCommand(string cmd);
 
-        public abstract Task SetService(IAudioServiceBase service, BuildStatusToken statusToken);
+        public abstract Task<byte[]> SendAsync(string topic, byte[] payload);
 
-        public abstract Task SyncService(BuildStatusToken statusToken);
+        public abstract Task Start();
 
-        public abstract Task CloseAsync();
+        public abstract Task Stop();
 
-        public abstract void Dispose();
-
-        protected void Subscribe(IAudioServiceBase service)
-        {
-            if (service == null) return;
-
-            service.AudioDataChanged += OnServiceAudioDataChanged;
-            service.FileMediaSourceRootsChanged += OnFileMediaSourceRootsChanged;
-            service.CurrentPlaylistChanged += OnServiceCurrentPlaylistChanged;
-            service.SourcePlaylistsChanged += OnServiceSourcePlaylistsChanged;
-            service.PlaylistsChanged += OnServicePlaylistsChanged;
-            service.PlayStateChanged += OnServicePlayStateChanged;
-            service.VolumeChanged += OnServiceVolumeChanged;
-            service.IsSearchShuffleChanged += OnPlaylistIsSearchShuffleChanged;
-            service.SearchKeyChanged += OnPlaylistSearchKeyChanged;
-
-            service.SourcePlaylists.ForEach(Subscribe);
-            service.Playlists.ForEach(Subscribe);
-        }
-
-        protected void Unsubscribe(IAudioServiceBase service)
-        {
-            if (service == null) return;
-
-            service.AudioDataChanged -= OnServiceAudioDataChanged;
-            service.FileMediaSourceRootsChanged -= OnFileMediaSourceRootsChanged;
-            service.CurrentPlaylistChanged -= OnServiceCurrentPlaylistChanged;
-            service.SourcePlaylistsChanged -= OnServiceSourcePlaylistsChanged;
-            service.PlaylistsChanged -= OnServicePlaylistsChanged;
-            service.PlayStateChanged -= OnServicePlayStateChanged;
-            service.VolumeChanged -= OnServiceVolumeChanged;
-            service.IsSearchShuffleChanged -= OnPlaylistIsSearchShuffleChanged;
-            service.SearchKeyChanged -= OnPlaylistSearchKeyChanged;
-
-            service.SourcePlaylists.ForEach(Unsubscribe);
-            service.Playlists.ForEach(Unsubscribe);
-        }
-
-        protected void Subscribe(ISourcePlaylistBase playlist)
-        {
-            if (playlist == null) return;
-
-            Subscribe((IPlaylistBase)playlist);
-
-            playlist.FileMediaSourcesChanged += OnPlaylistFileMediaSourcesChanged;
-        }
-
-        protected void Unsubscribe(ISourcePlaylistBase playlist)
-        {
-            if (playlist == null) return;
-
-            Unsubscribe((IPlaylistBase)playlist);
-
-            playlist.FileMediaSourcesChanged -= OnPlaylistFileMediaSourcesChanged;
-        }
-
-        protected void Subscribe(IPlaylistBase playlist)
-        {
-            if (playlist == null) return;
-
-            playlist.CurrentSongChanged += OnPlaylistCurrentSongChanged;
-            playlist.DurationChanged += OnPlaylistDurationChanged;
-            playlist.ShuffleChanged += OnPlaylistShuffleChanged;
-            playlist.LoopChanged += OnPlaylistLoopChanged;
-            playlist.NameChanged += OnPlaylistNameChanged;
-            playlist.PositionChanged += OnPlaylistPositionChanged;
-            playlist.WannaSongChanged += OnPlaylistWannaSongChanged;
-            playlist.SongsChanged += OnPlaylistSongsChanged;
-        }
-
-        protected void Unsubscribe(IPlaylistBase playlist)
-        {
-            if (playlist == null) return;
-
-            playlist.CurrentSongChanged -= OnPlaylistCurrentSongChanged;
-            playlist.DurationChanged -= OnPlaylistDurationChanged;
-            playlist.ShuffleChanged -= OnPlaylistShuffleChanged;
-            playlist.LoopChanged -= OnPlaylistLoopChanged;
-            playlist.NameChanged -= OnPlaylistNameChanged;
-            playlist.PositionChanged -= OnPlaylistPositionChanged;
-            playlist.WannaSongChanged -= OnPlaylistWannaSongChanged;
-            playlist.SongsChanged -= OnPlaylistSongsChanged;
-        }
-
+        public abstract Task Dispose();
 
         protected virtual void OnServiceAudioDataChanged(object sender, ValueChangedEventArgs<byte[]> e)
         {
@@ -317,21 +216,6 @@ namespace AudioPlayerBackend.Communication.Base
         protected void OnPropertyChanged(string name)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-        }
-
-        public Task Start()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task Stop()
-        {
-            throw new NotImplementedException();
-        }
-
-        Task IAudioService.Dispose()
-        {
-            throw new NotImplementedException();
         }
     }
 }

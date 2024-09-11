@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Data.Common;
 
-namespace AudioPlayerBackend.Extensions
+namespace AudioPlayerBackend.AudioLibrary.Database.Sql.Extensions
 {
     static class DbDataReaderExtensions
     {

@@ -12,18 +12,13 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 {
     public abstract class OwnTcpCommunicator : BaseCommunicator
     {
-        public const string AnwserCmd = "-ans", SyncCmd = "-sync", PingCmd = "-ping", CloseCmd = "-close";
+        public const string AnwserCmd = "-ans", ReturnCmd = "-rtn", SyncCmd = "-sync", PingCmd = "-ping", CloseCmd = "-close";
 
         protected readonly IAudioCreateService audioCreateService;
 
         protected OwnTcpCommunicator()
         {
             audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
-        }
-
-        protected Task PublishAudioData()
-        {
-            return SendAsync(nameof(Service.AudioData), Service.AudioData, true);
         }
 
         protected override async void OnFileMediaSourceRootsChanged(object sender, ValueChangedEventArgs<FileMediaSourceRoot[]> e)
