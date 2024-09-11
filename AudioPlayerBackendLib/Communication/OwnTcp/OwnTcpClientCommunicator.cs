@@ -14,7 +14,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
     {
         private static readonly TimeSpan pingInterval = TimeSpan.FromSeconds(10);
 
-        private bool isSyncing;
         private OwnTcpClientConnection connection;
         private readonly IInvokeDispatcherService dispatcher;
 
@@ -35,7 +34,14 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
         }
 
-        public override async Task OpenAsync(BuildStatusToken statusToken)
+        private static async Task<IPAddress> GetIpAddress(string serverAddress)
+        {
+            IPHostEntry entry = await Dns.GetHostEntryAsync(serverAddress);
+            return entry.AddressList.First(a => a.AddressFamily.HasFlag(AddressFamily.InterNetwork) &&
+                                                !a.AddressFamily.HasFlag(AddressFamily.InterNetworkV6));
+        }
+
+        public override async Task Start()
         {
             if (IsOpen) return;
 
@@ -60,31 +66,10 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 }
                 throw;
             }
-        }
 
-        private static async Task<IPAddress> GetIpAddress(string serverAddress)
-        {
-            IPHostEntry entry = await Dns.GetHostEntryAsync(serverAddress);
-            return entry.AddressList.First(a => a.AddressFamily.HasFlag(AddressFamily.InterNetwork) &&
-                                                !a.AddressFamily.HasFlag(AddressFamily.InterNetworkV6));
-        }
-
-        public override Task SetService(IAudioServiceBase service, BuildStatusToken statusToken)
-        {
-            Unsubscribe(Service);
-            Service = service;
-            Subscribe(Service);
-
-            return SyncService(statusToken);
-        }
-
-        public override async Task SyncService(BuildStatusToken statusToken)
-        {
             try
             {
-                isSyncing = true;
                 connection.IsSynced = false;
-                connection.Service = Service;
 
                 Task publishTask = Task.Run(() => SendMessagesHandler(connection));
                 Task pingTask = Task.Run(() => SendPingsHandler(connection));
@@ -211,7 +196,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                         case SyncCmd:
                             ByteQueue data = message.Payload;
-                            void syncAction() => data.DequeueService(connection.Service, 
+                            void syncAction() => data.DequeueService(connection.Service,
                                 audioCreateService.CreateSourcePlaylist, audioCreateService.CreatePlaylist);
 
                             await dispatcher.InvokeDispatcher(syncAction);
@@ -269,7 +254,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             Disconnected?.Invoke(this, e);
         }
 
-        public override async Task CloseAsync()
+        public override async Task Stop()
         {
             if (connection == null) return;
 
@@ -278,12 +263,9 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             connection = null;
         }
 
-        public override void Dispose()
+        public override async Task Dispose()
         {
-            if (connection == null) return;
-            DisposeTask().Wait();
-
-            async Task DisposeTask()
+            if (connection != null)
             {
                 connection.Disconnected -= Connection_Disconnected;
                 await connection.CloseAsync(null, false).ConfigureAwait(false);

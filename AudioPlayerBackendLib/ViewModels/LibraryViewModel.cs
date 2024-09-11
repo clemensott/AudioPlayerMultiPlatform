@@ -1,7 +1,7 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.Extensions;
 using AudioPlayerBackend.Build;
-using AudioPlayerBackend.Extensions;
 using AudioPlayerBackend.Player;
 using StdOttStandard.Linq;
 using System;

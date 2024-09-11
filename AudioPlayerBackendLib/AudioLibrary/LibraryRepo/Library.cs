@@ -7,16 +7,6 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 {
     public class Library
     {
-        public Library(PlaybackState playState, double volume, Guid? currentPlaylistId, 
-            ICollection<PlaylistInfo> playlists, DateTime? foldersLastUpdated)
-        {
-            PlayState = playState;
-            Volume = volume;
-            CurrentPlaylistId = currentPlaylistId;
-            Playlists = playlists;
-            FoldersLastUpdated = foldersLastUpdated;
-        }
-
         public PlaybackState PlayState { get; }
 
         public double Volume { get; }
@@ -26,6 +16,16 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         public ICollection<PlaylistInfo> Playlists { get; }
 
         public DateTime? FoldersLastUpdated { get; }
+
+        public Library(PlaybackState playState, double volume, Guid? currentPlaylistId, 
+            ICollection<PlaylistInfo> playlists, DateTime? foldersLastUpdated)
+        {
+            PlayState = playState;
+            Volume = volume;
+            CurrentPlaylistId = currentPlaylistId;
+            Playlists = playlists;
+            FoldersLastUpdated = foldersLastUpdated;
+        }
 
         public PlaylistInfo GetCurrentPlaylist()
         {

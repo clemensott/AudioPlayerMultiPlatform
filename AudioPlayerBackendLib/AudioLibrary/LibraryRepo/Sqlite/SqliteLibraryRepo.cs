@@ -1,5 +1,5 @@
 ﻿using AudioPlayerBackend.AudioLibrary.Database.Sql;
-using AudioPlayerBackend.Extensions;
+using AudioPlayerBackend.AudioLibrary.Database.Sql.Extensions;
 using AudioPlayerBackend.Player;
 using System;
 using System.Collections.Generic;

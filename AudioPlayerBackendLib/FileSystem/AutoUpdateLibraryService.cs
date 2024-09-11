@@ -1,6 +1,6 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
-using AudioPlayerBackend.Extensions;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.Extensions;
 using StdOttStandard;
 using System;
 using System.Threading;

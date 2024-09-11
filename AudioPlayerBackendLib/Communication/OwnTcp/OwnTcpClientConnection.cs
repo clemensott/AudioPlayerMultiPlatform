@@ -1,9 +1,7 @@
-﻿using AudioPlayerBackend.Audio;
-using StdOttStandard.Linq.DataStructures;
+﻿using StdOttStandard.Linq.DataStructures;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,15 +11,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
     {
         public event EventHandler<DisconnectedEventArgs> Disconnected;
 
-        public bool IsSynced { get; set; }
-
         public IDictionary<uint, OwnTcpSendMessage> Waits { get; }
 
         public AsyncQueue<OwnTcpMessage> ProcessQueue { get; }
 
         public SemaphoreSlim PingSem { get; }
-
-        public IAudioServiceBase Service { get; set; }
 
         public OwnTcpClientConnection(TcpClient client) : base(client)
         {

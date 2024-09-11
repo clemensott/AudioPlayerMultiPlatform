@@ -1,4 +1,7 @@
-﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using AudioPlayerBackend.Communication;
+using AudioPlayerBackend.Communication.Base;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -7,6 +10,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 {
     internal class OwnTcpPlaylistsRepo : IPlaylistsRepo
     {
+        private readonly IClientCommunicator clientCommunicator;
+
         public event EventHandler<PlaylistChangeArgs<string>> OnNameChange;
         public event EventHandler<PlaylistChangeArgs<OrderType>> OnShuffleChange;
         public event EventHandler<PlaylistChangeArgs<LoopType>> OnLoopChange;
@@ -21,6 +26,39 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
         public event EventHandler<PlaylistChangeArgs<FileMediaSources>> OnFileMedisSourcesChange;
         public event EventHandler<PlaylistChangeArgs<DateTime?>> OnFilesLastUpdatedChange;
         public event EventHandler<PlaylistChangeArgs<DateTime?>> OnSongsLastUpdatedChange;
+
+        public OwnTcpPlaylistsRepo(IClientCommunicator clientCommunicator)
+        {
+            this.clientCommunicator = clientCommunicator;
+        }
+
+        public Task Start()
+        {
+            clientCommunicator.Received += ClientCommunicator_Received;
+            return Task.CompletedTask;
+        }
+
+        public Task Stop()
+        {
+            clientCommunicator.Received -= ClientCommunicator_Received;
+            return Task.CompletedTask;
+        }
+
+        public Task Dispose()
+        {
+            return Stop();
+        }
+
+        private void ClientCommunicator_Received(object sender, ReceivedEventArgs e)
+        {
+            string[] parts = e.Topic.Split('.');
+            if (parts.Length != 2 || parts[0] != nameof(ILibraryRepo)) return;
+
+            ByteQueue payload = e.Payload;
+            switch (parts[1])
+            {
+            }
+        }
 
         public Task<Playlist> GetPlaylist(Guid id)
         {
@@ -108,21 +146,6 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
         }
 
         public Task SendSongsLastUpdatedChange(Guid id, DateTime? songsLastUpdated)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task Start()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task Stop()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task Dispose()
         {
             throw new NotImplementedException();
         }

@@ -57,7 +57,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
                     break;
             
                 case nameof(OnCurrentPlaylistIdChange):
-                    Guid? currentPlaylistId = payload.DequeueNullableGuid();
+                    Guid? currentPlaylistId = payload.DequeueGuidNullable();
                     OnCurrentPlaylistIdChange?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
                     break;
             

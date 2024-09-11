@@ -143,45 +143,6 @@ namespace AudioPlayerBackend.Communication.Base
             return new DateTime(DequeueLong());
         }
 
-        public void Enqueue(Song song)
-        {
-            Enqueue(song.Index);
-            Enqueue(song.Artist);
-            Enqueue(song.FullPath);
-            Enqueue(song.Title);
-        }
-
-        public Song DequeueSong()
-        {
-            return new Song()
-            {
-                Index = DequeueInt(),
-                Artist = DequeueString(),
-                FullPath = DequeueString(),
-                Title = DequeueString()
-            };
-        }
-
-        public void Enqueue(Song? song)
-        {
-            EnqueueNullable(song, Enqueue);
-        }
-
-        public Song? DequeueNullableSong()
-        {
-            return DequeueNullable(DequeueSong);
-        }
-
-        public void Enqueue(IEnumerable<Song> songs)
-        {
-            Enqueue(songs, Enqueue);
-        }
-
-        public Song[] DequeueSongs()
-        {
-            return DequeueArray(DequeueSong);
-        }
-
         public void Enqueue(TimeSpan span)
         {
             Enqueue(span.Ticks);
@@ -207,7 +168,7 @@ namespace AudioPlayerBackend.Communication.Base
             EnqueueNullable(guid, Enqueue);
         }
 
-        public Guid? DequeueNullableGuid()
+        public Guid? DequeueGuidNullable()
         {
             return DequeueNullable(DequeueGuid);
         }
@@ -370,14 +331,14 @@ namespace AudioPlayerBackend.Communication.Base
             return DequeueArray(() => DequeuePlaylist(createFunc));
         }
 
-        private void EnqueueNullable<T>(T? value, Action<T> valueEnqueueAction) where T : struct
+        public void EnqueueNullable<T>(T? value, Action<T> valueEnqueueAction) where T : struct
         {
             Enqueue(value.HasValue);
 
             if (value.HasValue) valueEnqueueAction(value.Value);
         }
 
-        private T? DequeueNullable<T>(Func<T> itemDequeueFunc) where T : struct
+        public T? DequeueNullable<T>(Func<T> itemDequeueFunc) where T : struct
         {
             return DequeueBool() ? (T?)itemDequeueFunc() : null;
         }
@@ -422,7 +383,7 @@ namespace AudioPlayerBackend.Communication.Base
             service.PlayState = (PlaybackState)DequeueInt();
         }
 
-        private void Enqueue<T>(IEnumerable<T> items, Action<T> itemEnqueueAction)
+        public void Enqueue<T>(IEnumerable<T> items, Action<T> itemEnqueueAction)
         {
             IList<T> list = items as IList<T> ?? items?.ToArray();
 
@@ -434,7 +395,7 @@ namespace AudioPlayerBackend.Communication.Base
             else Enqueue(-1);
         }
 
-        private T[] DequeueArray<T>(Func<T> itemDequeueFunc)
+        public T[] DequeueArray<T>(Func<T> itemDequeueFunc)
         {
             int length = DequeueInt();
             if (length == -1) return null;

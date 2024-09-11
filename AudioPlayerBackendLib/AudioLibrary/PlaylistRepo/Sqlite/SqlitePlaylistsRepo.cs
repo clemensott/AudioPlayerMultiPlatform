@@ -1,6 +1,6 @@
 ﻿using AudioPlayerBackend.AudioLibrary.Database.Sql;
+using AudioPlayerBackend.AudioLibrary.Database.Sql.Extensions;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
-using AudioPlayerBackend.Extensions;
 using StdOttStandard;
 using StdOttStandard.Linq;
 using System;

@@ -5,8 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Communication.Base;
 using StdOttStandard.Linq.DataStructures;
 
@@ -34,7 +32,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             listener = new TcpListener(IPAddress.Any, Port);
         }
 
-        public override async Task OpenAsync(BuildStatusToken statusToken)
+        public override async Task Start()
         {
             if (isOpen) return;
 
@@ -45,22 +43,10 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
             catch
             {
-                await CloseAsync();
+                await Stop();
                 throw;
             }
-        }
 
-        public override Task SetService(IAudioServiceBase service, BuildStatusToken statusToken)
-        {
-            Unsubscribe(Service);
-            Service = service;
-            Subscribe(Service);
-
-            return SyncService(statusToken);
-        }
-
-        public override async Task SyncService(BuildStatusToken statusToken)
-        {
             try
             {
                 connections = new List<OwnTcpServerConnection>();
@@ -70,7 +56,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
             catch (Exception e)
             {
-                await CloseAsync(e, true);
+                await Stop(e, true);
                 throw;
             }
         }
@@ -94,7 +80,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
             catch (Exception e)
             {
-                await CloseAsync(e, false);
+                await Stop(e, false);
             }
         }
 
@@ -266,12 +252,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        public override Task CloseAsync()
+        public override Task Stop()
         {
-            return CloseAsync(null, true);
+            return Stop(null, true);
         }
 
-        private async Task CloseAsync(Exception e, bool awaitAll)
+        private async Task Stop(Exception e, bool awaitAll)
         {
             if (!IsOpen) return;
 
@@ -297,9 +283,9 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        public override void Dispose()
+        public override async Task Dispose()
         {
-            CloseAsync(null, false).Wait();
+            await Stop(null, false);
         }
 
         public override Task SendCommand(string cmd)
