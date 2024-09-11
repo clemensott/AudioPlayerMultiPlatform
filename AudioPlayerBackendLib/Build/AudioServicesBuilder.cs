@@ -21,7 +21,7 @@ using StdOttStandard.Linq;
 
 namespace AudioPlayerBackend.Build
 {
-    public enum BuildState { Init, OpenCommunicator, SyncCommunicator, SendCommands, CreatePlayer, CompleteSerivce, Finished }
+    public enum BuildState { Init, Building, Starting, Completing, Finished }
 
     public class AudioServicesBuilder : INotifyPropertyChanged
     {
@@ -81,11 +81,13 @@ namespace AudioPlayerBackend.Build
 
                 try
                 {
-                    State = BuildState.CompleteSerivce;
-
+                    State = BuildState.Building;
                     audioServices = BuildAudioServices();
 
+                    State = BuildState.Starting;
                     await audioServices.Start();
+
+                    State = BuildState.Completing;
                     await CompleteServices(audioServices);
 
                     if (CompleteToken.IsEnded.HasValue) return;
