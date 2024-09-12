@@ -12,7 +12,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 {
     public abstract class OwnTcpCommunicator : BaseCommunicator
     {
-        public const string AnwserCmd = "-ans", ReturnCmd = "-rtn", SyncCmd = "-sync", PingCmd = "-ping", CloseCmd = "-close";
+        public const string AnwserCmd = "-ans", ReturnCmd = "-rtn", PingCmd = "-ping", CloseCmd = "-close";
 
         protected readonly IAudioCreateService audioCreateService;
 

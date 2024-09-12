@@ -4,9 +4,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Build;
-using AudioPlayerBackend.Communication.Base;
 
 namespace AudioPlayerBackend.Communication.OwnTcp
 {
@@ -69,15 +66,10 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
             try
             {
-                connection.IsSynced = false;
-
                 Task publishTask = Task.Run(() => SendMessagesHandler(connection));
                 Task pingTask = Task.Run(() => SendPingsHandler(connection));
                 Task receiveTask = Task.Run(() => ReceiveHandler(connection));
                 Task processTask = Task.Run(() => ProcessHandler(connection));
-
-                await connection.SendCommand(SyncCmd, false, TimeSpan.FromSeconds(1000), statusToken.EndTask);
-                connection.IsSynced = true;
 
                 connection.Task = Task.WhenAll(publishTask, pingTask, receiveTask, processTask);
             }
@@ -90,10 +82,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 catch { }
 
                 throw;
-            }
-            finally
-            {
-                isSyncing = false;
             }
         }
 
@@ -113,7 +101,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         protected override async Task SendAsync(string topic, byte[] payload, bool fireAndForget)
         {
-            if (isSyncing || !IsOpen || IsTopicLocked(topic, payload)) return;
+            if (!IsOpen || IsTopicLocked(topic, payload)) return;
 
             await connection.SendQueue.Enqueue(OwnTcpMessage.FromData(topic, payload, fireAndForget));
         }
@@ -194,19 +182,8 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                             await connection.CloseAsync(e, false);
                             return;
 
-                        case SyncCmd:
-                            ByteQueue data = message.Payload;
-                            void syncAction() => data.DequeueService(connection.Service,
-                                audioCreateService.CreateSourcePlaylist, audioCreateService.CreatePlaylist);
-
-                            await dispatcher.InvokeDispatcher(syncAction);
-
-                            connection.Waits[message.ID].SetResult(true);
-                            connection.Waits.Remove(message.ID);
-                            break;
-
                         default:
-                            if (connection.IsSynced) await connection.ProcessQueue.Enqueue(message);
+                            await connection.ProcessQueue.Enqueue(message);
                             break;
                     }
                 }

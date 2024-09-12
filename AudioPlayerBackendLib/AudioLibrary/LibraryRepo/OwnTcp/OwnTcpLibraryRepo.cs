@@ -81,8 +81,8 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
         public async Task SendPlayStateChange(PlaybackState playState)
         {
-            ByteQueue payload = new ByteQueue();
-            payload.Enqueue(playState);
+            ByteQueue payload = new ByteQueue()
+                .Enqueue(playState);
             await SendAsync(nameof(SendPlayStateChange), payload);
 
             OnPlayStateChange?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
@@ -90,8 +90,8 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
         public async Task SendVolumeChange(double volume)
         {
-            ByteQueue payload = new ByteQueue();
-            payload.Enqueue(volume);
+            ByteQueue payload = new ByteQueue()
+                .Enqueue(volume);
             await SendAsync(nameof(SendVolumeChange), payload);
 
             OnVolumeChange?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
@@ -100,8 +100,8 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
         public async Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
         {
-            ByteQueue payload = new ByteQueue();
-            payload.Enqueue(currentPlaylistId);
+            ByteQueue payload = new ByteQueue()
+                .Enqueue(currentPlaylistId);
             await SendAsync(nameof(SendCurrentPlaylistIdChange), payload);
 
             OnCurrentPlaylistIdChange?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
@@ -109,8 +109,8 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
         public async Task SendFoldersLastUpdatedChange(DateTime? foldersLastUpdated)
         {
-            ByteQueue payload = new ByteQueue();
-            payload.Enqueue(foldersLastUpdated);
+            ByteQueue payload = new ByteQueue()
+                .Enqueue(foldersLastUpdated);
             await SendAsync(nameof(SendFoldersLastUpdatedChange), payload);
 
             OnFoldersLastUpdatedChange?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));

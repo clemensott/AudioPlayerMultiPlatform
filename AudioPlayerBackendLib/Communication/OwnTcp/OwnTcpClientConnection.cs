@@ -59,8 +59,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public async Task CloseAsync(Exception e, bool awaitAll)
         {
-            if (!IsSynced && !Client.Connected) return;
-            IsSynced = false;
+            if (!Client.Connected) return;
 
             if (e == null) await SendCommand(OwnTcpCommunicator.CloseCmd, true).ConfigureAwait(false);
 
