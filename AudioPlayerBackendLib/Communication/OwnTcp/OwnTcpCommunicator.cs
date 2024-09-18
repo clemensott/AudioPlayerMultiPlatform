@@ -266,7 +266,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             return SendAsync(playlist.ID + "." + topic, payload, fireAndForget);
         }
 
-        protected abstract Task SendAsync(string topic, byte[] payload, bool fireAndForget);
+        protected abstract Task<byte[]> SendAsync(string topic, byte[] payload, bool fireAndForget);
 
         protected static IEnumerable<byte> GetBytes(OwnTcpMessage message)
         {

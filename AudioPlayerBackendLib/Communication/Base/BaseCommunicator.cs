@@ -17,7 +17,7 @@ namespace AudioPlayerBackend.Communication.Base
         private readonly Dictionary<string, byte[]> receivingDict = new Dictionary<string, byte[]>();
 
         public abstract event EventHandler<DisconnectedEventArgs> Disconnected;
-        public event EventHandler<ReceivedEventArgs> Received;
+        public abstract event EventHandler<ReceivedEventArgs> Received;
 
         public abstract bool IsOpen { get; }
 
@@ -27,7 +27,7 @@ namespace AudioPlayerBackend.Communication.Base
         {
         }
 
-        public abstract Task SendCommand(string cmd);
+        public abstract Task<bool> SendCommand(string cmd);
 
         public abstract Task<byte[]> SendAsync(string topic, byte[] payload);
 

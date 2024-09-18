@@ -13,7 +13,7 @@ namespace AudioPlayerBackend.Communication
 
         string Name { get; }
 
-        Task SendCommand(string cmd);
+        Task<bool> SendCommand(string cmd);
 
         Task<byte[]> SendAsync(string topic, byte[] payload);
     }
