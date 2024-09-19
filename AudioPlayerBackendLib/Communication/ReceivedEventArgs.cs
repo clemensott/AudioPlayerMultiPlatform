@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Communication
 {
@@ -7,6 +8,8 @@ namespace AudioPlayerBackend.Communication
         public string Topic { get; }
 
         public byte[] Payload { get; }
+
+        public TaskCompletionSource<byte[]> Anwser { get; }
 
         public ReceivedEventArgs(string topic, byte[] payload)
         {

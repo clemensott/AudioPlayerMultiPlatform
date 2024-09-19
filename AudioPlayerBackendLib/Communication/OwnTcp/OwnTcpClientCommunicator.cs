@@ -15,6 +15,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         private readonly IInvokeDispatcherService dispatcher;
 
         public override event EventHandler<DisconnectedEventArgs> Disconnected;
+        public override event EventHandler<ReceivedEventArgs> Received;
 
         public override bool IsOpen => connection?.Client.Connected ?? false;
 
@@ -154,7 +155,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                                 connection.Waits[message.ID].SetResult(payload);
                                 connection.Waits.Remove(message.ID);
                             }
-                            else if(code == (int)HttpStatusCode.InternalServerError)
+                            else if (code == (int)HttpStatusCode.InternalServerError)
                             {
                                 string exceptionMessage = Encoding.UTF8.GetString(payload);
                                 connection.Waits[message.ID].SetException(new Exception(exceptionMessage));
@@ -191,13 +192,16 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 {
                     LockTopic(item.Topic, item.Payload);
 
-                    bool handleAction() => HandlerMessage(item);
-                    bool success = await dispatcher.InvokeDispatcher(handleAction);
+                    async Task<byte[]> handleAction()
+                    {
+                        if (Received == null) return null;
 
-                    if (success) continue;
+                        ReceivedEventArgs args = new ReceivedEventArgs(item.Topic, item.Payload);
+                        Received.Invoke(this, args);
 
-                    Exception e = new Exception($"Handle Message not successful. Topic: {item.Topic}");
-                    await connection.CloseAsync(e, false);
+                        return await args.Anwser.Task;
+                    }
+                    await await dispatcher.InvokeDispatcher(handleAction);
                 }
                 catch (Exception e)
                 {

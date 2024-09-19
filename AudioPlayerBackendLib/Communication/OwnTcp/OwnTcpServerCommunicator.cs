@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using StdOttStandard.Linq;
 using StdOttStandard.Linq.DataStructures;
 
 namespace AudioPlayerBackend.Communication.OwnTcp
@@ -131,10 +132,10 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                             OwnTcpSendMessage processItem = new OwnTcpSendMessage(message);
                             await processQueue.Enqueue(processItem);
 
-                            await processItem.Task;
+                            byte[] resultData = await processItem.Task;
                             Task responseTask = message.IsFireAndForget
                                 ? Task.CompletedTask
-                                : SendAnswer(connection, message.ID, (int)HttpStatusCode.OK);
+                                : SendAnswer(connection, message.ID, (int)HttpStatusCode.OK, resultData);
 
                             await SendMessageToAllOtherClients(connection, message.Topic, message.Payload);
 
@@ -149,9 +150,18 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        private static Task SendAnswer(OwnTcpServerConnection connection, uint id, int value)
+        private static Task SendAnswer(OwnTcpServerConnection connection, uint id, int code)
         {
-            return SendMessageToClient(connection, AnwserCmd, id, BitConverter.GetBytes(value));
+            byte[] payload = BitConverter.GetBytes(code);
+
+            return SendMessageToClient(connection, AnwserCmd, id, payload);
+        }
+
+        private static Task SendAnswer(OwnTcpServerConnection connection, uint id, int code, byte[] data)
+        {
+            byte[] payload = BitConverter.GetBytes(code).Concat(data.ToNotNull()).ToArray();
+
+            return SendMessageToClient(connection, AnwserCmd, id, payload);
         }
 
         private async Task CloseConnection(OwnTcpServerConnection connection, bool sendClose = true)
