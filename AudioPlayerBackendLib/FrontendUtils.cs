@@ -1,97 +1,49 @@
 ﻿using System;
-using StdOttStandard.Linq;
-using System.Collections.Generic;
-using System.Linq;
-using AudioPlayerBackend.Audio;
 using System.Text;
+using AudioPlayerBackend.ViewModels;
+using AudioPlayerBackend.Player;
+using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using System.Threading.Tasks;
 
 namespace AudioPlayerBackend
 {
     public static class FrontendUtils
     {
-        public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs)
+        public static void SetTogglePlayState(this ILibraryViewModel viewModel)
         {
-            AddSongsToFirstPlaylist(service, songs, false);
+            if (viewModel != null)
+            {
+                viewModel.PlayState = viewModel.PlayState == PlaybackState.Playing ?
+                    PlaybackState.Paused : PlaybackState.Playing;
+            }
         }
 
-        public static void AddSongsToFirstPlaylist(this IAudioService service, IEnumerable<Song> songs, bool prepend)
+        public static void SetPlay(this ILibraryViewModel viewModel)
         {
-            songs = songs as Song[] ?? songs.ToArray();
+            if (viewModel != null) viewModel.PlayState = PlaybackState.Playing;
+        }
 
-            if (!songs.Any()) return;
+        public static void SetPause(this ILibraryViewModel viewModel)
+        {
+            if (viewModel != null) viewModel.PlayState = PlaybackState.Paused;
+        }
 
-            IPlaylist currentPlaylist = service.CurrentPlaylist;
-            Song? currentSong = currentPlaylist?.CurrentSong;
+        public static async Task SetRestartCurrentSong(this IPlaylistViewModel viewModel)
+        {
+            await viewModel.SendRequestSong(RequestSong.Start(viewModel.CurrentSong));
+        }
 
-            if (service.Playlists.Count > 0)
-            {
-                IPlaylist playlist = service.Playlists[0];
+        public static async Task SetNextSong(this IPlaylistViewModel viewModel)
+        {
+            Song? newCurrentSong = SongsHelper.GetNextSong(viewModel.Songs, viewModel.Shuffle, viewModel.CurrentSong).song;
+            await viewModel.SendRequestSong(RequestSong.Start(newCurrentSong));
+        }
 
-                if (playlist.ID == currentPlaylist?.ID)
-                {
-                    if (prepend)
-                    {
-                        playlist.Songs = songs.Concat(playlist.Songs).Distinct().ToArray();
-                        playlist.WannaSong = RequestSong.Start(songs.First());
-                    }
-                    else playlist.Songs = playlist.Songs.Concat(songs).Distinct().ToArray();
-                }
-                else
-                {
-                    if (prepend || !currentSong.HasValue)
-                    {
-                        playlist.Songs = songs.Distinct().ToArray();
-                        playlist.WannaSong = RequestSong.Start(songs.First());
-                        playlist.Duration = currentPlaylist.Duration;
-                        playlist.Position = currentPlaylist.Position;
-
-                        service.CurrentPlaylist = playlist;
-                    }
-                    else
-                    {
-                        playlist.Songs = songs.Insert(0, currentSong.Value).Distinct().ToArray();
-                        playlist.WannaSong = RequestSong.Get(currentSong.Value, null, currentPlaylist.Duration);
-
-                        service.CurrentPlaylist = playlist;
-
-                        currentPlaylist.CurrentSong = currentPlaylist.Songs.Cast<Song?>()
-                            .NextOrDefault(currentSong).next;
-                        currentPlaylist.Position = TimeSpan.Zero;
-                        currentPlaylist.WannaSong = RequestSong.Start(currentPlaylist.CurrentSong);
-                    }
-                }
-            }
-            else
-            {
-                IPlaylist playlist = AudioPlayerServiceProvider.Current.GetAudioCreateService().CreatePlaylist(Guid.NewGuid());
-                playlist.Name = "Custom";
-                playlist.Loop = LoopType.Next;
-                playlist.Shuffle = OrderType.Custom;
-
-                if (prepend || !currentSong.HasValue)
-                {
-                    playlist.Songs = songs.ToArray();
-                    playlist.WannaSong = RequestSong.Start(songs.First());
-                    playlist.Duration = currentPlaylist.Duration;
-                    playlist.Position = currentPlaylist.Position;
-
-                    service.Playlists.Add(playlist);
-                    service.CurrentPlaylist = playlist;
-                }
-                else
-                {
-                    playlist.Songs = songs.Insert(0, currentSong.Value).ToArray();
-                    playlist.WannaSong = RequestSong.Get(currentSong.Value, null, currentPlaylist.Duration);
-
-                    service.Playlists.Add(playlist);
-                    service.CurrentPlaylist = playlist;
-
-                    currentPlaylist.CurrentSong = currentPlaylist.Songs.Cast<Song?>()
-                        .NextOrDefault(currentSong).next;
-                    currentPlaylist.Position = TimeSpan.Zero;
-                    currentPlaylist.WannaSong = RequestSong.Start(currentPlaylist.CurrentSong);
-                }
-            }
+        public static async Task SetPreviousSong(this IPlaylistViewModel viewModel)
+        {
+            Song? newCurrentSong = SongsHelper.GetPreviousSong(viewModel.Songs, viewModel.Shuffle, viewModel.CurrentSong).song;
+            await viewModel.SendRequestSong(RequestSong.Start(newCurrentSong));
         }
     }
 

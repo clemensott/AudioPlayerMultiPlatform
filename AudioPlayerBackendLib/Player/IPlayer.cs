@@ -1,4 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using System;
 using System.Threading.Tasks;
 
@@ -11,6 +11,8 @@ namespace AudioPlayerBackend.Player
         event EventHandler<MediaEndedEventArgs> MediaEnded;
 
         PlaybackState PlayState { get; set; }
+
+        double PlaybackRate { get; set; }
 
         TimeSpan Position { get; }
 

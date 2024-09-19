@@ -17,7 +17,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             dict = new Dictionary<string, OwnTcpSendMessage>();
         }
 
-        public Task Enqueue(OwnTcpMessage message)
+        public Task<byte[]> Enqueue(OwnTcpMessage message)
         {
             lock (queue)
             {

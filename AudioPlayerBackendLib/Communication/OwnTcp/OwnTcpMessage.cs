@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace AudioPlayerBackend.Communication.OwnTcp
+﻿namespace AudioPlayerBackend.Communication.OwnTcp
 {
     public class OwnTcpMessage
     {
@@ -36,11 +32,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             };
         }
 
-        public static OwnTcpMessage FromData(string topic, byte[] payload, bool fireAndForget)
+        public static OwnTcpMessage FromData(string topic, byte[] payload, bool fireAndForget, uint id = 0)
         {
             return new OwnTcpMessage()
             {
                 IsFireAndForget = fireAndForget,
+                ID = id,
                 Topic = topic,
                 Payload = payload,
             };

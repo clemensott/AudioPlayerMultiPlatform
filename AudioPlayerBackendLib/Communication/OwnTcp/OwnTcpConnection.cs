@@ -7,6 +7,8 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 {
     class OwnTcpConnection
     {
+        public uint LastMessageID { get; private set; }
+
         public TcpClient Client { get; }
 
         public NetworkStream Stream { get; }
@@ -20,6 +22,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             Client = client;
             Stream = client.GetStream();
             SendQueue = new OwnTcpSendQueue();
+        }
+
+        public uint GetNextMessageID()
+        {
+            return ++LastMessageID;
         }
 
         public async Task<OwnTcpMessage> ReadMessage()

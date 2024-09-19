@@ -55,7 +55,7 @@ namespace AudioPlayerBackend.Data
 
         public void Init(IAudioService service)
         {
-            Service = service;
+            //Service = service;
 
             if (!string.IsNullOrWhiteSpace(path))
             {
@@ -190,7 +190,7 @@ namespace AudioPlayerBackend.Data
             else
             {
                 Guid currentPlaylistID = Guid.Parse(preloadData.CurrentPlaylistID);
-                Service.CurrentPlaylist = Service.GetAllPlaylists().FirstOrDefault(p => p.ID == currentPlaylistID);
+                //Service.CurrentPlaylist = Service.GetAllPlaylists().FirstOrDefault(p => p.ID == currentPlaylistID);
             }
 
             preloadData = null; // release memory

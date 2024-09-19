@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:AudioPlayerFrontend"
         xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        xmlns:audio="clr-namespace:AudioPlayerBackend.Audio;assembly=AudioPlayerBackendLib"
+        xmlns:audio="clr-namespace:AudioPlayerBackend.AudioLibrary.PlaylistRepo;assembly=AudioPlayerBackendLib"
         mc:Ignorable="d"
         Title="Hotkey Music"
         MinHeight="300" MinWidth="450"
@@ -21,6 +21,7 @@
         <con:TimeSpanToStringConverter x:Key="timeTextCon"/>
         <local:TimeSpanToSecondsConverter x:Key="timeSecCon"/>
         <local:IsAudioStreamPlayerConverter x:Key="isClientCon"/>
+        <con:ValueConverter x:Key="playlistMenuItemVisCon" ConvertEvent="ValueConverter_ConvertEvent"/>
 
         <con:VisibleCollapsedConverter x:Key="visCon"/>
         <con:CollapsedVisibleConverter x:Key="colCon"/>
@@ -38,7 +39,7 @@
         </Grid.RowDefinitions>
 
         <Grid Margin="3"
-              Visibility="{Binding AudioServiceUI,Converter={StaticResource visCon}}">
+              Visibility="{Binding IsLoaded,Converter={StaticResource visCon}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -47,16 +48,17 @@
 
             <TextBlock Text="Search:" FontWeight="Bold" Margin="0,0,5,0" VerticalAlignment="Center"/>
             <TextBox Grid.Column="1" Name="tbxSearch" Margin="0,3" HorizontalAlignment="Stretch"
-                     VerticalAlignment="Center" Text="{Binding AudioServiceUI.SearchKey,
+                     VerticalAlignment="Center" Text="{Binding SongSearch.SearchKey,
                        Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
-                     PreviewKeyDown="TbxSearch_PreviewKeyDown"/>
+                     PreviewKeyDown="TbxSearch_PreviewKeyDown"
+                     GotFocus="TbxSearch_GotFocus" LostFocus="TbxSearch_LostFocus"/>
 
             <Grid Grid.Column="2" Margin="5,0,0,0" Width="110"
-                  Visibility="{Binding AudioServiceUI.CurrentPlaylist,
+                  Visibility="{Binding CurrentPlaylist.Id,
                     Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
                 <ComboBox SelectedValuePath="DataContext"
-                          SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Shuffle,Mode=TwoWay}"
-                          Visibility="{Binding AudioServiceUI.IsSearching,Converter={StaticResource colCon}}">
+                          SelectedValue="{Binding CurrentPlaylist.Shuffle,Mode=TwoWay}"
+                          Visibility="{Binding SongSearch.IsSearching,Converter={StaticResource colCon}}">
                     <ComboBoxItem>
                         <ComboBoxItem.DataContext>
                             <audio:OrderType>ByTitleAndArtist</audio:OrderType>
@@ -78,8 +80,8 @@
                 </ComboBox>
 
                 <CheckBox Margin="5,0" Content="Shuffle" VerticalAlignment="Center" HorizontalAlignment="Left"
-                          IsChecked="{Binding AudioServiceUI.IsSearchShuffle,Mode=TwoWay}"
-                          Visibility="{Binding AudioServiceUI.IsSearching,Converter={StaticResource visCon}}"/>
+                          IsChecked="{Binding SongSearch.IsSearchShuffle,Mode=TwoWay}"
+                          Visibility="{Binding SongSearch.IsSearching,Converter={StaticResource visCon}}"/>
             </Grid>
 
             <!--<StackPanel Orientation="Horizontal" Margin="5,3" VerticalAlignment="Center"
@@ -97,20 +99,19 @@
                 <ColumnDefinition Width="Auto" MinWidth="190" />
             </Grid.ColumnDefinitions>
 
-            <con:MultipleInputs7Converter x:Name="micSongs" 
-                                          Input0="{Binding AudioServiceUI.CurrentPlaylist}"
-                                          Input1="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
-                                          Input2="{Binding AudioServiceUI.CurrentPlaylist.WannaSong,Mode=TwoWay}"
-                                          Input3="{Binding AudioServiceUI.CurrentPlaylist.AllSongs}"
-                                          Input4="{Binding AudioServiceUI.SearchSongs}"
-                                          Input5="{Binding AudioServiceUI.IsSearching}"
-                                          Input6="{StaticResource negativeOne}"
+            <con:MultipleInputs7Converter x:Name="micSongs"
+                                          Input0="{Binding CurrentPlaylist.CurrentSong}" 
+                                          Input1="{Binding CurrentPlaylist.RequestedSong,Mode=TwoWay}"
+                                          Input2="{Binding CurrentPlaylist.Songs}"
+                                          Input3="{Binding SongSearch.SearchSongs}"
+                                          Input4="{Binding SongSearch.IsSearching}"
+                                          Input5="{StaticResource negativeOne}"
                                           ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
             <ListBox x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ItemsSource="{Binding ElementName=micSongs,Path=Output}"
-                     SelectedIndex="{Binding ElementName=micSongs,Path=Input6,Mode=TwoWay}"
+                     SelectedIndex="{Binding ElementName=micSongs,Path=Input5,Mode=TwoWay}"
                      IsSynchronizedWithCurrentItem="True"
                      SelectionChanged="LbxSongs_SelectionChanged">
                 <ListBox.ItemContainerStyle>
@@ -155,7 +156,7 @@
                 </Grid.RowDefinitions>
 
                 <Grid Margin="3"
-                      Visibility="{Binding AudioServiceUI,
+                      Visibility="{Binding IsLoaded,
                         Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -165,12 +166,12 @@
                     <TextBlock Text="Volume:" FontWeight="Bold" HorizontalAlignment="Center"/>
                     <Slider Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0"
                             Maximum="1" SmallChange="0.05" LargeChange="0.2"
-                            Value="{Binding AudioServiceUI.Volume}" />
+                            Value="{Binding Volume}" />
                 </Grid>
 
                 <ComboBox Grid.Row="1" Margin="0,5,0,0" SelectedValuePath="DataContext"
-                          SelectedValue="{Binding AudioServiceUI.CurrentPlaylist.Loop,Mode=TwoWay}"
-                          Visibility="{Binding AudioServiceUI.CurrentPlaylist,
+                          SelectedValue="{Binding CurrentPlaylist.Loop,Mode=TwoWay}"
+                          Visibility="{Binding CurrentPlaylist.Id,
                             Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
                     <ComboBoxItem>
                         <ComboBoxItem.DataContext>
@@ -204,16 +205,9 @@
                     </ComboBoxItem>
                 </ComboBox>
 
-                <con:MultipleInputs4Converter x:Name="micPlaylists"
-                                              DataContext="{Binding AudioServiceUI}"
-                                              Input0="{Binding SourcePlaylists}"
-                                              Input1="{Binding Playlists}"
-                                              Input2="{Binding CurrentPlaylist,Mode=TwoWay}"
-                                              ConvertRef="MicPlaylists_Convert"/>
-
                 <ListBox Grid.Row="2" x:Name="lbxPlaylists" Margin="0,5" SelectionMode="Single"
-                         ItemsSource="{Binding ElementName=micPlaylists,Path=Output}"
-                         SelectedItem="{Binding ElementName=micPlaylists,Path=Input3,Mode=TwoWay}">
+                         ItemsSource="{Binding Playlists}"
+                         SelectedIndex="{Binding Path=CurrentPlaylistIndex,Mode=TwoWay}">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -221,21 +215,22 @@
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-
-                            <StackPanel Margin="0,3" Loaded="SplPlaylistItem_Loaded">
+                            <StackPanel Margin="0,3">
                                 <TextBlock FontWeight="SemiBold" FontSize="17"
                                                TextWrapping="Wrap" Text="{Binding Name}"/>
 
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Songs: "/>
-                                    <TextBlock Text="{Binding Songs.Length}"/>
+                                    <TextBlock Text="{Binding SongsCount}"/>
                                 </StackPanel>
 
                                 <StackPanel.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Name="mimReloadSongs" Header="Reload songs"
-                                                  Visibility="Collapsed" Click="MimReloadSongs_Click"/>
-                                        <Separator Name="sprUpdatePlaylist" Visibility="Collapsed"/>
+                                                  Visibility="{Binding Type,Converter={StaticResource playlistMenuItemVisCon}}"
+                                                  Click="MimReloadSongs_Click"/>
+                                        <Separator Name="sprUpdatePlaylist"
+                                                  Visibility="{Binding Type,Converter={StaticResource playlistMenuItemVisCon}}"/>
                                         <MenuItem Header="Remix songs" Click="MimRemixSongs_Click"/>
                                         <MenuItem Header="Remove" Click="MimRemovePlaylist_Click"/>
                                     </ContextMenu>
@@ -246,9 +241,6 @@
                 </ListBox>
 
                 <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
-                    <CheckBox Margin="5" Content="Enable UI" VerticalAlignment="Center" 
-                              IsChecked="{Binding IsUiEnabled,Mode=TwoWay}"/>
-
                     <Button Grid.Row="1" Margin="5,0" Content="Settings"
                             Width="100" Click="BtnSettings_Click"/>
                 </StackPanel>
@@ -262,8 +254,8 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.ColumnSpan="2" Margin="0,0,0,5"
-                  DataContext="{Binding AudioServiceUI.CurrentPlaylist}"
-                  Visibility="{Binding Converter={StaticResource visCon}}">
+                  DataContext="{Binding CurrentPlaylist}"
+                  Visibility="{Binding Id,Converter={StaticResource visCon}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -290,12 +282,12 @@
 
                 <Button Grid.Column="0" Content="Previous" Width="75" Click="OnPrevious"/>
                 <ToggleButton Grid.Column="1" Content="Play/Pause" Margin="5,0" Width="75"
-                              IsChecked="{Binding Service.AudioService.PlayState,Mode=TwoWay,
+                              IsChecked="{Binding PlayState,Mode=TwoWay,
                                 Converter={StaticResource ResourceKey=isPlayingCon}}" />
                 <Button Grid.Column="2" Content="Next" Width="75" Click="OnNext"/>
 
                 <StackPanel Grid.Column="3" VerticalAlignment="Center"
-                            DataContext="{Binding AudioServiceUI.CurrentPlaylist.CurrentSong}" 
+                            DataContext="{Binding CurrentPlaylist.CurrentSong}" 
                             Visibility="{Binding Converter={StaticResource visCon}}"
                             MouseLeftButtonDown="StpCurrentSong_MouseLeftButtonDown"
                             MouseRightButtonUp="StackPanel_MouseRightButtonUp">

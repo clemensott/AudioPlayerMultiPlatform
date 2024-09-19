@@ -1,18 +1,17 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Player;
+﻿using AudioPlayerBackend.Player;
 
 namespace AudioPlayerFrontend.Join
 {
     internal class PlayerCreateService : IPlayerCreateService
     {
-        public IServicePlayer CreateAudioServicePlayer(IAudioService service)
+        public IPlayerService CreateAudioServicePlayer(AudioPlayerBackend.IAudioService service)
         {
-            return new AudioServicePlayer(service, new Player());
+            throw new System.NotImplementedException();
         }
 
-        public IServicePlayer CreateAudioStreamPlayer(IAudioService service)
+        public IPlayerService CreateAudioStreamPlayer(AudioPlayerBackend.IAudioService service)
         {
-            return new AudioStreamPlayer(service, new Player());
+            throw new System.NotImplementedException();
         }
     }
 }

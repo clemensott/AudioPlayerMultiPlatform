@@ -3,10 +3,8 @@ using AudioPlayerBackend.Audio;
 
 namespace AudioPlayerBackend.Player
 {
-    public interface IServicePlayer : IDisposable
+    public interface IPlayerService : IAudioService
     {
-        IAudioService Service { get; }
-
         IPlayer Player { get; }
     }
 }

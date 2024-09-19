@@ -60,11 +60,11 @@ namespace AudioPlayerFrontend
             }
         }
 
-        public IAudioService AudioServiceUI => IsUiEnabled ? Service?.AudioService : null;
+        public IAudioService AudioServiceUI => null; // IsUiEnabled ? Service?.AudioService : null;
 
         public ICommunicator CommunicatorUI => IsUiEnabled ? Service?.Communicator : null;
 
-        public IServicePlayer ServicePlayerUI => IsUiEnabled ? Service?.ServicePlayer : null;
+        public IPlayerService ServicePlayerUI => IsUiEnabled ? Service?.ServicePlayer : null;
 
         public ViewModel()
         {

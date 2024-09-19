@@ -12,18 +12,13 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 {
     public abstract class OwnTcpCommunicator : BaseCommunicator
     {
-        public const string AnwserCmd = "-ans", SyncCmd = "-sync", PingCmd = "-ping", CloseCmd = "-close";
+        public const string AnwserCmd = "-ans", ReturnCmd = "-rtn", PingCmd = "-ping", CloseCmd = "-close";
 
         protected readonly IAudioCreateService audioCreateService;
 
         protected OwnTcpCommunicator()
         {
             audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
-        }
-
-        protected Task PublishAudioData()
-        {
-            return SendAsync(nameof(Service.AudioData), Service.AudioData, true);
         }
 
         protected override async void OnFileMediaSourceRootsChanged(object sender, ValueChangedEventArgs<FileMediaSourceRoot[]> e)
@@ -271,7 +266,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             return SendAsync(playlist.ID + "." + topic, payload, fireAndForget);
         }
 
-        protected abstract Task SendAsync(string topic, byte[] payload, bool fireAndForget);
+        protected abstract Task<byte[]> SendAsync(string topic, byte[] payload, bool fireAndForget);
 
         protected static IEnumerable<byte> GetBytes(OwnTcpMessage message)
         {
@@ -371,12 +366,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
                         case "next":
                             service = Service as IAudioService;
-                            service?.SetNextSong();
+                            //service?.SetNextSong();
                             break;
 
                         case "previous":
                             service = Service as IAudioService;
-                            service?.SetPreviousSong();
+                            //service?.SetPreviousSong();
                             break;
 
                         default:

@@ -4,8 +4,8 @@ namespace AudioPlayerBackend.Player
 {
     public interface IPlayerCreateService
     {
-        IServicePlayer CreateAudioServicePlayer(IAudioService service);
+        IPlayerService CreateAudioServicePlayer(IAudioService service);
 
-        IServicePlayer CreateAudioStreamPlayer(IAudioService service);
+        IPlayerService CreateAudioStreamPlayer(IAudioService service);
     }
 }

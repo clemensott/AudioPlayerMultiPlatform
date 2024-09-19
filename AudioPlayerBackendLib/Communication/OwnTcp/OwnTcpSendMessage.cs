@@ -2,7 +2,7 @@
 
 namespace AudioPlayerBackend.Communication.OwnTcp
 {
-    class OwnTcpSendMessage : TaskCompletionSource<bool>
+    class OwnTcpSendMessage : TaskCompletionSource<byte[]>
     {
         public OwnTcpMessage Message { get; set; }
 
