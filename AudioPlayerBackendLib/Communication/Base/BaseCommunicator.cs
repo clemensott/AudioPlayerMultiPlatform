@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Audio.MediaSource;
-using AudioPlayerBackend.Player;
 using StdOttStandard.Linq;
 
 namespace AudioPlayerBackend.Communication.Base
@@ -36,92 +33,6 @@ namespace AudioPlayerBackend.Communication.Base
         public abstract Task Stop();
 
         public abstract Task Dispose();
-
-        protected virtual void OnServiceAudioDataChanged(object sender, ValueChangedEventArgs<byte[]> e)
-        {
-        }
-
-        protected virtual void OnFileMediaSourceRootsChanged(object sender, ValueChangedEventArgs<FileMediaSourceRoot[]> e)
-        {
-        }
-
-        protected virtual void OnServiceCurrentPlaylistChanged(object sender, ValueChangedEventArgs<IPlaylistBase> e)
-        {
-        }
-
-        protected virtual void OnServiceSourcePlaylistsChanged(object sender, ValueChangedEventArgs<ISourcePlaylistBase[]> e)
-        {
-        }
-
-        protected virtual void OnServicePlaylistsChanged(object sender, ValueChangedEventArgs<IPlaylistBase[]> e)
-        {
-        }
-
-        protected virtual void OnServicePlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
-        {
-        }
-
-        protected virtual void OnServiceVolumeChanged(object sender, ValueChangedEventArgs<float> e)
-        {
-        }
-
-        protected virtual void OnPlaylistFileMediaSourcesChanged(object sender, ValueChangedEventArgs<FileMediaSource[]> e)
-        {
-        }
-
-        protected virtual void OnPlaylistIsSearchShuffleChanged(object sender, ValueChangedEventArgs<bool> e)
-        {
-        }
-
-        protected virtual void OnPlaylistSearchKeyChanged(object sender, ValueChangedEventArgs<string> e)
-        {
-        }
-
-        protected virtual void OnPlaylistCurrentSongChanged(object sender, ValueChangedEventArgs<Song?> e)
-        {
-        }
-
-        protected virtual void OnPlaylistDurationChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
-        {
-        }
-
-        protected virtual void OnPlaylistShuffleChanged(object sender, ValueChangedEventArgs<OrderType> e)
-        {
-        }
-
-        protected virtual void OnPlaylistLoopChanged(object sender, ValueChangedEventArgs<LoopType> e)
-        {
-        }
-
-        protected virtual void OnPlaylistNameChanged(object sender, ValueChangedEventArgs<string> e)
-        {
-        }
-
-        protected virtual void OnPlaylistPositionChanged(object sender, ValueChangedEventArgs<TimeSpan> e)
-        {
-        }
-
-        protected virtual void OnPlaylistWannaSongChanged(object sender, ValueChangedEventArgs<RequestSong?> e)
-        {
-        }
-
-        protected virtual void OnPlaylistSongsChanged(object sender, ValueChangedEventArgs<Song[]> e)
-        {
-        }
-
-        protected static string GetPlaylistType(IPlaylistBase playlist)
-        {
-            switch (playlist)
-            {
-                case ISourcePlaylistBase _:
-                    return nameof(ISourcePlaylistBase);
-
-                case IPlaylistBase _:
-                    return nameof(IPlaylistBase);
-            }
-
-            return null;
-        }
 
         protected void LockTopic(string topic, byte[] payload)
         {

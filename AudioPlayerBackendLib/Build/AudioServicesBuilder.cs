@@ -131,6 +131,8 @@ namespace AudioPlayerBackend.Build
             if (config.BuildServer)
             {
                 serviceList.Add(serviceProvider.GetService<IServerCommunicator>());
+                serviceList.Add(serviceProvider.GetService<IServerLibraryRepoConnector>());
+                serviceList.Add(serviceProvider.GetService<IServerPlaylistsRepoConnector>());
             }
 
             if (config.BuildClient)
@@ -161,6 +163,7 @@ namespace AudioPlayerBackend.Build
             }
             else if (config.BuildClient)
             {
+                services.AddSingleton<IClientCommunicator, OwnTcpClientCommunicator>();
                 services.AddSingleton<ILibraryRepo, OwnTcpLibraryRepo>();
                 services.AddSingleton<IPlaylistsRepo, OwnTcpPlaylistsRepo>();
             }
@@ -171,8 +174,12 @@ namespace AudioPlayerBackend.Build
             services.AddSingleton<IPlaylistsRepoService, PlaylistsRepoService>();
             services.AddTransient<IServicedPlaylistsRepo, ServicedPlaylistsRepo>();
 
-            if (config.BuildServer) services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
-            //services.AddSingleton<IClientCommunicator, OwnTcpClientCommunicator>();
+            if (config.BuildServer)
+            {
+                services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
+                services.AddSingleton<IServerLibraryRepoConnector, OwnTcpServerLibraryRepoConnector>();
+                services.AddSingleton<IServerPlaylistsRepoConnector, OwnTcpServerPlaylistsRepoConnector>();
+            }
 
             services.AddTransient<IPlayerService, AudioPlayerService>();
 

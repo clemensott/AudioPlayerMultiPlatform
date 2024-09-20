@@ -52,95 +52,124 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 
         private void ClientCommunicator_Received(object sender, ReceivedEventArgs e)
         {
-            string[] parts = e.Topic.Split('.');
-            if (parts.Length != 2 || parts[0] != nameof(ILibraryRepo)) return;
-
-            Guid playlistId;
-            ByteQueue payload = e.Payload;
-            switch (parts[1])
+            TaskCompletionSource<byte[]> anwser = null;
+            try
             {
-                case nameof(OnNameChange):
-                    playlistId = payload.DequeueGuid();
-                    string name = payload.DequeueString();
-                    OnNameChange?.Invoke(this, new PlaylistChangeArgs<string>(playlistId, name));
-                    break;
+                string[] parts = e.Topic.Split('.');
+                if (parts.Length != 2 || parts[0] != nameof(IPlaylistsRepo)) return;
 
-                case nameof(OnShuffleChange):
-                    playlistId = payload.DequeueGuid();
-                    OrderType shuffle = payload.DequeueOrderType();
-                    OnShuffleChange?.Invoke(this, new PlaylistChangeArgs<OrderType>(playlistId, shuffle));
-                    break;
+                anwser = e.StartAnwser();
 
-                case nameof(OnLoopChange):
-                    playlistId = payload.DequeueGuid();
-                    LoopType loop = payload.DequeueLoopType();
-                    OnLoopChange?.Invoke(this, new PlaylistChangeArgs<LoopType>(playlistId, loop));
-                    break;
+                Guid playlistId;
+                ByteQueue payload = e.Payload;
+                switch (parts[1])
+                {
+                    case nameof(OnNameChange):
+                        playlistId = payload.DequeueGuid();
+                        string name = payload.DequeueString();
+                        OnNameChange?.Invoke(this, new PlaylistChangeArgs<string>(playlistId, name));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnPlaybackRateChange):
-                    playlistId = payload.DequeueGuid();
-                    double playbackRate = payload.DequeueDouble();
-                    OnPlaybackRateChange?.Invoke(this, new PlaylistChangeArgs<double>(playlistId, playbackRate));
-                    break;
+                    case nameof(OnShuffleChange):
+                        playlistId = payload.DequeueGuid();
+                        OrderType shuffle = payload.DequeueOrderType();
+                        OnShuffleChange?.Invoke(this, new PlaylistChangeArgs<OrderType>(playlistId, shuffle));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnPositionChange):
-                    playlistId = payload.DequeueGuid();
-                    TimeSpan position = payload.DequeueTimeSpan();
-                    OnPositionChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, position));
-                    break;
+                    case nameof(OnLoopChange):
+                        playlistId = payload.DequeueGuid();
+                        LoopType loop = payload.DequeueLoopType();
+                        OnLoopChange?.Invoke(this, new PlaylistChangeArgs<LoopType>(playlistId, loop));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnDurationChange):
-                    playlistId = payload.DequeueGuid();
-                    TimeSpan duration = payload.DequeueTimeSpan();
-                    OnDurationChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, duration));
-                    break;
+                    case nameof(OnPlaybackRateChange):
+                        playlistId = payload.DequeueGuid();
+                        double playbackRate = payload.DequeueDouble();
+                        OnPlaybackRateChange?.Invoke(this, new PlaylistChangeArgs<double>(playlistId, playbackRate));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnRequestSongChange):
-                    playlistId = payload.DequeueGuid();
-                    RequestSong? requestSong = payload.DequeueRequestSongNullable();
-                    OnRequestSongChange?.Invoke(this, new PlaylistChangeArgs<RequestSong?>(playlistId, requestSong));
-                    break;
+                    case nameof(OnPositionChange):
+                        playlistId = payload.DequeueGuid();
+                        TimeSpan position = payload.DequeueTimeSpan();
+                        OnPositionChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, position));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnCurrentSongIdChange):
-                    playlistId = payload.DequeueGuid();
-                    Guid? currentSongId = payload.DequeueGuidNullable();
-                    OnCurrentSongIdChange?.Invoke(this, new PlaylistChangeArgs<Guid?>(playlistId, currentSongId));
-                    break;
+                    case nameof(OnDurationChange):
+                        playlistId = payload.DequeueGuid();
+                        TimeSpan duration = payload.DequeueTimeSpan();
+                        OnDurationChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, duration));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnSongsChange):
-                    playlistId = payload.DequeueGuid();
-                    Song[] songs = payload.DequeueSongs();
-                    OnSongsChange?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));
-                    break;
+                    case nameof(OnRequestSongChange):
+                        playlistId = payload.DequeueGuid();
+                        RequestSong? requestSong = payload.DequeueRequestSongNullable();
+                        OnRequestSongChange?.Invoke(this, new PlaylistChangeArgs<RequestSong?>(playlistId, requestSong));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnInsertPlaylist):
-                    int insertIndex = payload.DequeueInt();
-                    Playlist insertPlaylist = payload.DequeuePlaylist();
-                    OnInsertPlaylist?.Invoke(this, new InsertPlaylistArgs(insertIndex, insertPlaylist));
-                    break;
+                    case nameof(OnCurrentSongIdChange):
+                        playlistId = payload.DequeueGuid();
+                        Guid? currentSongId = payload.DequeueGuidNullable();
+                        OnCurrentSongIdChange?.Invoke(this, new PlaylistChangeArgs<Guid?>(playlistId, currentSongId));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnRemovePlaylist):
-                    playlistId = payload.DequeueGuid();
-                    OnRemovePlaylist?.Invoke(this, new RemovePlaylistArgs(playlistId));
-                    break;
+                    case nameof(OnSongsChange):
+                        playlistId = payload.DequeueGuid();
+                        Song[] songs = payload.DequeueSongs();
+                        OnSongsChange?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnFileMedisSourcesChange):
-                    playlistId = payload.DequeueGuid();
-                    FileMediaSources fileMediaSources = payload.DequeueFileMediaSources();
-                    OnFileMedisSourcesChange?.Invoke(this, new PlaylistChangeArgs<FileMediaSources>(playlistId, fileMediaSources));
-                    break;
+                    case nameof(OnInsertPlaylist):
+                        int insertIndex = payload.DequeueInt();
+                        Playlist insertPlaylist = payload.DequeuePlaylist();
+                        OnInsertPlaylist?.Invoke(this, new InsertPlaylistArgs(insertIndex, insertPlaylist));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnFilesLastUpdatedChange):
-                    playlistId = payload.DequeueGuid();
-                    DateTime? filesLastUpdated = payload.DequeueDateTimeNullable();
-                    OnFilesLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, filesLastUpdated));
-                    break;
+                    case nameof(OnRemovePlaylist):
+                        playlistId = payload.DequeueGuid();
+                        OnRemovePlaylist?.Invoke(this, new RemovePlaylistArgs(playlistId));
+                        anwser.SetResult(null);
+                        break;
 
-                case nameof(OnSongsLastUpdatedChange):
-                    playlistId = payload.DequeueGuid();
-                    DateTime? songsLastUpdated = payload.DequeueDateTimeNullable();
-                    OnSongsLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, songsLastUpdated));
-                    break;
+                    case nameof(OnFileMedisSourcesChange):
+                        playlistId = payload.DequeueGuid();
+                        FileMediaSources fileMediaSources = payload.DequeueFileMediaSources();
+                        OnFileMedisSourcesChange?.Invoke(this, new PlaylistChangeArgs<FileMediaSources>(playlistId, fileMediaSources));
+                        anwser.SetResult(null);
+                        break;
+
+                    case nameof(OnFilesLastUpdatedChange):
+                        playlistId = payload.DequeueGuid();
+                        DateTime? filesLastUpdated = payload.DequeueDateTimeNullable();
+                        OnFilesLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, filesLastUpdated));
+                        anwser.SetResult(null);
+                        break;
+
+                    case nameof(OnSongsLastUpdatedChange):
+                        playlistId = payload.DequeueGuid();
+                        DateTime? songsLastUpdated = payload.DequeueDateTimeNullable();
+                        OnSongsLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, songsLastUpdated));
+                        anwser.SetResult(null);
+                        break;
+
+                    default:
+                        anwser.SetException(new NotSupportedException($"Received action is not supported: {parts[2]}"));
+                        break;
+                }
+            }
+            catch (Exception exception)
+            {
+                if (anwser != null) anwser.SetException(exception);
+                else throw;
             }
         }
 
