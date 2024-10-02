@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AudioPlayerBackend.Build;
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -25,11 +26,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public int? Port { get; }
 
-        public OwnTcpClientCommunicator(string serverAddress, int port)
+        public OwnTcpClientCommunicator(AudioServicesBuildConfig config, IInvokeDispatcherService dispatcher)
         {
-            ServerAddress = serverAddress;
-            Port = port;
-            dispatcher = AudioPlayerServiceProvider.Current.GetDispatcher();
+            ServerAddress = config.ServerAddress;
+            Port = config.ServerPort;
+            this.dispatcher = dispatcher;
         }
 
         private static async Task<IPAddress> GetIpAddress(string serverAddress)

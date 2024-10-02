@@ -20,7 +20,6 @@ namespace AudioPlayerBackend.Build
         private int? clientPort;
         private string searchKey, serverAddress, dataFilePath;
         private float? volume;
-        private CommunicatorProtocol communicatorProtocol;
         private string[] autoUpdateRoots;
         private ServiceCollection additionalServices;
 
@@ -39,18 +38,6 @@ namespace AudioPlayerBackend.Build
 
                 autoUpdate = value;
                 OnPropertyChanged(nameof(AutoUpdate));
-            }
-        }
-
-        public CommunicatorProtocol CommunicatorProtocol
-        {
-            get => communicatorProtocol;
-            set
-            {
-                if (value == communicatorProtocol) return;
-
-                communicatorProtocol = value;
-                OnPropertyChanged(nameof(CommunicatorProtocol));
             }
         }
 
@@ -209,8 +196,8 @@ namespace AudioPlayerBackend.Build
         public AudioServicesBuildConfig WithArgs(IEnumerable<string> args)
         {
             OptionParsed parsed;
-            Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 3, 2);
-            Option serverOpt = new Option("s", "server", "Starts the app as server with the following port", false, 2, 2);
+            Option clientOpt = new Option("c", "client", "Starts the app as client with the following server address and port", false, 2, 1);
+            Option serverOpt = new Option("s", "server", "Starts the app as server with the following port", false, 1, 1);
             Option sourcesOpt = new Option("m", "media-sources", "Files and directories to play", false, -1, 0);
             Option orderSongsOpt = Option.GetLongOnly("order", "Order type for all playlists.", false, 1);
             Option searchShuffleOpt = Option.GetLongOnly("search-shuffle", "Shuffles all songs.", false, 0, 0);
@@ -228,18 +215,13 @@ namespace AudioPlayerBackend.Build
 
             if (result.TryGetFirstValidOptionParseds(serverOpt, out parsed))
             {
-                WithCommunicatorProtocol((CommunicatorProtocol)Enum
-                        .Parse(typeof(CommunicatorProtocol), parsed.Values[0], true))
-                    .WithServer(int.Parse(parsed.Values[1]));
+                WithServer(int.Parse(parsed.Values[0]));
             }
 
             if (result.TryGetFirstValidOptionParseds(clientOpt, out parsed))
             {
-                WithCommunicatorProtocol((CommunicatorProtocol)Enum
-                    .Parse(typeof(CommunicatorProtocol), parsed.Values[0], true));
-
-                if (parsed.Values.Count > 2) WithClient(parsed.Values[1], int.Parse(parsed.Values[2]));
-                else WithClient(parsed.Values[1]);
+                if (parsed.Values.Count > 1) WithClient(parsed.Values[0], int.Parse(parsed.Values[1]));
+                else WithClient(parsed.Values[0]);
             }
 
             if (result.TryGetFirstValidOptionParseds(orderSongsOpt, out parsed)) WithShuffle((OrderType)Enum.Parse(typeof(OrderType), parsed.Values[0]));
@@ -291,24 +273,6 @@ namespace AudioPlayerBackend.Build
             BuildClient = false;
 
             return WithServerPort(port);
-        }
-
-        public AudioServicesBuildConfig WithCommunicatorProtocol(CommunicatorProtocol communicatorProtocol)
-        {
-            CommunicatorProtocol = communicatorProtocol;
-            return this;
-        }
-
-        public AudioServicesBuildConfig WithMqtt()
-        {
-            CommunicatorProtocol = CommunicatorProtocol.MQTT;
-            return this;
-        }
-
-        public AudioServicesBuildConfig WithOwnTcp()
-        {
-            CommunicatorProtocol = CommunicatorProtocol.OwnTCP;
-            return this;
         }
 
         public AudioServicesBuildConfig WithServerPort(int port)
@@ -421,7 +385,6 @@ namespace AudioPlayerBackend.Build
                 AutoUpdateRoots = AutoUpdateRoots?.ToArray(),
                 AdditionalServices = CloneAdditionalServices(),
                 ClientPort = ClientPort,
-                CommunicatorProtocol = CommunicatorProtocol,
                 DataFilePath = DataFilePath,
                 Shuffle = Shuffle,
                 IsSearchShuffle = IsSearchShuffle,

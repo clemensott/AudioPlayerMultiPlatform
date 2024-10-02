@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using AudioPlayerBackend.Build;
 using StdOttStandard.Linq;
 using StdOttStandard.Linq.DataStructures;
 
@@ -27,9 +28,9 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public override string Name => "TCP Server: " + Port;
 
-        public OwnTcpServerCommunicator(int port)
+        public OwnTcpServerCommunicator(AudioServicesBuildConfig config)
         {
-            Port = port;
+            Port = config.ServerPort;
             listener = new TcpListener(IPAddress.Any, Port);
         }
 
@@ -41,15 +42,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             {
                 isOpen = true;
                 listener.Start();
-            }
-            catch
-            {
-                await Stop();
-                throw;
-            }
 
-            try
-            {
                 connections = new List<OwnTcpServerConnection>();
                 processQueue = new AsyncQueue<OwnTcpSendMessage>();
 
@@ -241,9 +234,15 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 {
                     LockTopic(item.Message.Topic, item.Message.Payload);
 
-                    bool success = HandlerMessage(item.Message);
-                    if (success) item.SetResult(null);
+                    ReceivedEventArgs args = new ReceivedEventArgs(Name, item.Message.Payload);
+                    Received?.Invoke(this, args);
+                    if (args.IsAwserStarted)
+                    {
+                        byte[] result = await args.Anwser.Task;
+                        item.SetResult(result);
+                    }
                     else item.SetException(new Exception("Handle message not successful"));
+
                 }
                 catch (Exception e)
                 {
