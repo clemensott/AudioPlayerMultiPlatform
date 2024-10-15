@@ -170,17 +170,27 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
 
         public static ByteQueue Enqueue(this ByteQueue queue, FileMediaSources fileMediaSources)
         {
-            return queue
-                .Enqueue(fileMediaSources.Root)
-                .Enqueue(fileMediaSources.Sources);
+            if (fileMediaSources != null)
+            {
+                return queue
+                    .Enqueue(fileMediaSources.Root)
+                    .Enqueue(fileMediaSources.Sources);
+            }
+
+            return queue.Enqueue(false);
         }
 
         public static FileMediaSources DequeueFileMediaSources(this ByteQueue queue)
         {
-            FileMediaSourceRoot root = queue.DequeueFileMediaSourceRoot();
-            FileMediaSource[] sources = queue.DequeueFileMediaSourceArray();
+            if (queue.DequeueBool())
+            {
+                FileMediaSourceRoot root = queue.DequeueFileMediaSourceRoot();
+                FileMediaSource[] sources = queue.DequeueFileMediaSourceArray();
 
-            return new FileMediaSources(root, sources);
+                return new FileMediaSources(root, sources);
+            }
+
+            return null;
         }
 
         public static ByteQueue Enqueue(this ByteQueue queue, Playlist playlist)
