@@ -1,7 +1,6 @@
 ﻿using AudioPlayerBackend.Player;
 using StdOttStandard.Linq;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -12,13 +11,9 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
         private readonly ILibraryRepo baseRepo;
         private readonly ILibraryRepoService parent;
 
-        public event EventHandler<AudioLibraryChangeArgs<bool>> OnIsSearchChange;
-        public event EventHandler<AudioLibraryChangeArgs<bool>> OnIsSearchShuffleChange;
-        public event EventHandler<AudioLibraryChangeArgs<string>> OnSearchKeyChange;
         public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> OnPlayStateChange;
         public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
         public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
-        public event EventHandler<AudioLibraryChangeArgs<IList<PlaylistInfo>>> OnPlaylistsChange;
         public event EventHandler<AudioLibraryChangeArgs<DateTime?>> OnFoldersLastUpdatedChange;
 
         public ServicedLibraryRepo(ILibraryRepo baseRepo, ILibraryRepoService parent)
@@ -70,25 +65,50 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
             ForEachRepo(repo => repo.OnFoldersLastUpdatedChange?.Invoke(this, args));
         }
 
-        public void Dispose()
-        {
-            parent.AddRepo(this);
-        }
-
         public Task Start()
         {
+            baseRepo.OnPlayStateChange += BaseRepo_OnPlayStateChange;
+            baseRepo.OnVolumeChange += BaseRepo_OnVolumeChange;
+            baseRepo.OnCurrentPlaylistIdChange += BaseRepo_OnCurrentPlaylistIdChange;
+            baseRepo.OnFoldersLastUpdatedChange += BaseRepo_OnFoldersLastUpdatedChange;
+
             return Task.CompletedTask;
         }
 
         public Task Stop()
         {
+            baseRepo.OnPlayStateChange -= BaseRepo_OnPlayStateChange;
+            baseRepo.OnVolumeChange -= BaseRepo_OnVolumeChange;
+            baseRepo.OnCurrentPlaylistIdChange -= BaseRepo_OnCurrentPlaylistIdChange;
+            baseRepo.OnFoldersLastUpdatedChange -= BaseRepo_OnFoldersLastUpdatedChange;
+
             return Task.CompletedTask;
         }
 
-        Task IAudioService.Dispose()
+        private void BaseRepo_OnPlayStateChange(object sender, AudioLibraryChangeArgs<PlaybackState> e)
         {
-            Dispose();
-            return Task.CompletedTask;
+            OnPlayStateChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnVolumeChange(object sender, AudioLibraryChangeArgs<double> e)
+        {
+            OnVolumeChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnCurrentPlaylistIdChange(object sender, AudioLibraryChangeArgs<Guid?> e)
+        {
+            OnCurrentPlaylistIdChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnFoldersLastUpdatedChange(object sender, AudioLibraryChangeArgs<DateTime?> e)
+        {
+            OnFoldersLastUpdatedChange?.Invoke(this, e);
+        }
+
+        public async Task Dispose()
+        {
+            await Stop();
+            parent.RemoveRepo(this);
         }
     }
 }

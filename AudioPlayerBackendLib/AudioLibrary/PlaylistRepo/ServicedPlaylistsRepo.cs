@@ -160,26 +160,121 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             var args = new PlaylistChangeArgs<DateTime?>(id, songsLastUpdated);
             ForEachRepo(repo => repo.OnSongsLastUpdatedChange?.Invoke(this, args));
         }
-
-        public void Dispose()
-        {
-            parent.RemoveRepo(this);
-        }
-
+        
         public Task Start()
         {
+            baseRepo.OnInsertPlaylist += BaseRepo_OnInsertPlaylist;
+            baseRepo.OnRemovePlaylist += BaseRepo_OnRemovePlaylist;
+            baseRepo.OnNameChange += BaseRepo_OnNameChange;
+            baseRepo.OnShuffleChange += BaseRepo_OnShuffleChange;
+            baseRepo.OnLoopChange += BaseRepo_OnLoopChange;
+            baseRepo.OnPlaybackRateChange += BaseRepo_OnPlaybackRateChange;
+            baseRepo.OnPositionChange += BaseRepo_OnPositionChange;
+            baseRepo.OnDurationChange += BaseRepo_OnDurationChange;
+            baseRepo.OnRequestSongChange += BaseRepo_OnRequestSongChange;
+            baseRepo.OnCurrentSongIdChange += BaseRepo_OnCurrentSongIdChange;
+            baseRepo.OnSongsChange += BaseRepo_OnSongsChange;
+            baseRepo.OnFileMedisSourcesChange += BaseRepo_OnFileMedisSourcesChange;
+            baseRepo.OnFilesLastUpdatedChange += BaseRepo_OnFilesLastUpdatedChange;
+            baseRepo.OnSongsLastUpdatedChange += BaseRepo_OnSongsLastUpdatedChange;
+
             return Task.CompletedTask;
         }
 
         public Task Stop()
         {
+            baseRepo.OnInsertPlaylist -= BaseRepo_OnInsertPlaylist;
+            baseRepo.OnRemovePlaylist -= BaseRepo_OnRemovePlaylist;
+            baseRepo.OnNameChange -= BaseRepo_OnNameChange;
+            baseRepo.OnShuffleChange -= BaseRepo_OnShuffleChange;
+            baseRepo.OnLoopChange -= BaseRepo_OnLoopChange;
+            baseRepo.OnPlaybackRateChange -= BaseRepo_OnPlaybackRateChange;
+            baseRepo.OnPositionChange -= BaseRepo_OnPositionChange;
+            baseRepo.OnDurationChange -= BaseRepo_OnDurationChange;
+            baseRepo.OnRequestSongChange -= BaseRepo_OnRequestSongChange;
+            baseRepo.OnCurrentSongIdChange -= BaseRepo_OnCurrentSongIdChange;
+            baseRepo.OnSongsChange -= BaseRepo_OnSongsChange;
+            baseRepo.OnFileMedisSourcesChange -= BaseRepo_OnFileMedisSourcesChange;
+            baseRepo.OnFilesLastUpdatedChange -= BaseRepo_OnFilesLastUpdatedChange;
+            baseRepo.OnSongsLastUpdatedChange -= BaseRepo_OnSongsLastUpdatedChange;
+
             return Task.CompletedTask;
         }
 
-        Task IAudioService.Dispose()
+        private void BaseRepo_OnInsertPlaylist(object sender, InsertPlaylistArgs e)
         {
-            Dispose();
-            return Task.CompletedTask;
+            OnInsertPlaylist?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnRemovePlaylist(object sender, RemovePlaylistArgs e)
+        {
+            OnRemovePlaylist?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnNameChange(object sender, PlaylistChangeArgs<string> e)
+        {
+            OnNameChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnShuffleChange(object sender, PlaylistChangeArgs<OrderType> e)
+        {
+            OnShuffleChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnLoopChange(object sender, PlaylistChangeArgs<LoopType> e)
+        {
+            OnLoopChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnPlaybackRateChange(object sender, PlaylistChangeArgs<double> e)
+        {
+            OnPlaybackRateChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnPositionChange(object sender, PlaylistChangeArgs<TimeSpan> e)
+        {
+            OnPositionChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnDurationChange(object sender, PlaylistChangeArgs<TimeSpan> e)
+        {
+            OnDurationChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnRequestSongChange(object sender, PlaylistChangeArgs<RequestSong?> e)
+        {
+            OnRequestSongChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnCurrentSongIdChange(object sender, PlaylistChangeArgs<Guid?> e)
+        {
+            OnCurrentSongIdChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
+        {
+            OnSongsChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnFileMedisSourcesChange(object sender, PlaylistChangeArgs<FileMediaSources> e)
+        {
+            OnFileMedisSourcesChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnFilesLastUpdatedChange(object sender, PlaylistChangeArgs<DateTime?> e)
+        {
+            OnFilesLastUpdatedChange?.Invoke(this, e);
+        }
+
+        private void BaseRepo_OnSongsLastUpdatedChange(object sender, PlaylistChangeArgs<DateTime?> e)
+        {
+            OnSongsLastUpdatedChange?.Invoke(this, e);
+        }
+
+        public async Task Dispose()
+        {
+            await Stop();
+            parent.RemoveRepo(this);
         }
     }
 }

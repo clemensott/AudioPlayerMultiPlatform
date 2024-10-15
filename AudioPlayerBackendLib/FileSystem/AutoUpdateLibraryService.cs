@@ -95,29 +95,29 @@ namespace AudioPlayerBackend.FileSystem
             }
         }
 
-        public Task Start()
+        public async Task Start()
         {
-            timer.Change(0, timerInterval);
+            await libraryRepo.Start();
+            await libraryRepo.Start();
 
-            return Task.CompletedTask;
+            timer.Change(0, timerInterval);
         }
 
-        public Task Stop()
+        public async Task Stop()
         {
             timer.Change(Timeout.Infinite, timerInterval);
 
-            return Task.CompletedTask;
+            await libraryRepo.Stop();
+            await libraryRepo.Stop();
         }
 
-        public Task Dispose()
+        public async Task Dispose()
         {
             timer.Change(Timeout.Infinite, timerInterval);
             timer.Dispose();
 
-            libraryRepo.Dispose();
-            playlistRepo.Dispose();
-
-            return Task.CompletedTask;
+            await libraryRepo.Dispose();
+            await playlistRepo.Dispose();
         }
     }
 }

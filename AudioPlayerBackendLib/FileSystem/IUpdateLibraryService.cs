@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.FileSystem
 {
-    public interface IUpdateLibraryService
+    public interface IUpdateLibraryService : IAudioService
     {
         Task ReloadLibrary();
 

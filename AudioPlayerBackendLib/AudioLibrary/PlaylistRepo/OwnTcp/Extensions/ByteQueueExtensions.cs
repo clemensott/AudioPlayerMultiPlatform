@@ -40,6 +40,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
         public static ByteQueue Enqueue(this ByteQueue queue, Song song)
         {
             return queue
+                .Enqueue(song.Id)
                 .Enqueue(song.Index)
                 .Enqueue(song.Artist)
                 .Enqueue(song.FullPath)
@@ -50,6 +51,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
         {
             return new Song()
             {
+                Id = queue.DequeueGuid(),
                 Index = queue.DequeueInt(),
                 Artist = queue.DequeueString(),
                 FullPath = queue.DequeueString(),

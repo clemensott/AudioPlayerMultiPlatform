@@ -213,6 +213,8 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Start()
         {
+            await playlistsRepo.Start();
+
             isRunning = true;
 
             playlistsRepo.OnNameChange += OnNameChange;
@@ -227,8 +229,10 @@ namespace AudioPlayerBackend.ViewModels
             await LoadPlaylistData();
         }
 
-        public Task Stop()
+        public async Task Stop()
         {
+            await playlistsRepo.Stop();
+
             isRunning = false;
 
             playlistsRepo.OnNameChange -= OnNameChange;
@@ -251,8 +255,6 @@ namespace AudioPlayerBackend.ViewModels
             Songs = Array.Empty<Song>();
 
             IsLoaded = false;
-
-            return Task.CompletedTask;
         }
 
         private void OnNameChange(object sender, PlaylistChangeArgs<string> e)
@@ -328,10 +330,9 @@ namespace AudioPlayerBackend.ViewModels
             Songs = SongsHelper.GetAllSongs(shuffledSongs.ToNotNull(), Shuffle).ToArray();
         }
 
-        public Task Dispose()
+        public async Task Dispose()
         {
-            playlistsRepo.Dispose();
-            return Task.CompletedTask;
+            await playlistsRepo.Dispose();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

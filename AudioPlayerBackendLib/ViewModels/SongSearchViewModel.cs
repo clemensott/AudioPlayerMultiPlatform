@@ -228,6 +228,9 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Start()
         {
+            await libraryRepo.Start();
+            await playlistsRepo.Start();
+
             IsEnabled = true;
             SubscribePlaylistsRepo();
 
@@ -280,7 +283,8 @@ namespace AudioPlayerBackend.ViewModels
             shuffledSongs = Enumerable.Empty<Song>();
             SearchSongs = Enumerable.Empty<Song>();
 
-            await Task.CompletedTask;
+            await libraryRepo.Stop();
+            await playlistsRepo.Stop();
         }
 
         public async Task Dispose()

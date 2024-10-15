@@ -262,5 +262,23 @@ namespace AudioPlayerFrontend.Join
 
             return new LocalKnownFolder(name, value, fullPath);
         }
+
+        public async Task Start()
+        {
+            await libraryRepo.Start();
+            await playlistsRepo.Start();
+        }
+
+        public async Task Stop()
+        {
+            await libraryRepo.Stop();
+            await playlistsRepo.Stop();
+        }
+
+        public async Task Dispose()
+        {
+            await libraryRepo.Dispose();
+            await playlistsRepo.Dispose();
+        }
     }
 }

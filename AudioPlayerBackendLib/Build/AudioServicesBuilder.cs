@@ -121,6 +121,7 @@ namespace AudioPlayerBackend.Build
                 // because the order in which the init sqls run are important
                 serviceProvider.GetService<IPlaylistsRepo>(),
                 serviceProvider.GetService<ILibraryRepo>(),
+                serviceProvider.GetService<IUpdateLibraryService>(),
             };
 
             if (config.BuildStandalone || config.BuildServer)
@@ -183,7 +184,6 @@ namespace AudioPlayerBackend.Build
 
             services.AddTransient<IPlayerService, AudioPlayerService>();
 
-            services.AddTransient<UpdateLibraryService>();
             services.AddTransient<AutoUpdateLibraryService>();
 
             services.AddSingleton<ILibraryViewModel, LibraryViewModel>();

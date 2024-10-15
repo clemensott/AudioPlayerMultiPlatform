@@ -98,9 +98,9 @@ namespace AudioPlayerBackend.Communication.Base
             return this;
         }
 
-        public float DequeueDouble()
+        public double DequeueDouble()
         {
-            return BitConverter.ToSingle(DequeueRange(sizeof(double)), 0);
+            return BitConverter.ToDouble(DequeueRange(sizeof(double)), 0);
         }
 
         public ByteQueue Enqueue(double value)

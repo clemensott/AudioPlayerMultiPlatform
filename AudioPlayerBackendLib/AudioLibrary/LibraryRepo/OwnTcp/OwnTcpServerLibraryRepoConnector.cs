@@ -23,7 +23,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
             return serverCommunicator.SendAsync($"{nameof(ILibraryRepo)}.{funcName}", payload);
         }
 
-        public Task Start()
+        public async Task Start()
         {
             libraryRepo.OnPlayStateChange += OnPlayStateChange;
             libraryRepo.OnVolumeChange += OnVolumeChange;
@@ -32,10 +32,10 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
             serverCommunicator.Received += OnReceived;
 
-            return Task.CompletedTask;
+            await libraryRepo.Start();
         }
 
-        public Task Stop()
+        public async Task Stop()
         {
             libraryRepo.OnPlayStateChange -= OnPlayStateChange;
             libraryRepo.OnVolumeChange -= OnVolumeChange;
@@ -44,7 +44,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
             serverCommunicator.Received += OnReceived;
 
-            return Task.CompletedTask;
+            await libraryRepo.Stop();
         }
 
         private async void OnPlayStateChange(object sender, AudioLibraryChangeArgs<PlaybackState> e)
@@ -132,9 +132,10 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
             }
         }
 
-        public Task Dispose()
+        public async Task Dispose()
         {
-            return Stop();
+            await Stop();
+            await libraryRepo.Dispose();
         }
     }
 }

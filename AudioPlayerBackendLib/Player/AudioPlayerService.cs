@@ -45,6 +45,9 @@ namespace AudioPlayerBackend.Player
 
         public async Task Start()
         {
+            await libraryRepo.Start();
+            await playlistsRepo.Start();
+
             SubsribePlayer();
             SubscribeLibraryRepo();
             SubscribePlaylistsRepo();
@@ -60,6 +63,9 @@ namespace AudioPlayerBackend.Player
 
         public async Task Stop()
         {
+            await libraryRepo.Stop();
+            await playlistsRepo.Stop();
+
             UnsubsribePlayer();
             UnsubscribeLibraryRepo();
             UnsubscribePlaylistsRepo();

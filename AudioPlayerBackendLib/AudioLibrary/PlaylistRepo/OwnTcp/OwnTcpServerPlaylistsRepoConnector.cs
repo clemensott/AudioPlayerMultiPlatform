@@ -24,7 +24,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             return serverCommunicator.SendAsync($"{nameof(IPlaylistsRepo)}.{funcName}", payload);
         }
 
-        public Task Start()
+        public async Task Start()
         {
             playlistsRepo.OnInsertPlaylist += OnInsertPlaylist;
             playlistsRepo.OnRemovePlaylist += OnRemovePlaylist;
@@ -43,10 +43,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 
             serverCommunicator.Received += OnReceived;
 
-            return Task.CompletedTask;
+            await playlistsRepo.Start();
         }
 
-        public Task Stop()
+        public async Task Stop()
         {
             playlistsRepo.OnInsertPlaylist -= OnInsertPlaylist;
             playlistsRepo.OnRemovePlaylist -= OnRemovePlaylist;
@@ -65,7 +65,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 
             serverCommunicator.Received -= OnReceived;
 
-            return Task.CompletedTask;
+            await playlistsRepo.Stop();
         }
 
         private async void OnInsertPlaylist(object sender, InsertPlaylistArgs e)
@@ -191,15 +191,24 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 
                 Guid playlistId;
                 ByteQueue payload = e.Payload;
+                ByteQueue result;
                 switch (parts[1])
                 {
+                    case nameof(playlistsRepo.GetPlaylist):
+                        playlistId = payload.DequeueGuid();
+                        Playlist playlist = await playlistsRepo.GetPlaylist(playlistId);
+                        result = new ByteQueue()
+                            .Enqueue(playlist);
+                        anwser.SetResult(result);
+                        break;
+
                     case nameof(playlistsRepo.SendInsertPlaylist):
                         int insertIndex = payload.DequeueInt();
                         Playlist insertPlaylist = payload.DequeuePlaylist();
                         await playlistsRepo.SendInsertPlaylist(insertPlaylist, insertIndex);
                         anwser.SetResult(null);
                         break;
-                        
+
                     case nameof(playlistsRepo.SendRemovePlaylist):
                         playlistId = payload.DequeueGuid();
                         await playlistsRepo.SendRemovePlaylist(playlistId);
@@ -212,14 +221,14 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
                         await playlistsRepo.SendNameChange(playlistId, name);
                         anwser.SetResult(null);
                         break;
-                        
+
                     case nameof(playlistsRepo.SendShuffleChange):
                         playlistId = payload.DequeueGuid();
                         OrderType shuffle = payload.DequeueOrderType();
                         await playlistsRepo.SendShuffleChange(playlistId, shuffle);
                         anwser.SetResult(null);
                         break;
-                        
+
                     case nameof(playlistsRepo.SendLoopChange):
                         playlistId = payload.DequeueGuid();
                         LoopType loop = payload.DequeueLoopType();
@@ -268,21 +277,29 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
                         await playlistsRepo.SendSongsChange(playlistId, songs);
                         anwser.SetResult(null);
                         break;
-                        
+
+                    case nameof(playlistsRepo.GetFileMediaSourcesOfRoot):
+                        Guid rootId = payload.DequeueGuid();
+                        ICollection<FileMediaSource> sources = await playlistsRepo.GetFileMediaSourcesOfRoot(rootId);
+                        result = new ByteQueue()
+                            .Enqueue(sources);
+                        anwser.SetResult(result);
+                        break;
+
                     case nameof(playlistsRepo.SendFileMedisSourcesChange):
                         playlistId = payload.DequeueGuid();
                         FileMediaSources fileMediaSources = payload.DequeueFileMediaSources();
                         await playlistsRepo.SendFileMedisSourcesChange(playlistId, fileMediaSources);
                         anwser.SetResult(null);
                         break;
-                        
+
                     case nameof(playlistsRepo.SendFilesLastUpdatedChange):
                         playlistId = payload.DequeueGuid();
                         DateTime? filesLastUpdated = payload.DequeueDateTimeNullable();
                         await playlistsRepo.SendFilesLastUpdatedChange(playlistId, filesLastUpdated);
                         anwser.SetResult(null);
                         break;
-                        
+
                     case nameof(playlistsRepo.SendSongsLastUpdatedChange):
                         playlistId = payload.DequeueGuid();
                         DateTime? songsLastUpdated = payload.DequeueDateTimeNullable();
@@ -291,7 +308,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
                         break;
 
                     default:
-                        anwser.SetException(new NotSupportedException($"Received action is not supported: {parts[2]}"));
+                        anwser.SetException(new NotSupportedException($"Received action is not supported: {parts[1]}"));
                         break;
                 }
             }
@@ -302,9 +319,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             }
         }
 
-        public Task Dispose()
+        public async Task Dispose()
         {
-            return Stop();
+            await Stop();
+            await playlistsRepo.Dispose();
         }
     }
 }
