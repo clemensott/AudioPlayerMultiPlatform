@@ -72,7 +72,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
             foreach (OwnTcpSendMessage message in Waits.Values)
             {
-                message.SetResult(null);
+                message.SetException(new Exception("Closed connection"));
             }
 
             Task raiseTask = RaiseDisconnected();

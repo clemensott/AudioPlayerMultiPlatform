@@ -41,6 +41,9 @@ namespace AudioPlayerBackend.Communication.Base
 
         private static void LockTopic(Dictionary<string, byte[]> dict, string topic, byte[] payload)
         {
+            // payload == null means that topic doesn't has to be lock, for example because it is a call to fetch data
+            if (payload == null) return;
+
             byte[] payloadLock;
 
             while (true)
@@ -65,6 +68,8 @@ namespace AudioPlayerBackend.Communication.Base
 
         private static bool IsTopicLocked(Dictionary<string, byte[]> dict, string topic, byte[] payload)
         {
+            if (payload == null) return false;
+
             byte[] payloadLock;
 
             if (!dict.TryGetValue(topic, out payloadLock)) return false;
@@ -84,31 +89,6 @@ namespace AudioPlayerBackend.Communication.Base
             lock (dict)
             {
                 if (!dict.TryGetValue(topic, out payloadLock)) return false;
-
-                dict.Remove(topic);
-            }
-
-            lock (payloadLock)
-            {
-                if (pulseAll) Monitor.PulseAll(payloadLock);
-                else Monitor.Pulse(payloadLock);
-            }
-
-            return true;
-        }
-
-        protected bool UnlockTopic(string topic, byte[] payload, bool pulseAll = false)
-        {
-            return UnlockTopic(receivingDict, topic, payload, pulseAll);
-        }
-
-        private static bool UnlockTopic(Dictionary<string, byte[]> dict, string topic, byte[] payload, bool pulseAll = false)
-        {
-            byte[] payloadLock;
-
-            lock (dict)
-            {
-                if (!dict.TryGetValue(topic, out payloadLock) || payloadLock.BothNullOrSequenceEqual(payload)) return false;
 
                 dict.Remove(topic);
             }

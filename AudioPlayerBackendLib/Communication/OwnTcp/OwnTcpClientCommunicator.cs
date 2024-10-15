@@ -29,7 +29,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         public OwnTcpClientCommunicator(AudioServicesBuildConfig config, IInvokeDispatcherService dispatcher)
         {
             ServerAddress = config.ServerAddress;
-            Port = config.ServerPort;
+            Port = config.ClientPort;
             this.dispatcher = dispatcher;
         }
 

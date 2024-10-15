@@ -81,14 +81,13 @@ namespace AudioPlayerBackend.Player
         {
             if (currentPlaylistId.TryHasValue(out Guid playlistId))
             {
-                RequestSong? currentState = requestSong.TryHasValue(out RequestSong request) && request.Song == Player.Source
+                RequestSong? currentState = requestSong.TryHasValue(out RequestSong request)
                     ? (RequestSong?)RequestSong.Get(request.Song, position, Player.Duration)
                     : null;
                 return (playlistId, currentState);
             }
 
             return (null, null);
-
         }
 
         private async Task ChangeCurrentPlaylist(Guid? newCurrentPlaylistId, bool saveCurrentState = false)
@@ -118,14 +117,6 @@ namespace AudioPlayerBackend.Player
             if (currentState.playlistId.HasValue)
             {
                 await playlistsRepo.SendRequestSongChange(currentState.playlistId.Value, currentState.state);
-            }
-        }
-
-        private async Task CheckUpdateCurrentSong()
-        {
-            if (Player.Source.HasValue ^ requestSong.HasValue)
-            {
-                await UpdateCurrentSong();
             }
         }
 

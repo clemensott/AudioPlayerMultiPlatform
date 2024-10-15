@@ -308,7 +308,7 @@ namespace AudioPlayerBackend.Communication.Base
 
         public static implicit operator ByteQueue(byte[] bytes)
         {
-            return new ByteQueue(bytes);
+            return bytes == null ? null : new ByteQueue(bytes);
         }
     }
 }

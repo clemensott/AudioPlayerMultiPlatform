@@ -63,6 +63,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 {
                     TcpClient client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
                     OwnTcpSendQueue queue = new OwnTcpSendQueue();
+                    System.Diagnostics.Debug.WriteLine("NewConnectionsHandler3");
                     OwnTcpServerConnection connection = new OwnTcpServerConnection(client, queue);
 
                     connections.Add(connection);
@@ -110,6 +111,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 {
                     OwnTcpMessage message = await connection.ReadMessage();
                     if (message == null || !connection.Client.Connected) break;
+                    System.Diagnostics.Debug.WriteLine($"ReadClientHandler3: {message.Topic}");
 
                     switch (message.Topic)
                     {
@@ -125,10 +127,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                             OwnTcpSendMessage processItem = new OwnTcpSendMessage(message);
                             await processQueue.Enqueue(processItem);
 
+                            System.Diagnostics.Debug.WriteLine($"ReadClientHandler5: {message.Topic} | {processQueue.Count}");
                             byte[] resultData = await processItem.Task;
                             Task responseTask = message.IsFireAndForget
                                 ? Task.CompletedTask
                                 : SendAnswer(connection, message.ID, (int)HttpStatusCode.OK, resultData);
+                            System.Diagnostics.Debug.WriteLine($"ReadClientHandler6: {message.Topic} | {message.IsFireAndForget}");
 
                             await SendMessageToAllOtherClients(connection, message.Topic, message.Payload);
 
@@ -227,22 +231,26 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         {
             while (true)
             {
+                System.Diagnostics.Debug.WriteLine("ProcessHandler2");
                 (_, OwnTcpSendMessage item) = await queue.Dequeue();
+                System.Diagnostics.Debug.WriteLine($"ProcessHandler3: {item.Message.Topic}");
                 if (queue.IsEnd) break;
 
                 try
                 {
                     LockTopic(item.Message.Topic, item.Message.Payload);
 
-                    ReceivedEventArgs args = new ReceivedEventArgs(Name, item.Message.Payload);
+                    ReceivedEventArgs args = new ReceivedEventArgs(item.Message.Topic, item.Message.Payload);
                     Received?.Invoke(this, args);
                     if (args.IsAwserStarted)
                     {
+                        System.Diagnostics.Debug.WriteLine("ProcessHandler5");
                         byte[] result = await args.Anwser.Task;
+                        System.Diagnostics.Debug.WriteLine("ProcessHandler6");
                         item.SetResult(result);
+                        System.Diagnostics.Debug.WriteLine("ProcessHandler7");
                     }
                     else item.SetException(new Exception("Handle message not successful"));
-
                 }
                 catch (Exception e)
                 {
@@ -250,9 +258,13 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 }
                 finally
                 {
+                    System.Diagnostics.Debug.WriteLine("ProcessHandler8");
                     UnlockTopic(item.Message.Topic);
+                    System.Diagnostics.Debug.WriteLine("ProcessHandler9");
                 }
             }
+
+            System.Diagnostics.Debug.WriteLine("ProcessHandler19");
         }
 
         public override Task Stop()
