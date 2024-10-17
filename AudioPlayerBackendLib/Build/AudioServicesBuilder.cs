@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
-using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.AudioLibrary.Database.Sql;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp;
@@ -25,7 +24,6 @@ namespace AudioPlayerBackend.Build
 
     public class AudioServicesBuilder : INotifyPropertyChanged
     {
-        private readonly IAudioCreateService audioCreateService;
         private readonly AudioServicesBuildConfig config;
         private BuildState state;
 
@@ -45,7 +43,6 @@ namespace AudioPlayerBackend.Build
 
         public AudioServicesBuilder(AudioServicesBuildConfig config)
         {
-            audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
             State = BuildState.Init;
             CompleteToken = new BuildStatusToken<AudioServices>();
             this.config = config;

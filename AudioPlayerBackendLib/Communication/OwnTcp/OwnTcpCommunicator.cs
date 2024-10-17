@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Communication.Base;
 
 namespace AudioPlayerBackend.Communication.OwnTcp
@@ -12,16 +11,8 @@ namespace AudioPlayerBackend.Communication.OwnTcp
     {
         public const string AnwserCmd = "-ans", ReturnCmd = "-rtn", PingCmd = "-ping", CloseCmd = "-close";
 
-        protected readonly IAudioCreateService audioCreateService;
-
         protected OwnTcpCommunicator()
         {
-            audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
-        }
-
-        private Task SendAsync(IPlaylistBase playlist, string topic, byte[] payload, bool fireAndForget)
-        {
-            return SendAsync(playlist.ID + "." + topic, payload, fireAndForget);
         }
 
         protected abstract Task<byte[]> SendAsync(string topic, byte[] payload, bool fireAndForget);

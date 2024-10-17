@@ -274,7 +274,6 @@
     <Compile Include="HotKeys.cs" />
     <Compile Include="Join\FileSystemService.cs" />
     <Compile Include="Join\InvokeDispatcherService.cs" />
-    <Compile Include="Join\PlayerCreateService.cs" />
     <Compile Include="Join\Player.cs" />
     <Compile Include="Join\UpdateLibraryService.cs" />
     <Compile Include="SettingsWindow.xaml.cs">
@@ -283,7 +282,6 @@
     <Compile Include="TimeSpanToSecondsConverter.cs" />
     <Compile Include="IsAudioStreamPlayerConverter.cs" />
     <Compile Include="ViewModels\AddSourcePlaylistViewModel.cs" />
-    <Compile Include="ViewModels\ViewModel.cs" />
     <Page Include="AddSourcePlaylistWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

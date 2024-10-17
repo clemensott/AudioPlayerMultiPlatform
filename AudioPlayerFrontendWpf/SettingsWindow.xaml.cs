@@ -1,6 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerFrontend.Join;
-using StdOttFramework.Converters;
+﻿using StdOttFramework.Converters;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,8 +12,8 @@ namespace AudioPlayerFrontend
     /// </summary>
     public partial class SettingsWindow : Window
     {
-        private IntConverter serverPortConverter;
-        private IntNullableConverter clientPortConverter;
+        private readonly IntConverter serverPortConverter;
+        private readonly IntNullableConverter clientPortConverter;
 
         public AudioServicesBuildConfig ServiceBuilder { get; private set; }
 

@@ -1,7 +1,4 @@
-﻿using System;
-using AudioPlayerBackend.Audio;
-
-namespace AudioPlayerBackend.Player
+﻿namespace AudioPlayerBackend.Player
 {
     public interface IPlayerService : IAudioService
     {
