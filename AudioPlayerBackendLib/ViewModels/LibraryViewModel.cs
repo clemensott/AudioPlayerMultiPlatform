@@ -68,17 +68,7 @@ namespace AudioPlayerBackend.ViewModels
             get => currentPlaylistIndex;
             set
             {
-                if (isUpdatingPlaylist)
-                {
-                    int restoreIndex = currentPlaylistIndex;
-                    currentPlaylistIndex = -2;
-                    OnPropertyChanged(nameof(CurrentPlaylistIndex));
-                    currentPlaylistIndex = restoreIndex;
-                    OnPropertyChanged(nameof(CurrentPlaylistIndex));
-                    return;
-                }
-
-                if (value == CurrentPlaylistIndex) return;
+                if (isUpdatingPlaylist||value == CurrentPlaylistIndex) return;
 
                 currentPlaylistIndex = value;
                 OnPropertyChanged(nameof(CurrentPlaylistIndex));
@@ -228,13 +218,17 @@ namespace AudioPlayerBackend.ViewModels
         {
             currentPlaylistIndex = Playlists.IndexOf(p => p.Id == CurrentPlaylist.Id);
             OnPropertyChanged(nameof(CurrentPlaylistIndex));
-            //OnPropertyChanged(nameof(CurrentPlaylistInfo));
         }
 
         public async Task RemixSongs(Guid playlistId)
         {
             Playlist playlist = await playlistsRepo.GetPlaylist(playlistId);
-            await playlistsRepo.SendSongsChange(playlist.Id, playlist.Songs.Shuffle().ToArray());
+            Song[] remixedSongs = playlist.Songs.Shuffle().Select((song, i) =>
+            {
+                song.Index = i;
+                return song;
+            }).ToArray();
+            await playlistsRepo.SendSongsChange(playlist.Id, remixedSongs);
         }
 
         public async Task RemovePlaylist(Guid playlistId)

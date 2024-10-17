@@ -60,7 +60,7 @@ namespace AudioPlayerBackend.Build
 
             AudioServicesBuilder Build()
             {
-                return AudioServicesBuilder.Build(config, TimeSpan.FromMilliseconds(5000));
+                return AudioServicesBuilder.Build(config, TimeSpan.FromMilliseconds(500));
             }
         }
 

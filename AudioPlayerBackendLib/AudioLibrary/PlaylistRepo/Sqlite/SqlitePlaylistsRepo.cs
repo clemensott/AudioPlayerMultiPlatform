@@ -311,6 +311,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
         private async Task UpsertPlaylistSongs(Guid playlistId, ICollection<Song> songs)
         {
+            int songIndex = 0;
             foreach (IList<Song> group in songs.ToGroupsOf(100))
             {
                 string songsSqlValues = string.Join(",", group.Select((_, i) => $"(@id{i},@t{i},@a{i},@p{i})"));
@@ -333,7 +334,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                     VALUES {playlistSongsSqlValues};
                 ";
                 var playlistSongsParameters = CreateParams("pid", playlistId.ToString())
-                    .Concat(group.SelectMany((song, i) => CreateParams($"x{i}", i, $"sid{i}", song.Id.ToString())));
+                    .Concat(group.SelectMany((song, i) => CreateParams($"x{i}", songIndex++, $"sid{i}", song.Id.ToString())))
+                    .ToArray();
                 await sqlExecuteService.ExecuteNonQueryAsync(playlistSongsSql, playlistSongsParameters);
             }
         }
