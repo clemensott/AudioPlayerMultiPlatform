@@ -1,5 +1,4 @@
-﻿using StdOttStandard.Linq;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -229,7 +228,7 @@ namespace AudioPlayerBackend.Communication.Base
             return DequeueBool() ? (T?)itemDequeueFunc() : null;
         }
 
-        private ByteQueue EnqueueClass<T>(T value, Func<T, ByteQueue> valueEnqueueAction) where T : class
+        public ByteQueue EnqueueClass<T>(T value, Func<T, ByteQueue> valueEnqueueAction) where T : class
         {
             return EnqueueClass(value, v =>
             {
@@ -237,7 +236,7 @@ namespace AudioPlayerBackend.Communication.Base
             });
         }
 
-        private ByteQueue EnqueueClass<T>(T value, Action<T> valueEnqueueAction) where T : class
+        public ByteQueue EnqueueClass<T>(T value, Action<T> valueEnqueueAction) where T : class
         {
             if (value == null) Enqueue(false);
             else
@@ -249,7 +248,7 @@ namespace AudioPlayerBackend.Communication.Base
             return this;
         }
 
-        private T DequeueOrDefault<T>(Func<T> itemDequeueFunc)
+        public T DequeueOrDefault<T>(Func<T> itemDequeueFunc)
         {
             return DequeueBool() ? itemDequeueFunc() : default(T);
         }
