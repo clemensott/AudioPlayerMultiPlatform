@@ -41,7 +41,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         private void ForEachRepo(Action<ServicedPlaylistsRepo> action)
         {
-            parent.GetRepos().OfType<ServicedPlaylistsRepo>().ForEach(action);
+            //parent.GetRepos().OfType<ServicedPlaylistsRepo>().ForEach(action);
         }
 
         public async Task SendInsertPlaylist(Playlist playlist, int? index)

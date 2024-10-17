@@ -121,7 +121,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
                         break;
 
                     default:
-                        anwser.SetException(new NotSupportedException($"Received action is not supported: {parts[2]}"));
+                        anwser.SetException(new NotSupportedException($"Received action is not supported: {parts[1]}"));
                         break;
                 }
             }

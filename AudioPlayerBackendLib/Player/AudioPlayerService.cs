@@ -407,16 +407,6 @@ namespace AudioPlayerBackend.Player
             await playlistsRepo.SendRequestSongChange(playlistId, newRequestSong);
         }
 
-        private async Task SendCurrentPlaylistsAndRequestSong(Guid? newCurrentPlaylistId, Song? newCurrentSong)
-        {
-            if (newCurrentPlaylistId.HasValue)
-            {
-                await playlistsRepo.SendRequestSongChange(newCurrentPlaylistId.Value, RequestSong.Start(newCurrentSong));
-            }
-
-            await libraryRepo.SendCurrentPlaylistIdChange(newCurrentPlaylistId);
-        }
-
         public async Task Dispose()
         {
             await Stop();

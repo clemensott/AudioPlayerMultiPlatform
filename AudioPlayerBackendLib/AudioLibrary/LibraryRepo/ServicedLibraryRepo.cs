@@ -30,7 +30,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 
         private void ForEachRepo(Action<ServicedLibraryRepo> action)
         {
-            parent.GetRepos().OfType<ServicedLibraryRepo>().ForEach(action);
+            //parent.GetRepos().OfType<ServicedLibraryRepo>().ForEach(action);
         }
 
         public async Task SendPlayStateChange(PlaybackState playState)
