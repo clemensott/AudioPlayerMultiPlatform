@@ -16,10 +16,10 @@ namespace AudioPlayerFrontend.Join
     internal class UpdateLibraryService : IUpdateLibraryService
     {
         private static readonly Random ran = new Random();
-        private readonly IServicedLibraryRepo libraryRepo;
-        private readonly IServicedPlaylistsRepo playlistsRepo;
+        private readonly ILibraryRepo libraryRepo;
+        private readonly IPlaylistsRepo playlistsRepo;
 
-        public UpdateLibraryService(IServicedLibraryRepo libraryRepo, IServicedPlaylistsRepo playlistsRepo)
+        public UpdateLibraryService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo)
         {
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
@@ -263,22 +263,19 @@ namespace AudioPlayerFrontend.Join
             return new LocalKnownFolder(name, value, fullPath);
         }
 
-        public async Task Start()
+        public Task Start()
         {
-            await libraryRepo.Start();
-            await playlistsRepo.Start();
+            return Task.CompletedTask;
         }
 
-        public async Task Stop()
+        public Task Stop()
         {
-            await libraryRepo.Stop();
-            await playlistsRepo.Stop();
+            return Task.CompletedTask;
         }
 
-        public async Task Dispose()
+        public Task Dispose()
         {
-            await libraryRepo.Dispose();
-            await playlistsRepo.Dispose();
+            return Task.CompletedTask;
         }
     }
 }

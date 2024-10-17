@@ -9,10 +9,10 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 {
     internal class OwnTcpServerLibraryRepoConnector : IServerLibraryRepoConnector
     {
-        private readonly IServicedLibraryRepo libraryRepo;
+        private readonly ILibraryRepo libraryRepo;
         private readonly IServerCommunicator serverCommunicator;
 
-        public OwnTcpServerLibraryRepoConnector(IServicedLibraryRepo libraryRepo, IServerCommunicator serverCommunicator)
+        public OwnTcpServerLibraryRepoConnector(ILibraryRepo libraryRepo, IServerCommunicator serverCommunicator)
         {
             this.libraryRepo = libraryRepo;
             this.serverCommunicator = serverCommunicator;
@@ -23,7 +23,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
             return serverCommunicator.SendAsync($"{nameof(ILibraryRepo)}.{funcName}", payload);
         }
 
-        public async Task Start()
+        public Task Start()
         {
             libraryRepo.OnPlayStateChange += OnPlayStateChange;
             libraryRepo.OnVolumeChange += OnVolumeChange;
@@ -32,10 +32,10 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
             serverCommunicator.Received += OnReceived;
 
-            await libraryRepo.Start();
+            return Task.CompletedTask;
         }
 
-        public async Task Stop()
+        public Task Stop()
         {
             libraryRepo.OnPlayStateChange -= OnPlayStateChange;
             libraryRepo.OnVolumeChange -= OnVolumeChange;
@@ -44,7 +44,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
             serverCommunicator.Received += OnReceived;
 
-            await libraryRepo.Stop();
+            return Task.CompletedTask;
         }
 
         private async void OnPlayStateChange(object sender, AudioLibraryChangeArgs<PlaybackState> e)
@@ -135,7 +135,6 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
         public async Task Dispose()
         {
             await Stop();
-            await libraryRepo.Dispose();
         }
     }
 }

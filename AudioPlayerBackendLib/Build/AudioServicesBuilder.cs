@@ -170,11 +170,6 @@ namespace AudioPlayerBackend.Build
             }
             else throw new NotSupportedException("Mode not supported");
 
-            services.AddSingleton<ILibraryRepoService, LibraryRepoService>();
-            services.AddTransient<IServicedLibraryRepo, ServicedLibraryRepo>();
-            services.AddSingleton<IPlaylistsRepoService, PlaylistsRepoService>();
-            services.AddTransient<IServicedPlaylistsRepo, ServicedPlaylistsRepo>();
-
             if (config.BuildServer)
             {
                 services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
@@ -200,32 +195,21 @@ namespace AudioPlayerBackend.Build
 
         public async Task CompleteServices(AudioServices audioServices)
         {
-            IServicedLibraryRepo libraryRepo = null;
-            IServicedPlaylistsRepo playlistsRepo = null;
+            ILibraryRepo libraryRepo = audioServices.GetLibraryRepo();
 
-            try
+            if (config.Shuffle.HasValue)
             {
-                libraryRepo = audioServices.GetServicedLibraryRepo();
+                Library library = await libraryRepo.GetLibrary();
 
-                if (config.Shuffle.HasValue)
+                IPlaylistsRepo playlistsRepo = audioServices.GetPlaylistsRepo();
+                foreach (PlaylistInfo playlist in library.Playlists)
                 {
-                    Library library = await libraryRepo.GetLibrary();
-
-                    playlistsRepo = audioServices.GetServicedPlaylistsRepo();
-                    foreach (PlaylistInfo playlist in library.Playlists)
-                    {
-                        await playlistsRepo.SendShuffleChange(playlist.Id, config.Shuffle.Value);
-                    }
+                    await playlistsRepo.SendShuffleChange(playlist.Id, config.Shuffle.Value);
                 }
+            }
 
-                if (config.Play.HasValue) await libraryRepo.SendPlayStateChange(config.Play.Value ? PlaybackState.Playing : PlaybackState.Paused);
-                if (config.Volume.HasValue) await libraryRepo.SendVolumeChange(config.Volume.Value);
-            }
-            finally
-            {
-                await (libraryRepo?.Dispose() ?? Task.CompletedTask);
-                await (playlistsRepo?.Dispose() ?? Task.CompletedTask);
-            }
+            if (config.Play.HasValue) await libraryRepo.SendPlayStateChange(config.Play.Value ? PlaybackState.Playing : PlaybackState.Paused);
+            if (config.Volume.HasValue) await libraryRepo.SendVolumeChange(config.Volume.Value);
 
             ILibraryViewModel libraryViewModel = audioServices.ServiceProvider.GetService<ILibraryViewModel>();
             ISongSearchViewModel songSearchViewModel = libraryViewModel.SongSearch;

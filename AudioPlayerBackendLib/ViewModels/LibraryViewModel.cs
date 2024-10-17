@@ -15,8 +15,8 @@ namespace AudioPlayerBackend.ViewModels
 {
     public class LibraryViewModel : ILibraryViewModel
     {
-        private readonly IServicedLibraryRepo libraryRepo;
-        private readonly IServicedPlaylistsRepo playlistsRepo;
+        private readonly ILibraryRepo libraryRepo;
+        private readonly IPlaylistsRepo playlistsRepo;
         private bool isLoaded, isUpdatingPlaylist;
         private int currentPlaylistIndex;
         private PlaybackState playState;
@@ -93,8 +93,8 @@ namespace AudioPlayerBackend.ViewModels
 
         public ISongSearchViewModel SongSearch { get; }
 
-        public LibraryViewModel(AudioServicesBuildConfig config, IServicedLibraryRepo libraryRepo,
-            IServicedPlaylistsRepo playlistsRepo, IPlaylistViewModel playlistViewModel,
+        public LibraryViewModel(AudioServicesBuildConfig config, ILibraryRepo libraryRepo,
+            IPlaylistsRepo playlistsRepo, IPlaylistViewModel playlistViewModel,
             ISongSearchViewModel songSearchViewModel)
         {
             IsLocalFileMediaSource = config.BuildStandalone || config.BuildServer;
@@ -107,9 +107,6 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Start()
         {
-            await libraryRepo.Start();
-            await playlistsRepo.Start();
-
             Subscribe();
 
             Library library = await libraryRepo.GetLibrary();
@@ -126,9 +123,6 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Stop()
         {
-            await libraryRepo.Stop();
-            await playlistsRepo.Stop();
-
             Unsubscribe();
 
             Playlists = new ObservableCollection<PlaylistInfo>();
@@ -247,9 +241,6 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Dispose()
         {
-            await libraryRepo.Dispose();
-            await playlistsRepo.Dispose();
-
             await CurrentPlaylist.Dispose();
             await SongSearch.Dispose();
         }

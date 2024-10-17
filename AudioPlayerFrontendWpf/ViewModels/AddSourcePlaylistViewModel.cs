@@ -116,14 +116,14 @@ namespace AudioPlayerFrontend.ViewModels
             }
         }
 
-        public IServicedLibraryRepo LibraryRepo { get; }
+        public ILibraryRepo LibraryRepo { get; }
 
-        public IServicedPlaylistsRepo PlaylistsRepo { get; }
+        public IPlaylistsRepo PlaylistsRepo { get; }
 
         public AddSourcePlaylistViewModel(AudioServices audioServices)
         {
-            LibraryRepo = audioServices.GetServicedLibraryRepo();
-            PlaylistsRepo = audioServices.GetServicedPlaylistsRepo();
+            LibraryRepo = audioServices.GetLibraryRepo();
+            PlaylistsRepo = audioServices.GetPlaylistsRepo();
 
             Loop = LoopType.CurrentPlaylist;
         }
@@ -161,9 +161,6 @@ namespace AudioPlayerFrontend.ViewModels
         public async Task Dispose()
         {
             await Stop();
-
-            await LibraryRepo.Dispose();
-            await PlaylistsRepo.Dispose();
         }
 
 

@@ -10,10 +10,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 {
     internal class OwnTcpServerPlaylistsRepoConnector : IServerPlaylistsRepoConnector
     {
-        private readonly IServicedPlaylistsRepo playlistsRepo;
+        private readonly IPlaylistsRepo playlistsRepo;
         private readonly IServerCommunicator serverCommunicator;
 
-        public OwnTcpServerPlaylistsRepoConnector(IServicedPlaylistsRepo playlistsRepo, IServerCommunicator serverCommunicator)
+        public OwnTcpServerPlaylistsRepoConnector(IPlaylistsRepo playlistsRepo, IServerCommunicator serverCommunicator)
         {
             this.playlistsRepo = playlistsRepo;
             this.serverCommunicator = serverCommunicator;
@@ -24,7 +24,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             return serverCommunicator.SendAsync($"{nameof(IPlaylistsRepo)}.{funcName}", payload);
         }
 
-        public async Task Start()
+        public Task Start()
         {
             playlistsRepo.OnInsertPlaylist += OnInsertPlaylist;
             playlistsRepo.OnRemovePlaylist += OnRemovePlaylist;
@@ -43,10 +43,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 
             serverCommunicator.Received += OnReceived;
 
-            await playlistsRepo.Start();
+            return Task.CompletedTask;
         }
 
-        public async Task Stop()
+        public Task Stop()
         {
             playlistsRepo.OnInsertPlaylist -= OnInsertPlaylist;
             playlistsRepo.OnRemovePlaylist -= OnRemovePlaylist;
@@ -65,7 +65,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 
             serverCommunicator.Received -= OnReceived;
 
-            await playlistsRepo.Stop();
+            return Task.CompletedTask;
         }
 
         private async void OnInsertPlaylist(object sender, InsertPlaylistArgs e)
@@ -322,7 +322,6 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
         public async Task Dispose()
         {
             await Stop();
-            await playlistsRepo.Dispose();
         }
     }
 }

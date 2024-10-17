@@ -15,8 +15,8 @@ namespace AudioPlayerBackend.Player
     {
         private const int updateInterval = 100;
 
-        private readonly IServicedLibraryRepo libraryRepo;
-        private readonly IServicedPlaylistsRepo playlistsRepo;
+        private readonly ILibraryRepo libraryRepo;
+        private readonly IPlaylistsRepo playlistsRepo;
         private readonly IInvokeDispatcherService dispatcher;
         private bool isSetCurrentSong;
         private int errorCount;
@@ -33,7 +33,7 @@ namespace AudioPlayerBackend.Player
 
         public IPlayer Player { get; }
 
-        public AudioPlayerService(IServicedLibraryRepo libraryRepo, IServicedPlaylistsRepo playlistsRepo, IPlayer player, IInvokeDispatcherService dispatcher)
+        public AudioPlayerService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo, IPlayer player, IInvokeDispatcherService dispatcher)
         {
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
@@ -45,9 +45,6 @@ namespace AudioPlayerBackend.Player
 
         public async Task Start()
         {
-            await libraryRepo.Start();
-            await playlistsRepo.Start();
-
             SubsribePlayer();
             SubscribeLibraryRepo();
             SubscribePlaylistsRepo();
@@ -63,9 +60,6 @@ namespace AudioPlayerBackend.Player
 
         public async Task Stop()
         {
-            await libraryRepo.Stop();
-            await playlistsRepo.Stop();
-
             UnsubsribePlayer();
             UnsubscribeLibraryRepo();
             UnsubscribePlaylistsRepo();
@@ -411,8 +405,6 @@ namespace AudioPlayerBackend.Player
         {
             await Stop();
 
-            await libraryRepo.Dispose();
-            await playlistsRepo.Dispose();
             timer.Dispose();
             Player.Dispose();
         }

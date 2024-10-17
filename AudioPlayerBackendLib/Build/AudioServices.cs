@@ -47,14 +47,14 @@ namespace AudioPlayerBackend.Build
             return ServiceProvider.GetService<IUpdateLibraryService>();
         }
 
-        public IServicedLibraryRepo GetServicedLibraryRepo()
+        public ILibraryRepo GetLibraryRepo()
         {
-            return ServiceProvider.GetService<IServicedLibraryRepo>();
+            return ServiceProvider.GetService<ILibraryRepo>();
         }
 
-        public IServicedPlaylistsRepo GetServicedPlaylistsRepo()
+        public IPlaylistsRepo GetPlaylistsRepo()
         {
-            return ServiceProvider.GetService<IServicedPlaylistsRepo>();
+            return ServiceProvider.GetService<IPlaylistsRepo>();
         }
 
         public async Task Start()

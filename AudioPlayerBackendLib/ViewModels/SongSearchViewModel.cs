@@ -13,8 +13,8 @@ namespace AudioPlayerBackend.ViewModels
 {
     public class SongSearchViewModel : ISongSearchViewModel
     {
-        private readonly IServicedLibraryRepo libraryRepo;
-        private readonly IServicedPlaylistsRepo playlistsRepo;
+        private readonly ILibraryRepo libraryRepo;
+        private readonly IPlaylistsRepo playlistsRepo;
         private readonly IDictionary<Guid, ICollection<Song>> allSongs;
 
         private bool isEnabled, isSearching, isSearchShuffle;
@@ -84,7 +84,7 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public SongSearchViewModel(IServicedLibraryRepo libraryRepo, IServicedPlaylistsRepo playlistsRepo)
+        public SongSearchViewModel(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo)
         {
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
@@ -228,9 +228,6 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Start()
         {
-            await libraryRepo.Start();
-            await playlistsRepo.Start();
-
             IsEnabled = true;
             SubscribePlaylistsRepo();
 
@@ -275,7 +272,7 @@ namespace AudioPlayerBackend.ViewModels
             shuffledSongs = SongsHelper.GetShuffledSongs(allSongs.Values).ToArray();
         }
 
-        public async Task Stop()
+        public Task Stop()
         {
             IsEnabled = false;
             UnsubscribePlaylistsRepo();
@@ -283,16 +280,12 @@ namespace AudioPlayerBackend.ViewModels
             shuffledSongs = Enumerable.Empty<Song>();
             SearchSongs = Enumerable.Empty<Song>();
 
-            await libraryRepo.Stop();
-            await playlistsRepo.Stop();
+            return Task.CompletedTask;
         }
 
         public async Task Dispose()
         {
             await Stop();
-
-            await libraryRepo.Dispose();
-            await playlistsRepo.Dispose();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

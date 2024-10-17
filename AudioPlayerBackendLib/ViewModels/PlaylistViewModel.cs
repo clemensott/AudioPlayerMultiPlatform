@@ -12,7 +12,7 @@ namespace AudioPlayerBackend.ViewModels
 {
     public class PlaylistViewModel : IPlaylistViewModel
     {
-        private readonly IServicedPlaylistsRepo playlistsRepo;
+        private readonly IPlaylistsRepo playlistsRepo;
         private bool isRunning, isLoaded;
         private Guid? id;
         private PlaylistType type;
@@ -175,7 +175,7 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public PlaylistViewModel(IServicedPlaylistsRepo playlistsRepo)
+        public PlaylistViewModel(IPlaylistsRepo playlistsRepo)
         {
             this.playlistsRepo = playlistsRepo;
         }
@@ -213,8 +213,6 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Start()
         {
-            await playlistsRepo.Start();
-
             isRunning = true;
 
             playlistsRepo.OnNameChange += OnNameChange;
@@ -229,10 +227,8 @@ namespace AudioPlayerBackend.ViewModels
             await LoadPlaylistData();
         }
 
-        public async Task Stop()
+        public Task Stop()
         {
-            await playlistsRepo.Stop();
-
             isRunning = false;
 
             playlistsRepo.OnNameChange -= OnNameChange;
@@ -255,6 +251,8 @@ namespace AudioPlayerBackend.ViewModels
             Songs = Array.Empty<Song>();
 
             IsLoaded = false;
+
+            return Task.CompletedTask;
         }
 
         private void OnNameChange(object sender, PlaylistChangeArgs<string> e)
@@ -333,7 +331,7 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Dispose()
         {
-            await playlistsRepo.Dispose();
+            await Stop();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

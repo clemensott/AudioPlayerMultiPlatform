@@ -15,15 +15,15 @@ namespace AudioPlayerBackend.FileSystem
         private static readonly TimeSpan filesUpdateInterval = TimeSpan.FromHours(1);
         private static readonly TimeSpan songsUpdateInterval = TimeSpan.FromDays(1);
 
-        private readonly IServicedLibraryRepo libraryRepo;
-        private readonly IServicedPlaylistsRepo playlistRepo;
+        private readonly ILibraryRepo libraryRepo;
+        private readonly IPlaylistsRepo playlistRepo;
         private readonly IUpdateLibraryService updateLibraryService;
         private readonly IInvokeDispatcherService dispatcherService;
         private readonly Timer timer;
 
         private bool isCheckingForUpdates = false;
 
-        public AutoUpdateLibraryService(IServicedLibraryRepo libraryRepo, IServicedPlaylistsRepo playlistRepo,
+        public AutoUpdateLibraryService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistRepo,
             IUpdateLibraryService updateLibraryService, IInvokeDispatcherService dispatcherService)
         {
             this.libraryRepo = libraryRepo;
@@ -95,29 +95,24 @@ namespace AudioPlayerBackend.FileSystem
             }
         }
 
-        public async Task Start()
+        public Task Start()
         {
-            await libraryRepo.Start();
-            await libraryRepo.Start();
-
             timer.Change(0, timerInterval);
+
+            return Task.CompletedTask;
         }
 
-        public async Task Stop()
+        public Task Stop()
         {
             timer.Change(Timeout.Infinite, timerInterval);
 
-            await libraryRepo.Stop();
-            await libraryRepo.Stop();
+            return Task.CompletedTask;
         }
 
         public async Task Dispose()
         {
-            timer.Change(Timeout.Infinite, timerInterval);
+            await Stop();
             timer.Dispose();
-
-            await libraryRepo.Dispose();
-            await playlistRepo.Dispose();
         }
     }
 }
