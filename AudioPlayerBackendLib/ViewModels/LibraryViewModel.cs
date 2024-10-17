@@ -17,7 +17,8 @@ namespace AudioPlayerBackend.ViewModels
     {
         private readonly IServicedLibraryRepo libraryRepo;
         private readonly IServicedPlaylistsRepo playlistsRepo;
-        private bool isLoaded;
+        private bool isLoaded, isUpdatingPlaylist;
+        private int currentPlaylistIndex;
         private PlaybackState playState;
         private double volume;
         private ObservableCollection<PlaylistInfo> playlists;
@@ -64,10 +65,23 @@ namespace AudioPlayerBackend.ViewModels
 
         public int CurrentPlaylistIndex
         {
-            get => Playlists.IndexOf(p => p.Id == CurrentPlaylist.Id);
+            get => currentPlaylistIndex;
             set
             {
+                if (isUpdatingPlaylist)
+                {
+                    int restoreIndex = currentPlaylistIndex;
+                    currentPlaylistIndex = -2;
+                    OnPropertyChanged(nameof(CurrentPlaylistIndex));
+                    currentPlaylistIndex = restoreIndex;
+                    OnPropertyChanged(nameof(CurrentPlaylistIndex));
+                    return;
+                }
+
                 if (value == CurrentPlaylistIndex) return;
+
+                currentPlaylistIndex = value;
+                OnPropertyChanged(nameof(CurrentPlaylistIndex));
 
                 libraryRepo.SendCurrentPlaylistIdChange(Playlists.ElementAtOrDefault(value)?.Id);
             }
@@ -186,15 +200,35 @@ namespace AudioPlayerBackend.ViewModels
 
         private void PlaylistsRepo_OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
         {
-            int index = Playlists.IndexOf(p => p.Id == e.Id);
-            PlaylistInfo playlist = Playlists[index];
-            Playlists[index] = new PlaylistInfo(playlist.Id, playlist.Type, playlist.Name, e.NewValue.Count, 
-                playlist.FilesLastUpdated, playlist.SongsLastUpdated);
+            try
+            {
+                isUpdatingPlaylist = true;
+
+                int index = Playlists.IndexOf(p => p.Id == e.Id);
+                bool restoreCurrentPlaylistIndex = index == CurrentPlaylistIndex;
+                PlaylistInfo playlist = Playlists[index];
+                Playlists[index] = new PlaylistInfo(playlist.Id, playlist.Type, playlist.Name, e.NewValue.Count,
+                    playlist.FilesLastUpdated, playlist.SongsLastUpdated);
+
+                // updating the selected playlist of an listbox triggers a selection change. This restores the selection.
+                if (restoreCurrentPlaylistIndex)
+                {
+                    currentPlaylistIndex = -2;
+                    OnPropertyChanged(nameof(CurrentPlaylistIndex));
+                    UpdateCurrentPlaylistIndex();
+                }
+            }
+            finally
+            {
+                isUpdatingPlaylist = false;
+            }
         }
 
         private void UpdateCurrentPlaylistIndex()
         {
+            currentPlaylistIndex = Playlists.IndexOf(p => p.Id == CurrentPlaylist.Id);
             OnPropertyChanged(nameof(CurrentPlaylistIndex));
+            //OnPropertyChanged(nameof(CurrentPlaylistInfo));
         }
 
         public async Task RemixSongs(Guid playlistId)

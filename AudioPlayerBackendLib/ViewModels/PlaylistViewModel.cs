@@ -307,6 +307,7 @@ namespace AudioPlayerBackend.ViewModels
             {
                 Playlist playlist = await playlistsRepo.GetPlaylist(id);
                 Name = playlist.Name;
+                Type = playlist.Type;
                 Shuffle = playlist.Shuffle;
                 Loop = playlist.Loop;
                 PlaybackRate = playlist.PlaybackRate;

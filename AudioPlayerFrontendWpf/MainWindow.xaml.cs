@@ -34,7 +34,6 @@ namespace AudioPlayerFrontend
         private AudioServices audioServices;
         private ILibraryViewModel viewModel;
         private HotKeys hotKeys;
-        private bool isChangingSelectedSongIndex;
 
         public MainWindow()
         {
@@ -245,20 +244,16 @@ namespace AudioPlayerFrontend
                 case Key.Up:
                     if (lbxSongs.Items.Count > 0 && viewModel.SongSearch.IsSearching)
                     {
-                        isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
                             StdUtils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, -1).index;
-                        isChangingSelectedSongIndex = false;
                     }
                     break;
 
                 case Key.Down:
                     if (lbxSongs.Items.Count > 0 && viewModel.SongSearch.IsSearching)
                     {
-                        isChangingSelectedSongIndex = true;
                         lbxSongs.SelectedIndex =
                             StdUtils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, 1).index;
-                        isChangingSelectedSongIndex = false;
                     }
                     break;
 
@@ -415,15 +410,15 @@ namespace AudioPlayerFrontend
             else if (!currentPlaylist.Type.HasFlag(PlaylistType.Search)) songs = searchSongs;
             else songs = searchSongs.Except(allSongs);
 
-            if (changedInput == 5 && lbxIndex != -1 && (isSearching || isChangingSelectedSongIndex)) ;
+            if (changedInput == 5 && lbxIndex != -1 && isSearching) ;
             else if (changedInput == 5 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))
             {
                 requestSong = RequestSong.Start(songs.ElementAt(lbxIndex));
             }
             else if (!currentSong.HasValue) lbxIndex = -1;
             else if (songs.Contains(currentSong.Value)) lbxIndex = songs.IndexOf(currentSong.Value);
-            else if (songs.Any()) lbxIndex = 0;
-            else lbxIndex = -1;
+            else if ((lbxIndex == -1 || changedInput == 4) && songs.Any()) lbxIndex = 0;
+            else lbxIndex = Math.Min(lbxIndex, songs.Count() - 1);
 
             return songs;
         }

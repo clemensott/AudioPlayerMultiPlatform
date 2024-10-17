@@ -272,7 +272,7 @@ namespace AudioPlayerBackend.ViewModels
 
         private void UpdateShuffledSongs()
         {
-            shuffledSongs = SongsHelper.GetShuffledSongs(allSongs.Values);
+            shuffledSongs = SongsHelper.GetShuffledSongs(allSongs.Values).ToArray();
         }
 
         public async Task Stop()
