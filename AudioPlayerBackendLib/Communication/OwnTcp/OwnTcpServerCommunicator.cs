@@ -26,8 +26,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public int Port { get; }
 
-        public override string Name => "TCP Server: " + Port;
-
         public OwnTcpServerCommunicator(AudioServicesBuildConfig config)
         {
             Port = config.ServerPort;

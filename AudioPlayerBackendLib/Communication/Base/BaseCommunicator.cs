@@ -18,8 +18,6 @@ namespace AudioPlayerBackend.Communication.Base
 
         public abstract bool IsOpen { get; }
 
-        public abstract string Name { get; }
-
         protected BaseCommunicator()
         {
         }

@@ -41,6 +41,24 @@ namespace AudioPlayerBackend.Build
 
         public BuildStatusToken<AudioServices> CompleteToken { get; }
 
+        public string CommunicatorName
+        {
+            get
+            {
+                if (config.BuildServer)
+                {
+                    return $"{config.ServerAddress.Trim()} : {config.ClientPort}";
+                }
+
+                if (config.BuildClient)
+                {
+                    return $"Server: {config.ServerPort}";
+                }
+
+                return null;
+            }
+        }
+
         public AudioServicesBuilder(AudioServicesBuildConfig config)
         {
             State = BuildState.Init;
@@ -81,12 +99,15 @@ namespace AudioPlayerBackend.Build
                     State = BuildState.Building;
                     audioServices = BuildAudioServices();
 
+                    await Task.Delay(3000);
                     State = BuildState.Starting;
                     await audioServices.Start();
 
+                    await Task.Delay(3000);
                     State = BuildState.Completing;
                     await CompleteServices(audioServices);
 
+                    await Task.Delay(3000);
                     if (CompleteToken.IsEnded.HasValue) return;
 
                     CompleteToken.End(BuildEndedType.Successful, audioServices);

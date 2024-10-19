@@ -88,7 +88,7 @@ namespace AudioPlayerFrontend
 
         private void BtnException_Click(object sender, RoutedEventArgs e)
         {
-            Exception exception = (Exception)micException.Output;
+            Exception exception = Build.CompleteToken.Exception;
 
             if (exception != null)
             {

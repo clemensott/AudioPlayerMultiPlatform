@@ -20,8 +20,6 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         public override bool IsOpen => connection?.Client.Connected ?? false;
 
-        public override string Name => $"TCP: {ServerAddress.Trim()} : {Port}";
-
         public string ServerAddress { get; }
 
         public int? Port { get; }

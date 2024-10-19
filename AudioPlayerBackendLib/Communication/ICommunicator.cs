@@ -11,8 +11,6 @@ namespace AudioPlayerBackend.Communication
 
         bool IsOpen { get; }
 
-        string Name { get; }
-
         Task<bool> SendCommand(string cmd);
 
         Task<byte[]> SendAsync(string topic, byte[] payload);
