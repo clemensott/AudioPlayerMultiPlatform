@@ -47,12 +47,12 @@ namespace AudioPlayerBackend.Build
             {
                 if (config.BuildServer)
                 {
-                    return $"{config.ServerAddress.Trim()} : {config.ClientPort}";
+                    return $"Server: {config.ServerPort}";
                 }
 
                 if (config.BuildClient)
                 {
-                    return $"Server: {config.ServerPort}";
+                    return $"{config.ServerAddress?.Trim()} : {config.ClientPort}";
                 }
 
                 return null;
@@ -99,15 +99,12 @@ namespace AudioPlayerBackend.Build
                     State = BuildState.Building;
                     audioServices = BuildAudioServices();
 
-                    await Task.Delay(3000);
                     State = BuildState.Starting;
                     await audioServices.Start();
 
-                    await Task.Delay(3000);
                     State = BuildState.Completing;
                     await CompleteServices(audioServices);
 
-                    await Task.Delay(3000);
                     if (CompleteToken.IsEnded.HasValue) return;
 
                     CompleteToken.End(BuildEndedType.Successful, audioServices);
