@@ -5,9 +5,7 @@ using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
-using AudioPlayerBackend.Player;
 using StdOttStandard.Converter.MultipleInputs;
-using System.ComponentModel;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Build;
 
@@ -20,7 +18,9 @@ namespace AudioPlayerFrontend
     /// </summary>
     public sealed partial class BuildOpenPage : Page
     {
-        private ServiceHandler serviceHandler;
+        private AudioServicesHandler audioServicesHandler;
+        
+        private AudioServicesBuilder Builder => DataContext as AudioServicesBuilder;
 
         public BuildOpenPage()
         {
@@ -29,29 +29,26 @@ namespace AudioPlayerFrontend
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
-            serviceHandler = (ServiceHandler)e.Parameter;
-            serviceHandler.PropertyChanged += ServiceHandler_PropertyChanged;
+            audioServicesHandler = (AudioServicesHandler)e.Parameter;
+            audioServicesHandler.ServicesBuild += AudioServicesHandler_ServicesBuild;
 
             IEnumerable<string> frames = Frame.BackStack.Select(s => s.SourcePageType.FullName);
             tblFrameStack.Text = string.Join("\r\n", frames);
 
-            await SetDataContext(serviceHandler.ServiceOpenBuild);
+            await SetDataContext(audioServicesHandler.Builder);
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
-            serviceHandler.PropertyChanged -= ServiceHandler_PropertyChanged;
+            audioServicesHandler.ServicesBuild -= AudioServicesHandler_ServicesBuild;
         }
 
-        private async void ServiceHandler_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        private async void AudioServicesHandler_ServicesBuild(object sender, AudioServicesBuilder e)
         {
-            if (e.PropertyName == nameof(serviceHandler.ServiceOpenBuild))
-            {
-                await SetDataContext(serviceHandler.ServiceOpenBuild);
-            }
+            await SetDataContext(e);
         }
 
-        private async Task SetDataContext(ServiceBuild dataContext)
+        private async Task SetDataContext(AudioServicesBuilder dataContext)
         {
             if (dataContext == null) return;
 
@@ -67,7 +64,7 @@ namespace AudioPlayerFrontend
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            serviceHandler.ServiceOpenBuild.Settings();
+            Builder.Settings();
         }
 
         private async void BtnException_Click(object sender, RoutedEventArgs e)
@@ -78,31 +75,6 @@ namespace AudioPlayerFrontend
             {
                 await new MessageDialog(exception.ToString(), "Building audio service error").ShowAsync();
             }
-        }
-
-        private async void AbbPrevious_Click(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetPreviousSong();
-        }
-
-        private async void AbbPlay_Click(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetPlayState(PlaybackState.Playing);
-        }
-
-        private async void AbbPause_Click(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetPlayState(PlaybackState.Paused);
-        }
-
-        private async void AtbToggle_Checked(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetToggle();
-        }
-
-        private async void AbbNext_Click(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetNextSong();
         }
     }
 }

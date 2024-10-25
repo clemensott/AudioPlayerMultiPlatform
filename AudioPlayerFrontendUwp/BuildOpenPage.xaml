@@ -73,22 +73,4 @@
             <TextBlock Text="{Binding State}"/>
         </StackPanel>
     </Grid>
-
-    <Page.BottomAppBar>
-        <CommandBar>
-            <CommandBar.PrimaryCommands>
-                <AppBarButton Label="Previous" Icon="Previous" Click="AbbPrevious_Click"/>
-                <AppBarToggleButton Label="Toggle" Icon="Switch" 
-                                    IsChecked="{Binding SendToggle,Mode=OneWay}" Checked="AtbToggle_Checked"/>
-                <AppBarButton Label="Next" Icon="next" Click="AbbNext_Click"/>
-            </CommandBar.PrimaryCommands>
-
-            <CommandBar.SecondaryCommands>
-                <AppBarButton Label="Play" Icon="Play" Click="AbbPlay_Click"
-                              IsEnabled="{Binding SendPlayState,Converter={StaticResource playCon}}"/>
-                <AppBarButton Label="Pause" Icon="Pause" Click="AbbPause_Click"
-                              IsEnabled="{Binding SendPlayState,Converter={StaticResource pauseCon}}"/>
-            </CommandBar.SecondaryCommands>
-        </CommandBar>
-    </Page.BottomAppBar>
 </Page>

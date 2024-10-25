@@ -9,12 +9,10 @@
     xmlns:com="using:AudioPlayerBackend.Player"
     xmlns:con="using:StdOttUwp.Converters"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-    Loaded="Page_Loaded">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Page.Resources>
         <local:VolumeToolTipConverter x:Key="volTooTipCon"/>
-        <local:IsIMqttAudioConverter x:Key="viewClientSetCon" />
 
         <com:PlaybackState x:Key="playingState">Playing</com:PlaybackState>
         <Symbol x:Key="playSym">Play</Symbol>
@@ -47,13 +45,6 @@
 
         <con:SingleInputConverter x:Name="sicIsUpdating" Output="{Binding IsUpdatingPlaylists}"/>
         <con:SingleInputConverter x:Name="sicIsClient" Output="{Binding IsClient}"/>
-
-        <con:MultipleInputs4Converter x:Name="micPlaylists"
-                                      DataContext="{Binding Audio}"
-                                      Input0="{Binding SourcePlaylists}"
-                                      Input1="{Binding Playlists}"
-                                      Input2="{Binding CurrentPlaylist,Mode=TwoWay}"
-                                      ConvertRef="MicPlaylists_Convert"/>
 
         <Grid Visibility="{Binding ElementName=micPlaylists,Path=Output.Count,Converter={StaticResource visCon}}">
             <StackPanel Visibility="{Binding IsUpdatingPlaylists,Converter={StaticResource visCon}}">

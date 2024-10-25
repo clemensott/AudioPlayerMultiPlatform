@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Build;
+﻿using AudioPlayerBackend.Build;
 using StdOttStandard.TaskCompletionSources;
 using StdOttStandard.Converter.MultipleInputs;
 using StdOttUwp.Converters;
@@ -9,6 +8,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
 
@@ -20,17 +20,17 @@ namespace AudioPlayerFrontend
     public sealed partial class SettingsPage : Page
     {
         private bool submit;
-        private IntConverter serverPortConverter;
-        private IntNullableConverter clientPortConverter;
-        private ServiceBuilder serviceBuilder;
-        private TaskCompletionSourceS<ServiceBuilder> result;
+        private readonly IntConverter serverPortConverter;
+        private readonly IntNullableConverter clientPortConverter;
+        private AudioServicesBuildConfig audioServicesBuildConfig;
+        private TaskCompletionSourceS<AudioServicesBuildConfig> result;
 
-        public ServiceBuilder ServiceBuilder
+        public AudioServicesBuildConfig Config
         {
-            get => serviceBuilder;
+            get => audioServicesBuildConfig;
             private set
             {
-                serviceBuilder = null;
+                audioServicesBuildConfig = null;
 
                 serverPortConverter.Convert(value.ServerPort);
                 clientPortConverter.Convert(value.ClientPort);
@@ -40,10 +40,10 @@ namespace AudioPlayerFrontend
                 if (value.BuildServer) tbxPort.Text = serverPortConverter.Text;
                 else if (value.BuildClient) tbxPort.Text = clientPortConverter.Text;
 
-                DataContext = serviceBuilder = value;
+                DataContext = audioServicesBuildConfig = value;
 
-                if (!serviceBuilder.IsSearchShuffle.HasValue) cbxSearchShuffle.IsChecked = null;
-                if (!serviceBuilder.Play.HasValue) cbxPlay.IsChecked = null;
+                if (!audioServicesBuildConfig.IsSearchShuffle.HasValue) cbxSearchShuffle.IsChecked = null;
+                if (!audioServicesBuildConfig.Play.HasValue) cbxPlay.IsChecked = null;
             }
         }
 
@@ -61,20 +61,20 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            result = (TaskCompletionSourceS<ServiceBuilder>)e.Parameter;
-            serviceBuilder = result.Input;
+            result = (TaskCompletionSourceS<AudioServicesBuildConfig>)e.Parameter;
+            audioServicesBuildConfig = result.Input;
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
 
-            result.SetResult(submit ? serviceBuilder : null);
+            result.SetResult(submit ? audioServicesBuildConfig : null);
         }
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            ServiceBuilder = serviceBuilder;
+            Config = audioServicesBuildConfig;
         }
 
         private object ShuffleConverter_ConvertEvent(object value, Type targetType, object parameter, string language)
@@ -90,35 +90,35 @@ namespace AudioPlayerFrontend
 
         private void RbnStandalone_Checked(object sender, RoutedEventArgs e)
         {
-            ServiceBuilder?.WithStandalone();
+            Config?.WithStandalone();
         }
 
         private void RbnServer_Checked(object sender, RoutedEventArgs e)
         {
             tbxPort.Text = serverPortConverter.Text;
 
-            ServiceBuilder?.WithServer(serverPortConverter.Value);
+            Config?.WithServer(serverPortConverter.Value);
         }
 
         private void RbnClient_Checked(object sender, RoutedEventArgs e)
         {
             tbxPort.Text = clientPortConverter.Text;
 
-            ServiceBuilder?.WithClient(tbxServerAddress.Text, clientPortConverter.Value);
+            Config?.WithClient(tbxServerAddress.Text, clientPortConverter.Value);
         }
 
         private void TbxPort_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (ServiceBuilder == null) return;
+            if (Config == null) return;
 
-            ServiceBuilder.ServerPort = serverPortConverter.ConvertBack(tbxPort.Text);
-            ServiceBuilder.ClientPort = clientPortConverter.ConvertBack(tbxPort.Text);
+            Config.ServerPort = serverPortConverter.ConvertBack(tbxPort.Text);
+            Config.ClientPort = clientPortConverter.ConvertBack(tbxPort.Text);
         }
 
         private async void Cbx_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
         {
             await Task.Delay(50);
-            if (ServiceBuilder != null) ((CheckBox)sender).IsChecked = null;
+            if (Config != null) ((CheckBox)sender).IsChecked = null;
         }
 
         private object MicVolume_ConvertRef(object sender, MultiplesInputsConvert3EventArgs args)
@@ -145,11 +145,6 @@ namespace AudioPlayerFrontend
             return null;
         }
 
-        private void CbxStreaming_RightTapped(object sender, RightTappedRoutedEventArgs e)
-        {
-            if (ServiceBuilder != null) ServiceBuilder.IsStreaming = null;
-        }
-
         private void AbbOk_Click(object sender, RoutedEventArgs e)
         {
             submit = true;
@@ -163,7 +158,7 @@ namespace AudioPlayerFrontend
 
         private void CbxPlay_Holding(object sender, HoldingRoutedEventArgs e)
         {
-            if (ServiceBuilder != null) cbxPlay.IsChecked = ServiceBuilder.Play = null;
+            if (Config != null) cbxPlay.IsChecked = Config.Play = null;
             e.Handled = true;
         }
     }

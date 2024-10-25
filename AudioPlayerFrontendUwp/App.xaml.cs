@@ -18,6 +18,9 @@ using AudioPlayerBackend;
 using AudioPlayerFrontend.Extensions;
 using System.ComponentModel;
 using Newtonsoft.Json;
+using AudioPlayerBackend.FileSystem;
+using AudioPlayerBackend.Player;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AudioPlayerFrontend
 {
@@ -30,7 +33,8 @@ namespace AudioPlayerFrontend
         private readonly TimeSpan autoUpdateInverval = TimeSpan.FromDays(1),
             autoUpdatePlaylistsInterval = TimeSpan.FromHours(1);
 
-        private readonly ServiceHandler serviceHandler;
+        private readonly AudioServicesHandler audioServicesHandler;
+        private readonly AudioServicesBuilderNavigationHandler audioServicesBuilderNavigationHandler;
         private readonly BackgroundTaskHandler backgroundTaskHandler;
         private readonly BackgroundTaskHelper backgroundTaskHelper;
         private DateTime lastAutoUpdatePlaylists;
@@ -40,32 +44,22 @@ namespace AudioPlayerFrontend
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
-            this.UnhandledException += OnUnhandledException;
+            //this.UnhandledException += OnUnhandledException;
             this.LeavingBackground += OnLeavingBackground;
 
-            loadServiceProfileTask = Task.Run(LoadServiceProfile);
-            AudioPlayerServiceProvider.Current
-                .AddFileSystemService<FileSystemService>()
-                .AddDispatcher<InvokeDispatcherService>()
-                .AddPlayerCreateService<PlayerCreateService>()
-                .Build();
+            loadServiceProfileTask = Task.Run(StartAudioServicesHandler);
 
             Dispatcher dispatcher = new Dispatcher();
-            ViewModel viewModel = new ViewModel();
-            viewModel.PropertyChanged += ViewModel_PropertyChanged;
-            serviceHandler = new ServiceHandler(dispatcher, viewModel)
-            {
-                Builder = new ServiceBuilder(),
-            };
-
-            backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, serviceHandler);
+            audioServicesHandler = new AudioServicesHandler(dispatcher);
+            audioServicesBuilderNavigationHandler = new AudioServicesBuilderNavigationHandler(audioServicesHandler);
+            backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, audioServicesHandler);
             backgroundTaskHelper = new BackgroundTaskHelper();
         }
 
-        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            Settings.Current.SetUnhandledException(e.Exception);
-        }
+        //private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        //{
+        //    Settings.Current.SetUnhandledException(e.Exception);
+        //}
 
         /// <summary>
         /// Wird aufgerufen, wenn die Anwendung durch den Endbenutzer normal gestartet wird. Weitere Einstiegspunkte
@@ -84,9 +78,9 @@ namespace AudioPlayerFrontend
             if (rootFrame.Content == null)
             {
                 await Task.Yield(); // let OnLeavingBackground fire to start background task asap
-                rootFrame.NavigateToBuildOpenPage(serviceHandler);
+                rootFrame.NavigateToBuildOpenPage(audioServicesHandler);
                 await loadServiceProfileTask;
-                await serviceHandler.Start(rootFrame);
+                await audioServicesBuilderNavigationHandler.Start(rootFrame);
                 loadServiceProfileTask = null; // release memory
             }
 
@@ -94,22 +88,40 @@ namespace AudioPlayerFrontend
             Window.Current.Activate();
         }
 
-        private async Task LoadServiceProfile()
+        private async Task StartAudioServicesHandler()
+        {
+            AudioServicesBuildConfig config = new AudioServicesBuildConfig()
+                .WithAutoUpdate()
+                .WithDateFilePath("library.db");
+            config.AdditionalServices.TryAddSingleton<IPlayer, Player>();
+            config.AdditionalServices.TryAddSingleton<IFileSystemService, FileSystemService>();
+            config.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, InvokeDispatcherService>();
+            config.AdditionalServices.TryAddSingleton<IUpdateLibraryService, UpdateLibraryService>();
+
+            ServiceProfile? profile = await LoadServiceProfile();
+            if (profile.HasValue) config.WithServiceProfile(profile.Value);
+
+            audioServicesHandler.Start(config);
+        }
+
+        private async Task<ServiceProfile?> LoadServiceProfile()
         {
             try
             {
+
                 IStorageItem item = await ApplicationData.Current.LocalFolder.TryGetItemAsync(serviceProfileFilename);
                 if (item is StorageFile)
                 {
                     string jsonText = await FileIO.ReadTextAsync((StorageFile)item);
-                    ServiceProfile profile = JsonConvert.DeserializeObject<ServiceProfile>(jsonText);
-                    profile.FillServiceBuilder(serviceHandler.Builder);
+                    return JsonConvert.DeserializeObject<ServiceProfile>(jsonText);
                 }
             }
             catch (Exception exc)
             {
                 System.Diagnostics.Debug.WriteLine("Loading service profile failed:\n" + exc);
             }
+
+            return null;
         }
 
         /// <summary>
@@ -138,15 +150,18 @@ namespace AudioPlayerFrontend
             {
                 backgroundTaskHandler.Stop();
 
-                ServiceProfile profile = new ServiceProfile(serviceHandler.Builder);
-                string jsonText = JsonConvert.SerializeObject(profile);
+                if (audioServicesHandler.Config != null)
+                {
+                    ServiceProfile profile = audioServicesHandler.Config.ToServiceProfile();
+                    string jsonText = JsonConvert.SerializeObject(profile);
 
-                StorageFile file = await ApplicationData.Current.LocalFolder
-                    .CreateFileAsync(serviceProfileFilename, CreationCollisionOption.OpenIfExists);
-                await FileIO.WriteTextAsync(file, jsonText);
+                    StorageFile file = await ApplicationData.Current.LocalFolder
+                        .CreateFileAsync(serviceProfileFilename, CreationCollisionOption.OpenIfExists);
+                    await FileIO.WriteTextAsync(file, jsonText);
+                }
 
-                await serviceHandler.CloseAsync();
-                serviceHandler.Dispose();
+                audioServicesBuilderNavigationHandler.Dispose();
+                await audioServicesHandler.Stop();
             }
             catch (Exception exc)
             {
@@ -161,49 +176,6 @@ namespace AudioPlayerFrontend
         private async void OnLeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
             if (!backgroundTaskHandler.IsRunning) await backgroundTaskHelper.Start();
-        }
-
-        private async void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(serviceHandler.ViewModel.Audio))
-            {
-                await Task.Yield(); // Resume building/setting of audio service asap
-                await AutoUpdate();
-            }
-        }
-
-        private async Task AutoUpdate()
-        {
-            ViewModel viewModel = serviceHandler.ViewModel;
-            if (viewModel.Audio == null
-                || viewModel.IsClient
-                || viewModel.IsUpdatingPlaylists) return;
-
-            try
-            {
-                viewModel.IsUpdatingPlaylists = true;
-
-                if (Settings.Current.LastUpdatedData > lastAutoUpdatePlaylists)
-                {
-                    lastAutoUpdatePlaylists = Settings.Current.LastUpdatedData;
-                }
-
-                if (DateTime.Now - Settings.Current.LastUpdatedData > autoUpdateInverval)
-                {
-                    await UpdateHelper.Update(viewModel.Audio);
-                    Settings.Current.LastUpdatedData = DateTime.Now;
-                }
-                else if (DateTime.Now - lastAutoUpdatePlaylists > autoUpdatePlaylistsInterval)
-                {
-                    await UpdateHelper.UpdatePlaylists(viewModel.Audio);
-                    lastAutoUpdatePlaylists = DateTime.Now;
-                }
-            }
-            catch { }
-            finally
-            {
-                viewModel.IsUpdatingPlaylists = false;
-            }
         }
 
         protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)

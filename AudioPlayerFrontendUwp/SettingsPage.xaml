@@ -6,7 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:con="using:StdOttUwp.Converters"
-    xmlns:audio="using:AudioPlayerBackend.Audio"
+    xmlns:audio="using:AudioPlayerBackend.AudioLibrary.PlaylistRepo"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     Loaded="Page_Loaded">
@@ -78,21 +78,6 @@
                 </ContentControl>
             </Grid>
 
-            <StackPanel Margin="3,10,3,3">
-                <TextBlock Text="Protocol:" FontSize="17" FontWeight="Bold" Margin="5,0"/>
-
-                <StackPanel Orientation="Horizontal">
-                    <RadioButton Content="Own TCP" Margin="2" HorizontalAlignment="Left" GroupName="CommunicatorProtocol"
-                                 IsEnabled="{Binding ElementName=rbnStandalone,Path=IsChecked,Converter={StaticResource inverter}}"
-                                 IsChecked="{Binding CommunicatorProtocol,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
-                                   Converter={StaticResource communicatorProtocolCon},ConverterParameter=OwnTCP}"/>
-                    <RadioButton Content="Mqtt" Margin="2" HorizontalAlignment="Left" GroupName="CommunicatorProtocol"
-                                 IsEnabled="{Binding ElementName=rbnStandalone,Path=IsChecked,Converter={StaticResource inverter}}"
-                                 IsChecked="{Binding CommunicatorProtocol,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
-                                   Converter={StaticResource communicatorProtocolCon},ConverterParameter=MQTT}"/>
-                </StackPanel>
-            </StackPanel>
-
             <StackPanel Margin="3,10,3,3" VerticalAlignment="Center">
                 <TextBlock Text="Shuffle:" FontSize="17" FontWeight="Bold" Margin="5,3"/>
 
@@ -142,10 +127,6 @@
                 <CheckBox Name="cbxPlay" Content="Play" Margin="3"
                           IsChecked="{Binding Play,Mode=TwoWay}"
                           DoubleTapped="Cbx_DoubleTapped"/>
-
-                <CheckBox Content="Stream to client:" Margin="3" Visibility="Collapsed"
-                          IsChecked="{Binding IsStreaming,Mode=TwoWay}"
-                          IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"/>
             </StackPanel>
 
             <StackPanel Margin="3,10,3,3">

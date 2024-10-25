@@ -1,7 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Build;
-
-namespace AudioPlayerFrontend
+﻿namespace AudioPlayerFrontend
 {
     public struct ServiceProfile
     {
@@ -11,15 +8,11 @@ namespace AudioPlayerFrontend
 
         public bool BuildClient { get; set; }
 
-        public CommunicatorProtocol CommunicatorProtocol { get; set; }
-
         public int? Shuffle { get; set; }
 
         public bool? IsSearchShuffle { get; set; }
 
         public bool? Play { get; set; }
-
-        public bool? IsStreaming { get; set; }
 
         public int ServerPort { get; set; }
 
@@ -32,42 +25,5 @@ namespace AudioPlayerFrontend
         public float? Volume { get; set; }
 
         public float? ClientVolume { get; set; }
-
-        public ServiceProfile(ServiceBuilder sb)
-        {
-            BuildStandalone = sb.BuildStandalone;
-            BuildServer = sb.BuildServer;
-            BuildClient = sb.BuildClient;
-            CommunicatorProtocol = sb.CommunicatorProtocol;
-            Shuffle = (int?)sb.Shuffle;
-            IsSearchShuffle = sb.IsSearchShuffle;
-            Play = sb.Play;
-            IsStreaming = sb.IsStreaming;
-            ServerPort = sb.ServerPort;
-            ClientPort = sb.ClientPort;
-            SearchKey = sb.SearchKey;
-            ServerAddress = sb.ServerAddress;
-            Volume = sb.Volume;
-            ClientVolume = null;
-        }
-
-        public void FillServiceBuilder(ServiceBuilder builder)
-        {
-            if (BuildStandalone) builder.WithStandalone();
-            else if (BuildServer) builder.WithServer(ServerPort);
-            else if (BuildClient) builder.WithClient(ServerAddress, ClientPort);
-
-            builder
-                .WithCommunicatorProtocol(CommunicatorProtocol)
-                .WithShuffle((OrderType?)Shuffle)
-                .WithIsSearchShuffle(IsSearchShuffle)
-                .WithPlay(Play)
-                .WithIsStreaming(IsStreaming)
-                .WithServerPort(ServerPort)
-                .WithClientPort(ClientPort)
-                .WithSearchKey(SearchKey)
-                .WithServerAddress(ServerAddress)
-                .WithVolume(Volume);
-        }
     }
 }

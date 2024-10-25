@@ -37,21 +37,14 @@
 
         <ctl:IconButton Grid.Column="3" Symbol="SelectAll" Margin="3" Click="IbnSelectAll_Click"/>
 
-        <con:SingleInputConverter x:Name="sicPlaylist" Input="{Binding Playlists}"
-                                  Convert="SicPlaylist_Convert"/>
-
-        <con:SingleInputConverter x:Name="sicSongsCount" Input="{Binding ElementName=sicPlaylist,Path=Output.Songs}"
+        <con:SingleInputConverter x:Name="sicSongsCount" Input="{Binding Path=SearchPlaylist.Songs}"
                                   Convert="SicSongsCount_Convert"/>
 
         <Button Grid.Column="4" Margin="3" MinWidth="40" VerticalAlignment="Stretch"
                 Content="{Binding ElementName=sicSongsCount,Path=Output}" Click="BtnClear_Click"/>
 
-        <con:MultipleInputs2Converter x:Name="micSongs" Input0="{Binding SearchSongs}"
-                                      Input1="{Binding CurrentPlaylist.AllSongs}"
-                                      Convert="MicSongs_Convert"/>
-
         <ListBox Grid.Row="2" Grid.ColumnSpan="5" Margin="0,5" HorizontalAlignment="Stretch"
-                 ItemsSource="{Binding ElementName=micSongs,Path=Output}" 
+                 ItemsSource="{Binding SearchSongs}" 
                  SelectionChanged="ListBox_SelectionChanged">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
