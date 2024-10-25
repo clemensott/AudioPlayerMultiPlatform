@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -95,7 +96,8 @@ namespace AudioPlayerFrontend
                 if (viewModel.AppendSources)
                 {
                     Playlist playlist = await viewModel.PlaylistsRepo.GetPlaylist(selectedPlaylistInfo.Id);
-                    newAllPaths = UpdateLibraryService.LoadAllFilePaths(playlist.FileMediaSources).Concat(newPaths).ToArray();
+                    IEnumerable<string> existingPaths = UpdateLibraryService.LoadAllFilePaths(playlist.FileMediaSources);
+                    newAllPaths = existingPaths.Concat(newPaths).Distinct().ToArray();
                 }
                 else
                 {

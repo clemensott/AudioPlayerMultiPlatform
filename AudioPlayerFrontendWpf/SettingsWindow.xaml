@@ -132,12 +132,6 @@
                         <CheckBox Name="cbxPlay" Content="Play" Margin="3,0"
                                   VerticalAlignment="Center" IsChecked="{Binding Play,Mode=TwoWay}"
                                   MouseRightButtonUp="CbxPlay_MouseRightButtonUp"/>
-
-                        <CheckBox Content="Stream to client:" VerticalAlignment="Center" Margin="10,0,0,0"
-                                  Visibility="Collapsed"
-                                  IsChecked="{Binding IsStreaming,Mode=TwoWay}"
-                                  IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"
-                                  MouseRightButtonUp="CbxStreaming_MouseRightButtonUp"/>
                     </StackPanel>
 
                     <StackPanel Grid.Row="5" Margin="3,10,3,10">

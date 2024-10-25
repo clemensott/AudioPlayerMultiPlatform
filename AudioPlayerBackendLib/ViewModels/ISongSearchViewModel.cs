@@ -17,6 +17,8 @@ namespace AudioPlayerBackend.ViewModels
 
         IEnumerable<Song> SearchSongs { get; }
 
+        IPlaylistViewModel SearchPlaylist { get; }
+
         Task AddSongsToSearchPlaylist(IEnumerable<Song> songs, SearchPlaylistAddType addType);
     }
 }

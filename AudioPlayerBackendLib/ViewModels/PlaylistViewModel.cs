@@ -329,6 +329,21 @@ namespace AudioPlayerBackend.ViewModels
             Songs = SongsHelper.GetAllSongs(shuffledSongs.ToNotNull(), Shuffle).ToArray();
         }
 
+        public async Task RemoveSong(Guid songId)
+        {
+            if (!Id.TryHasValue(out Guid id)) return;
+
+            Song[] newSongs = Songs.Where(s => s.Id != songId).ToArray();
+            if (Songs.SequenceEqual(newSongs)) return;
+
+            await playlistsRepo.SendSongsChange(id, newSongs);
+        }
+
+        public async Task ClearSongs()
+        {
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendSongsChange(id, new Song[0]);
+        }
+
         public async Task Dispose()
         {
             await Stop();

@@ -93,11 +93,6 @@ namespace AudioPlayerFrontend
             cbxPlay.IsChecked = ServiceBuilder.Play = null;
         }
 
-        private void CbxStreaming_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            ServiceBuilder.IsStreaming = null;
-        }
-
         private void CbxAllShuffle_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             ServiceBuilder.Shuffle = null;

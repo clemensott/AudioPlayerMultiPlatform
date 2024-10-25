@@ -34,5 +34,9 @@ namespace AudioPlayerBackend.ViewModels
         Task SetPlaylistId(Guid? id);
 
         Task SendRequestSong(RequestSong? requestSong);
+
+        Task RemoveSong(Guid songId);
+
+        Task ClearSongs();
     }
 }

@@ -14,7 +14,7 @@ namespace AudioPlayerBackend.Build
     public class AudioServicesBuildConfig : INotifyPropertyChanged
     {
         private bool autoUpdate;
-        private bool? isSearchShuffle, play, isStreaming;
+        private bool? isSearchShuffle, play;
         private OrderType? shuffle;
         private int serverPort;
         private int? clientPort;
@@ -86,18 +86,6 @@ namespace AudioPlayerBackend.Build
 
                 play = value;
                 OnPropertyChanged(nameof(Play));
-            }
-        }
-
-        public bool? IsStreaming
-        {
-            get => isStreaming;
-            set
-            {
-                if (value == isStreaming) return;
-
-                isStreaming = value;
-                OnPropertyChanged(nameof(IsStreaming));
             }
         }
 
@@ -204,13 +192,12 @@ namespace AudioPlayerBackend.Build
             Option searchKeyOpt = Option.GetLongOnly("search-key", "Shuffles all songs.", false, 1, 0);
             Option playOpt = new Option("p", "play", "Starts playback on startup", false, 0, 0);
             Option serviceVolOpt = new Option("v", "volume", "The volume of service (value between 0 and 1)", false, 1, 1);
-            Option streamingOpt = Option.GetLongOnly("stream", "If given the audio is streamed to the client", false, 0, 0);
             Option dataFileOpt = new Option("d", "data-file", "Filepath to where to read and write data.", false, 1, 1);
             Option autoUpdateOpt = new Option("a", "auto-update", "Enable auto update of library and its playlists.", false, 0, 0);
             Option autoUpdateRootsOpt = Option.GetLongOnly("auto-update-sources", "Filepaths to source roots that create playlists.", false, 1, 1);
 
             Options options = new Options(sourcesOpt, clientOpt, serverOpt, playOpt,
-                orderSongsOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, streamingOpt, dataFileOpt, autoUpdateOpt, autoUpdateRootsOpt);
+                orderSongsOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, dataFileOpt, autoUpdateOpt, autoUpdateRootsOpt);
             OptionParseResult result = options.Parse(args);
 
             if (result.TryGetFirstValidOptionParseds(serverOpt, out parsed))
@@ -231,9 +218,7 @@ namespace AudioPlayerBackend.Build
 
             if (result.TryGetFirstValidOptionParseds(serviceVolOpt, out parsed)) WithVolume(float.Parse(parsed.Values[0]));
 
-            if (result.HasValidOptionParseds(streamingOpt)) WithIsStreaming();
-
-            if (result.TryGetFirstValidOptionParseds(dataFileOpt, out parsed)) DataFilePath = parsed.Values[0];
+            if (result.TryGetFirstValidOptionParseds(dataFileOpt, out parsed)) WithDateFilePath(parsed.Values[0]);
 
             if (result.HasValidOptionParseds(autoUpdateOpt)) WithAutoUpdate();
             if (result.TryGetFirstValidOptionParseds(autoUpdateRootsOpt, out parsed)) WithAutoUpdateRoots(parsed.Values.ToArray());
@@ -333,16 +318,16 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public AudioServicesBuildConfig WithVolume(float? volume)
+        public AudioServicesBuildConfig WithDateFilePath(string path)
         {
-            Volume = volume;
+            DataFilePath = path;
 
             return this;
         }
 
-        public AudioServicesBuildConfig WithIsStreaming(bool? value = true)
+        public AudioServicesBuildConfig WithVolume(float? volume)
         {
-            IsStreaming = value;
+            Volume = volume;
 
             return this;
         }
@@ -388,7 +373,6 @@ namespace AudioPlayerBackend.Build
                 DataFilePath = DataFilePath,
                 Shuffle = Shuffle,
                 IsSearchShuffle = IsSearchShuffle,
-                IsStreaming = IsStreaming,
                 Play = Play,
                 SearchKey = SearchKey,
                 ServerAddress = ServerAddress,

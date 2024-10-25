@@ -403,12 +403,8 @@ namespace AudioPlayerFrontend
         private object MicCurrentSongIndex_ConvertRef(Song? currentSong, ref RequestSong? requestSong,
             IEnumerable<Song> allSongs, IEnumerable<Song> searchSongs, bool isSearching, ref int lbxIndex, int changedInput)
         {
-            IEnumerable<Song> songs;
+            IEnumerable<Song> songs = isSearching ? searchSongs : allSongs;
             IPlaylistViewModel currentPlaylist = viewModel.CurrentPlaylist;
-
-            if (!isSearching) songs = allSongs;
-            else if (!currentPlaylist.Type.HasFlag(PlaylistType.Search)) songs = searchSongs;
-            else songs = searchSongs.Except(allSongs);
 
             if (changedInput == 5 && lbxIndex != -1 && isSearching) ;
             else if (changedInput == 5 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))

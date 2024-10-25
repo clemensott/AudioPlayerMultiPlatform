@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.GenericEventArgs;
 using AudioPlayerBackend.Player;
 using Microsoft.Win32;
 using System;
@@ -21,15 +22,22 @@ namespace AudioPlayerFrontend.Join
         public event EventHandler<MediaOpenedEventArgs> MediaOpened;
         public event EventHandler<MediaFailedEventArgs> MediaFailed;
         public event EventHandler<MediaEndedEventArgs> MediaEnded;
+        public event EventHandler<HandledEventArgs> NextPressed;
+        public event EventHandler<HandledEventArgs> PreviousPressed;
+        public event EventHandler<ValueChangedEventArgs<PlaybackState>> PlayStateChanged;
+        public event EventHandler<ValueChangedEventArgs<float>> VolumeChanged;
 
         public PlaybackState PlayState
         {
             get => playState;
             set
             {
+                PlaybackState oldState = playState;
                 playState = value;
 
                 HandlePlayStateChange();
+
+                PlayStateChanged?.Invoke(this, new ValueChangedEventArgs<PlaybackState>(oldState, value));
             }
         }
 

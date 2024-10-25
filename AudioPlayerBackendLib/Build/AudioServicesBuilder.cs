@@ -113,7 +113,7 @@ namespace AudioPlayerBackend.Build
                 {
                     CompleteToken.Exception = e;
 
-                    await audioServices.Dispose();
+                    if (audioServices != null) await audioServices.Dispose();
 
                     if (CompleteToken.IsEnded.HasValue) return;
 
@@ -208,7 +208,7 @@ namespace AudioPlayerBackend.Build
             return services.BuildServiceProvider();
         }
 
-        public async Task CompleteServices(AudioServices audioServices)
+        private async Task CompleteServices(AudioServices audioServices)
         {
             ILibraryRepo libraryRepo = audioServices.GetLibraryRepo();
 
