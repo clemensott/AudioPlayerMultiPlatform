@@ -35,7 +35,7 @@
         <StackPanel Grid.Row="1" VerticalAlignment="Center">
             <StackPanel Margin="5">
                 <TextBlock Text="Opening Service..." FontSize="20" HorizontalAlignment="Center" Margin="5,0"/>
-                <TextBlock FontSize="18" HorizontalAlignment="Center" Text="{Binding Communicator.Name}"/>
+                <TextBlock FontSize="18" HorizontalAlignment="Center" Text="{Binding CommunicatorName}"/>
             </StackPanel>
 
             <ProgressRing IsActive="True" Height="100" Width="100" Margin="10"/>
@@ -44,28 +44,13 @@
                         Visibility="{Binding Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
                 <Button Content="Settings" Width="100" Margin="5" HorizontalAlignment="Center" Click="BtnSettings_Click"/>
                 <Button Content="Exception" Width="100" Margin="5" HorizontalAlignment="Center" 
-                        Visibility="{Binding ElementName=micException,Path=Output,
+                        Visibility="{Binding CompleteToken.Exception,
                           Converter={StaticResource excCon}}" Click="BtnException_Click"/>
             </StackPanel>
         </StackPanel>
 
         <TextBlock Grid.Row="2" HorizontalAlignment="Center" Margin="2" TextWrapping="Wrap"
-                   Text="{Binding ElementName=micException,Path=Output.Message}"/>
-
-        <con:MultipleInputs4Converter Name="micException" 
-                                      Input0="{Binding CommunicatorToken.Exception}"
-                                      Input1="{Binding SyncToken.Exception}"
-                                      Input2="{Binding PlayerToken.Exception}"
-                                      Input3="{Binding CompleteToken.Exception}"
-                                      Convert="MicException_Convert"/>
-
-        <ListView Grid.Row="3" SelectionMode="None" ItemsSource="{Binding Communicator.InitProps}"/>
-
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="10"
-                    Visibility="{Binding CommunicatorToken.Result,Converter={StaticResource colCon},FallbackValue={StaticResource collapsed}}">
-            <TextBlock Text="SongOffset: "/>
-            <TextBlock Text="{Binding SongOffset}"/>
-        </StackPanel>
+                   Text="{Binding Path=CompleteToken.Exception.Message}"/>
 
         <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="10"
                     Visibility="{Binding Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">

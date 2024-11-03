@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.Player;
-using StdOttStandard.Linq;
+﻿using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -12,13 +11,10 @@ using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
 using StdOttStandard.Converter.MultipleInputs;
 using System.Threading.Tasks;
-using System.Collections.ObjectModel;
 using StdOttStandard.TaskCompletionSources;
-using System.Collections.Specialized;
 using Windows.UI.Xaml.Controls.Primitives;
 using StdOttUwp;
 using AudioPlayerBackend;
-using StdOttUwp.Converters;
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerFrontend.Extensions;
 using AudioPlayerBackend.ViewModels;
@@ -44,6 +40,8 @@ namespace AudioPlayerFrontend
         {
             audioServicesHandler = (AudioServicesHandler)e.Parameter;
             audioServicesHandler.AudioServicesChanged += AudioServicesHandler_AudioServicesChanged;
+
+            SetAudioServices(audioServicesHandler.AudioServices);
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -53,7 +51,7 @@ namespace AudioPlayerFrontend
 
         private void AudioServicesHandler_AudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
         {
-            DataContext = viewModel = e.NewServices.GetViewModel();
+            SetAudioServices(e.NewServices);
         }
 
         private void SetAudioServices(AudioServices audioServices)
@@ -86,8 +84,8 @@ namespace AudioPlayerFrontend
         /// <returns>Show remove IconButton on every Song (true) or not (false).</returns>
         private object MicDoRemove_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
-            PlaylistInfo playlist = (PlaylistInfo)args.Input1;
-            return !playlist.Type.HasFlag(PlaylistType.SourcePlaylist);
+            PlaylistType? playlistType = (PlaylistType?)args.Input1;
+            return playlistType?.HasFlag(PlaylistType.SourcePlaylist) == false;
         }
 
         /// <summary>
@@ -196,15 +194,14 @@ namespace AudioPlayerFrontend
 
         private object MicPlaylistUpdateable_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
-            PlaylistInfo playlist = (PlaylistInfo)args.Input0;
-            return playlist.Type.HasFlag(PlaylistType.SourcePlaylist) && false.Equals(args.Input1);
+            PlaylistType? playlistType = (PlaylistType?)args.Input0;
+            return playlistType?.HasFlag(PlaylistType.SourcePlaylist) == true && false.Equals(args.Input1);
         }
 
         private async void MfiUpdateSongs_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                //viewModel.IsUpdatingPlaylists = true;
                 PlaylistInfo playlist = UwpUtils.GetDataContext<PlaylistInfo>(sender);
                 await updateLibraryService.UpdateSourcePlaylist(playlist.Id);
             }
@@ -212,27 +209,18 @@ namespace AudioPlayerFrontend
             {
                 await DialogUtils.ShowSafeAsync(exc.Message, "Update songs error");
             }
-            finally
-            {
-                //viewModel.IsUpdatingPlaylists = false;
-            }
         }
 
         private async void MfiReloadSongs_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                //viewModel.IsUpdatingPlaylists = true;
                 PlaylistInfo playlist = UwpUtils.GetDataContext<PlaylistInfo>(sender);
                 await updateLibraryService.ReloadSourcePlaylist(playlist.Id);
             }
             catch (Exception exc)
             {
                 await DialogUtils.ShowSafeAsync(exc.Message, "Reload songs error");
-            }
-            finally
-            {
-                //viewModel.IsUpdatingPlaylists = false;
             }
         }
 
@@ -255,28 +243,12 @@ namespace AudioPlayerFrontend
 
         private async void AbbUpdatePlaylistsAndSongs_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                //viewModel.IsUpdatingPlaylists = true;
-                await updateLibraryService.UpdateLibrary();
-            }
-            finally
-            {
-                //viewModel.IsUpdatingPlaylists = false;
-            }
+            await updateLibraryService.UpdateLibrary();
         }
 
         private async void AbbUReloadPlaylistsAndSongs_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                //viewModel.IsUpdatingPlaylists = true;
-                await updateLibraryService.ReloadLibrary();
-            }
-            finally
-            {
-                //viewModel.IsUpdatingPlaylists = false;
-            }
+            await updateLibraryService.ReloadLibrary();
         }
 
         private async void AudioPositionSlider_UserPositionChanged(object sender, TimeSpan e)

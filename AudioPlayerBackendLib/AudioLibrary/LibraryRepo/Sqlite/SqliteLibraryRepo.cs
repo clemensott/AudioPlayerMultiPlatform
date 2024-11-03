@@ -108,7 +108,6 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
         {
             await UpdateLibraryValue("current_playlist_id", currentPlaylistId?.ToString());
             OnCurrentPlaylistIdChange?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
-
         }
 
         public async Task SendFoldersLastUpdatedChange(DateTime? foldersLastUpdated)

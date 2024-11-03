@@ -46,7 +46,7 @@
         <con:SingleInputConverter x:Name="sicIsUpdating" Output="{Binding IsUpdatingPlaylists}"/>
         <con:SingleInputConverter x:Name="sicIsClient" Output="{Binding IsClient}"/>
 
-        <Grid Visibility="{Binding ElementName=micPlaylists,Path=Output.Count,Converter={StaticResource visCon}}">
+        <Grid Visibility="{Binding Path=Playlists.Count,Converter={StaticResource visCon}}">
             <StackPanel Visibility="{Binding IsUpdatingPlaylists,Converter={StaticResource visCon}}">
                 <TextBlock Text="Updating..." HorizontalAlignment="Center"/>
                 <ProgressBar IsIndeterminate="True" />
@@ -54,7 +54,7 @@
         </Grid>
 
         <Grid Grid.Row="1"
-              Visibility="{Binding Audio,Converter={StaticResource visCon}}">
+              Visibility="{Binding IsLoaded,Converter={StaticResource visCon}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -65,7 +65,7 @@
 
             <con:MultipleInputs2Converter x:Name="micViewPlaylists"
                                           Input0="{Binding ElementName=atbPlaylists,Path=IsChecked}"
-                                          Input1="{Binding Audio.CurrentPlaylist}"
+                                          Input1="{Binding Path=CurrentPlaylist.Id}"
                                           Convert="MicViewPlaylists_Convert"/>
 
             <Grid Grid.Row="0" Margin="5,0">
@@ -77,19 +77,19 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock FontSize="25" FontWeight="SemiBold" VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis" Text="{Binding Audio.CurrentPlaylist.Name}"
+                           TextTrimming="CharacterEllipsis" Text="{Binding CurrentPlaylist.Name}"
                            Visibility="{Binding ElementName=micViewPlaylists,Path=Output,Converter={StaticResource hidCon}}"/>
 
                 <TextBlock FontSize="25" FontWeight="SemiBold" Text="Playlists" VerticalAlignment="Center"
                            Visibility="{Binding ElementName=micViewPlaylists,Path=Output,Converter={StaticResource visCon}}"/>
 
                 <ctl:IconButton Grid.Column="1" Margin="3" Click="IbnLoopType_Click"
-                                Symbol="{Binding Audio.CurrentPlaylist.Loop,Converter={StaticResource loopIcoCon}}"
-                                Visibility="{Binding Audio.CurrentPlaylist,Converter={StaticResource visCon}}"/>
+                                Symbol="{Binding CurrentPlaylist.Loop,Converter={StaticResource loopIcoCon}}"
+                                Visibility="{Binding CurrentPlaylist,Converter={StaticResource visCon}}"/>
 
                 <ctl:IconButton Grid.Column="2" Margin="3" Click="IbnOrderType_Click"
-                                Symbol="{Binding Audio.CurrentPlaylist.Shuffle,Converter={StaticResource shuffleIcoCon}}"
-                                Visibility="{Binding Audio.CurrentPlaylist,Converter={StaticResource visCon}}"/>
+                                Symbol="{Binding CurrentPlaylist.Shuffle,Converter={StaticResource shuffleIcoCon}}"
+                                Visibility="{Binding CurrentPlaylist,Converter={StaticResource visCon}}"/>
 
                 <ctl:IconButton Grid.Column="3" Symbol="Find" Margin="3" Click="IbnSearch_Click"/>
             </Grid>
@@ -103,19 +103,19 @@
 
                 <TextBlock Text="Volume:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,3,5,0"/>
                 <Slider Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,-12" SnapsTo="StepValues"
-                        StepFrequency="0.01" Maximum="1" Value="{Binding Audio.Volume,Mode=TwoWay}"
+                        StepFrequency="0.01" Maximum="1" Value="{Binding Volume,Mode=TwoWay}"
                         ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
             </Grid>
 
             <con:MultipleInputs4Converter x:Name="micSongs" 
-                                          Input0="{Binding Audio.CurrentPlaylist.AllSongs}" 
-                                          Input1="{Binding Audio.CurrentPlaylist.CurrentSong}" 
-                                          Input2="{Binding Audio.CurrentPlaylist.WannaSong,Mode=TwoWay}" 
+                                          Input0="{Binding CurrentPlaylist.Songs}" 
+                                          Input1="{Binding CurrentPlaylist.CurrentSong}" 
+                                          Input2="{Binding CurrentPlaylist.RequestedSong,Mode=TwoWay}" 
                                           Input3="{StaticResource negativeOne}"
                                           ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
             <con:MultipleInputs2Converter x:Name="micDoRemove" 
-                                          Input1="{Binding Audio.CurrentPlaylist}"
+                                          Input1="{Binding CurrentPlaylist.Type}"
                                           Convert="MicDoRemove_Convert"/>
 
             <ListBox Grid.Row="2" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
@@ -157,11 +157,11 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <Grid Grid.Row="2" DataContext="{Binding Audio}"
+            <Grid Grid.Row="2"
                   Visibility="{Binding ElementName=micViewPlaylists,Path=Output,Converter={StaticResource visCon}}">
                 <ListBox x:Name="lbxPlaylists" Margin="0,5" SelectionMode="Single"
-                         ItemsSource="{Binding ElementName=micPlaylists,Path=Output}"
-                         SelectedItem="{Binding ElementName=micPlaylists,Path=Input3,Mode=TwoWay}"
+                         ItemsSource="{Binding Playlists}"
+                         SelectedIndex="{Binding CurrentPlaylistIndex,Mode=TwoWay}"
                          SelectionChanged="LbxPlaylists_SelectionChanged">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
@@ -176,7 +176,7 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 
-                                <con:MultipleInputs2Converter x:Name="micPlaylistUpdateable" Input0="{Binding}" 
+                                <con:MultipleInputs2Converter x:Name="micPlaylistUpdateable" Input0="{Binding Type}" 
                                                               Input1="{Binding ElementName=sicIsClient,Path=Output}"
                                                               Convert="MicPlaylistUpdateable_Convert"/>
 
@@ -184,7 +184,7 @@
                                            TextWrapping="WrapWholeWords" Text="{Binding Name}"/>
 
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Songs.Length}"/>
+                                    <TextBlock Text="{Binding SongsCount}"/>
                                     <TextBlock Text=" Song(s)"/>
                                 </StackPanel>
 
@@ -208,7 +208,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <Grid Visibility="{Binding ElementName=micPlaylists,Path=Output.Count,Converter={StaticResource hidCon}}">
+                <Grid Visibility="{Binding Path=Playlists.Count,Converter={StaticResource hidCon}}">
                     <StackPanel VerticalAlignment="Center"
                                 Visibility="{Binding ElementName=sicIsUpdating,Path=Output,Converter={StaticResource visCon}}">
                         <TextBlock Text="Updating..." Margin="5" HorizontalAlignment="Center"
@@ -217,7 +217,7 @@
                     </StackPanel>
                 </Grid>
 
-                <Grid Visibility="{Binding ElementName=micPlaylists,Path=Output.Count,Converter={StaticResource hidCon}}">
+                <Grid Visibility="{Binding Path=Playlists.Count,Converter={StaticResource hidCon}}">
                     <TextBlock Text="&lt;No Playlists&gt;" HorizontalAlignment="Center"
                                Margin="10" FontStyle="Italic" FontSize="20" FontWeight="SemiBold"
                                Visibility="{Binding ElementName=sicIsUpdating,Path=Output,Converter={StaticResource hidCon}}"/>
@@ -225,7 +225,7 @@
             </Grid>
 
 
-            <Grid Grid.Row="3" Margin="5,1" DataContext="{Binding Audio.CurrentPlaylist}"
+            <Grid Grid.Row="3" Margin="5,1" DataContext="{Binding CurrentPlaylist}"
                   Visibility="{Binding CurrentSong,Converter={StaticResource visCon},
                     FallbackValue={StaticResource collapsed}}">
                 <Grid.ColumnDefinitions>
@@ -241,14 +241,14 @@
                 </StackPanel>
             </Grid>
 
-            <local:AudioPositionSlider Grid.Row="4" Position="{Binding Audio.CurrentPlaylist.Position}"
-                                       Duration="{Binding Audio.CurrentPlaylist.Duration}"
-                                       Visibility="{Binding Audio.CurrentPlaylist,Converter={StaticResource visCon}}"
+            <local:AudioPositionSlider Grid.Row="4" Position="{Binding CurrentPlaylist.Position}"
+                                       Duration="{Binding CurrentPlaylist.Duration}"
+                                       Visibility="{Binding CurrentPlaylist.Id,Converter={StaticResource visCon}}"
                                        UserPositionChanged="AudioPositionSlider_UserPositionChanged"/>
         </Grid>
 
         <StackPanel Grid.Row="1" VerticalAlignment="Center"
-                    Visibility="{Binding Audio,Converter={StaticResource hidCon}}">
+                    Visibility="{Binding IsLoaded,Converter={StaticResource hidCon}}">
             <ProgressRing Grid.Row="1" IsActive="True" Height="100" Width="100" Margin="10"/>
             <Button Grid.Row="2" Content="Settings" Width="100" Margin="5"
                     HorizontalAlignment="Center" Click="BtnSettings_Click"/>
@@ -256,14 +256,14 @@
     </Grid>
 
     <Page.BottomAppBar>
-        <CommandBar Visibility="{Binding Audio,Converter={StaticResource visCon}}">
+        <CommandBar Visibility="{Binding IsLoaded,Converter={StaticResource visCon}}">
             <CommandBar.PrimaryCommands>
                 <AppBarToggleButton x:Name="atbPlaylists" Icon="List" Label="Playlists"/>
                 <AppBarButton Icon="Previous" Label="Previous" Click="AbbPrevious_Click"/>
-                <AppBarButton Label="{Binding Audio.PlayState,Converter={StaticResource isPlayPauseLabelCon}}"
+                <AppBarButton Label="{Binding PlayState,Converter={StaticResource isPlayPauseLabelCon}}"
                               Click="AbbPlayPause_Click">
                     <AppBarButton.Icon>
-                        <SymbolIcon Symbol="{Binding Audio.PlayState,Converter={StaticResource isPlayPauseIconCon}}"/>
+                        <SymbolIcon Symbol="{Binding PlayState,Converter={StaticResource isPlayPauseIconCon}}"/>
                     </AppBarButton.Icon>
                 </AppBarButton>
                 <AppBarButton Icon="Next" Label="Next" Click="AbbNext_Click"/>

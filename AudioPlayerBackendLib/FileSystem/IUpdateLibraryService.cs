@@ -7,6 +7,9 @@ namespace AudioPlayerBackend.FileSystem
 {
     public interface IUpdateLibraryService : IAudioService
     {
+        event EventHandler UpdateStarted;
+        event EventHandler UpdateCompleted;
+
         Task ReloadLibrary();
 
         Task UpdateLibrary();

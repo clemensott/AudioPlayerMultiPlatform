@@ -74,9 +74,11 @@
                                    Text="{Binding Artist,TargetNullValue=&lt;Unkown&gt;}"/>
 
                         <StackPanel Grid.Column="3" Grid.RowSpan="2" Orientation="Horizontal">
-                            <ctl:IconButton Symbol="Play" Background="Transparent" 
+                            <ctl:IconButton Symbol="Play" Background="Transparent"
                                             Margin="3" Click="IbnPlay_Click"/>
-                            <ctl:IconButton Symbol="Add" Background="Transparent" 
+                            <ctl:IconButton Symbol="Next" Background="Transparent"
+                                            Margin="3" Click="IbnNext_Click"/>
+                            <ctl:IconButton Symbol="Add" Background="Transparent"
                                             Margin="3" Click="IbnAdd_Click"/>
                         </StackPanel>
                     </Grid>

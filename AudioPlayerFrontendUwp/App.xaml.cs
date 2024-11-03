@@ -1,7 +1,5 @@
 ﻿using AudioPlayerFrontend.Join;
 using System;
-using System.IO;
-using System.Xml.Serialization;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
@@ -16,11 +14,11 @@ using Windows.ApplicationModel.Background;
 using StdOttStandard.Dispatch;
 using AudioPlayerBackend;
 using AudioPlayerFrontend.Extensions;
-using System.ComponentModel;
 using Newtonsoft.Json;
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.Player;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 
 namespace AudioPlayerFrontend
 {
@@ -37,14 +35,13 @@ namespace AudioPlayerFrontend
         private readonly AudioServicesBuilderNavigationHandler audioServicesBuilderNavigationHandler;
         private readonly BackgroundTaskHandler backgroundTaskHandler;
         private readonly BackgroundTaskHelper backgroundTaskHelper;
-        private DateTime lastAutoUpdatePlaylists;
-        Task loadServiceProfileTask = null;
+        private Task loadServiceProfileTask = null;
 
         public App()
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
-            //this.UnhandledException += OnUnhandledException;
+            this.UnhandledException += OnUnhandledException;
             this.LeavingBackground += OnLeavingBackground;
 
             loadServiceProfileTask = Task.Run(StartAudioServicesHandler);
@@ -56,10 +53,10 @@ namespace AudioPlayerFrontend
             backgroundTaskHelper = new BackgroundTaskHelper();
         }
 
-        //private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        //{
-        //    Settings.Current.SetUnhandledException(e.Exception);
-        //}
+        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Settings.Current.SetUnhandledException(e.Exception);
+        }
 
         /// <summary>
         /// Wird aufgerufen, wenn die Anwendung durch den Endbenutzer normal gestartet wird. Weitere Einstiegspunkte
@@ -90,9 +87,22 @@ namespace AudioPlayerFrontend
 
         private async Task StartAudioServicesHandler()
         {
+            //var db = await ApplicationData.Current.LocalFolder.TryGetItemAsync("library.db");
+            //await db?.DeleteAsync();
+
             AudioServicesBuildConfig config = new AudioServicesBuildConfig()
                 .WithAutoUpdate()
+                .WithDefaultUpdateRoots(new FileMediaSourceRootInfo[]
+                {
+                    new FileMediaSourceRootInfo(
+                        FileMediaSourceRootUpdateType.Songs | FileMediaSourceRootUpdateType.Folders,
+                        KnownFolders.MusicLibrary.DisplayName,
+                        FileMediaSourceRootPathType.KnownFolder,
+                        KnownFolderId.MusicLibrary.ToString()
+                   ),
+                })
                 .WithDateFilePath("library.db");
+
             config.AdditionalServices.TryAddSingleton<IPlayer, Player>();
             config.AdditionalServices.TryAddSingleton<IFileSystemService, FileSystemService>();
             config.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, InvokeDispatcherService>();
@@ -108,7 +118,6 @@ namespace AudioPlayerFrontend
         {
             try
             {
-
                 IStorageItem item = await ApplicationData.Current.LocalFolder.TryGetItemAsync(serviceProfileFilename);
                 if (item is StorageFile)
                 {

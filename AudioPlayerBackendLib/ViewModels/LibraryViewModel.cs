@@ -2,6 +2,7 @@
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.Extensions;
 using AudioPlayerBackend.Build;
+using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.Player;
 using StdOttStandard.Linq;
 using System;
@@ -17,8 +18,9 @@ namespace AudioPlayerBackend.ViewModels
     {
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
-        private bool isLoaded, isUpdatingPlaylist;
-        private int currentPlaylistIndex;
+        private readonly IUpdateLibraryService updateLibraryService;
+        private bool isLoaded, isUpdatingPlaylist, isUpdatingPlaylists;
+        private int currentPlaylistIndex, playlistsUpdatingCount;
         private PlaybackState playState;
         private double volume;
         private ObservableCollection<PlaylistInfo> playlists;
@@ -35,7 +37,21 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
+        public bool IsClient { get; }
+
         public bool IsLocalFileMediaSource { get; }
+
+        public bool IsUpdatingPlaylists
+        {
+            get => isUpdatingPlaylists;
+            private set
+            {
+                if (value == isUpdatingPlaylists) return;
+
+                isUpdatingPlaylists = value;
+                OnPropertyChanged(nameof(IsUpdatingPlaylists));
+            }
+        }
 
         public PlaybackState PlayState
         {
@@ -46,7 +62,8 @@ namespace AudioPlayerBackend.ViewModels
 
                 playState = value;
                 OnPropertyChanged(nameof(PlayState));
-                libraryRepo.SendPlayStateChange(value);
+
+                if (IsLoaded) libraryRepo.SendPlayStateChange(value);
             }
         }
 
@@ -59,7 +76,8 @@ namespace AudioPlayerBackend.ViewModels
 
                 volume = value;
                 OnPropertyChanged(nameof(Volume));
-                libraryRepo.SendVolumeChange(value);
+
+                if (IsLoaded) libraryRepo.SendVolumeChange(value);
             }
         }
 
@@ -68,12 +86,12 @@ namespace AudioPlayerBackend.ViewModels
             get => currentPlaylistIndex;
             set
             {
-                if (isUpdatingPlaylist||value == CurrentPlaylistIndex) return;
+                if (isUpdatingPlaylist || value == CurrentPlaylistIndex) return;
 
                 currentPlaylistIndex = value;
                 OnPropertyChanged(nameof(CurrentPlaylistIndex));
 
-                libraryRepo.SendCurrentPlaylistIdChange(Playlists.ElementAtOrDefault(value)?.Id);
+                if (IsLoaded) libraryRepo.SendCurrentPlaylistIdChange(Playlists.ElementAtOrDefault(value)?.Id);
             }
         }
 
@@ -95,11 +113,15 @@ namespace AudioPlayerBackend.ViewModels
 
         public LibraryViewModel(AudioServicesBuildConfig config, ILibraryRepo libraryRepo,
             IPlaylistsRepo playlistsRepo, IPlaylistViewModel playlistViewModel,
-            ISongSearchViewModel songSearchViewModel)
+            ISongSearchViewModel songSearchViewModel, IUpdateLibraryService updateLibraryService)
         {
+            IsClient = config.BuildClient;
             IsLocalFileMediaSource = config.BuildStandalone || config.BuildServer;
+
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
+            this.updateLibraryService = updateLibraryService;
+
             CurrentPlaylist = playlistViewModel;
             SongSearch = songSearchViewModel;
             Playlists = new ObservableCollection<PlaylistInfo>();
@@ -125,10 +147,10 @@ namespace AudioPlayerBackend.ViewModels
         {
             Unsubscribe();
 
+            IsLoaded = false;
+
             Playlists = new ObservableCollection<PlaylistInfo>();
             await CurrentPlaylist.Stop();
-
-            IsLoaded = false;
         }
 
         private void Subscribe()
@@ -140,6 +162,21 @@ namespace AudioPlayerBackend.ViewModels
             playlistsRepo.OnInsertPlaylist += PlaylistsRepo_OnInsertPlaylist;
             playlistsRepo.OnRemovePlaylist += PlaylistsRepo_OnRemovePlaylist;
             playlistsRepo.OnSongsChange += PlaylistsRepo_OnSongsChange;
+
+            updateLibraryService.UpdateStarted += UpdateLibraryService_UpdateStarted;
+            updateLibraryService.UpdateCompleted += UpdateLibraryService_UpdateCompleted;
+        }
+
+        private void UpdateLibraryService_UpdateStarted(object sender, EventArgs e)
+        {
+            playlistsUpdatingCount++;
+            IsUpdatingPlaylists = playlistsUpdatingCount > 0;
+        }
+
+        private void UpdateLibraryService_UpdateCompleted(object sender, EventArgs e)
+        {
+            playlistsUpdatingCount--;
+            IsUpdatingPlaylists = playlistsUpdatingCount > 0;
         }
 
         private void Unsubscribe()
@@ -197,8 +234,14 @@ namespace AudioPlayerBackend.ViewModels
                 // updating the selected playlist of an listbox triggers a selection change. This restores the selection.
                 if (restoreCurrentPlaylistIndex)
                 {
-                    currentPlaylistIndex = -2;
-                    OnPropertyChanged(nameof(CurrentPlaylistIndex));
+                    try
+                    {
+                        currentPlaylistIndex = -2;
+                        OnPropertyChanged(nameof(CurrentPlaylistIndex));
+                    }
+                    // This workaround is only needed für WPF and throws an error for UWP
+                    catch { }
+
                     UpdateCurrentPlaylistIndex();
                 }
             }
@@ -241,6 +284,8 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task Dispose()
         {
+            await Stop();
+
             await CurrentPlaylist.Dispose();
             await SongSearch.Dispose();
         }

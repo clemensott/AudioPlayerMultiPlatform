@@ -8,6 +8,7 @@ using Windows.UI.Xaml.Navigation;
 using StdOttStandard.Converter.MultipleInputs;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Build;
+using Windows.UI.Core;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
 
@@ -18,8 +19,9 @@ namespace AudioPlayerFrontend
     /// </summary>
     public sealed partial class BuildOpenPage : Page
     {
+        private bool isPageClosed = false;
         private AudioServicesHandler audioServicesHandler;
-        
+
         private AudioServicesBuilder Builder => DataContext as AudioServicesBuilder;
 
         public BuildOpenPage()
@@ -40,12 +42,13 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
+            isPageClosed = true;
             audioServicesHandler.ServicesBuild -= AudioServicesHandler_ServicesBuild;
         }
 
         private async void AudioServicesHandler_ServicesBuild(object sender, AudioServicesBuilder e)
         {
-            await SetDataContext(e);
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () => await SetDataContext(e));
         }
 
         private async Task SetDataContext(AudioServicesBuilder dataContext)
@@ -54,7 +57,7 @@ namespace AudioPlayerFrontend
 
             // only show all options if opening takes to long
             await Task.Delay(TimeSpan.FromSeconds(5));
-            DataContext = dataContext;
+            if (!isPageClosed) DataContext = dataContext;
         }
 
         private object MicException_Convert(object sender, MultiplesInputsConvert4EventArgs args)
@@ -69,7 +72,7 @@ namespace AudioPlayerFrontend
 
         private async void BtnException_Click(object sender, RoutedEventArgs e)
         {
-            Exception exception = (Exception)micException.Output;
+            Exception exception = audioServicesHandler?.Builder?.CompleteToken.Exception;
 
             if (exception != null)
             {

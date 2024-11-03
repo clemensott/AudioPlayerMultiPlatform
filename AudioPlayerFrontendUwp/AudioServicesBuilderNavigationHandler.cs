@@ -40,37 +40,40 @@ namespace AudioPlayerFrontend
         {
             if (builder == null || frame == null) return;
 
-            bool wasOnOpenPage = frame.CurrentSourcePageType == typeof(BuildOpenPage);
-            if (!wasOnOpenPage) frame.NavigateToBuildOpenPage(audioServicesHandler);
-
-            BuildEndedType endedType = await builder.CompleteToken.EndTask;
-            switch (endedType)
+            await frame.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
             {
-                case BuildEndedType.Successful:
-                    if (wasOnOpenPage)
-                    {
-                        frame.NavigateToMainPage(audioServicesHandler);
-                        frame.BackStack.RemoveAt(0);
-                    }
-                    else if (frame.CanGoBack) frame.GoBack();
-                    break;
+                bool wasOnOpenPage = frame.CurrentSourcePageType == typeof(BuildOpenPage);
+                if (!wasOnOpenPage) frame.NavigateToBuildOpenPage(audioServicesHandler);
 
-                case BuildEndedType.Canceled:
-                    // canceled means in the uwp app, a new attempt was started
-                    break;
+                BuildEndedType endedType = await builder.CompleteToken.EndTask;
+                switch (endedType)
+                {
+                    case BuildEndedType.Successful:
+                        if (wasOnOpenPage)
+                        {
+                            frame.NavigateToMainPage(audioServicesHandler);
+                            frame.BackStack.RemoveAt(0);
+                        }
+                        else if (frame.CanGoBack) frame.GoBack();
+                        break;
 
-                case BuildEndedType.Settings:
-                    await audioServicesHandler.Stop();
+                    case BuildEndedType.Canceled:
+                        // canceled means in the uwp app, a new attempt was started
+                        break;
 
-                    TaskCompletionSourceS<AudioServicesBuildConfig> settingsResult =
-                        new TaskCompletionSourceS<AudioServicesBuildConfig>(audioServicesHandler.Config.Clone());
-                    frame.NavigateToSettingsPage(settingsResult);
+                    case BuildEndedType.Settings:
+                        await audioServicesHandler.Stop();
 
-                    AudioServicesBuildConfig newConfig = await settingsResult.Task;
+                        TaskCompletionSourceS<AudioServicesBuildConfig> settingsResult =
+                            new TaskCompletionSourceS<AudioServicesBuildConfig>(audioServicesHandler.Config.Clone());
+                        frame.NavigateToSettingsPage(settingsResult);
 
-                    audioServicesHandler.Start(newConfig ?? audioServicesHandler.Config);
-                    break;
-            }
+                        AudioServicesBuildConfig newConfig = await settingsResult.Task;
+
+                        audioServicesHandler.Start(newConfig ?? audioServicesHandler.Config);
+                        break;
+                }
+            });
         }
 
         private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)

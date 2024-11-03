@@ -1,6 +1,7 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using AudioPlayerBackend.Build;
 using AudioPlayerBackend.FileSystem;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,8 @@ namespace AudioPlayerFrontend.Join
     {
         private readonly StorageFileEqualityComparer storageFileEqualityComparer;
 
-        public UpdateLibraryService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo) : base(libraryRepo, playlistsRepo)
+        public UpdateLibraryService(AudioServicesBuildConfig config, ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo)
+            : base(config, libraryRepo, playlistsRepo)
         {
             storageFileEqualityComparer = new StorageFileEqualityComparer();
         }
@@ -27,7 +29,10 @@ namespace AudioPlayerFrontend.Join
             IStorageItem rootStorageItem = await GetStorageItemFromFileMediaSourceRoot(root);
             if (!(rootStorageItem is StorageFolder rootFolder)) return;
 
-            await CheckFolders(rootFolder, source.RelativePath);
+            IStorageItem sourceStorageItem = await GetStorageItemFromMediaSourcePath(source, rootFolder);
+            if (!(sourceStorageItem is StorageFolder sourceFolder)) return;
+
+            await CheckFolders(sourceFolder, source.RelativePath);
 
             async Task CheckFolders(StorageFolder folder, string relativeFolderPath)
             {
@@ -81,8 +86,45 @@ namespace AudioPlayerFrontend.Join
                     }
 
                 case FileMediaSourceRootPathType.KnownFolder:
-                    KnownFolderId knownFolderId = Enum.Parse<KnownFolderId>(root.Path);
-                    return await KnownFolders.GetFolderAsync(knownFolderId);
+                    KnownFolderId knownFolderId = (KnownFolderId)Enum.Parse(typeof(KnownFolderId), root.Path, true);
+
+                    return GetKnownFolder(knownFolderId);
+
+                default:
+                    return null;
+            }
+        }
+
+        private static StorageFolder GetKnownFolder(KnownFolderId id)
+        {
+            switch (id)
+            {
+                case KnownFolderId.AppCaptures:
+                    return KnownFolders.AppCaptures;
+
+                case KnownFolderId.CameraRoll:
+                    return KnownFolders.CameraRoll;
+
+                case KnownFolderId.DocumentsLibrary:
+                    return KnownFolders.DocumentsLibrary;
+
+                case KnownFolderId.HomeGroup:
+                    return KnownFolders.HomeGroup;
+
+                case KnownFolderId.MusicLibrary:
+                    return KnownFolders.MusicLibrary;
+
+                case KnownFolderId.Objects3D:
+                    return KnownFolders.Objects3D;
+
+                case KnownFolderId.PicturesLibrary:
+                    return KnownFolders.PicturesLibrary;
+
+                case KnownFolderId.SavedPictures:
+                    return KnownFolders.SavedPictures;
+
+                case KnownFolderId.VideosLibrary:
+                    return KnownFolders.VideosLibrary;
 
                 default:
                     return null;
@@ -101,6 +143,8 @@ namespace AudioPlayerFrontend.Join
 
         private static async Task<IStorageItem> GetStorageItemFromMediaSourcePath(FileMediaSource source, StorageFolder root)
         {
+            if (string.IsNullOrWhiteSpace(source.RelativePath)) return root;
+
             string[] parts = source.RelativePath
                 .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)

@@ -18,11 +18,15 @@ namespace AudioPlayerFrontend
             this.InitializeComponent();
         }
 
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             DataContext = viewModel = (ISongSearchViewModel)e.Parameter;
+            await viewModel.Start();
+        }
 
-            base.OnNavigatedTo(e);
+        protected override async void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            await viewModel.Stop();
         }
 
         private async void IbnPlay_Click(object sender, RoutedEventArgs e)
@@ -32,11 +36,18 @@ namespace AudioPlayerFrontend
             await viewModel.AddSongsToSearchPlaylist(new Song[] { song }, SearchPlaylistAddType.FirstInPlaylist);
         }
 
+        private async void IbnNext_Click(object sender, RoutedEventArgs e)
+        {
+            Song song = (Song)((FrameworkElement)sender).DataContext;
+
+            await viewModel.AddSongsToSearchPlaylist(new Song[] { song }, SearchPlaylistAddType.NextInPlaylist);
+        }
+
         private async void IbnAdd_Click(object sender, RoutedEventArgs e)
         {
             Song song = (Song)((FrameworkElement)sender).DataContext;
 
-            await viewModel.AddSongsToSearchPlaylist(new Song[] { song }, SearchPlaylistAddType.FirstInPlaylist);
+            await viewModel.AddSongsToSearchPlaylist(new Song[] { song }, SearchPlaylistAddType.LastInPlaylist);
         }
 
         private async void IbnSelectAll_Click(object sender, RoutedEventArgs e)

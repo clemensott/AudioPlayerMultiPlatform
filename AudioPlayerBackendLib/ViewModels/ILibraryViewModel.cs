@@ -11,7 +11,11 @@ namespace AudioPlayerBackend.ViewModels
     {
         bool IsLoaded { get; }
 
+        bool IsClient { get; }
+
         bool IsLocalFileMediaSource { get; }
+
+        bool IsUpdatingPlaylists { get; }
 
         PlaybackState PlayState { get; set; }
 

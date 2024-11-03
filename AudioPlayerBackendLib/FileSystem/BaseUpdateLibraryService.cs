@@ -3,6 +3,7 @@ using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.Extensions;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using AudioPlayerBackend.Build;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,17 +16,36 @@ namespace AudioPlayerBackend.FileSystem
     public abstract class BaseUpdateLibraryService<TFile> : IUpdateLibraryService
     {
         private static readonly Random ran = new Random();
+
+        private readonly FileMediaSourceRootInfo[] defaultUpdateRoots;
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
 
         private readonly SemaphoreSlim loadMusicPropsSem;
 
-        public BaseUpdateLibraryService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo)
+        public event EventHandler UpdateStarted;
+        public event EventHandler UpdateCompleted;
+
+        public BaseUpdateLibraryService(AudioServicesBuildConfig config, ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo)
         {
+            defaultUpdateRoots = config.DefaultUpdateRoots;
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
 
             loadMusicPropsSem = new SemaphoreSlim(10);
+        }
+
+        private async Task RunWithEvents(Func<Task> action)
+        {
+            try
+            {
+                UpdateStarted?.Invoke(this, EventArgs.Empty);
+                await action();
+            }
+            finally
+            {
+                UpdateCompleted?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         public async Task UpdateLibrary()
@@ -38,17 +58,21 @@ namespace AudioPlayerBackend.FileSystem
             await UpdateReloadLibrary(true);
         }
 
-        private async Task UpdateReloadLibrary(bool reload)
+        private Task UpdateReloadLibrary(bool reload)
         {
-            Library library = await libraryRepo.GetLibrary();
-
-            foreach (PlaylistInfo playlist in library.Playlists.GetSourcePlaylists())
+            return RunWithEvents(async () =>
             {
-                await (reload ? ReloadSourcePlaylist(playlist.Id) : UpdateSourcePlaylist(playlist.Id));
-                await UpdateFolders(playlist.Id);
-            }
+                await CheckDefaultUpdateRoots();
 
-            await libraryRepo.SendFoldersLastUpdatedChange(DateTime.Now);
+                Library library = await libraryRepo.GetLibrary();
+                foreach (PlaylistInfo playlist in library.Playlists.GetSourcePlaylists())
+                {
+                    await (reload ? ReloadSourcePlaylistInternal(playlist.Id) : UpdateSourcePlaylistInternal(playlist.Id));
+                    await UpdateFolders(playlist.Id);
+                }
+
+                await libraryRepo.SendFoldersLastUpdatedChange(DateTime.Now);
+            });
         }
 
         protected async Task UpdateFolders(Guid playlistId)
@@ -70,6 +94,41 @@ namespace AudioPlayerBackend.FileSystem
         protected abstract Task CheckFileMediaSourceForPlaylist(ICollection<FileMediaSource> allSources,
             FileMediaSource source, FileMediaSourceRoot root);
 
+        private async Task CheckDefaultUpdateRoots()
+        {
+            if (defaultUpdateRoots == null || defaultUpdateRoots.Length == 0) return;
+
+            Library library = await libraryRepo.GetLibrary();
+            Dictionary<Guid, FileMediaSources> playlists = new Dictionary<Guid, FileMediaSources>();
+
+            foreach (FileMediaSourceRootInfo defaultRoot in defaultUpdateRoots)
+            {
+                FileMediaSourceRoot? root = null;
+                bool hasPlaylist = false;
+
+                foreach (Guid playlistId in library.Playlists.GetSourcePlaylists().Select(p => p.Id))
+                {
+                    if (!playlists.TryGetValue(playlistId, out FileMediaSources sources))
+                    {
+                        Playlist playlist = await playlistsRepo.GetPlaylist(playlistId);
+                        sources = playlist.FileMediaSources;
+                    }
+
+                    if (!EqualRoot(defaultRoot, sources)) continue;
+
+                    root = sources.Root;
+                    if (sources.Sources.Count != 1 || !sources.Sources.All(s => s.RelativePath == string.Empty)) continue;
+
+                    hasPlaylist = true;
+                    break;
+                }
+
+                if (root.HasValue && hasPlaylist) continue;
+
+                await TryCreatePlaylist(root ?? defaultRoot.CreateRoot(), string.Empty);
+            }
+        }
+
         protected async Task TryCreatePlaylist(FileMediaSourceRoot root, string relativePath)
         {
             FileMediaSources fileMediaSources = new FileMediaSources(root, new FileMediaSource[]
@@ -81,7 +140,7 @@ namespace AudioPlayerBackend.FileSystem
             if (songs.Length == 0) return;
 
             PlaylistType playlistType = PlaylistType.SourcePlaylist | PlaylistType.AutoSourcePlaylist;
-            string name = Path.GetFileName(relativePath);
+            string name = string.IsNullOrWhiteSpace(relativePath) ? root.Name : Path.GetFileName(relativePath);
             Playlist playlist = new Playlist(Guid.NewGuid(), playlistType, name,
                 OrderType.ByTitleAndArtist, LoopType.CurrentPlaylist, 1,
                 TimeSpan.Zero, TimeSpan.Zero, null, null, songs, fileMediaSources,
@@ -90,7 +149,19 @@ namespace AudioPlayerBackend.FileSystem
             await playlistsRepo.SendInsertPlaylist(playlist, null);
         }
 
-        public async Task UpdateSourcePlaylist(Guid id)
+        private static bool EqualRoot(FileMediaSourceRootInfo defaultRoot, FileMediaSources sources)
+        {
+            return defaultRoot.UpdateType == sources.Root.UpdateType
+                && defaultRoot.PathType == sources.Root.PathType
+                && defaultRoot.Path == sources.Root.Path;
+        }
+
+        public Task UpdateSourcePlaylist(Guid id)
+        {
+            return RunWithEvents(() => UpdateSourcePlaylistInternal(id));
+        }
+
+        public async Task UpdateSourcePlaylistInternal(Guid id)
         {
             Playlist playlist = await playlistsRepo.GetPlaylist(id);
             FileMediaSources fileMediaSources = playlist.FileMediaSources;
@@ -128,7 +199,12 @@ namespace AudioPlayerBackend.FileSystem
             else await playlistsRepo.SendRemovePlaylist(id);
         }
 
-        public async Task ReloadSourcePlaylist(Guid id)
+        public Task ReloadSourcePlaylist(Guid id)
+        {
+            return RunWithEvents(() => ReloadSourcePlaylistInternal(id));
+        }
+
+        public async Task ReloadSourcePlaylistInternal(Guid id)
         {
             Playlist playlist = await playlistsRepo.GetPlaylist(id);
             Song[] newSongs = await ReloadSourcePlaylist(playlist.FileMediaSources, playlist.Songs);

@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using AudioPlayerBackend.ViewModels;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using System.IO;
 
 namespace AudioPlayerBackend.Build
 {
@@ -20,7 +22,7 @@ namespace AudioPlayerBackend.Build
         private int? clientPort;
         private string searchKey, serverAddress, dataFilePath;
         private float? volume;
-        private string[] autoUpdateRoots;
+        private FileMediaSourceRootInfo[] defaultUpdateRoots;
         private ServiceCollection additionalServices;
 
         public bool BuildStandalone { get; private set; }
@@ -149,16 +151,15 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        // TODO: make use of this
-        public string[] AutoUpdateRoots
+        public FileMediaSourceRootInfo[] DefaultUpdateRoots
         {
-            get => autoUpdateRoots;
+            get => defaultUpdateRoots;
             set
             {
-                if (value == autoUpdateRoots) return;
+                if (value == defaultUpdateRoots) return;
 
-                autoUpdateRoots = value;
-                OnPropertyChanged(nameof(AutoUpdateRoots));
+                defaultUpdateRoots = value;
+                OnPropertyChanged(nameof(DefaultUpdateRoots));
             }
         }
 
@@ -194,10 +195,10 @@ namespace AudioPlayerBackend.Build
             Option serviceVolOpt = new Option("v", "volume", "The volume of service (value between 0 and 1)", false, 1, 1);
             Option dataFileOpt = new Option("d", "data-file", "Filepath to where to read and write data.", false, 1, 1);
             Option autoUpdateOpt = new Option("a", "auto-update", "Enable auto update of library and its playlists.", false, 0, 0);
-            Option autoUpdateRootsOpt = Option.GetLongOnly("auto-update-sources", "Filepaths to source roots that create playlists.", false, 1, 1);
+            Option defaultUpdateRootsOpt = Option.GetLongOnly("default-update-sources", "Filepaths to source roots that create playlists.", false, 3, 3);
 
             Options options = new Options(sourcesOpt, clientOpt, serverOpt, playOpt,
-                orderSongsOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, dataFileOpt, autoUpdateOpt, autoUpdateRootsOpt);
+                orderSongsOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, dataFileOpt, autoUpdateOpt, defaultUpdateRootsOpt);
             OptionParseResult result = options.Parse(args);
 
             if (result.TryGetFirstValidOptionParseds(serverOpt, out parsed))
@@ -221,18 +222,31 @@ namespace AudioPlayerBackend.Build
             if (result.TryGetFirstValidOptionParseds(dataFileOpt, out parsed)) WithDateFilePath(parsed.Values[0]);
 
             if (result.HasValidOptionParseds(autoUpdateOpt)) WithAutoUpdate();
-            if (result.TryGetFirstValidOptionParseds(autoUpdateRootsOpt, out parsed)) WithAutoUpdateRoots(parsed.Values.ToArray());
+            if (result.HasValidOptionParseds(defaultUpdateRootsOpt))
+            {
+                IEnumerable<FileMediaSourceRootInfo> defaultRoots = result.GetValidOptionParseds(defaultUpdateRootsOpt).Select(option =>
+                {
+                    FileMediaSourceRootUpdateType updateType = option.Values[0].Split('+')
+                        .Select(raw => (FileMediaSourceRootUpdateType)Enum.Parse(typeof(FileMediaSourceRootUpdateType), raw, true))
+                        .Aggregate(FileMediaSourceRootUpdateType.None, (sum, item) => sum | item);
+                    FileMediaSourceRootPathType pathType = (FileMediaSourceRootPathType)Enum
+                        .Parse(typeof(FileMediaSourceRootPathType), option.Values[1], true);
+                    string path = option.Values[2];
+                    string name = Path.GetFileName(path);
+
+                    return new FileMediaSourceRootInfo(updateType, name, pathType, path);
+                });
+                WithDefaultUpdateRoots(defaultRoots.ToArray());
+            }
 
             return this;
         }
 
         public AudioServicesBuildConfig WithService(ILibraryViewModel viewModel)
         {
-            //return WithShuffle(GetSharedValueOrNull(viewModel.GetAllPlaylists().Select(p => p.Shuffle)))
             return WithShuffle(null)
                 .WithIsSearchShuffle(viewModel.SongSearch.IsSearchShuffle)
                 .WithSearchKey(viewModel.SongSearch.SearchKey)
-                //.WithPlay(service.PlayState == PlaybackState.Playing)
                 .WithVolume((float)viewModel.Volume);
         }
 
@@ -339,9 +353,9 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public AudioServicesBuildConfig WithAutoUpdateRoots(string[] roots)
+        public AudioServicesBuildConfig WithDefaultUpdateRoots(FileMediaSourceRootInfo[] roots)
         {
-            AutoUpdateRoots = roots;
+            DefaultUpdateRoots = roots;
 
             return this;
         }
@@ -367,7 +381,7 @@ namespace AudioPlayerBackend.Build
                 BuildServer = BuildServer,
                 BuildStandalone = BuildStandalone,
                 AutoUpdate = AutoUpdate,
-                AutoUpdateRoots = AutoUpdateRoots?.ToArray(),
+                DefaultUpdateRoots = DefaultUpdateRoots?.ToArray(),
                 AdditionalServices = CloneAdditionalServices(),
                 ClientPort = ClientPort,
                 DataFilePath = DataFilePath,

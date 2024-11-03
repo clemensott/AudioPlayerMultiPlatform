@@ -242,6 +242,7 @@ namespace AudioPlayerBackend.ViewModels
             IsEnabled = true;
             SubscribeLibraryRepo();
             SubscribePlaylistsRepo();
+            SubscribeSearchPlaylist();
 
             await SearchPlaylist.Start();
             await LoadAllSongs();
@@ -333,8 +334,11 @@ namespace AudioPlayerBackend.ViewModels
         public Task Stop()
         {
             IsEnabled = false;
+
             UnsubscribeLibraryRepo();
             UnsubscribePlaylistsRepo();
+            UnsubscribeSearchPlaylist();
+
             allSongs.Clear();
             shuffledSongs = Enumerable.Empty<Song>();
             SearchSongs = Enumerable.Empty<Song>();

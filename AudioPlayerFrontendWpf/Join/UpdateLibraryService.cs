@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using AudioPlayerBackend.Build;
 
 namespace AudioPlayerFrontend.Join
 {
@@ -17,7 +18,8 @@ namespace AudioPlayerFrontend.Join
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
 
-        public UpdateLibraryService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo) : base(libraryRepo, playlistsRepo)
+        public UpdateLibraryService(AudioServicesBuildConfig config, ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo)
+            : base(config, libraryRepo, playlistsRepo)
         {
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;

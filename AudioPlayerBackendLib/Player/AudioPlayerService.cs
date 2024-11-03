@@ -169,23 +169,26 @@ namespace AudioPlayerBackend.Player
             {
                 Guid playlistId = currentPlaylistId.Value;
 
-                await playlistsRepo.SendCurrentSongIdChange(playlistId, e.Source.Id);
-                await playlistsRepo.SendPositionChange(playlistId, e.Position);
-                await playlistsRepo.SendDurationChange(playlistId, e.Duration);
+                await dispatcher.InvokeDispatcher(async () =>
+                {
+                    await playlistsRepo.SendCurrentSongIdChange(playlistId, e.Source.Id);
+                    await playlistsRepo.SendPositionChange(playlistId, e.Position);
+                    await playlistsRepo.SendDurationChange(playlistId, e.Duration);
+                });
             }
         }
 
         private async void Player_MediaFailed(object sender, MediaFailedEventArgs e)
         {
             StopTimer();
-            if (++errorCount < 10) await Continue(e.Song);
+            if (++errorCount < 10) await dispatcher.InvokeDispatcher(() => Continue(e.Song));
         }
 
         private async void Player_MediaEnded(object sender, MediaEndedEventArgs e)
         {
             Logs.Log($"Player_MediaEnded: {e.Song?.FullPath}");
             StopTimer();
-            await Continue(e.Song);
+            await dispatcher.InvokeDispatcher(() => Continue(e.Song));
         }
 
 

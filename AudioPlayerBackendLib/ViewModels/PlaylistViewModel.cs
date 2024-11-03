@@ -83,8 +83,11 @@ namespace AudioPlayerBackend.ViewModels
                 shuffle = value;
                 OnPropertyChanged(nameof(Shuffle));
 
-                SendShuffle(value);
-                UpdateSongs();
+                if (isRunning)
+                {
+                    SendShuffle(value);
+                    UpdateSongs();
+                }
             }
         }
 
@@ -97,7 +100,8 @@ namespace AudioPlayerBackend.ViewModels
 
                 loop = value;
                 OnPropertyChanged(nameof(Loop));
-                SendLoop(value);
+
+                if (isRunning) SendLoop(value);
             }
         }
 
@@ -110,7 +114,8 @@ namespace AudioPlayerBackend.ViewModels
 
                 playbackRate = value;
                 OnPropertyChanged(nameof(PlaybackRate));
-                SendPlaybackRate(value);
+
+                if (isRunning) SendPlaybackRate(value);
             }
         }
 
@@ -159,7 +164,8 @@ namespace AudioPlayerBackend.ViewModels
 
                 requestedSong = value;
                 OnPropertyChanged(nameof(RequestedSong));
-                SendRequestSong(value);
+
+                if (isRunning) SendRequestSong(value);
             }
         }
 
