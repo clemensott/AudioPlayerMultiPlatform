@@ -19,7 +19,7 @@ namespace AudioPlayerBackend.ViewModels
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
         private readonly IUpdateLibraryService updateLibraryService;
-        private bool isLoaded, isUpdatingPlaylist, isUpdatingPlaylists;
+        private bool isLoaded, isUpdatingPlaylist, isUpdatingPlaylists, isUpdatingIsUpdatingPlaylists;
         private int currentPlaylistIndex, playlistsUpdatingCount;
         private PlaybackState playState;
         private double volume;
@@ -167,16 +167,32 @@ namespace AudioPlayerBackend.ViewModels
             updateLibraryService.UpdateCompleted += UpdateLibraryService_UpdateCompleted;
         }
 
-        private void UpdateLibraryService_UpdateStarted(object sender, EventArgs e)
+        private async void UpdateLibraryService_UpdateStarted(object sender, EventArgs e)
         {
             playlistsUpdatingCount++;
-            IsUpdatingPlaylists = playlistsUpdatingCount > 0;
+            await UpdateIsUpdatingPlaylists();
         }
 
-        private void UpdateLibraryService_UpdateCompleted(object sender, EventArgs e)
+        private async void UpdateLibraryService_UpdateCompleted(object sender, EventArgs e)
         {
             playlistsUpdatingCount--;
-            IsUpdatingPlaylists = playlistsUpdatingCount > 0;
+            await UpdateIsUpdatingPlaylists();
+        }
+
+        private async Task UpdateIsUpdatingPlaylists()
+        {
+            if (isUpdatingIsUpdatingPlaylists) return;
+
+            try
+            {
+                isUpdatingIsUpdatingPlaylists = true;
+                await Task.Delay(100);
+                IsUpdatingPlaylists = playlistsUpdatingCount > 0;
+            }
+            finally
+            {
+                isUpdatingIsUpdatingPlaylists = false;
+            }
         }
 
         private void Unsubscribe()
