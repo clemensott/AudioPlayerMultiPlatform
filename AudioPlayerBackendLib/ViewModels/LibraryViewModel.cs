@@ -181,18 +181,22 @@ namespace AudioPlayerBackend.ViewModels
 
         private async Task UpdateIsUpdatingPlaylists()
         {
-            if (isUpdatingIsUpdatingPlaylists) return;
+            if (playlistsUpdatingCount <= 0)
+            {
+                if (isUpdatingIsUpdatingPlaylists) return;
 
-            try
-            {
-                isUpdatingIsUpdatingPlaylists = true;
-                await Task.Delay(100);
-                IsUpdatingPlaylists = playlistsUpdatingCount > 0;
+                try
+                {
+                    isUpdatingIsUpdatingPlaylists = true;
+                    await Task.Delay(100);
+                }
+                finally
+                {
+                    isUpdatingIsUpdatingPlaylists = false;
+                }
             }
-            finally
-            {
-                isUpdatingIsUpdatingPlaylists = false;
-            }
+
+            IsUpdatingPlaylists = playlistsUpdatingCount > 0;
         }
 
         private void Unsubscribe()
