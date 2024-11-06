@@ -4,6 +4,7 @@ using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.Extensions;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.Build;
+using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,6 +18,7 @@ namespace AudioPlayerBackend.FileSystem
     {
         private static readonly Random ran = new Random();
 
+        private readonly SongEqualityComparer songEqualityComparer;
         private readonly FileMediaSourceRootInfo[] defaultUpdateRoots;
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
@@ -28,6 +30,7 @@ namespace AudioPlayerBackend.FileSystem
 
         public BaseUpdateLibraryService(AudioServicesBuildConfig config, ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo)
         {
+            songEqualityComparer = new SongEqualityComparer();
             defaultUpdateRoots = config.DefaultUpdateRoots;
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
@@ -193,7 +196,11 @@ namespace AudioPlayerBackend.FileSystem
 
             if (newSongs.Length > 0)
             {
-                await playlistsRepo.SendSongsChange(id, newSongs);
+                if (!newSongs.BothNullOrSequenceEqual(playlist.Songs, songEqualityComparer))
+                {
+                    await playlistsRepo.SendSongsChange(id, newSongs);
+                }
+
                 await playlistsRepo.SendFilesLastUpdatedChange(id, DateTime.Now);
             }
             else await playlistsRepo.SendRemovePlaylist(id);
@@ -211,7 +218,11 @@ namespace AudioPlayerBackend.FileSystem
 
             if (newSongs.Length > 0)
             {
-                await playlistsRepo.SendSongsChange(id, newSongs);
+                if (!newSongs.BothNullOrSequenceEqual(playlist.Songs, songEqualityComparer))
+                {
+                    await playlistsRepo.SendSongsChange(id, newSongs);
+                }
+
                 await playlistsRepo.SendSongsLastUpdatedChange(id, DateTime.Now);
             }
             else await playlistsRepo.SendRemovePlaylist(id);
@@ -284,6 +295,22 @@ namespace AudioPlayerBackend.FileSystem
         public Task Dispose()
         {
             return Task.CompletedTask;
+        }
+
+        class SongEqualityComparer : IEqualityComparer<Song>
+        {
+            public bool Equals(Song x, Song y)
+            {
+                return x.Id == y.Id
+                    && x.Artist == y.Artist
+                    && x.Title == y.Title
+                    && x.FullPath == y.FullPath;
+            }
+
+            public int GetHashCode(Song obj)
+            {
+                return obj.GetHashCode();
+            }
         }
     }
 }
