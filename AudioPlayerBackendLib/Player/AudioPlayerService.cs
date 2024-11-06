@@ -26,7 +26,7 @@ namespace AudioPlayerBackend.Player
         private IList<Guid> playlistIds;
         private OrderType shuffle;
         private LoopType loop;
-        private TimeSpan position;
+        private TimeSpan position, duration;
         private RequestSong? requestSong;
         private Guid? currentSongId;
         private ICollection<Song> songs;
@@ -82,7 +82,7 @@ namespace AudioPlayerBackend.Player
             if (currentPlaylistId.TryHasValue(out Guid playlistId))
             {
                 RequestSong? currentState = requestSong.TryHasValue(out RequestSong request)
-                    ? (RequestSong?)RequestSong.Get(request.Song, position, Player.Duration)
+                    ? (RequestSong?)RequestSong.Get(request.Song, position, duration)
                     : null;
                 return (playlistId, currentState);
             }
@@ -120,24 +120,32 @@ namespace AudioPlayerBackend.Player
             }
         }
 
-        private void Timer_Elapsed(object state)
+        private async void Timer_Elapsed(object state)
         {
-            dispatcher.InvokeDispatcher(UpdatePosition);
+            await dispatcher.InvokeDispatcher(UpdatePosition);
         }
 
-        private void UpdatePosition()
+        private async Task UpdatePosition()
         {
             try
             {
                 if (!Player.Source.HasValue ||
                     Player.Source?.Id != currentSongId ||
-                    position.Seconds == Player.Position.Seconds ||
-                    !currentPlaylistId.HasValue) return;
+                    !currentPlaylistId.TryHasValue(out Guid playlistId)) return;
 
-                Guid playlistId = currentPlaylistId.Value;
-                position = Player.Position;
-                playlistsRepo.SendPositionChange(playlistId, position);
-                playlistsRepo.SendDurationChange(playlistId, Player.Duration);
+                TimeSpan currentPosition = Player.Position;
+                if (currentPosition.Seconds != position.Seconds)
+                {
+                    position = currentPosition;
+                    await playlistsRepo.SendPositionChange(playlistId, position);
+                }
+
+                TimeSpan currentDuration = Player.Duration;
+                if (currentDuration != duration)
+                {
+                    duration = currentDuration;
+                    await playlistsRepo.SendDurationChange(playlistId, duration);
+                }
             }
             catch (Exception e)
             {
@@ -163,19 +171,7 @@ namespace AudioPlayerBackend.Player
         {
             errorCount = 0;
 
-            EnableTimer();
-
-            if (currentPlaylistId.HasValue && requestSong?.Song == e.Source)
-            {
-                Guid playlistId = currentPlaylistId.Value;
-
-                await dispatcher.InvokeDispatcher(async () =>
-                {
-                    await playlistsRepo.SendCurrentSongIdChange(playlistId, e.Source.Id);
-                    await playlistsRepo.SendPositionChange(playlistId, e.Position);
-                    await playlistsRepo.SendDurationChange(playlistId, e.Duration);
-                });
-            }
+            await EnableTimer();
         }
 
         private async void Player_MediaFailed(object sender, MediaFailedEventArgs e)
@@ -215,7 +211,7 @@ namespace AudioPlayerBackend.Player
         {
             Player.PlayState = e.NewValue;
 
-            EnableTimer();
+            await dispatcher.InvokeDispatcher(() => EnableTimer());
 
             if (e.NewValue == PlaybackState.Paused) await SendCurrentState();
         }
@@ -345,16 +341,16 @@ namespace AudioPlayerBackend.Player
 
             isSetCurrentSong = false;
 
-            EnableTimer();
+            await EnableTimer();
         }
 
-        private void EnableTimer()
+        private async Task EnableTimer()
         {
             if (!isSetCurrentSong && currentPlaylistId.HasValue &&
                 Player.PlayState == PlaybackState.Playing) StartTimer();
             else StopTimer();
 
-            UpdatePosition();
+            await dispatcher.InvokeDispatcher(UpdatePosition);
         }
 
         private void StartTimer()
