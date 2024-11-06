@@ -3,6 +3,7 @@ using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using StdOttStandard;
 using StdOttStandard.Linq;
+using StdOttStandard.Linq.Sort;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -56,6 +57,8 @@ namespace AudioPlayerBackend.ViewModels
 
                 isSearchShuffle = value;
                 OnPropertyChanged(nameof(IsSearchShuffle));
+
+                UpdateSearchSongs();
             }
         }
 
@@ -225,11 +228,22 @@ namespace AudioPlayerBackend.ViewModels
         private async Task UpdateSearchSongs()
         {
             string searchKey = SearchKey;
-            Song[] excludeSongs = isCurrentPlaylist ? SearchPlaylist.Songs.ToArray() : null;
+            IEnumerable<Song> currentShuffledSongs = shuffledSongs;
+            ICollection<Song> searchPlaylistSongs = isCurrentPlaylist ? SearchPlaylist.Songs : null;
+
             Song[] searchSongs = await Task.Run(() =>
             {
-                IEnumerable<Song> search = SongsHelper.GetSearchSongs(shuffledSongs, IsSearchShuffle, searchKey);
-                if (excludeSongs != null) search = search.Except(excludeSongs);
+                IEnumerable<Song> search = SongsHelper.GetFilteredSongs(currentShuffledSongs, searchKey);
+
+                if (searchPlaylistSongs != null)
+                {
+                    HashSet<Song> excludeSongs = new HashSet<Song>(searchPlaylistSongs);
+                    search = search.Where(s => !excludeSongs.Contains(s));
+                }
+
+                search = search.Take(50);
+
+                if (IsSearchShuffle) search = search.HeapSort(currentShuffledSongs.IndexOf);
 
                 return search.Take(50).ToArray();
             });

@@ -1,6 +1,5 @@
 ﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using StdOttStandard.Linq;
-using StdOttStandard.Linq.Sort;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,7 +34,7 @@ namespace AudioPlayerBackend.AudioLibrary
 
                 case OrderType.ByPath:
                     return allSongsShuffled.OrderBy(s => s.FullPath);
-                    
+
                 case OrderType.Custom:
                     return allSongsShuffled;
             }
@@ -43,14 +42,7 @@ namespace AudioPlayerBackend.AudioLibrary
             throw new ArgumentException("Type is not implemented: " + shuffle, nameof(shuffle));
         }
 
-        public static IEnumerable<Song> GetSearchSongs(IEnumerable<Song> allSongsShuffled, bool isSearchShuffle, string searchKey)
-        {
-            if (!isSearchShuffle) return GetFilteredSongs(allSongsShuffled, searchKey);
-
-            return GetFilteredSongs(allSongsShuffled, searchKey).HeapSort(allSongsShuffled.IndexOf);
-        }
-
-        private static IEnumerable<Song> GetFilteredSongs(IEnumerable<Song> allSongs, string searchKey)
+        public static IEnumerable<Song> GetFilteredSongs(IEnumerable<Song> allSongs, string searchKey)
         {
             if (!GetIsSearching(searchKey)) return allSongs;
 
@@ -58,13 +50,13 @@ namespace AudioPlayerBackend.AudioLibrary
             string lsk = searchKey.ToLower();
 
             IEnumerable<Song> caseSenTitle = allSongs.Where(s => CT(s, sk)).
-                OrderBy(s => TI(s, sk)).ThenBy(s => s.Title).ThenBy(s => s.Artist);
+                OrderBy(s => TI(s, sk)).ThenBy(s => s.Title).ThenBy(s => s.Artist).ThenBy(s => s.Index);
             IEnumerable<Song> caseSenArtist = allSongs.Where(s => CA(s, sk)).
-                OrderBy(s => AI(s, sk)).ThenBy(s => s.Artist).ThenBy(s => s.Title);
+                OrderBy(s => AI(s, sk)).ThenBy(s => s.Artist).ThenBy(s => s.Title).ThenBy(s => s.Index);
             IEnumerable<Song> lowerTitle = allSongs.Where(s => CLT(s, lsk)).
-                OrderBy(s => LTI(s, lsk)).ThenBy(s => s.Title).ThenBy(s => s.Artist);
+                OrderBy(s => LTI(s, lsk)).ThenBy(s => s.Title).ThenBy(s => s.Artist).ThenBy(s => s.Index);
             IEnumerable<Song> lowerArtist = allSongs.Where(s => CLA(s, lsk)).
-                OrderBy(s => LAI(s, lsk)).ThenBy(s => s.Artist).ThenBy(s => s.Title);
+                OrderBy(s => LAI(s, lsk)).ThenBy(s => s.Artist).ThenBy(s => s.Title).ThenBy(s => s.Index);
 
             return caseSenTitle.Concat(caseSenArtist).Concat(lowerTitle).Concat(lowerArtist).Distinct();
         }
