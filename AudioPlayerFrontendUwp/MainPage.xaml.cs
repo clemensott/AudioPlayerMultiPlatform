@@ -22,6 +22,7 @@ using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using StdOttStandard;
+using AudioPlayerFrontend.Controls;
 
 namespace AudioPlayerFrontend
 {
@@ -128,48 +129,36 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private void IbnLoopType_Click(object sender, RoutedEventArgs e)
+        private async void IbnLoopType_Click(object sender, RoutedEventArgs e)
         {
-            switch (viewModel?.CurrentPlaylist.Loop)
+            IEnumerable<ListBoxDialogItem<LoopType?>> options = new ListBoxDialogItem<LoopType?>[]
             {
-                case LoopType.Next:
-                    viewModel.CurrentPlaylist.Loop = LoopType.Stop;
-                    break;
+                new ListBoxDialogItem<LoopType?>(LoopType.CurrentPlaylist, "Repeat Current Playlist"),
+                new ListBoxDialogItem<LoopType?>(LoopType.Stop, "Stop Playback"),
+                new ListBoxDialogItem<LoopType?>(LoopType.Next, "Play Next Playlist"),
+                new ListBoxDialogItem<LoopType?>(LoopType.CurrentSong, "Repeat Current Song"),
+                new ListBoxDialogItem<LoopType?>(LoopType.StopCurrentSong, "Stop Playback & Keep Current Song"),
+            };
 
-                case LoopType.Stop:
-                    viewModel.CurrentPlaylist.Loop = LoopType.CurrentPlaylist;
-                    break;
+            LoopType? newValue = await ListBoxDialog<LoopType?>
+                .Start(options, viewModel.CurrentPlaylist.Loop, "Loop Type");
 
-                case LoopType.CurrentPlaylist:
-                    viewModel.CurrentPlaylist.Loop = LoopType.CurrentSong;
-                    break;
-
-                case LoopType.CurrentSong:
-                    viewModel.CurrentPlaylist.Loop = LoopType.StopCurrentSong;
-                    break;
-
-                case LoopType.StopCurrentSong:
-                    viewModel.CurrentPlaylist.Loop = LoopType.Next;
-                    break;
-            }
+            if (newValue.HasValue) viewModel.CurrentPlaylist.Loop = newValue.Value;
         }
 
-        private void IbnOrderType_Click(object sender, RoutedEventArgs e)
+        private async void IbnOrderType_Click(object sender, RoutedEventArgs e)
         {
-            switch (viewModel?.CurrentPlaylist.Shuffle)
+            IEnumerable<ListBoxDialogItem<OrderType?>> options = new ListBoxDialogItem<OrderType?>[]
             {
-                case OrderType.ByTitleAndArtist:
-                    viewModel.CurrentPlaylist.Shuffle = OrderType.ByPath;
-                    break;
+                new ListBoxDialogItem<OrderType?>(OrderType.ByTitleAndArtist, "By Title And Artist"),
+                new ListBoxDialogItem<OrderType?>(OrderType.ByPath, "By Path"),
+                new ListBoxDialogItem<OrderType?>(OrderType.Custom, "Shuffle"),
+            };
 
-                case OrderType.ByPath:
-                    viewModel.CurrentPlaylist.Shuffle = OrderType.Custom;
-                    break;
+            OrderType? newValue = await ListBoxDialog<OrderType?>
+                .Start(options, viewModel.CurrentPlaylist.Shuffle, "Order Type");
 
-                case OrderType.Custom:
-                    viewModel.CurrentPlaylist.Shuffle = OrderType.ByTitleAndArtist;
-                    break;
-            }
+            if (newValue.HasValue) viewModel.CurrentPlaylist.Shuffle = newValue.Value;
         }
 
         private void IbnSearch_Click(object sender, RoutedEventArgs e)
@@ -239,6 +228,18 @@ namespace AudioPlayerFrontend
         private void SplCurrentSong_Tapped(object sender, TappedRoutedEventArgs e)
         {
             Scroll();
+        }
+
+        private async void SplPlaybackRate_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            double[] playbackRates = new double[] { 0.5, 0.75, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2, 2.25, 2.5 };
+            IEnumerable<ListBoxDialogItem<double>> options = playbackRates
+                .Select(rate => new ListBoxDialogItem<double>(rate, $"{rate,2}x"));
+
+            double newValue = await ListBoxDialog<double>
+                .Start(options, viewModel.CurrentPlaylist.PlaybackRate, "Playback Rate");
+
+            if (newValue > 0) viewModel.CurrentPlaylist.PlaybackRate = newValue;
         }
 
         private async void AbbUpdatePlaylistsAndSongs_Click(object sender, RoutedEventArgs e)

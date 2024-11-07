@@ -225,19 +225,27 @@
             </Grid>
 
 
-            <Grid Grid.Row="3" Margin="5,1" DataContext="{Binding CurrentPlaylist}"
-                  Visibility="{Binding CurrentSong,Converter={StaticResource visCon},
-                    FallbackValue={StaticResource collapsed}}">
+            <Grid Grid.Row="3" Margin="5,1" DataContext="{Binding CurrentPlaylist}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel DataContext="{Binding CurrentSong}" Tapped="SplCurrentSong_Tapped">
+                <StackPanel DataContext="{Binding Path=CurrentSong}"
+                            Visibility="{Binding Converter={StaticResource visCon},
+                              FallbackValue={StaticResource collapsed}}"
+                            Tapped="SplCurrentSong_Tapped">
                     <TextBlock Text="{Binding Title}" Margin="1" FontWeight="SemiBold" TextWrapping="Wrap"
                                Visibility="{Binding Title,Converter={StaticResource visCon}}"/>
                     <TextBlock Text="{Binding Artist}" Margin="1" FontStyle="Italic" TextWrapping="Wrap"
                                Visibility="{Binding Artist,Converter={StaticResource visCon}}"/>
+                </StackPanel>
+
+                <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal"
+                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Tapped="SplPlaybackRate_Tapped">
+                    <TextBlock Text="{Binding PlaybackRate,FallbackValue=1}" />
+                    <TextBlock Text="x" />
                 </StackPanel>
             </Grid>
 

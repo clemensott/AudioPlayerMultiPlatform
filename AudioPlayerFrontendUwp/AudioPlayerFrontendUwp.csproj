@@ -103,6 +103,7 @@
     <Compile Include="BuildOpenPage.xaml.cs">
       <DependentUpon>BuildOpenPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\ListBoxDialogItem.cs" />
     <Compile Include="Converter\FilePathsToSingleStringConverter.cs" />
     <Compile Include="Converter\OrderIconConverter.cs" />
     <Compile Include="Converter\LoopIconConverter.cs" />
@@ -112,6 +113,7 @@
     <Compile Include="Join\InvokeDispatcherService.cs" />
     <Compile Include="Join\Player.cs" />
     <Compile Include="Join\UpdateLibraryService.cs" />
+    <Compile Include="Controls\ListBoxDialog.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
