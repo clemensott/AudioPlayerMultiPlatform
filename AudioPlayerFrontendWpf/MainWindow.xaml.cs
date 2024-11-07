@@ -100,11 +100,6 @@ namespace AudioPlayerFrontend
                 throw;
             }
 
-            Option disableUiOpt = Option.GetLongOnly("disable-ui", "Disables UI on startup.", false, 0);
-            OptionParseResult result = new Options(disableUiOpt).Parse(args);
-
-            //if (result.TryGetFirstValidOptionParseds(disableUiOpt, out _)) viewModel.IsUiEnabled = false;
-
             servicesBuildConfig.AdditionalServices.TryAddSingleton<IPlayer, Player>();
             servicesBuildConfig.AdditionalServices.TryAddSingleton<IFileSystemService, FileSystemService>();
             servicesBuildConfig.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, InvokeDispatcherService>();
