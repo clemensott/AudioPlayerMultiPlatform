@@ -9,6 +9,10 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
 {
     internal class SqliteLibraryRepo : BaseSqlRepo, ILibraryRepo
     {
+        // play state should not be saved in db
+        // because playback should not be resume on startup of service
+        private PlaybackState playState;
+
         public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> OnPlayStateChange;
         public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
         public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
@@ -16,6 +20,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
 
         public SqliteLibraryRepo(ISqlExecuteService sqlExecuteService) : base(sqlExecuteService)
         {
+            playState = PlaybackState.Paused;
         }
 
         public override async Task Start()
@@ -51,7 +56,8 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
 
             (PlaybackState playState, double volume, Guid? currentPlaylistId, DateTime? foldersLastUpdated) lib = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
             {
-                PlaybackState playState = (PlaybackState)reader.GetInt64("play_state");
+                //PlaybackState playState = (PlaybackState)reader.GetInt64("play_state");
+                PlaybackState playState = this.playState;
                 double volume = reader.GetDouble("volume");
                 Guid? currentPlaylistId = reader.GetGuidNullableFromString("current_playlist_id");
                 DateTime? foldersLastUpdated = reader.GetDateTimeNullableFromInt64("folders_last_updated");
@@ -92,10 +98,13 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
             return sqlExecuteService.ExecuteNonQueryAsync(sql, parameters);
         }
 
-        public async Task SendPlayStateChange(PlaybackState playState)
+        public Task SendPlayStateChange(PlaybackState playState)
         {
-            await UpdateLibraryValue("play_state", (long)playState);
+            //await UpdateLibraryValue("play_state", (long)playState);
+            this.playState = playState;
             OnPlayStateChange?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
+
+            return Task.CompletedTask;
         }
 
         public async Task SendVolumeChange(double volume)
