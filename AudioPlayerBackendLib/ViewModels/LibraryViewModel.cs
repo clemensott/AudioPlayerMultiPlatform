@@ -19,7 +19,7 @@ namespace AudioPlayerBackend.ViewModels
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
         private readonly IUpdateLibraryService updateLibraryService;
-        private bool isLoaded, isUpdatingPlaylist, isUpdatingPlaylists, isUpdatingIsUpdatingPlaylists;
+        private bool isLoaded, isUpdatingPlaylist, isUpdatingPlaylists;
         private int currentPlaylistIndex, playlistsUpdatingCount;
         private PlaybackState playState;
         private double volume;
@@ -167,36 +167,17 @@ namespace AudioPlayerBackend.ViewModels
             updateLibraryService.UpdateCompleted += UpdateLibraryService_UpdateCompleted;
         }
 
-        private async void UpdateLibraryService_UpdateStarted(object sender, EventArgs e)
+        private void UpdateLibraryService_UpdateStarted(object sender, EventArgs e)
         {
-            playlistsUpdatingCount++;
-            await UpdateIsUpdatingPlaylists();
+            IsUpdatingPlaylists = ++playlistsUpdatingCount > 0;
         }
 
         private async void UpdateLibraryService_UpdateCompleted(object sender, EventArgs e)
         {
-            playlistsUpdatingCount--;
-            await UpdateIsUpdatingPlaylists();
-        }
+            // make sure that IsUpdatingPlaylists is at least 1 second set to true
+            await Task.Delay(1000);
 
-        private async Task UpdateIsUpdatingPlaylists()
-        {
-            if (playlistsUpdatingCount <= 0)
-            {
-                if (isUpdatingIsUpdatingPlaylists) return;
-
-                try
-                {
-                    isUpdatingIsUpdatingPlaylists = true;
-                    await Task.Delay(100);
-                }
-                finally
-                {
-                    isUpdatingIsUpdatingPlaylists = false;
-                }
-            }
-
-            IsUpdatingPlaylists = playlistsUpdatingCount > 0;
+            IsUpdatingPlaylists = --playlistsUpdatingCount > 0;
         }
 
         private void Unsubscribe()
