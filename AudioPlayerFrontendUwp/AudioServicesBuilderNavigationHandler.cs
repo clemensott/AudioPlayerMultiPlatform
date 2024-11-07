@@ -94,41 +94,6 @@ namespace AudioPlayerFrontend
             if (audioServicesHandler.Config != null) audioServicesHandler.Start(audioServicesHandler.Config);
         }
 
-        //private void Subscribe(Player player)
-        //{
-        //    if (player == null) return;
-
-        //    player.NextPressed += Player_NextPressed;
-        //    player.PreviousPressed += Player_PreviousPressed;
-        //    player.PlayStateChanged += Player_PlayStateChanged;
-        //}
-
-        //private void Unsubscribe(Player player)
-        //{
-        //    if (player == null) return;
-
-        //    player.NextPressed -= Player_NextPressed;
-        //    player.PreviousPressed -= Player_PreviousPressed;
-        //    player.PlayStateChanged -= Player_PlayStateChanged;
-        //}
-
-        //private void Player_NextPressed(object sender, HandledEventArgs e)
-        //{
-        //    Audio?.SetNextSong();
-        //    e.Handled = true;
-        //}
-
-        //private void Player_PreviousPressed(object sender, HandledEventArgs e)
-        //{
-        //    Audio?.SetPreviousSong();
-        //    e.Handled = true;
-        //}
-
-        //private void Player_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
-        //{
-        //    if (Audio != null) Audio.PlayState = e.NewValue;
-        //}
-
         public void Dispose()
         {
             Application.Current.EnteredBackground -= Application_EnteredBackground;

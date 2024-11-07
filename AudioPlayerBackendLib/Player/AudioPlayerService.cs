@@ -1,6 +1,7 @@
 ﻿using AudioPlayerBackend.AudioLibrary;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.GenericEventArgs;
 using StdOttStandard;
 using StdOttStandard.Linq;
 using System;
@@ -158,6 +159,9 @@ namespace AudioPlayerBackend.Player
             Player.MediaOpened += Player_MediaOpened;
             Player.MediaFailed += Player_MediaFailed;
             Player.MediaEnded += Player_MediaEnded;
+            Player.NextPressed += Player_NextPressed;
+            Player.PreviousPressed += Player_PreviousPressed;
+            Player.PlayStateChanged += Player_PlayStateChanged;
         }
 
         private void UnsubsribePlayer()
@@ -165,6 +169,41 @@ namespace AudioPlayerBackend.Player
             Player.MediaOpened -= Player_MediaOpened;
             Player.MediaFailed -= Player_MediaFailed;
             Player.MediaEnded -= Player_MediaEnded;
+            Player.NextPressed -= Player_NextPressed;
+            Player.PreviousPressed -= Player_PreviousPressed;
+            Player.PlayStateChanged -= Player_PlayStateChanged;
+        }
+
+        private async void Player_NextPressed(object sender, HandledEventArgs e)
+        {
+            if (currentPlaylistId.TryHasValue(out Guid playlistId))
+            {
+                e.Handled = true;
+
+                Song? currentSong = songs.FirstOrDefault(s => s.Id == currentSongId);
+                Song? newCurrentSong = SongsHelper.GetNextSong(songs, shuffle, currentSong).song;
+                await playlistsRepo.SendRequestSongChange(playlistId, RequestSong.Start(newCurrentSong));
+            }
+        }
+
+        private async void Player_PreviousPressed(object sender, HandledEventArgs e)
+        {
+            if (currentPlaylistId.TryHasValue(out Guid playlistId))
+            {
+                e.Handled = true;
+
+                Song? currentSong = songs.FirstOrDefault(s => s.Id == currentSongId);
+                Song? newCurrentSong = SongsHelper.GetPreviousSong(songs, shuffle, currentSong).song;
+                await playlistsRepo.SendRequestSongChange(playlistId, RequestSong.Start(newCurrentSong));
+            }
+        }
+
+        private async void Player_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
+        {
+            if (currentPlaylistId.TryHasValue(out Guid playlistId))
+            {
+                await libraryRepo.SendPlayStateChange(e.NewValue);
+            }
         }
 
         private async void Player_MediaOpened(object sender, MediaOpenedEventArgs e)
