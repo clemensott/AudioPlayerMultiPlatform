@@ -36,7 +36,10 @@ namespace AudioPlayerFrontend.Join
 
                 HandlePlayStateChange();
 
-                PlayStateChanged?.Invoke(this, new ValueChangedEventArgs<PlaybackState>(oldState, value));
+                if (oldState != value)
+                {
+                    PlayStateChanged?.Invoke(this, new ValueChangedEventArgs<PlaybackState>(oldState, value));
+                }
             }
         }
 
