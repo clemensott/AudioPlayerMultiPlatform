@@ -106,7 +106,7 @@ namespace AudioPlayerBackend.FileSystem
 
         private async Task CheckRootForNewPlaylists(FileMediaSourceRoot root)
         {
-            if (root.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders)) return;
+            if (!root.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders)) return;
 
             ICollection<FileMediaSource> allSources = await playlistsRepo.GetFileMediaSourcesOfRoot(root.Id);
             await CheckRootForNewPlaylists(allSources, root);
@@ -229,6 +229,7 @@ namespace AudioPlayerBackend.FileSystem
                     Song loadedSong;
                     if (loadedSongs.TryGetValue(songs[i].FullPath, out loadedSong))
                     {
+                        loadedSong.Id = songs[i].Id;
                         songs[i] = loadedSong;
                         loadedSongs.Remove(songs[i].FullPath);
                     }
