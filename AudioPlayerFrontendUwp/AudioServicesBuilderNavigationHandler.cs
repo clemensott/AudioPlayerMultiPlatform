@@ -78,6 +78,8 @@ namespace AudioPlayerFrontend
 
         private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
         {
+            if (audioServicesHandler.AudioServices != null) return;
+
             Deferral deferral = e.GetDeferral();
             try
             {
@@ -91,7 +93,10 @@ namespace AudioPlayerFrontend
 
         private void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            if (audioServicesHandler.Config != null) audioServicesHandler.Start(audioServicesHandler.Config);
+            if (audioServicesHandler.Config != null && audioServicesHandler.AudioServices == null)
+            {
+                audioServicesHandler.Start(audioServicesHandler.Config);
+            }
         }
 
         public void Dispose()
