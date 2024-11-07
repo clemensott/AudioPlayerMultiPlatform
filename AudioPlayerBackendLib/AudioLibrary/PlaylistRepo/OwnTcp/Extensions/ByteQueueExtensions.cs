@@ -147,6 +147,16 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
             return new FileMediaSourceRoot(id, updateType, name, pathType, path);
         }
 
+        public static ByteQueue Enqueue(this ByteQueue queue, ICollection<FileMediaSourceRoot> fileMediaSourceRoots)
+        {
+            return queue.Enqueue(fileMediaSourceRoots, queue.Enqueue);
+        }
+
+        public static ICollection<FileMediaSourceRoot> DequeueFileMediaSourceRoots(this ByteQueue queue)
+        {
+            return queue.DequeueArray(queue.DequeueFileMediaSourceRoot);
+        }
+
         public static ByteQueue Enqueue(this ByteQueue queue, FileMediaSource fileMediaSource)
         {
             return queue.Enqueue(fileMediaSource.RelativePath);

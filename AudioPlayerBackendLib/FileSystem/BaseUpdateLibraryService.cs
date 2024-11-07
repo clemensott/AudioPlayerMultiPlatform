@@ -65,72 +65,61 @@ namespace AudioPlayerBackend.FileSystem
         {
             return RunWithEvents(async () =>
             {
-                await CheckDefaultUpdateRoots();
+                await UpdatePlaylistsInternal();
 
                 Library library = await libraryRepo.GetLibrary();
                 foreach (PlaylistInfo playlist in library.Playlists.GetSourcePlaylists())
                 {
                     await (reload ? ReloadSourcePlaylistInternal(playlist.Id) : UpdateSourcePlaylistInternal(playlist.Id));
-                    await UpdateFolders(playlist.Id);
                 }
 
                 await libraryRepo.SendFoldersLastUpdatedChange(DateTime.Now);
             });
         }
 
-        protected async Task UpdateFolders(Guid playlistId)
+        public Task UpdatePlaylists()
         {
-            Playlist playlist = await playlistsRepo.GetPlaylist(playlistId);
-            FileMediaSources fileMediaSources = playlist.FileMediaSources;
-            if (fileMediaSources == null
-                || !fileMediaSources.Root.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders)) return;
-
-            FileMediaSourceRoot root = fileMediaSources.Root;
-            ICollection<FileMediaSource> allSources = await playlistsRepo.GetFileMediaSourcesOfRoot(root.Id);
-
-            foreach (FileMediaSource source in fileMediaSources.Sources)
+            return RunWithEvents(async () =>
             {
-                await CheckFileMediaSourceForPlaylist(allSources, source, root);
-            }
+                await UpdatePlaylistsInternal();
+                await libraryRepo.SendFoldersLastUpdatedChange(DateTime.Now);
+            });
         }
 
-        protected abstract Task CheckFileMediaSourceForPlaylist(ICollection<FileMediaSource> allSources,
-            FileMediaSource source, FileMediaSourceRoot root);
-
-        private async Task CheckDefaultUpdateRoots()
+        public async Task UpdatePlaylistsInternal()
         {
-            if (defaultUpdateRoots == null || defaultUpdateRoots.Length == 0) return;
+            FileMediaSourceRootInfo[] defaultUpdateRoots = this.defaultUpdateRoots.ToNotNull().ToArray();
+            ICollection<FileMediaSourceRoot> roots = await playlistsRepo.GetFileMediaSourceRoots();
 
-            Library library = await libraryRepo.GetLibrary();
-            Dictionary<Guid, FileMediaSources> playlists = new Dictionary<Guid, FileMediaSources>();
+            foreach (FileMediaSourceRoot root in roots)
+            {
+                await CheckRootForNewPlaylists(root);
+
+                defaultUpdateRoots = defaultUpdateRoots.Where(r => !EqualRoot(r, root)).ToArray();
+            }
 
             foreach (FileMediaSourceRootInfo defaultRoot in defaultUpdateRoots)
             {
-                FileMediaSourceRoot? root = null;
-                bool hasPlaylist = false;
-
-                foreach (Guid playlistId in library.Playlists.GetSourcePlaylists().Select(p => p.Id))
-                {
-                    if (!playlists.TryGetValue(playlistId, out FileMediaSources sources))
-                    {
-                        Playlist playlist = await playlistsRepo.GetPlaylist(playlistId);
-                        sources = playlist.FileMediaSources;
-                    }
-
-                    if (!EqualRoot(defaultRoot, sources)) continue;
-
-                    root = sources.Root;
-                    if (sources.Sources.Count != 1 || !sources.Sources.All(s => s.RelativePath == string.Empty)) continue;
-
-                    hasPlaylist = true;
-                    break;
-                }
-
-                if (root.HasValue && hasPlaylist) continue;
-
-                await TryCreatePlaylist(root ?? defaultRoot.CreateRoot(), string.Empty);
+                await CheckRootForNewPlaylists(defaultRoot.CreateRoot());
             }
         }
+
+        private async Task CheckRootForNewPlaylists(FileMediaSourceRoot root)
+        {
+            if (root.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders)) return;
+
+            ICollection<FileMediaSource> allSources = await playlistsRepo.GetFileMediaSourcesOfRoot(root.Id);
+            await CheckRootForNewPlaylists(allSources, root);
+        }
+
+        private static bool EqualRoot(FileMediaSourceRootInfo defaultRoot, FileMediaSourceRoot root)
+        {
+            return defaultRoot.UpdateType == root.UpdateType
+                && defaultRoot.PathType == root.PathType
+                && defaultRoot.Path == root.Path;
+        }
+
+        protected abstract Task CheckRootForNewPlaylists(ICollection<FileMediaSource> allSources, FileMediaSourceRoot root);
 
         protected async Task TryCreatePlaylist(FileMediaSourceRoot root, string relativePath)
         {
@@ -150,13 +139,6 @@ namespace AudioPlayerBackend.FileSystem
                 null, DateTime.Now, DateTime.Now);
 
             await playlistsRepo.SendInsertPlaylist(playlist, null);
-        }
-
-        private static bool EqualRoot(FileMediaSourceRootInfo defaultRoot, FileMediaSources sources)
-        {
-            return defaultRoot.UpdateType == sources.Root.UpdateType
-                && defaultRoot.PathType == sources.Root.PathType
-                && defaultRoot.Path == sources.Root.Path;
         }
 
         public Task UpdateSourcePlaylist(Guid id)

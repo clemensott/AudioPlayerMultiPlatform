@@ -278,6 +278,13 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
                         anwser.SetResult(null);
                         break;
 
+                    case nameof(playlistsRepo.GetFileMediaSourceRoots):
+                        ICollection<FileMediaSourceRoot> roots = await playlistsRepo.GetFileMediaSourceRoots();
+                        result = new ByteQueue()
+                            .Enqueue(roots);
+                        anwser.SetResult(result);
+                        break;
+                        
                     case nameof(playlistsRepo.GetFileMediaSourcesOfRoot):
                         Guid rootId = payload.DequeueGuid();
                         ICollection<FileMediaSource> sources = await playlistsRepo.GetFileMediaSourcesOfRoot(rootId);

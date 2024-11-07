@@ -13,6 +13,8 @@ namespace AudioPlayerBackend.FileSystem
         Task ReloadLibrary();
 
         Task UpdateLibrary();
+        
+        Task UpdatePlaylists();
 
         Task ReloadSourcePlaylist(Guid id);
 

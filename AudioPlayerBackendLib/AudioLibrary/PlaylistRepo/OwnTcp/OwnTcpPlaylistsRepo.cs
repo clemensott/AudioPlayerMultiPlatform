@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
-using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.Base;
@@ -308,12 +307,19 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             OnSongsChange?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(id, songs));
         }
 
+        public async Task<ICollection<FileMediaSourceRoot>> GetFileMediaSourceRoots()
+        {
+            ByteQueue result = await SendAsync(nameof(GetFileMediaSourceRoots), null);
+
+            return result.DequeueFileMediaSourceRoots();
+        }
+
         public async Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(rootId);
 
-            ByteQueue result = await SendAsync(nameof(SendSongsChange), payload);
+            ByteQueue result = await SendAsync(nameof(GetFileMediaSourcesOfRoot), payload);
 
             return result.DequeueFileMediaSourceArray();
         }

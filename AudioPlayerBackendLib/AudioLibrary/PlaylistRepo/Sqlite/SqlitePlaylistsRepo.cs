@@ -522,6 +522,27 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             OnSongsChange?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));
         }
 
+        public async Task<ICollection<FileMediaSourceRoot>> GetFileMediaSourceRoots()
+        {
+            const string sql = @"
+                SELECT id, update_type, name, path_type, path
+                FROM file_media_source_roots;
+            ";
+
+            return await sqlExecuteService.ExecuteReadAllAsync(GetFileMediaSourceRoot, sql);
+
+            FileMediaSourceRoot GetFileMediaSourceRoot(DbDataReader reader)
+            {
+                Guid id = reader.GetGuidFromString("id");
+                FileMediaSourceRootUpdateType updateType = (FileMediaSourceRootUpdateType)reader.GetInt64("update_type");
+                string name = reader.GetString("name");
+                FileMediaSourceRootPathType pathType = (FileMediaSourceRootPathType)reader.GetInt64("path_type");
+                string path = reader.GetString("path");
+
+                return new FileMediaSourceRoot(id, updateType, name, pathType, path);
+            }
+        }
+
         public async Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId)
         {
             const string sql = @"

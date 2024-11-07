@@ -73,7 +73,7 @@ namespace AudioPlayerBackend.FileSystem
                 Library library = await libraryRepo.GetLibrary();
                 if (NeedsFoldersUpdate(library.FoldersLastUpdated))
                 {
-                    await InvokeDispatcher(() => updateLibraryService.UpdateLibrary());
+                    await InvokeDispatcher(() => updateLibraryService.UpdatePlaylists());
                 }
 
                 library = await libraryRepo.GetLibrary();

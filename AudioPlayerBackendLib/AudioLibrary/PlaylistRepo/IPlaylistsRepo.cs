@@ -42,6 +42,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
         Task SendSongsChange(Guid id, ICollection<Song> songs);
         event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
 
+        Task<ICollection<FileMediaSourceRoot>> GetFileMediaSourceRoots();
+        
         Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId);
 
         Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources);

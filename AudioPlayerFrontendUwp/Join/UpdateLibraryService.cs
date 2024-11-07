@@ -23,25 +23,24 @@ namespace AudioPlayerFrontend.Join
             storageFileEqualityComparer = new StorageFileEqualityComparer();
         }
 
-        protected override async Task CheckFileMediaSourceForPlaylist(ICollection<FileMediaSource> allSources,
-            FileMediaSource source, FileMediaSourceRoot root)
+        protected override async Task CheckRootForNewPlaylists(ICollection<FileMediaSource> allSources, FileMediaSourceRoot root)
         {
             IStorageItem rootStorageItem = await GetStorageItemFromFileMediaSourceRoot(root);
             if (!(rootStorageItem is StorageFolder rootFolder)) return;
 
-            IStorageItem sourceStorageItem = await GetStorageItemFromMediaSourcePath(source, rootFolder);
-            if (!(sourceStorageItem is StorageFolder sourceFolder)) return;
-
-            await CheckFolders(sourceFolder, source.RelativePath);
+            await CheckFolders(rootFolder, string.Empty);
 
             async Task CheckFolders(StorageFolder folder, string relativeFolderPath)
             {
+                if (!allSources.Any(s => s.RelativePath == relativeFolderPath))
+                {
+                    await TryCreatePlaylist(root, relativeFolderPath);
+                }
+
                 foreach (StorageFolder subFolder in await folder.GetFoldersAsync())
                 {
-                    string relativeSubFolderPath = FileMediaSource.NormalizeRelativePath(Path.Combine(relativeFolderPath, subFolder.Name));
-                    if (allSources.Any(s => s.RelativePath == relativeSubFolderPath)) return;
-
-                    await TryCreatePlaylist(root, relativeSubFolderPath);
+                    string relativeSubFolderPath = FileMediaSource
+                        .NormalizeRelativePath(Path.Combine(relativeFolderPath, subFolder.Name));
                     await CheckFolders(subFolder, relativeSubFolderPath);
                 }
             }

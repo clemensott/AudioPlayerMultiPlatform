@@ -25,23 +25,24 @@ namespace AudioPlayerFrontend.Join
             this.playlistsRepo = playlistsRepo;
         }
 
-        protected override async Task CheckFileMediaSourceForPlaylist(ICollection<FileMediaSource> allSources,
-            FileMediaSource source, FileMediaSourceRoot root)
+        protected override async Task CheckRootForNewPlaylists(ICollection<FileMediaSource> allSources, FileMediaSourceRoot root)
         {
-            string path = GetFileMediaSourcePath(source, root);
-            if (!Directory.Exists(path)) return;
+            string rootPath = GetPathFromFileMediaSourceRoot(root);
+            if (!Directory.Exists(rootPath)) return;
 
-            int rootLength = root.Path.Length;
-            await CheckFolders(path);
+            int rootLength = rootPath.Length;
+            await CheckFolders(rootPath);
 
             async Task CheckFolders(string folderPath)
             {
+                string relativePath = FileMediaSource.NormalizeRelativePath(folderPath.Substring(rootLength));
+                if (!allSources.Any(s => s.RelativePath == relativePath))
+                {
+                    await TryCreatePlaylist(root, relativePath);
+                }
+
                 foreach (string subFolderPath in Directory.GetDirectories(folderPath))
                 {
-                    string relativePath = FileMediaSource.NormalizeRelativePath(subFolderPath.Substring(rootLength));
-                    if (allSources.Any(s => s.RelativePath == relativePath)) return;
-
-                    await TryCreatePlaylist(root, relativePath);
                     await CheckFolders(subFolderPath);
                 }
             }
