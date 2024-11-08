@@ -12,7 +12,7 @@ namespace AudioPlayerFrontend
     public sealed partial class AudioPositionSlider : UserControl
     {
         public static readonly DependencyProperty PositionProperty =
-            DependencyProperty.Register("Position", typeof(TimeSpan), typeof(AudioPositionSlider),
+            DependencyProperty.Register(nameof(Position), typeof(TimeSpan), typeof(AudioPositionSlider),
                 new PropertyMetadata(TimeSpan.Zero, new PropertyChangedCallback(OnPositionPropertyChanged)));
 
         private static void OnPositionPropertyChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
@@ -22,13 +22,19 @@ namespace AudioPlayerFrontend
 
             if (s.isManipulatingSlider || s.isUpdatingSliderValue) return;
 
-            s.isUpdatingSliderValue = true;
-            s.sldPosition.Value = value.TotalSeconds;
-            s.isUpdatingSliderValue = false;
+            try
+            {
+                s.isUpdatingSliderValue = true;
+                s.sldPosition.Value = value.TotalSeconds;
+            }
+            finally
+            {
+                s.isUpdatingSliderValue = false;
+            }
         }
 
         public static readonly DependencyProperty DurationProperty =
-            DependencyProperty.Register("Duration", typeof(TimeSpan), typeof(AudioPositionSlider),
+            DependencyProperty.Register(nameof(Duration), typeof(TimeSpan), typeof(AudioPositionSlider),
                 new PropertyMetadata(TimeSpan.Zero, new PropertyChangedCallback(OnDurationPropertyChanged)));
 
         private static void OnDurationPropertyChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
@@ -36,9 +42,15 @@ namespace AudioPlayerFrontend
             var s = (AudioPositionSlider)sender;
             var value = (TimeSpan)e.NewValue;
 
-            s.isUpdatingSliderValue = true;
-            s.sldPosition.Maximum = value.TotalSeconds;
-            s.isUpdatingSliderValue = false;
+            try
+            {
+                s.isUpdatingSliderValue = true;
+                s.sldPosition.Maximum = value.TotalSeconds;
+            }
+            finally
+            {
+                s.isUpdatingSliderValue = false;
+            }
         }
 
         private bool isUpdatingSliderValue, isManipulatingSlider;
@@ -70,20 +82,26 @@ namespace AudioPlayerFrontend
         private void SldPosition_ManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs e)
         {
             isManipulatingSlider = false;
-            Position = TimeSpan.FromSeconds(sldPosition.Value);
+
+            UserPositionChanged?.Invoke(this, TimeSpan.FromSeconds(sldPosition.Value));
         }
 
         private async void SldPosition_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
             if (isUpdatingSliderValue || isManipulatingSlider) return;
 
-            isUpdatingSliderValue = true;
+            try
+            {
+                isUpdatingSliderValue = true;
 
-            await Task.Delay(100);
+                await Task.Delay(100);
 
-            if (!isManipulatingSlider) UserPositionChanged?.Invoke(this, TimeSpan.FromSeconds(sldPosition.Value));
-
-            isUpdatingSliderValue = false;
+                if (!isManipulatingSlider) UserPositionChanged?.Invoke(this, TimeSpan.FromSeconds(sldPosition.Value));
+            }
+            finally
+            {
+                isUpdatingSliderValue = false;
+            }
         }
     }
 }

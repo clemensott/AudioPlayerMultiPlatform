@@ -14,11 +14,12 @@ using Windows.ApplicationModel.Background;
 using StdOttStandard.Dispatch;
 using AudioPlayerBackend;
 using AudioPlayerFrontend.Extensions;
-using Newtonsoft.Json;
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.Player;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using Windows.Storage.Streams;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace AudioPlayerFrontend
 {
@@ -27,7 +28,7 @@ namespace AudioPlayerFrontend
     /// </summary>
     sealed partial class App : Application
     {
-        private const string serviceProfileFilename = "serviceProfile.json";
+        private const string serviceProfileFilename = "serviceProfile.data";
         private readonly TimeSpan autoUpdateInverval = TimeSpan.FromDays(1),
             autoUpdatePlaylistsInterval = TimeSpan.FromHours(1);
 
@@ -87,9 +88,6 @@ namespace AudioPlayerFrontend
 
         private async Task StartAudioServicesHandler()
         {
-            //var db = await ApplicationData.Current.LocalFolder.TryGetItemAsync("library.db");
-            //await db?.DeleteAsync();
-
             AudioServicesBuildConfig config = new AudioServicesBuildConfig()
                 .WithAutoUpdate()
                 .WithDefaultUpdateRoots(new FileMediaSourceRootInfo[]
@@ -121,8 +119,9 @@ namespace AudioPlayerFrontend
                 IStorageItem item = await ApplicationData.Current.LocalFolder.TryGetItemAsync(serviceProfileFilename);
                 if (item is StorageFile)
                 {
-                    string jsonText = await FileIO.ReadTextAsync((StorageFile)item);
-                    return JsonConvert.DeserializeObject<ServiceProfile>(jsonText);
+                    IBuffer buffer = await FileIO.ReadBufferAsync((StorageFile)item);
+                    ServiceProfile profile = ServiceProfile.FromData(buffer.ToArray());
+                    return profile;
                 }
             }
             catch (Exception exc)
@@ -162,11 +161,11 @@ namespace AudioPlayerFrontend
                 if (audioServicesHandler.Config != null)
                 {
                     ServiceProfile profile = audioServicesHandler.Config.ToServiceProfile();
-                    string jsonText = JsonConvert.SerializeObject(profile);
+                    byte[] data = profile.ToData();
 
                     StorageFile file = await ApplicationData.Current.LocalFolder
                         .CreateFileAsync(serviceProfileFilename, CreationCollisionOption.OpenIfExists);
-                    await FileIO.WriteTextAsync(file, jsonText);
+                    await FileIO.WriteBytesAsync(file, data);
                 }
 
                 audioServicesBuilderNavigationHandler.Dispose();

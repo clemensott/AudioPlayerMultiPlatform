@@ -61,9 +61,8 @@ namespace AudioPlayerBackend.Build
 
         private async Task Rebuild()
         {
-            SetAudioServices(null);
+            await SetAudioServices(null);
 
-            await (audioServices?.Dispose() ?? Task.CompletedTask);
             keepOpenSem.Release();
             StartKeepService();
         }
@@ -77,11 +76,11 @@ namespace AudioPlayerBackend.Build
             {
                 await keepOpenSem.WaitAsync();
 
-                SetAudioServices(null);
+                await SetAudioServices(null);
 
                 Builder = backgrounTaskDispatcher == null ? Build() : await backgrounTaskDispatcher.Run(Build);
 
-                SetAudioServices(await builder.CompleteToken.ResultTask);
+                await SetAudioServices(await builder.CompleteToken.ResultTask);
             }
 
             AudioServicesBuilder Build()
@@ -92,6 +91,8 @@ namespace AudioPlayerBackend.Build
 
         private async Task SetAudioServices(AudioServices audioServices)
         {
+            if (audioServices == this.audioServices) return;
+
             foreach (ICommunicator communicator in (this.audioServices?.GetCommunicators()).ToNotNull())
             {
                 communicator.Disconnected -= OnDisconnected;
@@ -118,7 +119,7 @@ namespace AudioPlayerBackend.Build
             keepService = false;
             builder?.Cancel();
 
-            Stopped?.Invoke(this, System.EventArgs.Empty);
+            Stopped?.Invoke(this, EventArgs.Empty);
         }
     }
 }

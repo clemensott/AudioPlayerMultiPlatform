@@ -23,6 +23,7 @@ using AudioPlayerBackend.AudioLibrary;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using StdOttStandard;
 using AudioPlayerFrontend.Controls;
+using Windows.UI.Core;
 
 namespace AudioPlayerFrontend
 {
@@ -50,9 +51,9 @@ namespace AudioPlayerFrontend
             audioServicesHandler.AudioServicesChanged -= AudioServicesHandler_AudioServicesChanged;
         }
 
-        private void AudioServicesHandler_AudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
+        private async void AudioServicesHandler_AudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
         {
-            SetAudioServices(e.NewServices);
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => SetAudioServices(e.NewServices));
         }
 
         private void SetAudioServices(AudioServices audioServices)

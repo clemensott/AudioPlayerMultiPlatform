@@ -6,7 +6,7 @@ using System.Text;
 
 namespace AudioPlayerBackend.Communication.Base
 {
-    class ByteQueue : IEnumerable<byte>
+    public class ByteQueue : IEnumerable<byte>
     {
         private readonly Queue<byte> bytes;
 
@@ -43,6 +43,16 @@ namespace AudioPlayerBackend.Communication.Base
         public bool DequeueBool()
         {
             return BitConverter.ToBoolean(DequeueRange(sizeof(bool)), 0);
+        }
+
+        public ByteQueue Enqueue(bool? value)
+        {
+            return EnqueueNullable(value, Enqueue);
+        }
+
+        public bool? DequeueBoolNullable()
+        {
+            return DequeueNullable(DequeueBool);
         }
 
         public ByteQueue Enqueue(ushort value)
@@ -86,32 +96,35 @@ namespace AudioPlayerBackend.Communication.Base
             return BitConverter.ToInt64(DequeueRange(sizeof(long)), 0);
         }
 
-        public float DequeueFloat()
-        {
-            return BitConverter.ToSingle(DequeueRange(sizeof(float)), 0);
-        }
-
         public ByteQueue Enqueue(float value)
         {
             EnqueueRange(BitConverter.GetBytes(value));
             return this;
         }
 
-        public double DequeueDouble()
+        public float DequeueFloat()
         {
-            return BitConverter.ToDouble(DequeueRange(sizeof(double)), 0);
+            return BitConverter.ToSingle(DequeueRange(sizeof(float)), 0);
+        }
+
+        public ByteQueue Enqueue(float? value)
+        {
+            return EnqueueNullable(value, Enqueue);
+        }
+
+        public float? DequeueFloatNullable()
+        {
+            return DequeueNullable(DequeueFloat);
         }
 
         public ByteQueue Enqueue(double value)
         {
-            EnqueueRange(BitConverter.GetBytes(value));
-            return this;
+            return EnqueueRange(BitConverter.GetBytes(value));
         }
 
-        public string DequeueString()
+        public double DequeueDouble()
         {
-            int length = DequeueInt();
-            return length >= 0 ? Encoding.UTF8.GetString(DequeueRange(length)) : null;
+            return BitConverter.ToDouble(DequeueRange(sizeof(double)), 0);
         }
 
         public ByteQueue Enqueue(string value)
@@ -125,6 +138,12 @@ namespace AudioPlayerBackend.Communication.Base
                 EnqueueRange(valueBytes);
             }
             return this;
+        }
+
+        public string DequeueString()
+        {
+            int length = DequeueInt();
+            return length >= 0 ? Encoding.UTF8.GetString(DequeueRange(length)) : null;
         }
 
         public ByteQueue Enqueue(IEnumerable<string> strings)
@@ -300,7 +319,7 @@ namespace AudioPlayerBackend.Communication.Base
             return bytes.GetEnumerator();
         }
 
-        public static implicit operator byte[](ByteQueue queue)
+        public static implicit operator byte[] (ByteQueue queue)
         {
             return queue.ToArray();
         }
