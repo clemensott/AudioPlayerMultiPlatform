@@ -93,7 +93,7 @@ namespace AudioPlayerFrontend
 
         private void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            if (audioServicesHandler.Config != null && audioServicesHandler.AudioServices == null)
+            if (audioServicesHandler.Config != null && audioServicesHandler.Builder == null && audioServicesHandler.AudioServices == null)
             {
                 audioServicesHandler.Start(audioServicesHandler.Config);
             }

@@ -78,14 +78,16 @@ namespace AudioPlayerBackend.Build
 
                 await SetAudioServices(null);
 
-                Builder = backgrounTaskDispatcher == null ? Build() : await backgrounTaskDispatcher.Run(Build);
+                Builder = new AudioServicesBuilder(Config.Clone());
+                if (backgrounTaskDispatcher == null) Build();
+                else await backgrounTaskDispatcher.Run(Build);
 
                 await SetAudioServices(await builder.CompleteToken.ResultTask);
             }
 
-            AudioServicesBuilder Build()
+            void Build()
             {
-                return AudioServicesBuilder.Build(Config, TimeSpan.FromMilliseconds(500));
+                Builder.StartBuild(TimeSpan.FromMilliseconds(500));
             }
         }
 
