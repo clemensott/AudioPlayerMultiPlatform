@@ -20,7 +20,7 @@ namespace AudioPlayerFrontend
             this.audioServicesHandler = audioServicesHandler;
         }
 
-        public async Task Start(Frame frame)
+        public async void Start(Frame frame)
         {
             this.frame = frame;
 
@@ -49,12 +49,12 @@ namespace AudioPlayerFrontend
                 switch (endedType)
                 {
                     case BuildEndedType.Successful:
-                        if (wasOnOpenPage)
+                        if (frame.CanGoBack) frame.GoBack();
+                        else
                         {
                             frame.NavigateToMainPage(audioServicesHandler);
                             frame.BackStack.RemoveAt(0);
                         }
-                        else if (frame.CanGoBack) frame.GoBack();
                         break;
 
                     case BuildEndedType.Canceled:
@@ -93,10 +93,7 @@ namespace AudioPlayerFrontend
 
         private void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            if (audioServicesHandler.Config != null && audioServicesHandler.Builder == null && audioServicesHandler.AudioServices == null)
-            {
-                audioServicesHandler.Start(audioServicesHandler.Config);
-            }
+            if (!audioServicesHandler.IsStarted) audioServicesHandler.Start();
         }
 
         public void Dispose()

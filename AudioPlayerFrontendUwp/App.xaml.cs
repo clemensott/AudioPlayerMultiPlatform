@@ -76,9 +76,10 @@ namespace AudioPlayerFrontend
             if (rootFrame.Content == null)
             {
                 await Task.Yield(); // let OnLeavingBackground fire to start background task asap
-                rootFrame.NavigateToBuildOpenPage(audioServicesHandler);
+
+                audioServicesBuilderNavigationHandler.Start(rootFrame);
+
                 await loadServiceProfileTask;
-                await audioServicesBuilderNavigationHandler.Start(rootFrame);
                 loadServiceProfileTask = null; // release memory
             }
 
@@ -168,7 +169,6 @@ namespace AudioPlayerFrontend
                     await FileIO.WriteBytesAsync(file, data);
                 }
 
-                audioServicesBuilderNavigationHandler.Dispose();
                 await audioServicesHandler.Stop();
             }
             catch (Exception exc)

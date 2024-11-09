@@ -11,7 +11,6 @@ namespace AudioPlayerBackend.Build
     {
         private readonly Dispatcher backgrounTaskDispatcher;
         private readonly SemaphoreSlim keepOpenSem;
-        private bool keepService;
         private AudioServicesBuilder builder;
         private AudioServices audioServices;
 
@@ -47,16 +46,18 @@ namespace AudioPlayerBackend.Build
 
         public AudioServicesBuildConfig Config { get; private set; }
 
+        public bool IsStarted { get; private set; }
+
         public AudioServicesHandler(Dispatcher backgrounTaskDispatcher = null)
         {
             this.backgrounTaskDispatcher = backgrounTaskDispatcher;
             keepOpenSem = new SemaphoreSlim(0);
         }
 
-        public async void Start(AudioServicesBuildConfig config)
+        public async void Start(AudioServicesBuildConfig config = null)
         {
-            Config = config;
-            await Rebuild();
+            if (config != null) Config = config;
+            if (Config != null) await Rebuild();
         }
 
         private async Task Rebuild()
@@ -69,10 +70,10 @@ namespace AudioPlayerBackend.Build
 
         private async void StartKeepService()
         {
-            if (keepService) return;
-            keepService = true;
+            if (IsStarted) return;
+            IsStarted = true;
 
-            while (keepService)
+            while (IsStarted)
             {
                 await keepOpenSem.WaitAsync();
 
@@ -118,7 +119,7 @@ namespace AudioPlayerBackend.Build
         {
             await SetAudioServices(null);
 
-            keepService = false;
+            IsStarted = false;
             builder?.Cancel();
 
             Stopped?.Invoke(this, EventArgs.Empty);
