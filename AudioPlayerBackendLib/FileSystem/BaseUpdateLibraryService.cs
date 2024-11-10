@@ -106,10 +106,9 @@ namespace AudioPlayerBackend.FileSystem
 
         private async Task CheckRootForNewPlaylists(FileMediaSourceRoot root)
         {
-            if (!root.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders)) return;
-
             ICollection<FileMediaSource> allSources = await playlistsRepo.GetFileMediaSourcesOfRoot(root.Id);
-            await CheckRootForNewPlaylists(allSources, root);
+            bool withSubFolders = root.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders);
+            await CheckRootForNewPlaylists(allSources, root, withSubFolders);
         }
 
         private static bool EqualRoot(FileMediaSourceRootInfo defaultRoot, FileMediaSourceRoot root)
@@ -119,7 +118,7 @@ namespace AudioPlayerBackend.FileSystem
                 && defaultRoot.Path == root.Path;
         }
 
-        protected abstract Task CheckRootForNewPlaylists(ICollection<FileMediaSource> allSources, FileMediaSourceRoot root);
+        protected abstract Task CheckRootForNewPlaylists(ICollection<FileMediaSource> allSources, FileMediaSourceRoot root, bool withSubFolders);
 
         protected async Task TryCreatePlaylist(FileMediaSourceRoot root, string relativePath)
         {

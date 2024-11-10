@@ -23,7 +23,7 @@ namespace AudioPlayerFrontend.Join
             storageFileEqualityComparer = new StorageFileEqualityComparer();
         }
 
-        protected override async Task CheckRootForNewPlaylists(ICollection<FileMediaSource> allSources, FileMediaSourceRoot root)
+        protected override async Task CheckRootForNewPlaylists(ICollection<FileMediaSource> allSources, FileMediaSourceRoot root, bool withSubFolders)
         {
             IStorageItem rootStorageItem = await GetStorageItemFromFileMediaSourceRoot(root);
             if (!(rootStorageItem is StorageFolder rootFolder)) return;
@@ -37,6 +37,7 @@ namespace AudioPlayerFrontend.Join
                     await TryCreatePlaylist(root, relativeFolderPath);
                 }
 
+                if (!withSubFolders) return;
                 foreach (StorageFolder subFolder in await folder.GetFoldersAsync())
                 {
                     string relativeSubFolderPath = FileMediaSource
