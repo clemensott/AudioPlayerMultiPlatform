@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -6,11 +7,14 @@ using Windows.UI.Xaml.Controls.Primitives;
 using StdOttStandard.Converter.MultipleInputs;
 using AudioPlayerBackend.ViewModels;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.Build;
+using Windows.UI.Core;
 
 namespace AudioPlayerFrontend
 {
     public sealed partial class SearchPage : Page
     {
+        private AudioServicesHandler audioServicesHandler;
         private ISongSearchViewModel viewModel;
 
         public SearchPage()
@@ -18,15 +22,25 @@ namespace AudioPlayerFrontend
             this.InitializeComponent();
         }
 
-        protected override async void OnNavigatedTo(NavigationEventArgs e)
+        protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            DataContext = viewModel = (ISongSearchViewModel)e.Parameter;
-            await viewModel.Start();
+            audioServicesHandler = (AudioServicesHandler)e.Parameter;
+            audioServicesHandler.AddAudioServicesChangedListener(AudioServicesHandler_AudioServicesChanged);
+        }
+
+        private async void AudioServicesHandler_AudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
+        {
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+            {
+                if (viewModel != null) await viewModel.Stop();
+                DataContext = viewModel = e.NewServices?.GetViewModel().SongSearch;
+                if (viewModel != null) await viewModel.Start();
+            });
         }
 
         protected override async void OnNavigatedFrom(NavigationEventArgs e)
         {
-            await viewModel.Stop();
+            if (viewModel != null) await viewModel.Stop();
         }
 
         private async void IbnPlay_Click(object sender, RoutedEventArgs e)

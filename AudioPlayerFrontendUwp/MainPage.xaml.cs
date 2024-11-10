@@ -35,15 +35,17 @@ namespace AudioPlayerFrontend
 
         public MainPage()
         {
+            Logs.Log("MainPage1");
             this.InitializeComponent();
+            Logs.Log("MainPage2");
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
+            Logs.Log("MainPage.OnNavigatedTo1");
             audioServicesHandler = (AudioServicesHandler)e.Parameter;
-            audioServicesHandler.AudioServicesChanged += AudioServicesHandler_AudioServicesChanged;
-
-            SetAudioServices(audioServicesHandler.AudioServices);
+            audioServicesHandler.AddAudioServicesChangedListener(AudioServicesHandler_AudioServicesChanged);
+            Logs.Log("MainPage.OnNavigatedTo2");
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -58,8 +60,10 @@ namespace AudioPlayerFrontend
 
         private void SetAudioServices(AudioServices audioServices)
         {
+            Logs.Log("MainPage.SetAudioServices1");
             DataContext = viewModel = audioServices?.GetViewModel();
             updateLibraryService = audioServices?.GetUpdateLibraryService();
+            Logs.Log("MainPage.SetAudioServices2");
         }
 
         private object MicViewPlaylists_Convert(object sender, MultiplesInputsConvert2EventArgs args)
@@ -164,7 +168,7 @@ namespace AudioPlayerFrontend
 
         private void IbnSearch_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel != null) Frame.NavigateToSearchPage(viewModel.SongSearch);
+            if (viewModel != null) Frame.NavigateToSearchPage(audioServicesHandler);
         }
 
         private void LbxPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -305,7 +309,10 @@ namespace AudioPlayerFrontend
 
             await new MessageDialog(exceptionText, time.ToString()).ShowAsync();
 
-            string message = $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}";
+            string message = $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}"
+                + $"\nAudioHandler: {audioServicesHandler.IsStarted}"
+                + $"\nConfig: {audioServicesHandler.Config != null}"
+                + $"\nAudioServices: {audioServicesHandler.AudioServices != null}";
             await new MessageDialog(message, "States").ShowAsync();
 
             await new MessageDialog(Logs.Get(), "Logs").ShowAsync();

@@ -45,11 +45,10 @@ namespace AudioPlayerFrontend.Background
             ResetCloseTimer();
             closeTimer.RanDown += CloseTimer_RanDown;
 
-            SubscribeServicesHandler();
             Application.Current.EnteredBackground += OnEnteredBackground;
             Application.Current.LeavingBackground += OnLeavingBackground;
 
-            HandleAudioServices(servicesHandler.AudioServices);
+            SubscribeServicesHandler();
         }
 
         private void CloseTimer_RanDown(object sender, EventArgs e)
@@ -60,7 +59,7 @@ namespace AudioPlayerFrontend.Background
 
         private void SubscribeServicesHandler()
         {
-            servicesHandler.AudioServicesChanged += ServicesHandler_AudioServicesChanged;
+            servicesHandler.AddAudioServicesChangedListener(ServicesHandler_AudioServicesChanged);
         }
 
         private void UnsubscribeServicesHandler()

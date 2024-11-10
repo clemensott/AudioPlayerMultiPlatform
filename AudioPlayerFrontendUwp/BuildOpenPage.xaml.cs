@@ -26,18 +26,21 @@ namespace AudioPlayerFrontend
 
         public BuildOpenPage()
         {
+            AudioPlayerBackend.Logs.Log("BuildOpenPage1");
             this.InitializeComponent();
+            AudioPlayerBackend.Logs.Log("BuildOpenPage2");
         }
 
-        protected override async void OnNavigatedTo(NavigationEventArgs e)
+        protected override void OnNavigatedTo(NavigationEventArgs e)
         {
+            AudioPlayerBackend.Logs.Log("BuildOpenPage.OnNavigatedTo1");
             audioServicesHandler = (AudioServicesHandler)e.Parameter;
-            audioServicesHandler.ServicesBuild += AudioServicesHandler_ServicesBuild;
+            audioServicesHandler.AddServiceBuildListener(AudioServicesHandler_ServicesBuild);
 
             IEnumerable<string> frames = Frame.BackStack.Select(s => s.SourcePageType.FullName);
             tblFrameStack.Text = string.Join("\r\n", frames);
 
-            await SetDataContext(audioServicesHandler.Builder);
+            AudioPlayerBackend.Logs.Log("BuildOpenPage.OnNavigatedTo2");
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -53,11 +56,13 @@ namespace AudioPlayerFrontend
 
         private async Task SetDataContext(AudioServicesBuilder dataContext)
         {
+            AudioPlayerBackend.Logs.Log("BuildOpenPage.SetDataContext1");
             if (dataContext == null) return;
 
             // only show all options if opening takes to long
             await Task.Delay(TimeSpan.FromSeconds(5));
             if (!isPageClosed) DataContext = dataContext;
+            AudioPlayerBackend.Logs.Log("BuildOpenPage.SetDataContext2");
         }
 
         private object MicException_Convert(object sender, MultiplesInputsConvert4EventArgs args)

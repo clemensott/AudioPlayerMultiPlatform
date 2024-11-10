@@ -54,6 +54,18 @@ namespace AudioPlayerBackend.Build
             keepOpenSem = new SemaphoreSlim(0);
         }
 
+        public void AddServiceBuildListener(EventHandler<AudioServicesBuilder> eventHandler)
+        {
+            ServicesBuild += eventHandler;
+            if (Builder != null) eventHandler(this, Builder);
+        }
+
+        public void AddAudioServicesChangedListener(EventHandler<AudioServicesChangedEventArgs> eventHandler)
+        {
+            AudioServicesChanged += eventHandler;
+            if (AudioServices != null) eventHandler(this, new AudioServicesChangedEventArgs(null, AudioServices));
+        }
+
         public async void Start(AudioServicesBuildConfig config = null)
         {
             if (config != null) Config = config;

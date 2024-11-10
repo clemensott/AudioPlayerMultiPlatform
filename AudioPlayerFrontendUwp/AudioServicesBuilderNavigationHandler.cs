@@ -20,15 +20,14 @@ namespace AudioPlayerFrontend
             this.audioServicesHandler = audioServicesHandler;
         }
 
-        public async void Start(Frame frame)
+        public void Start(Frame frame)
         {
             this.frame = frame;
 
             Application.Current.EnteredBackground += Application_EnteredBackground;
             Application.Current.LeavingBackground += Application_LeavingBackground;
 
-            audioServicesHandler.ServicesBuild += AudioServicesHandler_ServicesBuild;
-            await HandleAudioServiceBuilder(audioServicesHandler.Builder);
+            audioServicesHandler.AddServiceBuildListener(AudioServicesHandler_ServicesBuild);
         }
 
         private async void AudioServicesHandler_ServicesBuild(object sender, AudioServicesBuilder e)

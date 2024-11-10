@@ -12,7 +12,7 @@ namespace AudioPlayerFrontend.Extensions
             frame.Navigate(typeof(MainPage), parameter);
         }
 
-        internal static void NavigateToSearchPage(this Frame frame, ISongSearchViewModel parameter)
+        internal static void NavigateToSearchPage(this Frame frame, AudioServicesHandler parameter)
         {
             frame.Navigate(typeof(SearchPage), parameter);
         }
