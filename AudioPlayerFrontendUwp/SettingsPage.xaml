@@ -6,19 +6,11 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:con="using:StdOttUwp.Converters"
-    xmlns:audio="using:AudioPlayerBackend.AudioLibrary.PlaylistRepo"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-    Loaded="Page_Loaded">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Page.Resources>
-        <local:VolumeToolTipConverter x:Key="volTooTipCon"/>
         <con:FalsyConverter x:Key="inverter"/>
-        <con:EnumConverter x:Key="communicatorProtocolCon"/>
-
-        <con:ValueConverter x:Key="shuffleCon"
-                            ConvertEvent="ShuffleConverter_ConvertEvent"
-                            ConvertBackEvent="ShuffleConverter_ConvertBackEvent"/>
     </Page.Resources>
 
     <ScrollViewer>
@@ -34,7 +26,7 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="Mode:" FontSize="17" FontWeight="Bold" Margin="5,0"/>
+                <TextBlock Text="Mode" FontSize="17" FontWeight="Bold" Margin="5,0"/>
 
                 <StackPanel Grid.Row="1" VerticalAlignment="Center">
                     <RadioButton x:Name="rbnStandalone" Content="Standalone" 
@@ -44,7 +36,7 @@
                     <RadioButton x:Name="rbnServer" Content="Server" 
                                  GroupName="Communicator" Margin="2"
                                  IsChecked="{Binding BuildServer,Mode=OneWay}"
-                                 Checked="RbnServer_Checked" Visibility="Collapsed"/>
+                                 Checked="RbnServer_Checked"/>
                     <RadioButton x:Name="rbnClient" Content="Client" 
                                  GroupName="Communicator" Margin="2"
                                  IsChecked="{Binding BuildClient,Mode=OneWay}"
@@ -79,59 +71,21 @@
             </Grid>
 
             <StackPanel Margin="3,10,3,3" VerticalAlignment="Center">
-                <TextBlock Text="Shuffle:" FontSize="17" FontWeight="Bold" Margin="5,3"/>
+                <TextBlock Text="Auto Update" FontSize="17" FontWeight="Bold" Margin="5,3"/>
 
-                <ComboBox Width="150" Margin="3" HorizontalAlignment="Left" SelectedValuePath="DataContext"
-                          SelectedValue="{Binding Shuffle,Mode=TwoWay,Converter={StaticResource shuffleCon},ConverterParameter=none}">
-                    <ComboBoxItem DataContext="none">None</ComboBoxItem>
-                    <ComboBoxItem>
-                        <ComboBoxItem.DataContext>
-                            <audio:OrderType>ByTitleAndArtist</audio:OrderType>
-                        </ComboBoxItem.DataContext>
-                        <ComboBoxItem.Content>Title and Artist</ComboBoxItem.Content>
-                    </ComboBoxItem>
-                    <ComboBoxItem>
-                        <ComboBoxItem.DataContext>
-                            <audio:OrderType>ByPath</audio:OrderType>
-                        </ComboBoxItem.DataContext>
-                        <ComboBoxItem.Content>File path</ComboBoxItem.Content>
-                    </ComboBoxItem>
-                    <ComboBoxItem>
-                        <ComboBoxItem.DataContext>
-                            <audio:OrderType>Custom</audio:OrderType>
-                        </ComboBoxItem.DataContext>
-                        <ComboBoxItem.Content>Shuffle</ComboBoxItem.Content>
-                    </ComboBoxItem>
-                </ComboBox>
-                
-                <CheckBox Name="cbxSearchShuffle" Content="Shuffle search songs" Margin="3"
-                          IsChecked="{Binding IsSearchShuffle,Mode=TwoWay}"
-                          DoubleTapped="Cbx_DoubleTapped"/>
+                <CheckBox Name="cbxAutoUpdate" Content="Enable" Margin="3"
+                          IsChecked="{Binding AutoUpdate,Mode=TwoWay}"/>
             </StackPanel>
 
-            <StackPanel Margin="3">
-                <con:MultipleInputs3Converter x:Name="micVolume"
-                                              Input0="{Binding Volume,Mode=TwoWay}"
-                                              ConvertRef="MicVolume_ConvertRef"/>
+            <StackPanel Margin="3,10,3,3" VerticalAlignment="Center">
+                <TextBlock Text="Default Update Root" FontSize="17" FontWeight="Bold" Margin="5,3"/>
 
-                <CheckBox x:Name="cbxVolume" IsChecked="{Binding ElementName=micVolume,Path=Input1,Mode=TwoWay}">
-                    <TextBlock Text="Volume:" FontSize="17" FontWeight="Bold" Margin="5,0"/>
-                </CheckBox>
-                <Slider Grid.Column="2" Maximum="1" Margin="5,0,5,-5" StepFrequency="0.01" SnapsTo="StepValues"
-                        IsEnabled="{Binding ElementName=micVolume,Path=Input1}"
-                        Value="{Binding ElementName=micVolume,Path=Input2,Mode=TwoWay}"
-                        ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
-            </StackPanel>
+                <CheckBox Name="cbxMusicDefaultRoot" Content="Music Library" Margin="3" IsChecked="True"
+                          Checked="CbxMusicDefaultRoot_Checked" Unchecked="CbxMusicDefaultRoot_Unchecked"/>
 
-            <StackPanel Orientation="Horizontal" Margin="5,0,3,3">
-                <CheckBox Name="cbxPlay" Content="Play" Margin="3"
-                          IsChecked="{Binding Play,Mode=TwoWay}"
-                          DoubleTapped="Cbx_DoubleTapped"/>
-            </StackPanel>
-
-            <StackPanel Margin="3,10,3,3">
-                <TextBlock Text="Search:" FontSize="17" FontWeight="Bold" Margin="5,0"/>
-                <TextBox Margin="3" Text="{Binding SearchKey,Mode=TwoWay}"/>
+                <CheckBox Name="cbxMusicWithSubFolders" Content="With sub folders" Margin="3" IsChecked="True"
+                          IsEnabled="{Binding ElementName=cbxMusicDefaultRoot,Path=IsChecked}"
+                          Checked="CbxMusicWithSubFolders_Checked" Unchecked="CbxMusicWithSubFolders_Unchecked"/>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

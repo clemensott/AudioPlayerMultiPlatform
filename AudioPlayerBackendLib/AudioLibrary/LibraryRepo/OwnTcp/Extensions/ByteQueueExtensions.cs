@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp.Extensions
 {
-    internal static class ByteQueueExtensions
+    public static class ByteQueueExtensions
     {
         public static ByteQueue Enqueue(this ByteQueue queue, PlaybackState playState)
         {

@@ -1,4 +1,7 @@
-﻿using AudioPlayerBackend.Communication.Base;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions;
+using AudioPlayerBackend.Communication.Base;
+using System.Linq;
 
 namespace AudioPlayerFrontend
 {
@@ -10,23 +13,15 @@ namespace AudioPlayerFrontend
 
         public bool BuildClient { get; set; }
 
-        public int? Shuffle { get; set; }
-
-        public bool? IsSearchShuffle { get; set; }
-
-        public bool? Play { get; set; }
+        public bool AutoUpdate { get; set; }
 
         public int ServerPort { get; set; }
 
         public int? ClientPort { get; set; }
 
-        public string SearchKey { get; set; }
-
         public string ServerAddress { get; set; }
 
-        public float? Volume { get; set; }
-
-        public float? ClientVolume { get; set; }
+        public FileMediaSourceRootInfo[] DefaultUpdateRoots { get; set; }
 
         public byte[] ToData()
         {
@@ -34,15 +29,11 @@ namespace AudioPlayerFrontend
                 .Enqueue(BuildStandalone)
                 .Enqueue(BuildServer)
                 .Enqueue(BuildClient)
-                .Enqueue(Shuffle)
-                .Enqueue(IsSearchShuffle)
-                .Enqueue(Play)
+                .Enqueue(AutoUpdate)
                 .Enqueue(ServerPort)
                 .Enqueue(ClientPort)
-                .Enqueue(SearchKey)
                 .Enqueue(ServerAddress)
-                .Enqueue(Volume)
-                .Enqueue(ClientVolume);
+                .Enqueue(DefaultUpdateRoots);
         }
 
         public static ServiceProfile FromData(byte[] data)
@@ -53,15 +44,11 @@ namespace AudioPlayerFrontend
                 BuildStandalone = queue.DequeueBool(),
                 BuildServer = queue.DequeueBool(),
                 BuildClient = queue.DequeueBool(),
-                Shuffle = queue.DequeueIntNullable(),
-                IsSearchShuffle = queue.DequeueBoolNullable(),
-                Play = queue.DequeueBoolNullable(),
+                AutoUpdate = queue.DequeueBool(),
                 ServerPort = queue.DequeueInt(),
                 ClientPort = queue.DequeueIntNullable(),
-                SearchKey = queue.DequeueString(),
                 ServerAddress = queue.DequeueString(),
-                Volume = queue.DequeueFloatNullable(),
-                ClientVolume = queue.DequeueFloatNullable(),
+                DefaultUpdateRoots = queue.DequeueFileMediaSourceRootInfos()?.ToArray(),
             };
         }
     }
