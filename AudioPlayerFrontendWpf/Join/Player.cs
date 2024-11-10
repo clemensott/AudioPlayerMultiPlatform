@@ -88,10 +88,11 @@ namespace AudioPlayerFrontend.Join
             {
                 AudioPlayerBackend.Logs.Log($"MediaElement_MediaOpened1: {setRequestSong.Song.FullPath}");
                 Source = setRequestSong.Song;
-                if (setRequestSong.Position.HasValue && mediaElement.NaturalDuration.HasTimeSpan &&
-                    setRequestSong.Duration == mediaElement.NaturalDuration.TimeSpan)
+                if (setRequestSong.Position > TimeSpan.Zero
+                    && mediaElement.NaturalDuration.HasTimeSpan
+                    && setRequestSong.Duration == mediaElement.NaturalDuration.TimeSpan)
                 {
-                    SetPosition(setRequestSong.Position.Value);
+                    SetPosition(setRequestSong.Position);
                 }
                 else lastPosition = Position;
 
@@ -181,10 +182,9 @@ namespace AudioPlayerFrontend.Join
                 AudioPlayerBackend.Logs.Log($"Player.Set6: {Source.HasValue} | {wanna.Song.FullPath} | {Source?.FullPath}");
                 if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)
                 {
-                    if (wanna.Position.HasValue &&
-                        wanna.Position.Value != Position)
+                    if (!wanna.ContinuePlayback && wanna.Position != Position)
                     {
-                        SetPosition(wanna.Position.Value);
+                        SetPosition(wanna.Position);
                     }
                     Source = wanna.Song;
                     ExecutePlayState();

@@ -46,17 +46,23 @@ namespace AudioPlayerBackend.Player
 
         public async Task Start()
         {
+            Logs.Log("AudioPlayerService.Start1");
             SubsribePlayer();
             SubscribeLibraryRepo();
             SubscribePlaylistsRepo();
+            Logs.Log("AudioPlayerService.Start2");
 
             Library library = await libraryRepo.GetLibrary();
+            Logs.Log("AudioPlayerService.Start3");
             playlistIds = library.Playlists.Select(p => p.Id).ToList();
 
             Player.PlayState = library.PlayState;
+            Logs.Log("AudioPlayerService.Start4");
             await ChangeCurrentPlaylist(library.CurrentPlaylistId);
+            Logs.Log("AudioPlayerService.Start5");
 
             await libraryRepo.SendVolumeChange(Player.Volume);
+            Logs.Log("AudioPlayerService.Start6");
         }
 
         public async Task Stop()
@@ -93,14 +99,15 @@ namespace AudioPlayerBackend.Player
 
         private async Task ChangeCurrentPlaylist(Guid? newCurrentPlaylistId, bool saveCurrentState = false)
         {
+            Logs.Log("AudioPlayerService.ChangeCurrentPlaylist1");
             if (currentPlaylistId == newCurrentPlaylistId) return;
 
-            (Guid? playlistId, RequestSong? state) currentState = saveCurrentState ? GetCurrentStateAsRequestSong() : (null, null);
-
             currentPlaylistId = newCurrentPlaylistId;
+            Logs.Log("AudioPlayerService.ChangeCurrentPlaylist2");
             if (newCurrentPlaylistId.HasValue)
             {
                 var currentPlaylist = await playlistsRepo.GetPlaylist(newCurrentPlaylistId.Value);
+                Logs.Log("AudioPlayerService.ChangeCurrentPlaylist3");
                 shuffle = currentPlaylist.Shuffle;
                 loop = currentPlaylist.Loop;
                 requestSong = currentPlaylist.RequestSong;
@@ -112,13 +119,14 @@ namespace AudioPlayerBackend.Player
                 songs = new Song[0];
             }
 
+            Logs.Log("AudioPlayerService.ChangeCurrentPlaylist4");
             // if a request song has been set by CheckRequestedSong then UpdateCurrentSong got called already
-            if (!await CheckRequestedSong()) await UpdateCurrentSong();
-
-            if (currentState.playlistId.HasValue)
+            if (!await CheckRequestedSong())
             {
-                await playlistsRepo.SendRequestSongChange(currentState.playlistId.Value, currentState.state);
+                Logs.Log("AudioPlayerService.ChangeCurrentPlaylist5");
+                await UpdateCurrentSong();
             }
+            Logs.Log("AudioPlayerService.ChangeCurrentPlaylist6");
         }
 
         private async void Timer_Elapsed(object state)
@@ -130,13 +138,15 @@ namespace AudioPlayerBackend.Player
         {
             try
             {
-                if (!Player.Source.HasValue ||
-                    Player.Source?.Id != currentSongId ||
+                if (!Player.Source.TryHasValue(out Song currentSong) ||
+                    currentSong.Id != currentSongId ||
                     !currentPlaylistId.TryHasValue(out Guid playlistId)) return;
 
+                bool updateRequestedSong = false;
                 TimeSpan currentPosition = Player.Position;
                 if (currentPosition.Seconds != position.Seconds)
                 {
+                    updateRequestedSong = true;
                     position = currentPosition;
                     await playlistsRepo.SendPositionChange(playlistId, position);
                 }
@@ -144,8 +154,15 @@ namespace AudioPlayerBackend.Player
                 TimeSpan currentDuration = Player.Duration;
                 if (currentDuration != duration)
                 {
+                    updateRequestedSong = true;
                     duration = currentDuration;
                     await playlistsRepo.SendDurationChange(playlistId, duration);
+                }
+
+                if (updateRequestedSong)
+                {
+                    RequestSong newRequestedSong = RequestSong.Get(currentSong, currentPosition, currentDuration, true);
+                    await playlistsRepo.SendRequestSongChange(playlistId, newRequestedSong);
                 }
             }
             catch (Exception e)
@@ -208,9 +225,11 @@ namespace AudioPlayerBackend.Player
 
         private async void Player_MediaOpened(object sender, MediaOpenedEventArgs e)
         {
+            Logs.Log("AudioPlayerService.Player_MediaOpened1");
             errorCount = 0;
 
             await EnableTimer();
+            Logs.Log("AudioPlayerService.Player_MediaOpened1");
         }
 
         private async void Player_MediaFailed(object sender, MediaFailedEventArgs e)
@@ -221,9 +240,11 @@ namespace AudioPlayerBackend.Player
 
         private async void Player_MediaEnded(object sender, MediaEndedEventArgs e)
         {
+            Logs.Log("AudioPlayerService.Player_MediaEnded1");
             Logs.Log($"Player_MediaEnded: {e.Song?.FullPath}");
             StopTimer();
             await dispatcher.InvokeDispatcher(() => Continue(e.Song));
+            Logs.Log("AudioPlayerService.Player_MediaEnded3");
         }
 
 
@@ -363,24 +384,30 @@ namespace AudioPlayerBackend.Player
 
         private async Task UpdateCurrentSong()
         {
+            Logs.Log("AudioPlayerService.UpdateCurrentSong1");
             StopTimer();
             isSetCurrentSong = true;
 
             if (currentPlaylistId.TryHasValue(out Guid playlistId))
             {
                 RequestSong? setRequestSong = requestSong;
+                Logs.Log("AudioPlayerService.UpdateCurrentSong2");
                 await Player.Set(setRequestSong);
+                Logs.Log("AudioPlayerService.UpdateCurrentSong3");
 
                 if (requestSong.Equals(setRequestSong))
                 {
                     await playlistsRepo.SendCurrentSongIdChange(playlistId, setRequestSong?.Song.Id);
                 }
+                Logs.Log("AudioPlayerService.UpdateCurrentSong4");
             }
             else await Player.Set(null);
 
             isSetCurrentSong = false;
 
+            Logs.Log("AudioPlayerService.UpdateCurrentSong5");
             await EnableTimer();
+            Logs.Log("AudioPlayerService.UpdateCurrentSong6");
         }
 
         private async Task EnableTimer()

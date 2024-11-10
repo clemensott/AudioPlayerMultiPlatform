@@ -84,16 +84,18 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
             return queue
                 .Enqueue(song.Song)
                 .Enqueue(song.Position)
-                .Enqueue(song.Duration);
+                .Enqueue(song.Duration)
+                .Enqueue(song.ContinuePlayback);
         }
 
         public static RequestSong DequeueRequestSong(this ByteQueue queue)
         {
             Song song = queue.DequeueSong();
-            TimeSpan? position = queue.DequeueTimeSpanNullable();
+            TimeSpan position = queue.DequeueTimeSpan();
             TimeSpan duration = queue.DequeueTimeSpan();
+            bool continuePlayback = queue.DequeueBool();
 
-            return RequestSong.Get(song, position, duration);
+            return RequestSong.Get(song, position, duration, continuePlayback);
         }
 
         public static ByteQueue Enqueue(this ByteQueue queue, RequestSong? song)

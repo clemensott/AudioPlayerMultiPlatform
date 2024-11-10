@@ -113,9 +113,9 @@ namespace AudioPlayerFrontend.Join
         private void Player_MediaOpened(MediaPlayer sender, object args)
         {
             Source = requestSong.Value.Song;
-            if (requestSong.Value.Position.HasValue && requestSong.Value.Duration == sender.PlaybackSession.NaturalDuration)
+            if (requestSong.Value.Duration == sender.PlaybackSession.NaturalDuration)
             {
-                sender.PlaybackSession.Position = requestSong.Value.Position.Value;
+                sender.PlaybackSession.Position = requestSong.Value.Position;
             }
 
             MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, requestSong.Value.Song));
@@ -153,10 +153,9 @@ namespace AudioPlayerFrontend.Join
 
                 if (Source.HasValue && song.Song.FullPath == Source?.FullPath)
                 {
-                    if (song.Position.HasValue &&
-                        song.Position.Value != Position)
+                    if (!song.ContinuePlayback && song.Position != Position)
                     {
-                        player.PlaybackSession.Position = song.Position.Value;
+                        player.PlaybackSession.Position = song.Position;
                     }
                     Source = song.Song;
                     ExecutePlayState();

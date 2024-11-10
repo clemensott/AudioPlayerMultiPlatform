@@ -5,6 +5,11 @@ namespace AudioPlayerBackend.AudioLibrary.Database.Sql.Extensions
 {
     static class DbDataReaderExtensions
     {
+        public static bool GetBooleanFromLong(this DbDataReader reader, string name)
+        {
+            return reader.GetInt64(reader.GetOrdinal(name)) == 1L;
+        }
+        
         public static bool? GetBooleanFromNullableLong(this DbDataReader reader, string name)
         {
             int ordinal = reader.GetOrdinal(name);

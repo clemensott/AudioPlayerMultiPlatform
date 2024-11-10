@@ -273,14 +273,11 @@ namespace AudioPlayerBackend.ViewModels
         {
             if (CurrentPlaylist.Id == playlistId)
             {
-                int newIndex = Math.Min(CurrentPlaylistIndex + 1, Playlists.Count);
-                await CurrentPlaylist.SetPlaylistId(Playlists.ElementAtOrDefault(newIndex)?.Id);
+                int newIndex = Math.Min(CurrentPlaylistIndex + 1, Playlists.Count - 2);
+                await libraryRepo.SendCurrentPlaylistIdChange(Playlists.ElementAtOrDefault(newIndex)?.Id);
             }
 
             await playlistsRepo.SendRemovePlaylist(playlistId);
-
-            int index = Playlists.IndexOf(p => p.Id == playlistId);
-            Playlists.RemoveAt(index);
         }
 
         public async Task Dispose()

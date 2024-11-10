@@ -60,6 +60,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                     requested_song_id         TEXT REFERENCES songs (id),
                     requested_song_position   INTEGER,
                     requested_song_duration   INTEGER,
+                    requested_song_continue   INTEGER,
                     songs_count               INT     NOT NULL DEFAULT 0,
                     file_media_source_root_id TEXT REFERENCES file_media_source_roots (id),
                     files_last_updated        INTEGER,
@@ -110,7 +111,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 SELECT p.id, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
                     requested_song_id, rs.title as requested_song_title, rs.artist as requested_song_artist,
                     rs.full_path as requested_song_full_path, requested_song_position, requested_song_duration,
-                    file_media_source_root_id, np.next_playlist_id, p.files_last_updated, p.songs_last_updated
+                    requested_song_continue, file_media_source_root_id, np.next_playlist_id, p.files_last_updated,
+                    p.songs_last_updated
                 FROM playlists p
                     LEFT JOIN songs rs ON p.requested_song_id = rs.id
                     LEFT JOIN next_playlists np ON p.id = np.playlist_id
@@ -186,11 +188,12 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 string songTitle = reader.GetString("requested_song_title");
                 string songArtist = reader.GetStringNullable("requested_song_artist");
                 string songFullPath = reader.GetString("requested_song_full_path");
-                TimeSpan? requestPosition = reader.GetTimespanNullableFromInt64("requested_song_position");
+                TimeSpan requestPosition = reader.GetTimespanFromInt64("requested_song_position");
                 TimeSpan requestDuration = reader.GetTimespanFromInt64("requested_song_duration");
+                bool requestContinue = reader.GetBooleanFromLong("requested_song_continue");
 
                 Song song = new Song(songId.Value, songIndex, songTitle, songArtist, songFullPath);
-                return RequestSong.Get(song, requestPosition, requestDuration);
+                return RequestSong.Get(song, requestPosition, requestDuration, requestContinue);
             }
 
             Song GetSong(DbDataReader reader)
@@ -280,11 +283,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 
             const string playlistSql = @"
                 INSERT INTO playlists (id, index_value, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
-                    requested_song_id, requested_song_position, requested_song_duration, songs_count, file_media_source_root_id,
-                    files_last_updated, songs_last_updated)
+                    requested_song_id, requested_song_position, requested_song_duration, requested_song_continue, songs_count,
+                    file_media_source_root_id, files_last_updated, songs_last_updated)
                 VALUES (@id, @index, @type, @name, @shuffle, @loop, @playbackRate, @position, @duration, @currentSongId,
-                    @requestedSongId, @requestedSongPosition, @requestedSongDuration, @songsCount, @fileMediaSourceRootId,
-                    @filesLastUpdated, @songsLastUpdated);
+                    @requestedSongId, @requestedSongPosition, @requestedSongDuration, @requestedSongContinue, @songsCount,
+                    @fileMediaSourceRootId, @filesLastUpdated, @songsLastUpdated);
             ";
             var playlistParameters = new KeyValuePair<string, object>[]
             {
@@ -299,8 +302,9 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 CreateParam("duration", playlist.Duration.Ticks),
                 CreateParam("currentSongId", playlist.CurrentSongId?.ToString()),
                 CreateParam("requestedSongId", playlist.RequestSong?.Song.Id.ToString()),
-                CreateParam("requestedSongPosition", playlist.RequestSong?.Position?.Ticks),
+                CreateParam("requestedSongPosition", playlist.RequestSong?.Position.Ticks),
                 CreateParam("requestedSongDuration", playlist.RequestSong?.Duration.Ticks),
+                CreateParam("requestedSongContinue", playlist.RequestSong?.ContinuePlayback == true ? 1L : 0L),
                 CreateParam("fileMediaSourceRootId", playlist.FileMediaSources?.Root.Id.ToString()),
                 CreateParam("songsCount", playlist.Songs?.Count ?? 0),
                 CreateParam("filesLastUpdated", playlist.FilesLastUpdated?.Ticks),
@@ -497,15 +501,17 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 UPDATE playlists
                 SET requested_song_id = @requestedSongId,
                     requested_song_position = @requestedSongPosition,
-                    requested_song_duration = @requestedSongDuration
+                    requested_song_duration = @requestedSongDuration,
+                    requested_song_continue = @requestedSongContinue
                 WHERE id = @id;
             ";
             KeyValuePair<string, object>[] parameters = new KeyValuePair<string, object>[]
             {
                 CreateParam("id", playlistId.ToString()),
                 CreateParam("requestedSongId", requestedSong?.Song.Id.ToString()),
-                CreateParam("requestedSongPosition", requestedSong?.Position?.Ticks),
+                CreateParam("requestedSongPosition", requestedSong?.Position.Ticks),
                 CreateParam("requestedSongDuration", requestedSong?.Duration.Ticks),
+                CreateParam("requestedSongContinue", requestedSong?.ContinuePlayback == true ? 1L : 0L),
             };
             await sqlExecuteService.ExecuteNonQueryAsync(sql, parameters);
 
