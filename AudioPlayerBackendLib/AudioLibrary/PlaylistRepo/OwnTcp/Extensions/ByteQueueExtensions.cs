@@ -238,10 +238,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
                 .Enqueue(playlist.Shuffle)
                 .Enqueue(playlist.Loop)
                 .Enqueue(playlist.PlaybackRate)
-                .Enqueue(playlist.Position)
-                .Enqueue(playlist.Duration)
                 .Enqueue(playlist.RequestSong)
-                .Enqueue(playlist.CurrentSongId)
                 .Enqueue(playlist.Songs)
                 .Enqueue(playlist.FileMediaSources)
                 .Enqueue(playlist.NextPlaylist)
@@ -257,18 +254,15 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
             OrderType shuffle = queue.DequeueOrderType();
             LoopType loop = queue.DequeueLoopType();
             double playbackRate = queue.DequeueDouble();
-            TimeSpan position = queue.DequeueTimeSpan();
-            TimeSpan duration = queue.DequeueTimeSpan();
             RequestSong? requestSong = queue.DequeueRequestSongNullable();
-            Guid? currentSongId = queue.DequeueGuidNullable();
             Song[] songs = queue.DequeueSongs();
             FileMediaSources fileMediaSources = queue.DequeueFileMediaSources();
             Guid? nextPlaylist = queue.DequeueGuidNullable();
             DateTime? filesLastUpdated = queue.DequeueDateTimeNullable();
             DateTime? songsLastUpdated = queue.DequeueDateTimeNullable();
 
-            return new Playlist(id, type, name, shuffle, loop, playbackRate, position, duration,
-                requestSong, currentSongId, songs, fileMediaSources, nextPlaylist, filesLastUpdated, songsLastUpdated);
+            return new Playlist(id, type, name, shuffle, loop, playbackRate, requestSong,
+                songs, fileMediaSources, nextPlaylist, filesLastUpdated, songsLastUpdated);
         }
     }
 }

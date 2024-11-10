@@ -27,17 +27,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
         Task SendPlaybackRateChange(Guid id, double playbackRate);
         event EventHandler<PlaylistChangeArgs<double>> OnPlaybackRateChange;
 
-        Task SendPositionChange(Guid id, TimeSpan position);
-        event EventHandler<PlaylistChangeArgs<TimeSpan>> OnPositionChange;
-
-        Task SendDurationChange(Guid id, TimeSpan duration);
-        event EventHandler<PlaylistChangeArgs<TimeSpan>> OnDurationChange;
-
         Task SendRequestSongChange(Guid id, RequestSong? requestSong);
         event EventHandler<PlaylistChangeArgs<RequestSong?>> OnRequestSongChange;
-
-        Task SendCurrentSongIdChange(Guid id, Guid? currentSongId);
-        event EventHandler<PlaylistChangeArgs<Guid?>> OnCurrentSongIdChange;
 
         Task SendSongsChange(Guid id, ICollection<Song> songs);
         event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;

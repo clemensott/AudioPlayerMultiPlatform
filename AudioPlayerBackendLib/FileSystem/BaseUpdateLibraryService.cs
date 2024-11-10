@@ -134,8 +134,7 @@ namespace AudioPlayerBackend.FileSystem
             string name = string.IsNullOrWhiteSpace(relativePath) ? root.Name : Path.GetFileName(relativePath);
             Playlist playlist = new Playlist(Guid.NewGuid(), playlistType, name,
                 OrderType.ByTitleAndArtist, LoopType.CurrentPlaylist, 1,
-                TimeSpan.Zero, TimeSpan.Zero, null, null, songs, fileMediaSources,
-                null, DateTime.Now, DateTime.Now);
+                null, songs, fileMediaSources, null, DateTime.Now, DateTime.Now);
 
             await playlistsRepo.SendInsertPlaylist(playlist, null);
         }

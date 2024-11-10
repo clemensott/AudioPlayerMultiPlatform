@@ -32,10 +32,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             playlistsRepo.OnShuffleChange += OnShuffleChange;
             playlistsRepo.OnLoopChange += OnLoopChange;
             playlistsRepo.OnPlaybackRateChange += OnPlaybackRateChange;
-            playlistsRepo.OnPositionChange += OnPositionChange;
-            playlistsRepo.OnDurationChange += OnDurationChange;
             playlistsRepo.OnRequestSongChange += OnRequestSongChange;
-            playlistsRepo.OnCurrentSongIdChange += OnCurrentSongIdChange;
             playlistsRepo.OnSongsChange += OnSongsChange;
             playlistsRepo.OnFileMedisSourcesChange += OnFileMedisSourcesChange;
             playlistsRepo.OnFilesLastUpdatedChange += OnFilesLastUpdatedChange;
@@ -54,10 +51,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             playlistsRepo.OnShuffleChange -= OnShuffleChange;
             playlistsRepo.OnLoopChange -= OnLoopChange;
             playlistsRepo.OnPlaybackRateChange -= OnPlaybackRateChange;
-            playlistsRepo.OnPositionChange -= OnPositionChange;
-            playlistsRepo.OnDurationChange -= OnDurationChange;
             playlistsRepo.OnRequestSongChange -= OnRequestSongChange;
-            playlistsRepo.OnCurrentSongIdChange -= OnCurrentSongIdChange;
             playlistsRepo.OnSongsChange -= OnSongsChange;
             playlistsRepo.OnFileMedisSourcesChange -= OnFileMedisSourcesChange;
             playlistsRepo.OnFilesLastUpdatedChange -= OnFilesLastUpdatedChange;
@@ -115,36 +109,12 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             await SendAsync(nameof(playlistsRepo.OnPlaybackRateChange), payload);
         }
 
-        private async void OnPositionChange(object sender, PlaylistChangeArgs<TimeSpan> e)
-        {
-            ByteQueue payload = new ByteQueue()
-                .Enqueue(e.Id)
-                .Enqueue(e.NewValue);
-            await SendAsync(nameof(playlistsRepo.OnPositionChange), payload);
-        }
-
-        private async void OnDurationChange(object sender, PlaylistChangeArgs<TimeSpan> e)
-        {
-            ByteQueue payload = new ByteQueue()
-                .Enqueue(e.Id)
-                .Enqueue(e.NewValue);
-            await SendAsync(nameof(playlistsRepo.OnDurationChange), payload);
-        }
-
         private async void OnRequestSongChange(object sender, PlaylistChangeArgs<RequestSong?> e)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(e.Id)
                 .Enqueue(e.NewValue);
             await SendAsync(nameof(playlistsRepo.OnRequestSongChange), payload);
-        }
-
-        private async void OnCurrentSongIdChange(object sender, PlaylistChangeArgs<Guid?> e)
-        {
-            ByteQueue payload = new ByteQueue()
-                .Enqueue(e.Id)
-                .Enqueue(e.NewValue);
-            await SendAsync(nameof(playlistsRepo.OnCurrentSongIdChange), payload);
         }
 
         private async void OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
@@ -243,31 +213,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
                         anwser.SetResult(null);
                         break;
 
-                    case nameof(playlistsRepo.SendPositionChange):
-                        playlistId = payload.DequeueGuid();
-                        TimeSpan position = payload.DequeueTimeSpan();
-                        await playlistsRepo.SendPositionChange(playlistId, position);
-                        anwser.SetResult(null);
-                        break;
-
-                    case nameof(playlistsRepo.SendDurationChange):
-                        playlistId = payload.DequeueGuid();
-                        TimeSpan duration = payload.DequeueTimeSpan();
-                        await playlistsRepo.SendDurationChange(playlistId, duration);
-                        anwser.SetResult(null);
-                        break;
-
                     case nameof(playlistsRepo.SendRequestSongChange):
                         playlistId = payload.DequeueGuid();
                         RequestSong? requestSong = payload.DequeueRequestSongNullable();
                         await playlistsRepo.SendRequestSongChange(playlistId, requestSong);
-                        anwser.SetResult(null);
-                        break;
-
-                    case nameof(playlistsRepo.SendCurrentSongIdChange):
-                        playlistId = payload.DequeueGuid();
-                        Guid? currentSongId = payload.DequeueGuidNullable();
-                        await playlistsRepo.SendCurrentSongIdChange(playlistId, currentSongId);
                         anwser.SetResult(null);
                         break;
 

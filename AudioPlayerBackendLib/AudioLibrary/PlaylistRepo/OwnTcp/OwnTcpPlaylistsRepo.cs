@@ -16,10 +16,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
         public event EventHandler<PlaylistChangeArgs<OrderType>> OnShuffleChange;
         public event EventHandler<PlaylistChangeArgs<LoopType>> OnLoopChange;
         public event EventHandler<PlaylistChangeArgs<double>> OnPlaybackRateChange;
-        public event EventHandler<PlaylistChangeArgs<TimeSpan>> OnPositionChange;
-        public event EventHandler<PlaylistChangeArgs<TimeSpan>> OnDurationChange;
         public event EventHandler<PlaylistChangeArgs<RequestSong?>> OnRequestSongChange;
-        public event EventHandler<PlaylistChangeArgs<Guid?>> OnCurrentSongIdChange;
         public event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
         public event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
         public event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
@@ -91,31 +88,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
                         anwser.SetResult(null);
                         break;
 
-                    case nameof(OnPositionChange):
-                        playlistId = payload.DequeueGuid();
-                        TimeSpan position = payload.DequeueTimeSpan();
-                        OnPositionChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, position));
-                        anwser.SetResult(null);
-                        break;
-
-                    case nameof(OnDurationChange):
-                        playlistId = payload.DequeueGuid();
-                        TimeSpan duration = payload.DequeueTimeSpan();
-                        OnDurationChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, duration));
-                        anwser.SetResult(null);
-                        break;
-
                     case nameof(OnRequestSongChange):
                         playlistId = payload.DequeueGuid();
                         RequestSong? requestSong = payload.DequeueRequestSongNullable();
                         OnRequestSongChange?.Invoke(this, new PlaylistChangeArgs<RequestSong?>(playlistId, requestSong));
-                        anwser.SetResult(null);
-                        break;
-
-                    case nameof(OnCurrentSongIdChange):
-                        playlistId = payload.DequeueGuid();
-                        Guid? currentSongId = payload.DequeueGuidNullable();
-                        OnCurrentSongIdChange?.Invoke(this, new PlaylistChangeArgs<Guid?>(playlistId, currentSongId));
                         anwser.SetResult(null);
                         break;
 
@@ -250,39 +226,6 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             await SendAsync(nameof(SendPlaybackRateChange), payload);
 
             OnPlaybackRateChange?.Invoke(this, new PlaylistChangeArgs<double>(id, playbackRate));
-        }
-
-        public async Task SendPositionChange(Guid id, TimeSpan position)
-        {
-            ByteQueue payload = new ByteQueue()
-                .Enqueue(id)
-                .Enqueue(position);
-
-            await SendAsync(nameof(SendPositionChange), payload);
-
-            OnPositionChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(id, position));
-        }
-
-        public async Task SendDurationChange(Guid id, TimeSpan duration)
-        {
-            ByteQueue payload = new ByteQueue()
-                .Enqueue(id)
-                .Enqueue(duration);
-
-            await SendAsync(nameof(SendDurationChange), payload);
-
-            OnDurationChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(id, duration));
-        }
-
-        public async Task SendCurrentSongIdChange(Guid id, Guid? currentSongId)
-        {
-            ByteQueue payload = new ByteQueue()
-                .Enqueue(id)
-                .Enqueue(currentSongId);
-
-            await SendAsync(nameof(SendCurrentSongIdChange), payload);
-
-            OnCurrentSongIdChange?.Invoke(this, new PlaylistChangeArgs<Guid?>(id, currentSongId));
         }
 
         public async Task SendRequestSongChange(Guid id, RequestSong? requestSong)

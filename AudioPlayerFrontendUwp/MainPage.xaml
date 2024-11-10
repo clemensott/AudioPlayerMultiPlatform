@@ -249,9 +249,10 @@
                 </StackPanel>
             </Grid>
 
-            <local:AudioPositionSlider Grid.Row="4" Position="{Binding CurrentPlaylist.Position}"
-                                       Duration="{Binding CurrentPlaylist.Duration}"
-                                       Visibility="{Binding CurrentPlaylist.Id,Converter={StaticResource visCon}}"
+            <local:AudioPositionSlider Grid.Row="4" DataContext="{Binding CurrentPlaylist.RequestedSong}"
+                                       Position="{Binding Position}"
+                                       Duration="{Binding Duration}"
+                                       Visibility="{Binding Song,Converter={StaticResource visCon}}"
                                        UserPositionChanged="AudioPositionSlider_UserPositionChanged"/>
         </Grid>
 

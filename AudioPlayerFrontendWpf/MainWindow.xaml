@@ -327,8 +327,8 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.ColumnSpan="2" Margin="0,0,0,5"
-                  DataContext="{Binding CurrentPlaylist}"
-                  Visibility="{Binding Id,Converter={StaticResource visCon}}">
+                  DataContext="{Binding CurrentPlaylist.RequestedSong}"
+                  Visibility="{Binding Song,Converter={StaticResource visCon}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />

@@ -165,6 +165,8 @@ namespace AudioPlayerBackend.ViewModels
                 requestedSong = value;
                 OnPropertyChanged(nameof(RequestedSong));
 
+                CurrentSong = shuffledSongs.Cast<Song?>().FirstOrDefault(s => s?.Id == requestedSong?.Song.Id);
+
                 if (isRunning) SendRequestSong(value);
             }
         }
@@ -225,9 +227,7 @@ namespace AudioPlayerBackend.ViewModels
             playlistsRepo.OnShuffleChange += OnShuffleChange;
             playlistsRepo.OnLoopChange += OnLoopChange;
             playlistsRepo.OnPlaybackRateChange += OnPlaybackRateChange;
-            playlistsRepo.OnPositionChange += OnPositionChange;
-            playlistsRepo.OnDurationChange += OnDurationChange;
-            playlistsRepo.OnCurrentSongIdChange += OnCurrentSongIdChange;
+            playlistsRepo.OnRequestSongChange += OnRequestSongChange;
             playlistsRepo.OnSongsChange += OnSongsChange;
 
             await LoadPlaylistData();
@@ -241,9 +241,7 @@ namespace AudioPlayerBackend.ViewModels
             playlistsRepo.OnShuffleChange -= OnShuffleChange;
             playlistsRepo.OnLoopChange -= OnLoopChange;
             playlistsRepo.OnPlaybackRateChange -= OnPlaybackRateChange;
-            playlistsRepo.OnPositionChange -= OnPositionChange;
-            playlistsRepo.OnDurationChange -= OnDurationChange;
-            playlistsRepo.OnCurrentSongIdChange -= OnCurrentSongIdChange;
+            playlistsRepo.OnRequestSongChange -= OnRequestSongChange;
             playlistsRepo.OnSongsChange -= OnSongsChange;
 
             Name = string.Empty;
@@ -281,19 +279,9 @@ namespace AudioPlayerBackend.ViewModels
             if (Id == e.Id) PlaybackRate = e.NewValue;
         }
 
-        private void OnPositionChange(object sender, PlaylistChangeArgs<TimeSpan> e)
+        private void OnRequestSongChange(object sender, PlaylistChangeArgs<RequestSong?> e)
         {
-            if (Id == e.Id) Position = e.NewValue;
-        }
-
-        private void OnDurationChange(object sender, PlaylistChangeArgs<TimeSpan> e)
-        {
-            if (Id == e.Id) Duration = e.NewValue;
-        }
-
-        private void OnCurrentSongIdChange(object sender, PlaylistChangeArgs<Guid?> e)
-        {
-            if (Id == e.Id) SetCurrentSongById(e.NewValue);
+            if (Id == e.Id) RequestedSong = e.NewValue;
         }
 
         private void OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
@@ -315,19 +303,12 @@ namespace AudioPlayerBackend.ViewModels
                 Shuffle = playlist.Shuffle;
                 Loop = playlist.Loop;
                 PlaybackRate = playlist.PlaybackRate;
-                Position = playlist.Position;
-                Duration = playlist.Duration;
                 shuffledSongs = playlist.Songs;
-                SetCurrentSongById(playlist.CurrentSongId);
+                RequestedSong = playlist.RequestSong;
                 UpdateSongs();
 
                 IsLoaded = true;
             }
-        }
-
-        private void SetCurrentSongById(Guid? currentSongId)
-        {
-            CurrentSong = shuffledSongs.Cast<Song?>().FirstOrDefault(s => s?.Id == currentSongId);
         }
 
         private void UpdateSongs()

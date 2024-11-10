@@ -17,10 +17,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         public event EventHandler<PlaylistChangeArgs<OrderType>> OnShuffleChange;
         public event EventHandler<PlaylistChangeArgs<LoopType>> OnLoopChange;
         public event EventHandler<PlaylistChangeArgs<double>> OnPlaybackRateChange;
-        public event EventHandler<PlaylistChangeArgs<TimeSpan>> OnPositionChange;
-        public event EventHandler<PlaylistChangeArgs<TimeSpan>> OnDurationChange;
         public event EventHandler<PlaylistChangeArgs<RequestSong?>> OnRequestSongChange;
-        public event EventHandler<PlaylistChangeArgs<Guid?>> OnCurrentSongIdChange;
         public event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
         public event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
         public event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
@@ -54,9 +51,6 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                     shuffle                   INTEGER NOT NULL,
                     loop                      INTEGER NOT NULL,
                     playback_rate             REAL    NOT NULL,
-                    position                  INTEGER NOT NULL,
-                    duration                  INTEGER NOT NULL,
-                    current_song_id           TEXT REFERENCES songs (id),
                     requested_song_id         TEXT REFERENCES songs (id),
                     requested_song_position   INTEGER,
                     requested_song_duration   INTEGER,
@@ -108,7 +102,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         public async Task<Playlist> GetPlaylist(Guid playlistId)
         {
             string playlistSql = $@"
-                SELECT p.id, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
+                SELECT p.id, type, name, shuffle, loop, playback_rate,
                     requested_song_id, rs.title as requested_song_title, rs.artist as requested_song_artist,
                     rs.full_path as requested_song_full_path, requested_song_position, requested_song_duration,
                     requested_song_continue, file_media_source_root_id, np.next_playlist_id, p.files_last_updated,
@@ -119,7 +113,9 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 WHERE p.id = @id;
             ";
             var playlistParameters = CreateParams("id", playlistId.ToString());
-            (Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop, double playbackRate, TimeSpan position, TimeSpan duration, Guid? currentSongId, RequestSong? requestedSong, Guid? fileMediaSourceRootId, Guid? nextPlaylistId, DateTime? filesLastUpdated, DateTime? songsLastUpdated) playlist = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
+            (Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop, double playbackRate,
+                RequestSong? requestedSong, Guid? fileMediaSourceRootId, Guid? nextPlaylistId,
+                DateTime? filesLastUpdated, DateTime? songsLastUpdated) playlist = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
             {
                 Guid id = reader.GetGuidFromString("id");
                 PlaylistType type = (PlaylistType)reader.GetInt64("type");
@@ -127,17 +123,14 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 OrderType shuffle = (OrderType)reader.GetInt64("shuffle");
                 LoopType loop = (LoopType)reader.GetInt64("loop");
                 double playbackRate = reader.GetDouble("playback_rate");
-                TimeSpan position = reader.GetTimespanFromInt64("position");
-                TimeSpan duration = reader.GetTimespanFromInt64("duration");
-                Guid? currentSongId = reader.GetGuidNullableFromString("current_song_id");
                 RequestSong? requestedSong = GetRequestedSong(reader);
                 Guid? fileMediaSourceRootId = reader.GetGuidNullableFromString("file_media_source_root_id");
                 Guid? nextPlaylistId = reader.GetGuidNullableFromString("next_playlist_id");
                 DateTime? filesLastUpdated = reader.GetDateTimeNullableFromInt64("files_last_updated");
                 DateTime? songsLastUpdated = reader.GetDateTimeNullableFromInt64("songs_last_updated");
 
-                return (id, type, name, shuffle, loop, playbackRate, position, duration, currentSongId,
-                    requestedSong, fileMediaSourceRootId, nextPlaylistId, filesLastUpdated, songsLastUpdated);
+                return (id, type, name, shuffle, loop, playbackRate, requestedSong, 
+                    fileMediaSourceRootId, nextPlaylistId, filesLastUpdated, songsLastUpdated);
             }, playlistSql, playlistParameters);
 
             const string songsSql = @"
@@ -175,8 +168,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             }
 
             return new Playlist(playlist.id, playlist.type, playlist.name, playlist.shuffle, playlist.loop,
-                playlist.playbackRate, playlist.position, playlist.duration, playlist.requestedSong,
-                playlist.currentSongId, songs, fileMediaSources, playlist.nextPlaylistId,
+                playlist.playbackRate, playlist.requestedSong, songs, fileMediaSources, playlist.nextPlaylistId,
                 playlist.filesLastUpdated, playlist.songsLastUpdated);
 
             RequestSong? GetRequestedSong(DbDataReader reader)
@@ -282,12 +274,12 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             }
 
             const string playlistSql = @"
-                INSERT INTO playlists (id, index_value, type, name, shuffle, loop, playback_rate, position, duration, current_song_id,
-                    requested_song_id, requested_song_position, requested_song_duration, requested_song_continue, songs_count,
-                    file_media_source_root_id, files_last_updated, songs_last_updated)
-                VALUES (@id, @index, @type, @name, @shuffle, @loop, @playbackRate, @position, @duration, @currentSongId,
-                    @requestedSongId, @requestedSongPosition, @requestedSongDuration, @requestedSongContinue, @songsCount,
-                    @fileMediaSourceRootId, @filesLastUpdated, @songsLastUpdated);
+                INSERT INTO playlists (id, index_value, type, name, shuffle, loop, playback_rate,
+                    requested_song_id, requested_song_position, requested_song_duration, requested_song_continue,
+                    songs_count, file_media_source_root_id, files_last_updated, songs_last_updated)
+                VALUES (@id, @index, @type, @name, @shuffle, @loop, @playbackRate,
+                    @requestedSongId, @requestedSongPosition, @requestedSongDuration, @requestedSongContinue,
+                    @songsCount, @fileMediaSourceRootId, @filesLastUpdated, @songsLastUpdated);
             ";
             var playlistParameters = new KeyValuePair<string, object>[]
             {
@@ -298,9 +290,6 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 CreateParam("shuffle", (long)playlist.Shuffle),
                 CreateParam("loop", (long)playlist.Loop),
                 CreateParam("playbackRate", playlist.PlaybackRate),
-                CreateParam("position", playlist.Position.Ticks),
-                CreateParam("duration", playlist.Duration.Ticks),
-                CreateParam("currentSongId", playlist.CurrentSongId?.ToString()),
                 CreateParam("requestedSongId", playlist.RequestSong?.Song.Id.ToString()),
                 CreateParam("requestedSongPosition", playlist.RequestSong?.Position.Ticks),
                 CreateParam("requestedSongDuration", playlist.RequestSong?.Duration.Ticks),
@@ -386,8 +375,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             const string songsSql = @"
                 DELETE FROM songs
                 WHERE id NOT IN (SELECT ps.song_id FROM playlist_songs ps)
-                    AND id NOT IN (SELECT p.requested_song_id FROM playlists p)
-                    AND id NOT IN (SELECT p.current_song_id FROM playlists p);
+                    AND id NOT IN (SELECT p.requested_song_id FROM playlists p);
             ";
             await sqlExecuteService.ExecuteNonQueryAsync(songsSql);
         }
@@ -473,24 +461,6 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         {
             await UpdatePlaylistValue("playback_rate", playlistId, playbackRate);
             OnPlaybackRateChange?.Invoke(this, new PlaylistChangeArgs<double>(playlistId, playbackRate));
-        }
-
-        public async Task SendPositionChange(Guid playlistId, TimeSpan position)
-        {
-            await UpdatePlaylistValue("position", playlistId, position.Ticks);
-            OnPositionChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, position));
-        }
-
-        public async Task SendDurationChange(Guid playlistId, TimeSpan duration)
-        {
-            await UpdatePlaylistValue("duration", playlistId, duration.Ticks);
-            OnDurationChange?.Invoke(this, new PlaylistChangeArgs<TimeSpan>(playlistId, duration));
-        }
-
-        public async Task SendCurrentSongIdChange(Guid playlistId, Guid? currentSongId)
-        {
-            await UpdatePlaylistValue("current_song_id", playlistId, currentSongId?.ToString());
-            OnCurrentSongIdChange?.Invoke(this, new PlaylistChangeArgs<Guid?>(playlistId, currentSongId));
         }
 
         public async Task SendRequestSongChange(Guid playlistId, RequestSong? requestedSong)

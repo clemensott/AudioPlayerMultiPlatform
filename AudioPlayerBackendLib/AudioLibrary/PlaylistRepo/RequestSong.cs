@@ -23,6 +23,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             ContinuePlayback = continuePlayback;
         }
 
+        public RequestSong CloneWithContinuePlayback()
+        {
+            return new RequestSong(Song, Position, Duration, true);
+        }
+
         public override string ToString()
         {
             return $"{Song.FullPath} @ {Position} / {Duration}";

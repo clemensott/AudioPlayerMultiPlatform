@@ -83,7 +83,7 @@ namespace AudioPlayerFrontend
                 FileMediaSources fileMediaSources = FileMediaSourcesHelper.ExtractFileMediaSources(newPaths);
                 Song[] songs = await updateLibraryService.ReloadSourcePlaylist(fileMediaSources);
                 Playlist newPlaylist = new Playlist(Guid.NewGuid(), PlaylistType.SourcePlaylist, viewModel.Name,
-                    viewModel.Shuffle, viewModel.Loop, 1, TimeSpan.Zero, TimeSpan.Zero, null, null, songs,
+                    viewModel.Shuffle, viewModel.Loop, 1, null, songs,
                     fileMediaSources, null, DateTime.Now, DateTime.Now);
 
                 await viewModel.PlaylistsRepo.SendInsertPlaylist(newPlaylist, null);
