@@ -203,7 +203,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
                         break;
 
                     case nameof(playlistsRepo.SendInsertPlaylist):
-                        int insertIndex = payload.DequeueInt();
+                        int? insertIndex = payload.DequeueIntNullable();
                         Playlist insertPlaylist = payload.DequeuePlaylist();
                         await playlistsRepo.SendInsertPlaylist(insertPlaylist, insertIndex);
                         anwser.SetResult(null);

@@ -127,7 +127,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
                         break;
 
                     case nameof(OnInsertPlaylist):
-                        int insertIndex = payload.DequeueInt();
+                        int? insertIndex = payload.DequeueIntNullable();
                         Playlist insertPlaylist = payload.DequeuePlaylist();
                         OnInsertPlaylist?.Invoke(this, new InsertPlaylistArgs(insertIndex, insertPlaylist));
                         anwser.SetResult(null);
