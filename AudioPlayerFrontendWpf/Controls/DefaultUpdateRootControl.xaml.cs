@@ -35,6 +35,11 @@ namespace AudioPlayerFrontend.Controls
             ApplyDataContext();
         }
 
+        private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            ApplyDataContext();
+        }
+
         private void ApplyDataContext()
         {
             if (isUpdatingValue) return;
@@ -145,11 +150,6 @@ namespace AudioPlayerFrontend.Controls
         private void TbxPath_TextChanged(object sender, TextChangedEventArgs e)
         {
             TriggerValueChanged();
-        }
-
-        private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
-        {
-            ApplyDataContext();
         }
     }
 }
