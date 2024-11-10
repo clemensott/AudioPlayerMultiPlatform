@@ -1,9 +1,10 @@
-﻿using StdOttFramework.Converters;
+﻿using StdOttStandard.Linq;
+using StdOttFramework.Converters;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using AudioPlayerBackend.Build;
-using StdOttStandard.Converter.MultipleInputs;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using System.Linq;
 
 namespace AudioPlayerFrontend
 {
@@ -15,11 +16,11 @@ namespace AudioPlayerFrontend
         private readonly IntConverter serverPortConverter;
         private readonly IntNullableConverter clientPortConverter;
 
-        public AudioServicesBuildConfig ServiceBuilder { get; private set; }
+        public AudioServicesBuildConfig ServiceConfig { get; private set; }
 
         public HotKeysBuilder HotKeysBuilder { get; private set; }
 
-        public SettingsWindow(AudioServicesBuildConfig serviceBuilder, HotKeysBuilder hotKeysBuilder)
+        public SettingsWindow(AudioServicesBuildConfig serviceConfig, HotKeysBuilder hotKeysBuilder)
         {
             InitializeComponent();
 
@@ -30,77 +31,59 @@ namespace AudioPlayerFrontend
                 NullOrWhiteSpaceValue = null
             };
 
-            timMode.DataContext = ServiceBuilder = serviceBuilder;
+            timMode.DataContext = ServiceConfig = serviceConfig;
             timHotKeys.DataContext = HotKeysBuilder = hotKeysBuilder;
 
-            if (serviceBuilder.BuildServer) tbxPort.Text = serverPortConverter.Convert(serviceBuilder.ServerPort);
-            else if (serviceBuilder.BuildClient) tbxPort.Text = clientPortConverter.Convert(serviceBuilder.ClientPort);
+            if (serviceConfig.BuildServer) tbxPort.Text = serverPortConverter.Convert(serviceConfig.ServerPort);
+            else if (serviceConfig.BuildClient) tbxPort.Text = clientPortConverter.Convert(serviceConfig.ClientPort);
 
-            if (!serviceBuilder.IsSearchShuffle.HasValue) cbxSearchShuffle.IsChecked = null;
-            if (!serviceBuilder.Play.HasValue) cbxPlay.IsChecked = null;
+            lbxDefaultUpdateRoots.ItemsSource = serviceConfig.DefaultUpdateRoots;
         }
 
         private void RbnStandalone_Checked(object sender, RoutedEventArgs e)
         {
-            ServiceBuilder.WithStandalone();
+            ServiceConfig.WithStandalone();
         }
 
         private void RbnServer_Checked(object sender, RoutedEventArgs e)
         {
-            ServiceBuilder.WithServer(serverPortConverter.Value);
+            ServiceConfig.WithServer(serverPortConverter.Value);
         }
 
         private void RbnClient_Checked(object sender, RoutedEventArgs e)
         {
-            ServiceBuilder.WithClient(tbxServerAddress.Text, clientPortConverter.Value);
+            ServiceConfig.WithClient(tbxServerAddress.Text, clientPortConverter.Value);
         }
 
         private void TbxPort_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (ServiceBuilder == null) return;
+            if (ServiceConfig == null) return;
 
-            ServiceBuilder.ServerPort = serverPortConverter.ConvertBack(tbxPort.Text);
-            ServiceBuilder.ClientPort = clientPortConverter.ConvertBack(tbxPort.Text);
+            ServiceConfig.ServerPort = serverPortConverter.ConvertBack(tbxPort.Text);
+            ServiceConfig.ClientPort = clientPortConverter.ConvertBack(tbxPort.Text);
         }
 
-        private object MicVolume_ConvertRef(object sender, MultiplesInputsConvert3EventArgs args)
+        private void LbxDefaultUpdateRoots_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (args.Input1 == null) args.Input1 = false;
-            if (args.Input2 == null) args.Input2 = 1d;
-
-            switch (args.ChangedValueIndex)
-            {
-                case 0:
-                    if (args.Input0 is float)
-                    {
-                        args.Input1 = true;
-                        args.Input2 = (double)(float)args.Input0;
-                    }
-                    else args.Input1 = false;
-                    break;
-
-                case 1:
-                case 2:
-                    args.Input0 = true.Equals(args.Input1) ? (float?)(double)args.Input2 : null;
-                    break;
-            }
-
-            return null;
+            lbxDefaultUpdateRoots.SelectedIndex = -1;
         }
 
-        private void CbxPlay_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void DefaultUpdateRootControl_ValueChanged(object sender, FileMediaSourceRootInfo e)
         {
-            cbxPlay.IsChecked = ServiceBuilder.Play = null;
+            int index = lbxDefaultUpdateRoots.ItemsSource.ToNotNull().IndexOf(((FrameworkElement)sender).DataContext);
+            if (index < 0) return;
+
+            FileMediaSourceRootInfo[] newDefaultRoots = ServiceConfig.DefaultUpdateRoots.ToArray();
+            newDefaultRoots[index] = e;
+            ServiceConfig.WithDefaultUpdateRoots(newDefaultRoots);
         }
 
-        private void CbxAllShuffle_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void BtnAddDefaultUpdateRoot_Click(object sender, RoutedEventArgs e)
         {
-            ServiceBuilder.Shuffle = null;
-        }
+            ServiceConfig.WithDefaultUpdateRoots(ServiceConfig.DefaultUpdateRoots.ToNotNull()
+                .ConcatParams(new FileMediaSourceRootInfo()).ToArray());
+            lbxDefaultUpdateRoots.ItemsSource = ServiceConfig.DefaultUpdateRoots;
 
-        private void CbxSearchShuffle_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            ServiceBuilder.IsSearchShuffle = null;
         }
 
         private void BtnOk_Click(object sender, RoutedEventArgs e)

@@ -262,6 +262,9 @@
     <Compile Include="BuildOpenWindow.xaml.cs">
       <DependentUpon>BuildOpenWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\DefaultUpdateRootControl.xaml.cs">
+      <DependentUpon>DefaultUpdateRootControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="FileMediaSourcesHelper.cs" />
     <Compile Include="FilePathsToSingleStringConverter.cs" />
     <Compile Include="HotKeyBox.xaml.cs">
@@ -284,6 +287,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="BuildOpenWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\DefaultUpdateRootControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
