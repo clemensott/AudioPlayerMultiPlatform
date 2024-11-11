@@ -40,6 +40,7 @@ namespace AudioPlayerFrontend
 
         public App()
         {
+            Logs.Log("App1");
             this.InitializeComponent();
             this.Suspending += OnSuspending;
             this.UnhandledException += OnUnhandledException;
@@ -49,6 +50,7 @@ namespace AudioPlayerFrontend
 
             Dispatcher dispatcher = new Dispatcher();
             audioServicesHandler = new AudioServicesHandler(dispatcher);
+            audioServicesHandler.AudioServicesChanged += OnAudioServicesChanged;
             audioServicesBuilderNavigationHandler = new AudioServicesBuilderNavigationHandler(audioServicesHandler);
             backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, audioServicesHandler);
             backgroundTaskHelper = new BackgroundTaskHelper();
@@ -89,6 +91,9 @@ namespace AudioPlayerFrontend
 
         private async Task StartAudioServicesHandler()
         {
+            //var item = await ApplicationData.Current.LocalFolder.TryGetItemAsync("library.db");
+            //if (item is StorageFile file) await file.DeleteAsync();
+
             AudioServicesBuildConfig config = new AudioServicesBuildConfig()
                 .WithAutoUpdate()
                 .WithDefaultUpdateRoots(new FileMediaSourceRootInfo[]
@@ -133,6 +138,20 @@ namespace AudioPlayerFrontend
             return null;
         }
 
+        private async void OnAudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
+        {
+            // save service profile if service was built successfully by it
+            if (audioServicesHandler.Config != null)
+            {
+                ServiceProfile profile = audioServicesHandler.Config.ToServiceProfile();
+                byte[] data = profile.ToData();
+
+                StorageFile file = await ApplicationData.Current.LocalFolder
+                    .CreateFileAsync(serviceProfileFilename, CreationCollisionOption.OpenIfExists);
+                await FileIO.WriteBytesAsync(file, data);
+            }
+        }
+
         /// <summary>
         /// Wird aufgerufen, wenn die Navigation auf eine bestimmte Seite fehlschlägt
         /// </summary>
@@ -158,16 +177,6 @@ namespace AudioPlayerFrontend
             try
             {
                 backgroundTaskHandler.Stop();
-
-                if (audioServicesHandler.Config != null)
-                {
-                    ServiceProfile profile = audioServicesHandler.Config.ToServiceProfile();
-                    byte[] data = profile.ToData();
-
-                    StorageFile file = await ApplicationData.Current.LocalFolder
-                        .CreateFileAsync(serviceProfileFilename, CreationCollisionOption.OpenIfExists);
-                    await FileIO.WriteBytesAsync(file, data);
-                }
 
                 await audioServicesHandler.Stop();
             }
