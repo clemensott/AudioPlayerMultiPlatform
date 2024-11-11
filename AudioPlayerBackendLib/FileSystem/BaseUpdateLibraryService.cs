@@ -73,7 +73,7 @@ namespace AudioPlayerBackend.FileSystem
                     await (reload ? ReloadSourcePlaylistInternal(playlist.Id) : UpdateSourcePlaylistInternal(playlist.Id));
                 }
 
-                await libraryRepo.SendFoldersLastUpdatedChange(DateTime.Now);
+                await libraryRepo.SetFoldersLastUpdated(DateTime.Now);
             });
         }
 
@@ -82,7 +82,7 @@ namespace AudioPlayerBackend.FileSystem
             return RunWithEvents(async () =>
             {
                 await UpdatePlaylistsInternal();
-                await libraryRepo.SendFoldersLastUpdatedChange(DateTime.Now);
+                await libraryRepo.SetFoldersLastUpdated(DateTime.Now);
             });
         }
 
@@ -136,7 +136,7 @@ namespace AudioPlayerBackend.FileSystem
                 OrderType.ByTitleAndArtist, LoopType.CurrentPlaylist, 1,
                 null, songs, fileMediaSources, null, DateTime.Now, DateTime.Now);
 
-            await playlistsRepo.SendInsertPlaylist(playlist, null);
+            await playlistsRepo.InsertPlaylist(playlist, null);
         }
 
         public Task UpdateSourcePlaylist(Guid id)
@@ -178,12 +178,12 @@ namespace AudioPlayerBackend.FileSystem
             {
                 if (!newSongs.BothNullOrSequenceEqual(playlist.Songs, songEqualityComparer))
                 {
-                    await playlistsRepo.SendSongsChange(id, newSongs);
+                    await playlistsRepo.SetSongs(id, newSongs);
                 }
 
-                await playlistsRepo.SendFilesLastUpdatedChange(id, DateTime.Now);
+                await playlistsRepo.SetFilesLastUpdated(id, DateTime.Now);
             }
-            else await playlistsRepo.SendRemovePlaylist(id);
+            else await playlistsRepo.RemovePlaylist(id);
         }
 
         public Task ReloadSourcePlaylist(Guid id)
@@ -200,12 +200,12 @@ namespace AudioPlayerBackend.FileSystem
             {
                 if (!newSongs.BothNullOrSequenceEqual(playlist.Songs, songEqualityComparer))
                 {
-                    await playlistsRepo.SendSongsChange(id, newSongs);
+                    await playlistsRepo.SetSongs(id, newSongs);
                 }
 
-                await playlistsRepo.SendSongsLastUpdatedChange(id, DateTime.Now);
+                await playlistsRepo.SetSongsLastUpdated(id, DateTime.Now);
             }
-            else await playlistsRepo.SendRemovePlaylist(id);
+            else await playlistsRepo.RemovePlaylist(id);
         }
 
         public Task<Song[]> ReloadSourcePlaylist(FileMediaSources fileMediaSources)

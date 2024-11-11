@@ -11,10 +11,10 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
     {
         private readonly IClientCommunicator clientCommunicator;
 
-        public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> OnPlayStateChange;
-        public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
-        public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
-        public event EventHandler<AudioLibraryChangeArgs<DateTime?>> OnFoldersLastUpdatedChange;
+        public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> PlayStateChanged;
+        public event EventHandler<AudioLibraryChangeArgs<double>> VolumeChanged;
+        public event EventHandler<AudioLibraryChangeArgs<Guid?>> CurrentPlaylistIdChanged;
+        public event EventHandler<AudioLibraryChangeArgs<DateTime?>> FoldersLastUpdatedChanged;
 
         public OwnTcpLibraryRepo(IClientCommunicator clientCommunicator)
         {
@@ -51,27 +51,27 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
                 ByteQueue payload = e.Payload;
                 switch (parts[1])
                 {
-                    case nameof(OnPlayStateChange):
+                    case nameof(PlayStateChanged):
                         PlaybackState playState = payload.DequeuePlaybackState();
-                        OnPlayStateChange?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
+                        PlayStateChanged?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
                         anwser.SetResult(null);
                         break;
 
-                    case nameof(OnVolumeChange):
+                    case nameof(VolumeChanged):
                         double volume = payload.DequeueDouble();
-                        OnVolumeChange?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
+                        VolumeChanged?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
                         anwser.SetResult(null);
                         break;
 
-                    case nameof(OnCurrentPlaylistIdChange):
+                    case nameof(CurrentPlaylistIdChanged):
                         Guid? currentPlaylistId = payload.DequeueGuidNullable();
-                        OnCurrentPlaylistIdChange?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
+                        CurrentPlaylistIdChanged?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
                         anwser.SetResult(null);
                         break;
 
-                    case nameof(OnFoldersLastUpdatedChange):
+                    case nameof(FoldersLastUpdatedChanged):
                         DateTime? foldersLastUpdated = payload.DequeueDateTimeNullable();
-                        OnFoldersLastUpdatedChange?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
+                        FoldersLastUpdatedChanged?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
                         anwser.SetResult(null);
                         break;
 
@@ -98,41 +98,41 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
             return result.DequeueLibrary();
         }
 
-        public async Task SendPlayStateChange(PlaybackState playState)
+        public async Task SetPlayState(PlaybackState playState)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(playState);
-            await SendAsync(nameof(SendPlayStateChange), payload);
+            await SendAsync(nameof(SetPlayState), payload);
 
-            OnPlayStateChange?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
+            PlayStateChanged?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
         }
 
-        public async Task SendVolumeChange(double volume)
+        public async Task SetVolume(double volume)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(volume);
-            await SendAsync(nameof(SendVolumeChange), payload);
+            await SendAsync(nameof(SetVolume), payload);
 
-            OnVolumeChange?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
+            VolumeChanged?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
 
         }
 
-        public async Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
+        public async Task SetCurrentPlaylistId(Guid? currentPlaylistId)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(currentPlaylistId);
-            await SendAsync(nameof(SendCurrentPlaylistIdChange), payload);
+            await SendAsync(nameof(SetCurrentPlaylistId), payload);
 
-            OnCurrentPlaylistIdChange?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
+            CurrentPlaylistIdChanged?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
         }
 
-        public async Task SendFoldersLastUpdatedChange(DateTime? foldersLastUpdated)
+        public async Task SetFoldersLastUpdated(DateTime? foldersLastUpdated)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(foldersLastUpdated);
-            await SendAsync(nameof(SendFoldersLastUpdatedChange), payload);
+            await SendAsync(nameof(SetFoldersLastUpdated), payload);
 
-            OnFoldersLastUpdatedChange?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
+            FoldersLastUpdatedChanged?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
         }
     }
 }

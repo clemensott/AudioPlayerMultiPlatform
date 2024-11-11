@@ -31,19 +31,19 @@ namespace AudioPlayerBackend
 
         public static async Task SetRestartCurrentSong(this IPlaylistViewModel viewModel)
         {
-            await viewModel.SendRequestSong(RequestSong.Start(viewModel.CurrentSong));
+            await viewModel.SetCurrentSongRequest(SongRequest.Start(viewModel.CurrentSongRequest?.Id));
         }
 
         public static async Task SetNextSong(this IPlaylistViewModel viewModel)
         {
             Song? newCurrentSong = SongsHelper.GetNextSong(viewModel.Songs, viewModel.Shuffle, viewModel.CurrentSong).song;
-            await viewModel.SendRequestSong(RequestSong.Start(newCurrentSong));
+            await viewModel.SetCurrentSongRequest(SongRequest.Start(newCurrentSong?.Id));
         }
 
         public static async Task SetPreviousSong(this IPlaylistViewModel viewModel)
         {
             Song? newCurrentSong = SongsHelper.GetPreviousSong(viewModel.Songs, viewModel.Shuffle, viewModel.CurrentSong).song;
-            await viewModel.SendRequestSong(RequestSong.Start(newCurrentSong));
+            await viewModel.SetCurrentSongRequest(SongRequest.Start(newCurrentSong?.Id));
         }
     }
 

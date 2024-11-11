@@ -19,7 +19,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         public double PlaybackRate { get; }
 
-        public RequestSong? RequestSong { get; }
+        public SongRequest? CurrentSongRequest { get; }
 
         public ICollection<Song> Songs { get; }
 
@@ -32,7 +32,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
         public DateTime? SongsLastUpdated { get; }
 
         public Playlist(Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop,
-            double playbackRate, RequestSong? requestSong, ICollection<Song> songs, FileMediaSources fileMediaSources,
+            double playbackRate, SongRequest? songRequest, ICollection<Song> songs, FileMediaSources fileMediaSources,
             Guid? nextPlaylist, DateTime? filesLastUpdated, DateTime? songsLastUpdated)
         {
             Id = id;
@@ -41,7 +41,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             Shuffle = shuffle;
             Loop = loop;
             PlaybackRate = playbackRate;
-            RequestSong = requestSong;
+            CurrentSongRequest = songRequest;
             Songs = songs;
             FileMediaSources = fileMediaSources;
             NextPlaylist = nextPlaylist;
@@ -51,9 +51,9 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         public Song? GetCurrentSong()
         {
-            if (RequestSong == null) return null;
+            if (CurrentSongRequest == null) return null;
 
-            return Songs.First(s => s.Id == RequestSong?.Song.Id);
+            return Songs.First(s => s.Id == CurrentSongRequest?.Id);
         }
     }
 }

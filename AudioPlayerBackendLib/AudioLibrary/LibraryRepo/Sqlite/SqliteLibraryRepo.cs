@@ -13,10 +13,10 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
         // because playback should not be resume on startup of service
         private PlaybackState playState;
 
-        public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> OnPlayStateChange;
-        public event EventHandler<AudioLibraryChangeArgs<double>> OnVolumeChange;
-        public event EventHandler<AudioLibraryChangeArgs<Guid?>> OnCurrentPlaylistIdChange;
-        public event EventHandler<AudioLibraryChangeArgs<DateTime?>> OnFoldersLastUpdatedChange;
+        public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> PlayStateChanged;
+        public event EventHandler<AudioLibraryChangeArgs<double>> VolumeChanged;
+        public event EventHandler<AudioLibraryChangeArgs<Guid?>> CurrentPlaylistIdChanged;
+        public event EventHandler<AudioLibraryChangeArgs<DateTime?>> FoldersLastUpdatedChanged;
 
         public SqliteLibraryRepo(ISqlExecuteService sqlExecuteService) : base(sqlExecuteService)
         {
@@ -98,31 +98,31 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
             return sqlExecuteService.ExecuteNonQueryAsync(sql, parameters);
         }
 
-        public Task SendPlayStateChange(PlaybackState playState)
+        public Task SetPlayState(PlaybackState playState)
         {
             //await UpdateLibraryValue("play_state", (long)playState);
             this.playState = playState;
-            OnPlayStateChange?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
+            PlayStateChanged?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
 
             return Task.CompletedTask;
         }
 
-        public async Task SendVolumeChange(double volume)
+        public async Task SetVolume(double volume)
         {
             await UpdateLibraryValue("volume", volume);
-            OnVolumeChange?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
+            VolumeChanged?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
         }
 
-        public async Task SendCurrentPlaylistIdChange(Guid? currentPlaylistId)
+        public async Task SetCurrentPlaylistId(Guid? currentPlaylistId)
         {
             await UpdateLibraryValue("current_playlist_id", currentPlaylistId?.ToString());
-            OnCurrentPlaylistIdChange?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
+            CurrentPlaylistIdChanged?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
         }
 
-        public async Task SendFoldersLastUpdatedChange(DateTime? foldersLastUpdated)
+        public async Task SetFoldersLastUpdated(DateTime? foldersLastUpdated)
         {
             await UpdateLibraryValue("folders_last_updated", foldersLastUpdated?.Ticks);
-            OnFoldersLastUpdatedChange?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
+            FoldersLastUpdatedChanged?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
         }
     }
 }

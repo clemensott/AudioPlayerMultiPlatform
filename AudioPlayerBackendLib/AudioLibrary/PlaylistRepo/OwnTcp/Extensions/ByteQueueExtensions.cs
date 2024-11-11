@@ -79,31 +79,31 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
             return queue.DequeueArray(queue.DequeueSong);
         }
 
-        public static ByteQueue Enqueue(this ByteQueue queue, RequestSong song)
+        public static ByteQueue Enqueue(this ByteQueue queue, SongRequest song)
         {
             return queue
-                .Enqueue(song.Song)
+                .Enqueue(song.Id)
                 .Enqueue(song.Position)
                 .Enqueue(song.Duration)
                 .Enqueue(song.ContinuePlayback);
         }
 
-        public static RequestSong DequeueRequestSong(this ByteQueue queue)
+        public static SongRequest DequeueRequestSong(this ByteQueue queue)
         {
-            Song song = queue.DequeueSong();
+            Guid id = queue.DequeueGuid();
             TimeSpan position = queue.DequeueTimeSpan();
             TimeSpan duration = queue.DequeueTimeSpan();
             bool continuePlayback = queue.DequeueBool();
 
-            return RequestSong.Get(song, position, duration, continuePlayback);
+            return SongRequest.Get(id, position, duration, continuePlayback);
         }
 
-        public static ByteQueue Enqueue(this ByteQueue queue, RequestSong? song)
+        public static ByteQueue Enqueue(this ByteQueue queue, SongRequest? song)
         {
             return queue.EnqueueNullable(song, queue.Enqueue);
         }
 
-        public static RequestSong? DequeueRequestSongNullable(this ByteQueue queue)
+        public static SongRequest? DequeueRequestSongNullable(this ByteQueue queue)
         {
             return queue.DequeueNullable(queue.DequeueRequestSong);
         }
@@ -238,7 +238,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
                 .Enqueue(playlist.Shuffle)
                 .Enqueue(playlist.Loop)
                 .Enqueue(playlist.PlaybackRate)
-                .Enqueue(playlist.RequestSong)
+                .Enqueue(playlist.CurrentSongRequest)
                 .Enqueue(playlist.Songs)
                 .Enqueue(playlist.FileMediaSources)
                 .Enqueue(playlist.NextPlaylist)
@@ -254,14 +254,14 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
             OrderType shuffle = queue.DequeueOrderType();
             LoopType loop = queue.DequeueLoopType();
             double playbackRate = queue.DequeueDouble();
-            RequestSong? requestSong = queue.DequeueRequestSongNullable();
+            SongRequest? songRequest = queue.DequeueRequestSongNullable();
             Song[] songs = queue.DequeueSongs();
             FileMediaSources fileMediaSources = queue.DequeueFileMediaSources();
             Guid? nextPlaylist = queue.DequeueGuidNullable();
             DateTime? filesLastUpdated = queue.DequeueDateTimeNullable();
             DateTime? songsLastUpdated = queue.DequeueDateTimeNullable();
 
-            return new Playlist(id, type, name, shuffle, loop, playbackRate, requestSong,
+            return new Playlist(id, type, name, shuffle, loop, playbackRate, songRequest,
                 songs, fileMediaSources, nextPlaylist, filesLastUpdated, songsLastUpdated);
         }
     }

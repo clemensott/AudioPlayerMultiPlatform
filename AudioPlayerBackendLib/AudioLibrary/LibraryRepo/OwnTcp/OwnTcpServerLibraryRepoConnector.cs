@@ -25,10 +25,10 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
         public Task Start()
         {
-            libraryRepo.OnPlayStateChange += OnPlayStateChange;
-            libraryRepo.OnVolumeChange += OnVolumeChange;
-            libraryRepo.OnCurrentPlaylistIdChange += OnCurrentPlaylistIdChange;
-            libraryRepo.OnFoldersLastUpdatedChange += OnFoldersLastUpdatedChange;
+            libraryRepo.PlayStateChanged += OnPlayStateChanged;
+            libraryRepo.VolumeChanged += OnVolumeChanged;
+            libraryRepo.CurrentPlaylistIdChanged += OnCurrentPlaylistIdChanged;
+            libraryRepo.FoldersLastUpdatedChanged += OnFoldersLastUpdatedChanged;
 
             serverCommunicator.Received += OnReceived;
 
@@ -37,42 +37,42 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
         public Task Stop()
         {
-            libraryRepo.OnPlayStateChange -= OnPlayStateChange;
-            libraryRepo.OnVolumeChange -= OnVolumeChange;
-            libraryRepo.OnCurrentPlaylistIdChange -= OnCurrentPlaylistIdChange;
-            libraryRepo.OnFoldersLastUpdatedChange -= OnFoldersLastUpdatedChange;
+            libraryRepo.PlayStateChanged -= OnPlayStateChanged;
+            libraryRepo.VolumeChanged -= OnVolumeChanged;
+            libraryRepo.CurrentPlaylistIdChanged -= OnCurrentPlaylistIdChanged;
+            libraryRepo.FoldersLastUpdatedChanged -= OnFoldersLastUpdatedChanged;
 
             serverCommunicator.Received += OnReceived;
 
             return Task.CompletedTask;
         }
 
-        private async void OnPlayStateChange(object sender, AudioLibraryChangeArgs<PlaybackState> e)
+        private async void OnPlayStateChanged(object sender, AudioLibraryChangeArgs<PlaybackState> e)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(e.NewValue);
-            await SendAsync(nameof(libraryRepo.OnPlayStateChange), payload);
+            await SendAsync(nameof(libraryRepo.PlayStateChanged), payload);
         }
 
-        private async void OnVolumeChange(object sender, AudioLibraryChangeArgs<double> e)
+        private async void OnVolumeChanged(object sender, AudioLibraryChangeArgs<double> e)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(e.NewValue);
-            await SendAsync(nameof(libraryRepo.OnVolumeChange), payload);
+            await SendAsync(nameof(libraryRepo.VolumeChanged), payload);
         }
 
-        private async void OnCurrentPlaylistIdChange(object sender, AudioLibraryChangeArgs<Guid?> e)
+        private async void OnCurrentPlaylistIdChanged(object sender, AudioLibraryChangeArgs<Guid?> e)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(e.NewValue);
-            await SendAsync(nameof(libraryRepo.OnCurrentPlaylistIdChange), payload);
+            await SendAsync(nameof(libraryRepo.CurrentPlaylistIdChanged), payload);
         }
 
-        private async void OnFoldersLastUpdatedChange(object sender, AudioLibraryChangeArgs<DateTime?> e)
+        private async void OnFoldersLastUpdatedChanged(object sender, AudioLibraryChangeArgs<DateTime?> e)
         {
             ByteQueue payload = new ByteQueue()
                 .Enqueue(e.NewValue);
-            await SendAsync(nameof(libraryRepo.OnFoldersLastUpdatedChange), payload);
+            await SendAsync(nameof(libraryRepo.FoldersLastUpdatedChanged), payload);
         }
 
         private async void OnReceived(object sender, ReceivedEventArgs e)
@@ -96,27 +96,27 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
                         anwser.SetResult(result);
                         break;
 
-                    case nameof(libraryRepo.SendPlayStateChange):
+                    case nameof(libraryRepo.SetPlayState):
                         PlaybackState playState = payload.DequeuePlaybackState();
-                        await libraryRepo.SendPlayStateChange(playState);
+                        await libraryRepo.SetPlayState(playState);
                         anwser.SetResult(null);
                         break;
 
-                    case nameof(libraryRepo.SendVolumeChange):
+                    case nameof(libraryRepo.SetVolume):
                         double volume = payload.DequeueDouble();
-                        await libraryRepo.SendVolumeChange(volume);
+                        await libraryRepo.SetVolume(volume);
                         anwser.SetResult(null);
                         break;
 
-                    case nameof(libraryRepo.SendCurrentPlaylistIdChange):
+                    case nameof(libraryRepo.SetCurrentPlaylistId):
                         Guid? currentPlaylistId = payload.DequeueGuidNullable();
-                        await libraryRepo.SendCurrentPlaylistIdChange(currentPlaylistId);
+                        await libraryRepo.SetCurrentPlaylistId(currentPlaylistId);
                         anwser.SetResult(null);
                         break;
 
-                    case nameof(libraryRepo.SendFoldersLastUpdatedChange):
+                    case nameof(libraryRepo.SetFoldersLastUpdated):
                         DateTime? foldersLastUpdated = payload.DequeueDateTimeNullable();
-                        await libraryRepo.SendFoldersLastUpdatedChange(foldersLastUpdated);
+                        await libraryRepo.SetFoldersLastUpdated(foldersLastUpdated);
                         anwser.SetResult(null);
                         break;
 

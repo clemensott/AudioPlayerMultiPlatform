@@ -20,9 +20,8 @@ namespace AudioPlayerBackend.ViewModels
         private OrderType shuffle;
         private LoopType loop;
         private double playbackRate;
-        private TimeSpan position, duration;
         private Song? currentSong;
-        private RequestSong? requestedSong;
+        private SongRequest? currentSongRequest;
         private ICollection<Song> shuffledSongs, songs;
 
         public bool IsLoaded
@@ -119,30 +118,6 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public TimeSpan Position
-        {
-            get => position;
-            private set
-            {
-                if (value == position) return;
-
-                position = value;
-                OnPropertyChanged(nameof(Position));
-            }
-        }
-
-        public TimeSpan Duration
-        {
-            get => duration;
-            private set
-            {
-                if (value == duration) return;
-
-                duration = value;
-                OnPropertyChanged(nameof(Duration));
-            }
-        }
-
         public Song? CurrentSong
         {
             get => currentSong;
@@ -155,19 +130,19 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public RequestSong? RequestedSong
+        public SongRequest? CurrentSongRequest
         {
-            get => requestedSong;
+            get => currentSongRequest;
             set
             {
-                if (Equals(value, requestedSong)) return;
+                if (Equals(value, currentSongRequest)) return;
 
-                requestedSong = value;
-                OnPropertyChanged(nameof(RequestedSong));
+                currentSongRequest = value;
+                OnPropertyChanged(nameof(CurrentSongRequest));
 
-                CurrentSong = shuffledSongs.Cast<Song?>().FirstOrDefault(s => s?.Id == requestedSong?.Song.Id);
+                CurrentSong = shuffledSongs.Cast<Song?>().FirstOrDefault(s => s?.Id == currentSongRequest?.Id);
 
-                if (isRunning) SendRequestSong(value);
+                if (isRunning) SetCurrentSongRequest(value);
             }
         }
 
@@ -190,22 +165,22 @@ namespace AudioPlayerBackend.ViewModels
 
         public async Task SendShuffle(OrderType shuffle)
         {
-            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendShuffleChange(id, shuffle);
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SetShuffle(id, shuffle);
         }
 
         public async Task SendLoop(LoopType loop)
         {
-            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendLoopChange(id, loop);
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SetLoop(id, loop);
         }
 
         public async Task SendPlaybackRate(double playbackRate)
         {
-            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendPlaybackRateChange(id, playbackRate);
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SetPlaybackRate(id, playbackRate);
         }
 
-        public async Task SendRequestSong(RequestSong? requestSong)
+        public async Task SetCurrentSongRequest(SongRequest? songRequest)
         {
-            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendRequestSongChange(id, requestSong);
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SetCurrentSongRequest(id, songRequest);
         }
 
         public async Task SetPlaylistId(Guid? id)
@@ -223,12 +198,12 @@ namespace AudioPlayerBackend.ViewModels
         {
             isRunning = true;
 
-            playlistsRepo.OnNameChange += OnNameChange;
-            playlistsRepo.OnShuffleChange += OnShuffleChange;
-            playlistsRepo.OnLoopChange += OnLoopChange;
-            playlistsRepo.OnPlaybackRateChange += OnPlaybackRateChange;
-            playlistsRepo.OnRequestSongChange += OnRequestSongChange;
-            playlistsRepo.OnSongsChange += OnSongsChange;
+            playlistsRepo.NameChanged += OnNameChanged;
+            playlistsRepo.ShuffleChanged += OnShuffleChanged;
+            playlistsRepo.LoopChanged += OnLoopChanged;
+            playlistsRepo.PlaybackRateChanged += OnPlaybackRateChanged;
+            playlistsRepo.CurrentSongRequestChanged += OnCurrentSongRequestChanged;
+            playlistsRepo.SongsChanged += OnSongsChanged;
 
             await LoadPlaylistData();
         }
@@ -237,19 +212,17 @@ namespace AudioPlayerBackend.ViewModels
         {
             isRunning = false;
 
-            playlistsRepo.OnNameChange -= OnNameChange;
-            playlistsRepo.OnShuffleChange -= OnShuffleChange;
-            playlistsRepo.OnLoopChange -= OnLoopChange;
-            playlistsRepo.OnPlaybackRateChange -= OnPlaybackRateChange;
-            playlistsRepo.OnRequestSongChange -= OnRequestSongChange;
-            playlistsRepo.OnSongsChange -= OnSongsChange;
+            playlistsRepo.NameChanged -= OnNameChanged;
+            playlistsRepo.ShuffleChanged -= OnShuffleChanged;
+            playlistsRepo.LoopChanged -= OnLoopChanged;
+            playlistsRepo.PlaybackRateChanged -= OnPlaybackRateChanged;
+            playlistsRepo.CurrentSongRequestChanged -= OnCurrentSongRequestChanged;
+            playlistsRepo.SongsChanged -= OnSongsChanged;
 
             Name = string.Empty;
             Shuffle = OrderType.ByTitleAndArtist;
             Loop = LoopType.CurrentPlaylist;
             PlaybackRate = 1;
-            Position = TimeSpan.Zero;
-            Duration = TimeSpan.Zero;
             CurrentSong = null;
             shuffledSongs = Array.Empty<Song>();
             Songs = Array.Empty<Song>();
@@ -259,32 +232,32 @@ namespace AudioPlayerBackend.ViewModels
             return Task.CompletedTask;
         }
 
-        private void OnNameChange(object sender, PlaylistChangeArgs<string> e)
+        private void OnNameChanged(object sender, PlaylistChangeArgs<string> e)
         {
             if (Id == e.Id) Name = e.NewValue;
         }
 
-        private void OnShuffleChange(object sender, PlaylistChangeArgs<OrderType> e)
+        private void OnShuffleChanged(object sender, PlaylistChangeArgs<OrderType> e)
         {
             if (Id == e.Id) Shuffle = e.NewValue;
         }
 
-        private void OnLoopChange(object sender, PlaylistChangeArgs<LoopType> e)
+        private void OnLoopChanged(object sender, PlaylistChangeArgs<LoopType> e)
         {
             if (Id == e.Id) Loop = e.NewValue;
         }
 
-        private void OnPlaybackRateChange(object sender, PlaylistChangeArgs<double> e)
+        private void OnPlaybackRateChanged(object sender, PlaylistChangeArgs<double> e)
         {
             if (Id == e.Id) PlaybackRate = e.NewValue;
         }
 
-        private void OnRequestSongChange(object sender, PlaylistChangeArgs<RequestSong?> e)
+        private void OnCurrentSongRequestChanged(object sender, PlaylistChangeArgs<SongRequest?> e)
         {
-            if (Id == e.Id) RequestedSong = e.NewValue;
+            if (Id == e.Id) CurrentSongRequest = e.NewValue;
         }
 
-        private void OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
+        private void OnSongsChanged(object sender, PlaylistChangeArgs<ICollection<Song>> e)
         {
             if (Id == e.Id)
             {
@@ -304,7 +277,7 @@ namespace AudioPlayerBackend.ViewModels
                 Loop = playlist.Loop;
                 PlaybackRate = playlist.PlaybackRate;
                 shuffledSongs = playlist.Songs;
-                RequestedSong = playlist.RequestSong;
+                CurrentSongRequest = playlist.CurrentSongRequest;
                 UpdateSongs();
 
                 IsLoaded = true;
@@ -323,12 +296,12 @@ namespace AudioPlayerBackend.ViewModels
             Song[] newSongs = Songs.Where(s => s.Id != songId).ToArray();
             if (Songs.SequenceEqual(newSongs)) return;
 
-            await playlistsRepo.SendSongsChange(id, newSongs);
+            await playlistsRepo.SetSongs(id, newSongs);
         }
 
         public async Task ClearSongs()
         {
-            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SendSongsChange(id, new Song[0]);
+            if (Id.TryHasValue(out Guid id)) await playlistsRepo.SetSongs(id, new Song[0]);
         }
 
         public async Task Dispose()

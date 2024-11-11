@@ -13,17 +13,17 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 {
     internal class SqlitePlaylistsRepo : BaseSqlRepo, IPlaylistsRepo
     {
-        public event EventHandler<PlaylistChangeArgs<string>> OnNameChange;
-        public event EventHandler<PlaylistChangeArgs<OrderType>> OnShuffleChange;
-        public event EventHandler<PlaylistChangeArgs<LoopType>> OnLoopChange;
-        public event EventHandler<PlaylistChangeArgs<double>> OnPlaybackRateChange;
-        public event EventHandler<PlaylistChangeArgs<RequestSong?>> OnRequestSongChange;
-        public event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
-        public event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
-        public event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
-        public event EventHandler<PlaylistChangeArgs<FileMediaSources>> OnFileMedisSourcesChange;
-        public event EventHandler<PlaylistChangeArgs<DateTime?>> OnFilesLastUpdatedChange;
-        public event EventHandler<PlaylistChangeArgs<DateTime?>> OnSongsLastUpdatedChange;
+        public event EventHandler<PlaylistChangeArgs<string>> NameChanged;
+        public event EventHandler<PlaylistChangeArgs<OrderType>> ShuffleChanged;
+        public event EventHandler<PlaylistChangeArgs<LoopType>> LoopChanged;
+        public event EventHandler<PlaylistChangeArgs<double>> PlaybackRateChanged;
+        public event EventHandler<PlaylistChangeArgs<SongRequest?>> CurrentSongRequestChanged;
+        public event EventHandler<PlaylistChangeArgs<ICollection<Song>>> SongsChanged;
+        public event EventHandler<InsertPlaylistArgs> InsertedPlaylist;
+        public event EventHandler<RemovePlaylistArgs> RemovedPlaylist;
+        public event EventHandler<PlaylistChangeArgs<FileMediaSources>> FileMedisSourcesChanged;
+        public event EventHandler<PlaylistChangeArgs<DateTime?>> FilesLastUpdatedChanged;
+        public event EventHandler<PlaylistChangeArgs<DateTime?>> SongsLastUpdatedChanged;
 
         public SqlitePlaylistsRepo(ISqlExecuteService sqlExecuteService) : base(sqlExecuteService)
         {
@@ -103,18 +103,16 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         {
             string playlistSql = $@"
                 SELECT p.id, type, name, shuffle, loop, playback_rate,
-                    requested_song_id, rs.title as requested_song_title, rs.artist as requested_song_artist,
-                    rs.full_path as requested_song_full_path, requested_song_position, requested_song_duration,
+                    requested_song_id, requested_song_position, requested_song_duration,
                     requested_song_continue, file_media_source_root_id, np.next_playlist_id, p.files_last_updated,
                     p.songs_last_updated
                 FROM playlists p
-                    LEFT JOIN songs rs ON p.requested_song_id = rs.id
                     LEFT JOIN next_playlists np ON p.id = np.playlist_id
                 WHERE p.id = @id;
             ";
             var playlistParameters = CreateParams("id", playlistId.ToString());
             (Guid id, PlaylistType type, string name, OrderType shuffle, LoopType loop, double playbackRate,
-                RequestSong? requestedSong, Guid? fileMediaSourceRootId, Guid? nextPlaylistId,
+                SongRequest? songRequest, Guid? fileMediaSourceRootId, Guid? nextPlaylistId,
                 DateTime? filesLastUpdated, DateTime? songsLastUpdated) playlist = await sqlExecuteService.ExecuteReadFirstAsync(reader =>
             {
                 Guid id = reader.GetGuidFromString("id");
@@ -123,13 +121,13 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 OrderType shuffle = (OrderType)reader.GetInt64("shuffle");
                 LoopType loop = (LoopType)reader.GetInt64("loop");
                 double playbackRate = reader.GetDouble("playback_rate");
-                RequestSong? requestedSong = GetRequestedSong(reader);
+                SongRequest? songRequest = GetSongRequest(reader);
                 Guid? fileMediaSourceRootId = reader.GetGuidNullableFromString("file_media_source_root_id");
                 Guid? nextPlaylistId = reader.GetGuidNullableFromString("next_playlist_id");
                 DateTime? filesLastUpdated = reader.GetDateTimeNullableFromInt64("files_last_updated");
                 DateTime? songsLastUpdated = reader.GetDateTimeNullableFromInt64("songs_last_updated");
 
-                return (id, type, name, shuffle, loop, playbackRate, requestedSong, 
+                return (id, type, name, shuffle, loop, playbackRate, songRequest, 
                     fileMediaSourceRootId, nextPlaylistId, filesLastUpdated, songsLastUpdated);
             }, playlistSql, playlistParameters);
 
@@ -168,24 +166,19 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             }
 
             return new Playlist(playlist.id, playlist.type, playlist.name, playlist.shuffle, playlist.loop,
-                playlist.playbackRate, playlist.requestedSong, songs, fileMediaSources, playlist.nextPlaylistId,
+                playlist.playbackRate, playlist.songRequest, songs, fileMediaSources, playlist.nextPlaylistId,
                 playlist.filesLastUpdated, playlist.songsLastUpdated);
 
-            RequestSong? GetRequestedSong(DbDataReader reader)
+            SongRequest? GetSongRequest(DbDataReader reader)
             {
                 Guid? songId = reader.GetGuidNullableFromString("requested_song_id");
                 if (!songId.HasValue) return null;
 
-                const int songIndex = 0;
-                string songTitle = reader.GetString("requested_song_title");
-                string songArtist = reader.GetStringNullable("requested_song_artist");
-                string songFullPath = reader.GetString("requested_song_full_path");
                 TimeSpan requestPosition = reader.GetTimespanFromInt64("requested_song_position");
                 TimeSpan requestDuration = reader.GetTimespanFromInt64("requested_song_duration");
                 bool requestContinue = reader.GetBooleanFromLong("requested_song_continue");
 
-                Song song = new Song(songId.Value, songIndex, songTitle, songArtist, songFullPath);
-                return RequestSong.Get(song, requestPosition, requestDuration, requestContinue);
+                return SongRequest.Get(songId, requestPosition, requestDuration, requestContinue);
             }
 
             Song GetSong(DbDataReader reader)
@@ -250,10 +243,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             await sqlExecuteService.ExecuteNonQueryAsync(sql, parameters);
         }
 
-        private async Task InsertPlaylist(Playlist playlist, int? index)
+        private async Task InsertIntoPlaylistTable(Playlist playlist, int? index)
         {
-            if (playlist.RequestSong.TryHasValue(out RequestSong requestedSong)) await UpsertSong(requestedSong.Song);
-
             if (index.HasValue)
             {
                 const string moveIndexesSql = @"
@@ -278,7 +269,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                     requested_song_id, requested_song_position, requested_song_duration, requested_song_continue,
                     songs_count, file_media_source_root_id, files_last_updated, songs_last_updated)
                 VALUES (@id, @index, @type, @name, @shuffle, @loop, @playbackRate,
-                    @requestedSongId, @requestedSongPosition, @requestedSongDuration, @requestedSongContinue,
+                    @songRequestId, @songRequestPosition, @songRequestDuration, @songRequestContinue,
                     @songsCount, @fileMediaSourceRootId, @filesLastUpdated, @songsLastUpdated);
             ";
             var playlistParameters = new KeyValuePair<string, object>[]
@@ -290,10 +281,10 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
                 CreateParam("shuffle", (long)playlist.Shuffle),
                 CreateParam("loop", (long)playlist.Loop),
                 CreateParam("playbackRate", playlist.PlaybackRate),
-                CreateParam("requestedSongId", playlist.RequestSong?.Song.Id.ToString()),
-                CreateParam("requestedSongPosition", playlist.RequestSong?.Position.Ticks),
-                CreateParam("requestedSongDuration", playlist.RequestSong?.Duration.Ticks),
-                CreateParam("requestedSongContinue", playlist.RequestSong?.ContinuePlayback == true ? 1L : 0L),
+                CreateParam("songRequestId", playlist.CurrentSongRequest?.Id.ToString()),
+                CreateParam("songRequestPosition", playlist.CurrentSongRequest?.Position.Ticks),
+                CreateParam("songRequestDuration", playlist.CurrentSongRequest?.Duration.Ticks),
+                CreateParam("songRequestContinue", playlist.CurrentSongRequest?.ContinuePlayback == true ? 1L : 0L),
                 CreateParam("fileMediaSourceRootId", playlist.FileMediaSources?.Root.Id.ToString()),
                 CreateParam("songsCount", playlist.Songs?.Count ?? 0),
                 CreateParam("filesLastUpdated", playlist.FilesLastUpdated?.Ticks),
@@ -348,16 +339,16 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             }
         }
 
-        public async Task SendInsertPlaylist(Playlist playlist, int? index)
+        public async Task InsertPlaylist(Playlist playlist, int? index)
         {
             if (playlist.FileMediaSources != null) await UpsertFileMediaSourceRoot(playlist.FileMediaSources.Root);
 
-            await InsertPlaylist(playlist, index);
+            await InsertIntoPlaylistTable(playlist, index);
 
             if (playlist.FileMediaSources?.Sources.Count > 0) await InsertFileMediaSources(playlist.Id, playlist.FileMediaSources.Sources);
             if (playlist.Songs.Count > 0) await UpsertPlaylistSongs(playlist.Id, playlist.Songs);
 
-            OnInsertPlaylist?.Invoke(this, new InsertPlaylistArgs(index, playlist));
+            InsertedPlaylist?.Invoke(this, new InsertPlaylistArgs(index, playlist));
         }
 
         private async Task DeletePlaylistSongs(Guid playlistId)
@@ -417,7 +408,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             await sqlExecuteService.ExecuteNonQueryAsync(fileMediaSourceRootSql);
         }
 
-        public async Task SendRemovePlaylist(Guid playlistId)
+        public async Task RemovePlaylist(Guid playlistId)
         {
             await DeletePlaylistSongs(playlistId);
             await DeleteUnuusedSongs();
@@ -425,7 +416,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             await DeletePlaylist(playlistId);
             await DeleteUnuusedFileMediaSourceRoots();
 
-            OnRemovePlaylist?.Invoke(this, new RemovePlaylistArgs(playlistId));
+            RemovedPlaylist?.Invoke(this, new RemovePlaylistArgs(playlistId));
         }
 
         private Task UpdatePlaylistValue(string columnName, Guid playlistId, object value)
@@ -439,63 +430,61 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             return sqlExecuteService.ExecuteNonQueryAsync(sql, parameters);
         }
 
-        public async Task SendNameChange(Guid playlistId, string name)
+        public async Task SetName(Guid playlistId, string name)
         {
             await UpdatePlaylistValue("name", playlistId, name);
-            OnNameChange?.Invoke(this, new PlaylistChangeArgs<string>(playlistId, name));
+            NameChanged?.Invoke(this, new PlaylistChangeArgs<string>(playlistId, name));
         }
 
-        public async Task SendShuffleChange(Guid playlistId, OrderType shuffle)
+        public async Task SetShuffle(Guid playlistId, OrderType shuffle)
         {
             await UpdatePlaylistValue("shuffle", playlistId, (long)shuffle);
-            OnShuffleChange?.Invoke(this, new PlaylistChangeArgs<OrderType>(playlistId, shuffle));
+            ShuffleChanged?.Invoke(this, new PlaylistChangeArgs<OrderType>(playlistId, shuffle));
         }
 
-        public async Task SendLoopChange(Guid playlistId, LoopType loop)
+        public async Task SetLoop(Guid playlistId, LoopType loop)
         {
             await UpdatePlaylistValue("loop", playlistId, (long)loop);
-            OnLoopChange?.Invoke(this, new PlaylistChangeArgs<LoopType>(playlistId, loop));
+            LoopChanged?.Invoke(this, new PlaylistChangeArgs<LoopType>(playlistId, loop));
         }
 
-        public async Task SendPlaybackRateChange(Guid playlistId, double playbackRate)
+        public async Task SetPlaybackRate(Guid playlistId, double playbackRate)
         {
             await UpdatePlaylistValue("playback_rate", playlistId, playbackRate);
-            OnPlaybackRateChange?.Invoke(this, new PlaylistChangeArgs<double>(playlistId, playbackRate));
+            PlaybackRateChanged?.Invoke(this, new PlaylistChangeArgs<double>(playlistId, playbackRate));
         }
 
-        public async Task SendRequestSongChange(Guid playlistId, RequestSong? requestedSong)
+        public async Task SetCurrentSongRequest(Guid playlistId, SongRequest? songRequest)
         {
-            if (requestedSong.HasValue) await UpsertSong(requestedSong.Value.Song);
-
             string sql = $@"
                 UPDATE playlists
-                SET requested_song_id = @requestedSongId,
-                    requested_song_position = @requestedSongPosition,
-                    requested_song_duration = @requestedSongDuration,
-                    requested_song_continue = @requestedSongContinue
+                SET requested_song_id = @songRequestId,
+                    requested_song_position = @songRequestPosition,
+                    requested_song_duration = @songRequestDuration,
+                    requested_song_continue = @songRequestContinue
                 WHERE id = @id;
             ";
             KeyValuePair<string, object>[] parameters = new KeyValuePair<string, object>[]
             {
                 CreateParam("id", playlistId.ToString()),
-                CreateParam("requestedSongId", requestedSong?.Song.Id.ToString()),
-                CreateParam("requestedSongPosition", requestedSong?.Position.Ticks),
-                CreateParam("requestedSongDuration", requestedSong?.Duration.Ticks),
-                CreateParam("requestedSongContinue", requestedSong?.ContinuePlayback == true ? 1L : 0L),
+                CreateParam("songRequestId", songRequest?.Id.ToString()),
+                CreateParam("songRequestPosition", songRequest?.Position.Ticks),
+                CreateParam("songRequestDuration", songRequest?.Duration.Ticks),
+                CreateParam("songRequestContinue", songRequest?.ContinuePlayback == true ? 1L : 0L),
             };
             await sqlExecuteService.ExecuteNonQueryAsync(sql, parameters);
 
-            OnRequestSongChange?.Invoke(this, new PlaylistChangeArgs<RequestSong?>(playlistId, requestedSong));
+            CurrentSongRequestChanged?.Invoke(this, new PlaylistChangeArgs<SongRequest?>(playlistId, songRequest));
         }
 
-        public async Task SendSongsChange(Guid playlistId, ICollection<Song> songs)
+        public async Task SetSongs(Guid playlistId, ICollection<Song> songs)
         {
             await DeletePlaylistSongs(playlistId);
             if (songs?.Count > 0) await UpsertPlaylistSongs(playlistId, songs);
             await UpdatePlaylistValue("songs_count", playlistId, (long)(songs?.Count ?? 0));
             await DeleteUnuusedSongs();
 
-            OnSongsChange?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));
+            SongsChanged?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));
         }
 
         public async Task<ICollection<FileMediaSourceRoot>> GetFileMediaSourceRoots()
@@ -538,7 +527,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             }
         }
 
-        public async Task SendFileMedisSourcesChange(Guid playlistId, FileMediaSources fileMediaSources)
+        public async Task SetFileMedisSources(Guid playlistId, FileMediaSources fileMediaSources)
         {
             await DeleteFileMediaSources(playlistId);
             if (fileMediaSources != null)
@@ -550,19 +539,19 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             await UpdatePlaylistValue("file_media_source_root_id", playlistId, fileMediaSources?.Root.Id.ToString());
             await DeleteUnuusedFileMediaSourceRoots();
 
-            OnFileMedisSourcesChange?.Invoke(this, new PlaylistChangeArgs<FileMediaSources>(playlistId, fileMediaSources));
+            FileMedisSourcesChanged?.Invoke(this, new PlaylistChangeArgs<FileMediaSources>(playlistId, fileMediaSources));
         }
 
-        public async Task SendFilesLastUpdatedChange(Guid playlistId, DateTime? filesLastUpdated)
+        public async Task SetFilesLastUpdated(Guid playlistId, DateTime? filesLastUpdated)
         {
             await UpdatePlaylistValue("files_last_updated", playlistId, filesLastUpdated?.Ticks);
-            OnFilesLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, filesLastUpdated));
+            FilesLastUpdatedChanged?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, filesLastUpdated));
         }
 
-        public async Task SendSongsLastUpdatedChange(Guid playlistId, DateTime? songsLastUpdated)
+        public async Task SetSongsLastUpdated(Guid playlistId, DateTime? songsLastUpdated)
         {
             await UpdatePlaylistValue("songs_last_updated", playlistId, songsLastUpdated?.Ticks);
-            OnSongsLastUpdatedChange?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, songsLastUpdated));
+            SongsLastUpdatedChanged?.Invoke(this, new PlaylistChangeArgs<DateTime?>(playlistId, songsLastUpdated));
         }
     }
 }

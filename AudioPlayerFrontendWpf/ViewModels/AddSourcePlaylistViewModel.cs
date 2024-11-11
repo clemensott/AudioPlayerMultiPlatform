@@ -130,8 +130,8 @@ namespace AudioPlayerFrontend.ViewModels
 
         public async Task Start()
         {
-            PlaylistsRepo.OnInsertPlaylist += PlaylistsRepo_OnInsertPlaylist;
-            PlaylistsRepo.OnRemovePlaylist += PlaylistsRepo_OnRemovePlaylist;
+            PlaylistsRepo.InsertedPlaylist += PlaylistsRepo_InsertedPlaylist;
+            PlaylistsRepo.RemovedPlaylist += PlaylistsRepo_RemovedPlaylist;
 
             Library library = await LibraryRepo.GetLibrary();
             SourcePlaylists = new ObservableCollection<PlaylistInfo>(library.Playlists);
@@ -139,20 +139,20 @@ namespace AudioPlayerFrontend.ViewModels
 
         public Task Stop()
         {
-            PlaylistsRepo.OnInsertPlaylist -= PlaylistsRepo_OnInsertPlaylist;
-            PlaylistsRepo.OnRemovePlaylist -= PlaylistsRepo_OnRemovePlaylist;
+            PlaylistsRepo.InsertedPlaylist -= PlaylistsRepo_InsertedPlaylist;
+            PlaylistsRepo.RemovedPlaylist -= PlaylistsRepo_RemovedPlaylist;
 
             SourcePlaylists.Clear();
 
             return Task.CompletedTask;
         }
 
-        private void PlaylistsRepo_OnInsertPlaylist(object sender, InsertPlaylistArgs e)
+        private void PlaylistsRepo_InsertedPlaylist(object sender, InsertPlaylistArgs e)
         {
             SourcePlaylists.Insert(e.Index ?? SourcePlaylists.Count, e.Playlist.ToPlaylistInfo());
         }
 
-        private void PlaylistsRepo_OnRemovePlaylist(object sender, RemovePlaylistArgs e)
+        private void PlaylistsRepo_RemovedPlaylist(object sender, RemovePlaylistArgs e)
         {
             int index = SourcePlaylists.IndexOf(p => p.Id == e.Id);
             SourcePlaylists.RemoveAt(index);

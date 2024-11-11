@@ -150,7 +150,7 @@ namespace AudioPlayerFrontend.Join
             if (e.Mode == PowerModes.Resume && PlayState == PlaybackState.Playing && Source != null)
             {
                 if (handleSem.CurrentCount == 0) handleSem.Release();
-                RequestSong restartRequest = RequestSong.Get(Source.Value, lastPosition, Duration);
+                RequestSong restartRequest = new RequestSong(Source.Value, lastPosition, Duration, false);
                 await Stop();
                 await Set(restartRequest);
             }
@@ -160,33 +160,33 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        public Task Set(RequestSong? wanna)
+        public Task Set(RequestSong? request)
         {
-            AudioPlayerBackend.Logs.Log($"Player.Set2: {wanna.HasValue}");
-            return wanna.HasValue ? Set(wanna.Value) : Stop();
+            AudioPlayerBackend.Logs.Log($"Player.Set2: {request.HasValue}");
+            return request.HasValue ? Set(request.Value) : Stop();
         }
 
-        private async Task Set(RequestSong wanna)
+        private async Task Set(RequestSong request)
         {
-            AudioPlayerBackend.Logs.Log($"Player.Set4: {wanna.Song.FullPath} | {wanna.Position} / {wanna.Duration}");
-            requestSong = wanna;
+            AudioPlayerBackend.Logs.Log($"Player.Set4: {request.Song.FullPath} | {request.Position} / {request.Duration}");
+            requestSong = request;
 
             await handleSem.WaitAsync();
 
             bool release = true;
             try
             {
-                AudioPlayerBackend.Logs.Log($"Player.Set5: {requestSong.Equals(wanna)}");
-                if (!requestSong.Equals(wanna)) return;
+                AudioPlayerBackend.Logs.Log($"Player.Set5: {requestSong.Equals(request)}");
+                if (!requestSong.Equals(request)) return;
 
-                AudioPlayerBackend.Logs.Log($"Player.Set6: {Source.HasValue} | {wanna.Song.FullPath} | {Source?.FullPath}");
-                if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)
+                AudioPlayerBackend.Logs.Log($"Player.Set6: {Source.HasValue} | {request.Song.FullPath} | {Source?.FullPath}");
+                if (Source.HasValue && request.Song.FullPath == Source?.FullPath)
                 {
-                    if (!wanna.ContinuePlayback && wanna.Position != Position)
+                    if (!request.ContinuePlayback && request.Position != Position)
                     {
-                        SetPosition(wanna.Position);
+                        SetPosition(request.Position);
                     }
-                    Source = wanna.Song;
+                    Source = request.Song;
                     ExecutePlayState();
                     return;
                 }
@@ -195,7 +195,7 @@ namespace AudioPlayerFrontend.Join
             catch (Exception e)
             {
                 Source = null;
-                MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
             }
             finally
             {
@@ -204,14 +204,14 @@ namespace AudioPlayerFrontend.Join
 
             try
             {
-                AudioPlayerBackend.Logs.Log($"Player.Set8: {wanna.Song.FullPath}");
-                setRequestSong = wanna;
-                mediaElement.Source = new Uri(wanna.Song.FullPath);
+                AudioPlayerBackend.Logs.Log($"Player.Set8: {request.Song.FullPath}");
+                setRequestSong = request;
+                mediaElement.Source = new Uri(request.Song.FullPath);
             }
             catch (Exception e)
             {
                 Source = null;
-                MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
                 handleSem.Release();
             }
         }

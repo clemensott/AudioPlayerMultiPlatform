@@ -86,8 +86,8 @@ namespace AudioPlayerFrontend
                     viewModel.Shuffle, viewModel.Loop, 1, null, songs,
                     fileMediaSources, null, DateTime.Now, DateTime.Now);
 
-                await viewModel.PlaylistsRepo.SendInsertPlaylist(newPlaylist, null);
-                await viewModel.LibraryRepo.SendCurrentPlaylistIdChange(newPlaylist.Id);
+                await viewModel.PlaylistsRepo.InsertPlaylist(newPlaylist, null);
+                await viewModel.LibraryRepo.SetCurrentPlaylistId(newPlaylist.Id);
             }
             else
             {
@@ -105,7 +105,7 @@ namespace AudioPlayerFrontend
                 }
 
                 FileMediaSources fileMediaSources = FileMediaSourcesHelper.ExtractFileMediaSources(newAllPaths);
-                await viewModel.PlaylistsRepo.SendFileMedisSourcesChange(selectedPlaylistInfo.Id, fileMediaSources);
+                await viewModel.PlaylistsRepo.SetFileMedisSources(selectedPlaylistInfo.Id, fileMediaSources);
                 await updateLibraryService.UpdateSourcePlaylist(selectedPlaylistInfo.Id);
             }
 

@@ -375,40 +375,40 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
-        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert7EventArgs args)
+        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert6EventArgs args)
         {
-            if (args.Input2 == null || args.Input3 == null || args.Input4 == null || args.Input5 == null) return null;
+            if (args.Input1 == null || args.Input2 == null || args.Input3 == null || args.Input4 == null) return null;
 
-            Song? currentSong = (Song?)args.Input0;
-            RequestSong? requestedSong = (RequestSong?)args.Input1;
-            IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input2;
-            IEnumerable<Song> searchSongs = (IEnumerable<Song>)args.Input3;
-            bool isSearching = (bool)args.Input4;
-            int indexLbx = (int)args.Input5;
+            SongRequest? songRequest = (SongRequest?)args.Input0;
+            IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input1;
+            IEnumerable<Song> searchSongs = (IEnumerable<Song>)args.Input2;
+            bool isSearching = (bool)args.Input3;
+            int indexLbx = (int)args.Input4;
 
-            object songsLbx = MicCurrentSongIndex_ConvertRef(currentSong, ref requestedSong,
-                allSongs, searchSongs, isSearching, ref indexLbx, args.ChangedValueIndex);
+            object songsLbx = MicCurrentSongIndex_ConvertRef(ref songRequest, allSongs,
+                searchSongs, isSearching, ref indexLbx, args.ChangedValueIndex);
 
-            args.Input1 = requestedSong;
-            args.Input5 = indexLbx;
+            args.Input0 = songRequest;
+            args.Input4 = indexLbx;
 
             return songsLbx;
         }
 
-        private object MicCurrentSongIndex_ConvertRef(Song? currentSong, ref RequestSong? requestSong,
-            IEnumerable<Song> allSongs, IEnumerable<Song> searchSongs, bool isSearching, ref int lbxIndex, int changedInput)
+        private object MicCurrentSongIndex_ConvertRef(ref SongRequest? songRequest, IEnumerable<Song> allSongs,
+            IEnumerable<Song> searchSongs, bool isSearching, ref int lbxIndex, int changedInput)
         {
             IEnumerable<Song> songs = isSearching ? searchSongs : allSongs;
             IPlaylistViewModel currentPlaylist = viewModel.CurrentPlaylist;
+            Guid? currentSongId = songRequest?.Id;
 
-            if (changedInput == 5 && lbxIndex != -1 && isSearching) ;
-            else if (changedInput == 5 && lbxIndex != -1 && allSongs.Contains(songs.ElementAt(lbxIndex)))
+            if (changedInput == 4 && lbxIndex != -1 && !isSearching && allSongs.Contains(songs.ElementAt(lbxIndex)))
             {
-                requestSong = RequestSong.Start(songs.ElementAt(lbxIndex));
+                songRequest = SongRequest.Start(songs.ElementAt(lbxIndex).Id);
             }
-            else if (!currentSong.HasValue) lbxIndex = -1;
-            else if (songs.Contains(currentSong.Value)) lbxIndex = songs.IndexOf(currentSong.Value);
-            else if ((lbxIndex == -1 || changedInput == 4) && songs.Any()) lbxIndex = 0;
+            else if (lbxIndex != -1 && isSearching) ;
+            else if (!songRequest.HasValue) lbxIndex = -1;
+            else if ( songs.Any(s => s.Id == currentSongId)) lbxIndex = songs.IndexOf(s => s.Id == currentSongId);
+            else if ((lbxIndex == -1 || changedInput == 3) && songs.Any()) lbxIndex = 0;
             else lbxIndex = Math.Min(lbxIndex, songs.Count() - 1);
 
             return songs;
@@ -447,11 +447,11 @@ namespace AudioPlayerFrontend
             double durationSeconds = slider.Maximum;
             IPlaylistViewModel currentPlaylist = viewModel.CurrentPlaylist;
 
-            if (currentPlaylist.Id.HasValue && currentPlaylist.CurrentSong.TryHasValue(out Song currentSong) &&
-                Math.Abs(currentPlaylist.Duration.TotalSeconds - durationSeconds) < 0.01 &&
-                Math.Abs(currentPlaylist.Position.TotalSeconds - positionSeconds) > 0.01)
+            if (currentPlaylist.Id.HasValue && currentPlaylist.CurrentSongRequest.TryHasValue(out SongRequest request) &&
+                Math.Abs(request.Duration.TotalSeconds - durationSeconds) < 0.01 &&
+                Math.Abs(request.Position.TotalSeconds - positionSeconds) > 0.01)
             {
-                currentPlaylist.SendRequestSong(RequestSong.Get(currentSong, TimeSpan.FromSeconds(positionSeconds)));
+                currentPlaylist.SetCurrentSongRequest(SongRequest.Get(request.Id, TimeSpan.FromSeconds(positionSeconds), request.Duration));
             }
         }
     }

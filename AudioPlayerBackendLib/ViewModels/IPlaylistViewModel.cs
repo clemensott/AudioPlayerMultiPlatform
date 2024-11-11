@@ -21,19 +21,15 @@ namespace AudioPlayerBackend.ViewModels
 
         double PlaybackRate { get; set; }
 
-        TimeSpan Position { get; }
-
-        TimeSpan Duration { get; }
-
         Song? CurrentSong { get; }
 
-        RequestSong? RequestedSong { get; set; }
+        SongRequest? CurrentSongRequest { get; set; }
 
         ICollection<Song> Songs { get; }
 
         Task SetPlaylistId(Guid? id);
 
-        Task SendRequestSong(RequestSong? requestSong);
+        Task SetCurrentSongRequest(SongRequest? requestSong);
 
         Task RemoveSong(Guid songId);
 

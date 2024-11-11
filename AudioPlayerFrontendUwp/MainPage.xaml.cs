@@ -98,24 +98,24 @@ namespace AudioPlayerFrontend
         /// Handles user input and programmatic changes for viewed songs and selected song
         /// </summary>
         /// <param name="sender"></param>
-        /// <param name="args">Input0: CurrentPlaylist.AllSongs, Input1: CurrentPlaylist.CurrentSong, Input2: CurrentPlaylist.WannaSong, Input3: lbxSongs.SelectedIndex</param>
+        /// <param name="args">Input0: CurrentPlaylist.AllSongs, Input1: CurrentPlaylist.CurrentSongRequest, Input2: lbxSongs.SelectedIndex</param>
         /// <returns>The list of Songs to view on UI.</returns>
-        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert4EventArgs args)
+        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert3EventArgs args)
         {
             if (args.Input0 == null)
             {
-                args.Input3 = -1;
+                args.Input2 = -1;
                 return null;
             }
-            if (args.ChangedValueIndex == 2) return args.Input0;
 
             IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input0;
-            Song? currentSong = (Song?)args.Input1;
-            int index = (int)args.Input3;
+            SongRequest? songRequest = (SongRequest?)args.Input1;
+            int index = (int)args.Input2;
+            Guid? currentSongId = songRequest?.Id;
 
-            if (args.ChangedValueIndex == 3 && index != -1) args.Input2 = RequestSong.Start(allSongs.ElementAt(index));
-            else if (!currentSong.HasValue) args.Input3 = -1;
-            else args.Input3 = allSongs.IndexOf(currentSong.Value);
+            if (args.ChangedValueIndex == 2 && index != -1) args.Input1 = SongRequest.Start(allSongs.ElementAt(index).Id);
+            else if (!currentSongId.HasValue) args.Input2 = -1;
+            else args.Input2 = allSongs.IndexOf(s => s.Id == currentSongId);
 
             return allSongs;
         }
@@ -260,8 +260,8 @@ namespace AudioPlayerFrontend
         private async void AudioPositionSlider_UserPositionChanged(object sender, TimeSpan e)
         {
             IPlaylistViewModel playlist = viewModel.CurrentPlaylist;
-            RequestSong? requestSong = RequestSong.Get(playlist.CurrentSong, e, playlist.Duration);
-            await viewModel.CurrentPlaylist.SendRequestSong(requestSong);
+            SongRequest? songRequest = SongRequest.Get(playlist.CurrentSongRequest?.Id, e, playlist.CurrentSongRequest?.Duration);
+            await viewModel.CurrentPlaylist.SetCurrentSongRequest(songRequest);
         }
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)

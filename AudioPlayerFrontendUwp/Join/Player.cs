@@ -14,7 +14,7 @@ namespace AudioPlayerFrontend.Join
     class Player : IPlayer
     {
         private PlaybackState playState;
-        private RequestSong? requestSong;
+        private RequestSong? request;
         private readonly SemaphoreSlim sem;
         private readonly MediaPlayer player;
 
@@ -112,13 +112,13 @@ namespace AudioPlayerFrontend.Join
 
         private void Player_MediaOpened(MediaPlayer sender, object args)
         {
-            Source = requestSong.Value.Song;
-            if (requestSong.Value.Duration == sender.PlaybackSession.NaturalDuration)
+            Source = request.Value.Song;
+            if (request.Value.Duration == sender.PlaybackSession.NaturalDuration)
             {
-                sender.PlaybackSession.Position = requestSong.Value.Position;
+                sender.PlaybackSession.Position = request.Value.Position;
             }
 
-            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, requestSong.Value.Song));
+            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, request.Value.Song));
             ExecutePlayState();
             sem.Release();
         }
@@ -126,7 +126,7 @@ namespace AudioPlayerFrontend.Join
         private void Player_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
             Source = null;
-            MediaFailed?.Invoke(this, new MediaFailedEventArgs(requestSong?.Song, args.ExtendedErrorCode));
+            MediaFailed?.Invoke(this, new MediaFailedEventArgs(request?.Song, args.ExtendedErrorCode));
             sem.Release();
         }
 
@@ -135,29 +135,29 @@ namespace AudioPlayerFrontend.Join
             MediaEnded?.Invoke(this, new MediaEndedEventArgs(Source));
         }
 
-        public Task Set(RequestSong? song)
+        public Task Set(RequestSong? request)
         {
-            return song.HasValue ? Set(song.Value) : Stop();
+            return request.HasValue ? Set(request.Value) : Stop();
         }
 
-        private async Task Set(RequestSong song)
+        private async Task Set(RequestSong request)
         {
-            requestSong = song;
+            this.request = request;
 
             await sem.WaitAsync();
 
             bool release = true;
             try
             {
-                if (!requestSong.Equals(song)) return;
+                if (!this.request.Equals(request)) return;
 
-                if (Source.HasValue && song.Song.FullPath == Source?.FullPath)
+                if (Source.HasValue && request.Song.FullPath == Source?.FullPath)
                 {
-                    if (!song.ContinuePlayback && song.Position != Position)
+                    if (!request.ContinuePlayback && request.Position != Position)
                     {
-                        player.PlaybackSession.Position = song.Position;
+                        player.PlaybackSession.Position = request.Position;
                     }
-                    Source = song.Song;
+                    Source = request.Song;
                     ExecutePlayState();
                     return;
                 }
@@ -166,7 +166,7 @@ namespace AudioPlayerFrontend.Join
             catch (Exception e)
             {
                 Source = null;
-                MediaFailed?.Invoke(this, new MediaFailedEventArgs(song.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
             }
             finally
             {
@@ -175,24 +175,24 @@ namespace AudioPlayerFrontend.Join
 
             try
             {
-                StorageFile file = await StorageFile.GetFileFromPathAsync(song.Song.FullPath);
+                StorageFile file = await StorageFile.GetFileFromPathAsync(request.Song.FullPath);
                 player.Source = MediaSource.CreateFromStorageFile(file);
 
                 await SMTC.DisplayUpdater.CopyFromFileAsync(MediaPlaybackType.Music, file);
                 if (string.IsNullOrWhiteSpace(SMTC.DisplayUpdater.MusicProperties.Title))
                 {
-                    SMTC.DisplayUpdater.MusicProperties.Title = song.Song.Title ?? string.Empty;
+                    SMTC.DisplayUpdater.MusicProperties.Title = request.Song.Title ?? string.Empty;
                 }
                 if (string.IsNullOrWhiteSpace(SMTC.DisplayUpdater.MusicProperties.Artist))
                 {
-                    SMTC.DisplayUpdater.MusicProperties.Artist = song.Song.Artist ?? string.Empty;
+                    SMTC.DisplayUpdater.MusicProperties.Artist = request.Song.Artist ?? string.Empty;
                 }
                 SMTC.DisplayUpdater.Update();
             }
             catch (Exception e)
             {
                 Source = null;
-                MediaFailed?.Invoke(this, new MediaFailedEventArgs(song.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
                 sem.Release();
             }
         }

@@ -63,7 +63,7 @@ namespace AudioPlayerBackend.ViewModels
                 playState = value;
                 OnPropertyChanged(nameof(PlayState));
 
-                if (IsLoaded) libraryRepo.SendPlayStateChange(value);
+                if (IsLoaded) libraryRepo.SetPlayState(value);
             }
         }
 
@@ -77,7 +77,7 @@ namespace AudioPlayerBackend.ViewModels
                 volume = value;
                 OnPropertyChanged(nameof(Volume));
 
-                if (IsLoaded) libraryRepo.SendVolumeChange(value);
+                if (IsLoaded) libraryRepo.SetVolume(value);
             }
         }
 
@@ -91,7 +91,7 @@ namespace AudioPlayerBackend.ViewModels
                 currentPlaylistIndex = value;
                 OnPropertyChanged(nameof(CurrentPlaylistIndex));
 
-                if (IsLoaded) libraryRepo.SendCurrentPlaylistIdChange(Playlists.ElementAtOrDefault(value)?.Id);
+                if (IsLoaded) libraryRepo.SetCurrentPlaylistId(Playlists.ElementAtOrDefault(value)?.Id);
             }
         }
 
@@ -155,13 +155,13 @@ namespace AudioPlayerBackend.ViewModels
 
         private void Subscribe()
         {
-            libraryRepo.OnPlayStateChange += OnPlayStateChange;
-            libraryRepo.OnVolumeChange += OnVolumeChange;
-            libraryRepo.OnCurrentPlaylistIdChange += OnCurrentPlaylistIdChange;
+            libraryRepo.PlayStateChanged += OnPlayStateChanged;
+            libraryRepo.VolumeChanged += OnVolumeChanged;
+            libraryRepo.CurrentPlaylistIdChanged += OnCurrentPlaylistIdChanged;
 
-            playlistsRepo.OnInsertPlaylist += PlaylistsRepo_OnInsertPlaylist;
-            playlistsRepo.OnRemovePlaylist += PlaylistsRepo_OnRemovePlaylist;
-            playlistsRepo.OnSongsChange += PlaylistsRepo_OnSongsChange;
+            playlistsRepo.InsertedPlaylist += OnInsertedPlaylist;
+            playlistsRepo.RemovedPlaylist += OnRemovedPlaylist;
+            playlistsRepo.SongsChanged += OnSongsChanged;
 
             updateLibraryService.UpdateStarted += UpdateLibraryService_UpdateStarted;
             updateLibraryService.UpdateCompleted += UpdateLibraryService_UpdateCompleted;
@@ -182,45 +182,45 @@ namespace AudioPlayerBackend.ViewModels
 
         private void Unsubscribe()
         {
-            libraryRepo.OnPlayStateChange -= OnPlayStateChange;
-            libraryRepo.OnVolumeChange -= OnVolumeChange;
-            libraryRepo.OnCurrentPlaylistIdChange -= OnCurrentPlaylistIdChange;
+            libraryRepo.PlayStateChanged -= OnPlayStateChanged;
+            libraryRepo.VolumeChanged -= OnVolumeChanged;
+            libraryRepo.CurrentPlaylistIdChanged -= OnCurrentPlaylistIdChanged;
 
-            playlistsRepo.OnInsertPlaylist -= PlaylistsRepo_OnInsertPlaylist;
-            playlistsRepo.OnRemovePlaylist -= PlaylistsRepo_OnRemovePlaylist;
-            playlistsRepo.OnSongsChange -= PlaylistsRepo_OnSongsChange;
+            playlistsRepo.InsertedPlaylist -= OnInsertedPlaylist;
+            playlistsRepo.RemovedPlaylist -= OnRemovedPlaylist;
+            playlistsRepo.SongsChanged -= OnSongsChanged;
         }
 
-        private void OnPlayStateChange(object sender, AudioLibraryChangeArgs<PlaybackState> e)
+        private void OnPlayStateChanged(object sender, AudioLibraryChangeArgs<PlaybackState> e)
         {
             playState = e.NewValue;
             OnPropertyChanged(nameof(PlayState));
         }
 
-        private void OnVolumeChange(object sender, AudioLibraryChangeArgs<double> e)
+        private void OnVolumeChanged(object sender, AudioLibraryChangeArgs<double> e)
         {
             volume = e.NewValue;
             OnPropertyChanged(nameof(Volume));
         }
 
-        private async void OnCurrentPlaylistIdChange(object sender, AudioLibraryChangeArgs<Guid?> e)
+        private async void OnCurrentPlaylistIdChanged(object sender, AudioLibraryChangeArgs<Guid?> e)
         {
             await CurrentPlaylist.SetPlaylistId(e.NewValue);
             UpdateCurrentPlaylistIndex();
         }
 
-        private void PlaylistsRepo_OnInsertPlaylist(object sender, InsertPlaylistArgs e)
+        private void OnInsertedPlaylist(object sender, InsertPlaylistArgs e)
         {
             Playlists.Insert(e.Index ?? Playlists.Count, e.Playlist.ToPlaylistInfo());
         }
 
-        private void PlaylistsRepo_OnRemovePlaylist(object sender, RemovePlaylistArgs e)
+        private void OnRemovedPlaylist(object sender, RemovePlaylistArgs e)
         {
             int index = Playlists.IndexOf(p => p.Id == e.Id);
             Playlists.RemoveAt(index);
         }
 
-        private void PlaylistsRepo_OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
+        private void OnSongsChanged(object sender, PlaylistChangeArgs<ICollection<Song>> e)
         {
             try
             {
@@ -266,7 +266,7 @@ namespace AudioPlayerBackend.ViewModels
                 song.Index = i;
                 return song;
             }).ToArray();
-            await playlistsRepo.SendSongsChange(playlist.Id, remixedSongs);
+            await playlistsRepo.SetSongs(playlist.Id, remixedSongs);
         }
 
         public async Task RemovePlaylist(Guid playlistId)
@@ -274,10 +274,10 @@ namespace AudioPlayerBackend.ViewModels
             if (CurrentPlaylist.Id == playlistId)
             {
                 int newIndex = Math.Min(CurrentPlaylistIndex + 1, Playlists.Count - 2);
-                await libraryRepo.SendCurrentPlaylistIdChange(Playlists.ElementAtOrDefault(newIndex)?.Id);
+                await libraryRepo.SetCurrentPlaylistId(Playlists.ElementAtOrDefault(newIndex)?.Id);
             }
 
-            await playlistsRepo.SendRemovePlaylist(playlistId);
+            await playlistsRepo.RemovePlaylist(playlistId);
         }
 
         public async Task Dispose()

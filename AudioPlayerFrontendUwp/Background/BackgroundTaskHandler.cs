@@ -88,17 +88,17 @@ namespace AudioPlayerFrontend.Background
         {
             if (libraryRepo == null) return;
 
-            libraryRepo.OnPlayStateChange += LibraryRepo_OnPlayStateChange;
+            libraryRepo.PlayStateChanged += LibraryRepo_PlayStateChanged;
         }
 
         private void UnsubscribeLibraryRepo()
         {
             if (libraryRepo == null) return;
 
-            libraryRepo.OnPlayStateChange -= LibraryRepo_OnPlayStateChange;
+            libraryRepo.PlayStateChanged -= LibraryRepo_PlayStateChanged;
         }
 
-        private void LibraryRepo_OnPlayStateChange(object sender, AudioLibraryChangeArgs<PlaybackState> e)
+        private void LibraryRepo_PlayStateChanged(object sender, AudioLibraryChangeArgs<PlaybackState> e)
         {
             playState = e.NewValue;
             ResetCloseTimer();

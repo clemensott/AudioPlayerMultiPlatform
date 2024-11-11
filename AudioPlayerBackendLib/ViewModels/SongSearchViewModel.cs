@@ -104,8 +104,7 @@ namespace AudioPlayerBackend.ViewModels
         private async Task AddSongsToNewSearchPlaylist(IEnumerable<Song> songs, SearchPlaylistAddType addType, Guid? currentPlaylistId)
         {
             bool setNextSongInOldPlaylist;
-            TimeSpan position, duration;
-            RequestSong? requestedSong;
+            SongRequest? songRequest;
             ICollection<Song> newSongs;
 
             Playlist currentPlaylist = currentPlaylistId.TryHasValue(out Guid id) ? await playlistsRepo.GetPlaylist(id) : null;
@@ -116,27 +115,27 @@ namespace AudioPlayerBackend.ViewModels
                 setNextSongInOldPlaylist = false;
 
                 newSongs = songs.ToArray();
-                requestedSong = RequestSong.Start(songs.First());
+                songRequest = SongRequest.Start(songs.First().Id);
             }
             else
             {
                 setNextSongInOldPlaylist = true;
 
-                requestedSong = currentPlaylist.RequestSong?.CloneWithContinuePlayback();
+                songRequest = currentPlaylist.CurrentSongRequest?.CloneWithContinuePlayback();
                 newSongs = songs.Insert(0, currentSong.Value).ToArray();
             }
 
             PlaylistType playlistType = PlaylistType.Custom | PlaylistType.Search;
             Playlist playlist = new Playlist(Guid.NewGuid(), playlistType, "Custom", OrderType.Custom, LoopType.Next, 1,
-                 requestedSong, newSongs, null, null, null, null);
+                 songRequest, newSongs, null, null, null, null);
 
-            await playlistsRepo.SendInsertPlaylist(playlist, null);
-            await libraryRepo.SendCurrentPlaylistIdChange(playlist.Id);
+            await playlistsRepo.InsertPlaylist(playlist, null);
+            await libraryRepo.SetCurrentPlaylistId(playlist.Id);
 
             if (setNextSongInOldPlaylist)
             {
                 Song? nextSong = currentPlaylist.Songs.Cast<Song?>().NextOrDefault(currentSong).next;
-                await playlistsRepo.SendRequestSongChange(currentPlaylist.Id, RequestSong.Start(nextSong));
+                await playlistsRepo.SetCurrentSongRequest(currentPlaylist.Id, SongRequest.Start(nextSong?.Id));
             }
         }
 
@@ -148,22 +147,22 @@ namespace AudioPlayerBackend.ViewModels
             {
                 case SearchPlaylistAddType.FirstInPlaylist:
                     newSongs = songs.Concat(currentPlaylist.Songs).Distinct().ToArray();
-                    await playlistsRepo.SendSongsChange(currentPlaylist.Id, newSongs);
-                    await playlistsRepo.SendRequestSongChange(currentPlaylist.Id, RequestSong.Start(songs.First()));
+                    await playlistsRepo.SetSongs(currentPlaylist.Id, newSongs);
+                    await playlistsRepo.SetCurrentSongRequest(currentPlaylist.Id, SongRequest.Start(songs.First().Id));
                     break;
 
                 case SearchPlaylistAddType.NextInPlaylist:
-                    int currentSongIndex = currentPlaylist.Songs.IndexOf(s => s.Id == currentPlaylist.RequestSong?.Song.Id);
+                    int currentSongIndex = currentPlaylist.Songs.IndexOf(s => s.Id == currentPlaylist.CurrentSongRequest?.Id);
                     IEnumerable<Song> beforeSongs = currentPlaylist.Songs.Take(currentSongIndex + 1);
                     IEnumerable<Song> afterSongs = currentPlaylist.Songs.Skip(currentSongIndex + 1);
 
                     newSongs = beforeSongs.Concat(songs).Concat(afterSongs).ToArray();
-                    await playlistsRepo.SendSongsChange(currentPlaylist.Id, newSongs);
+                    await playlistsRepo.SetSongs(currentPlaylist.Id, newSongs);
                     break;
 
                 case SearchPlaylistAddType.LastInPlaylist:
                     newSongs = currentPlaylist.Songs.Concat(songs).Distinct().ToArray();
-                    await playlistsRepo.SendSongsChange(currentPlaylist.Id, newSongs);
+                    await playlistsRepo.SetSongs(currentPlaylist.Id, newSongs);
                     break;
             }
         }
@@ -172,25 +171,28 @@ namespace AudioPlayerBackend.ViewModels
             Guid? currentPlaylistId, PlaylistInfo searchPlaylist)
         {
             Playlist currentPlaylist = currentPlaylistId.TryHasValue(out Guid id) ? await playlistsRepo.GetPlaylist(id) : null;
-            if (addType == SearchPlaylistAddType.FirstInPlaylist || !currentPlaylist.RequestSong.HasValue)
-            {
-                await playlistsRepo.SendSongsChange(searchPlaylist.Id, songs.Distinct().ToArray());
-                await playlistsRepo.SendRequestSongChange(searchPlaylist.Id, RequestSong.Start(songs.First()));
+            Song? currentSong = currentPlaylist?.GetCurrentSong();
 
-                await libraryRepo.SendCurrentPlaylistIdChange(searchPlaylist.Id);
+            if (addType == SearchPlaylistAddType.FirstInPlaylist || !currentSong.HasValue)
+            {
+                await playlistsRepo.SetSongs(searchPlaylist.Id, songs.Distinct().ToArray());
+                await playlistsRepo.SetCurrentSongRequest(searchPlaylist.Id, SongRequest.Start(songs.First().Id));
+
+                await libraryRepo.SetCurrentPlaylistId(searchPlaylist.Id);
             }
             else
             {
-                Song[] newSongs = songs.Insert(0, currentPlaylist.RequestSong.Value.Song).Distinct().ToArray();
-                await playlistsRepo.SendSongsChange(searchPlaylist.Id, newSongs);
+                Song[] newSongs = songs.Insert(0, currentSong.Value).Distinct().ToArray();
+                await playlistsRepo.SetSongs(searchPlaylist.Id, newSongs);
 
-                RequestSong searchRequestSong = currentPlaylist.RequestSong.Value.CloneWithContinuePlayback();
-                await playlistsRepo.SendRequestSongChange(searchPlaylist.Id, searchRequestSong);
+                SongRequest searchRequestSong = currentPlaylist.CurrentSongRequest.Value.CloneWithContinuePlayback();
+                await playlistsRepo.SetCurrentSongRequest(searchPlaylist.Id, searchRequestSong);
 
-                await libraryRepo.SendCurrentPlaylistIdChange(searchPlaylist.Id);
+                await libraryRepo.SetCurrentPlaylistId(searchPlaylist.Id);
 
-                RequestSong? currentPlaylistRequestSong = RequestSong.Start(SongsHelper.GetNextSong(currentPlaylist).song);
-                await playlistsRepo.SendRequestSongChange(currentPlaylist.Id, currentPlaylistRequestSong);
+                Song? nextSong = SongsHelper.GetNextSong(currentPlaylist, currentSong).song;
+                SongRequest? currentPlaylistRequestSong = SongRequest.Start(nextSong?.Id);
+                await playlistsRepo.SetCurrentSongRequest(currentPlaylist.Id, currentPlaylistRequestSong);
             }
         }
 
@@ -256,15 +258,15 @@ namespace AudioPlayerBackend.ViewModels
 
         private void SubscribeLibraryRepo()
         {
-            libraryRepo.OnCurrentPlaylistIdChange += OnCurrentPlaylistIdChange;
+            libraryRepo.CurrentPlaylistIdChanged += OnCurrentPlaylistIdChanged;
         }
 
         private void UnsubscribeLibraryRepo()
         {
-            libraryRepo.OnCurrentPlaylistIdChange -= OnCurrentPlaylistIdChange;
+            libraryRepo.CurrentPlaylistIdChanged -= OnCurrentPlaylistIdChanged;
         }
 
-        private async void OnCurrentPlaylistIdChange(object sender, AudioLibraryChangeArgs<Guid?> e)
+        private async void OnCurrentPlaylistIdChanged(object sender, AudioLibraryChangeArgs<Guid?> e)
         {
             bool wasCurrentPlaylist = isCurrentPlaylist;
             isCurrentPlaylist = e.NewValue.HasValue && e.NewValue == SearchPlaylist.Id;
@@ -274,14 +276,14 @@ namespace AudioPlayerBackend.ViewModels
 
         private void SubscribePlaylistsRepo()
         {
-            playlistsRepo.OnInsertPlaylist += OnInsertPlaylist;
-            playlistsRepo.OnSongsChange += OnSongsChange;
+            playlistsRepo.InsertedPlaylist += OnInsertedPlaylist;
+            playlistsRepo.SongsChanged += OnSongsChanged;
         }
 
         private void UnsubscribePlaylistsRepo()
         {
-            playlistsRepo.OnInsertPlaylist -= OnInsertPlaylist;
-            playlistsRepo.OnSongsChange -= OnSongsChange;
+            playlistsRepo.InsertedPlaylist -= OnInsertedPlaylist;
+            playlistsRepo.SongsChanged -= OnSongsChanged;
         }
 
         private void SubscribeSearchPlaylist()
@@ -302,12 +304,12 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        private async void OnInsertPlaylist(object sender, InsertPlaylistArgs e)
+        private async void OnInsertedPlaylist(object sender, InsertPlaylistArgs e)
         {
             if (e.Playlist.Type.HasFlag(PlaylistType.Search)) await SearchPlaylist.SetPlaylistId(e.Playlist.Id);
         }
 
-        private async void OnSongsChange(object sender, PlaylistChangeArgs<ICollection<Song>> e)
+        private async void OnSongsChanged(object sender, PlaylistChangeArgs<ICollection<Song>> e)
         {
             // if playlist is not in all songs than it is not a Source Playlist
             if (!allSongs.ContainsKey(e.Id)) return;

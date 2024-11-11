@@ -9,41 +9,41 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
     {
         Task<Playlist> GetPlaylist(Guid id);
 
-        Task SendInsertPlaylist(Playlist playlist, int? index);
-        event EventHandler<InsertPlaylistArgs> OnInsertPlaylist;
+        Task InsertPlaylist(Playlist playlist, int? index);
+        event EventHandler<InsertPlaylistArgs> InsertedPlaylist;
 
-        Task SendRemovePlaylist(Guid id);
-        event EventHandler<RemovePlaylistArgs> OnRemovePlaylist;
+        Task RemovePlaylist(Guid id);
+        event EventHandler<RemovePlaylistArgs> RemovedPlaylist;
 
-        Task SendNameChange(Guid id, string name);
-        event EventHandler<PlaylistChangeArgs<string>> OnNameChange;
+        Task SetName(Guid id, string name);
+        event EventHandler<PlaylistChangeArgs<string>> NameChanged;
 
-        Task SendShuffleChange(Guid id, OrderType shuffle);
-        event EventHandler<PlaylistChangeArgs<OrderType>> OnShuffleChange;
+        Task SetShuffle(Guid id, OrderType shuffle);
+        event EventHandler<PlaylistChangeArgs<OrderType>> ShuffleChanged;
 
-        Task SendLoopChange(Guid id, LoopType loop);
-        event EventHandler<PlaylistChangeArgs<LoopType>> OnLoopChange;
+        Task SetLoop(Guid id, LoopType loop);
+        event EventHandler<PlaylistChangeArgs<LoopType>> LoopChanged;
 
-        Task SendPlaybackRateChange(Guid id, double playbackRate);
-        event EventHandler<PlaylistChangeArgs<double>> OnPlaybackRateChange;
+        Task SetPlaybackRate(Guid id, double playbackRate);
+        event EventHandler<PlaylistChangeArgs<double>> PlaybackRateChanged;
 
-        Task SendRequestSongChange(Guid id, RequestSong? requestSong);
-        event EventHandler<PlaylistChangeArgs<RequestSong?>> OnRequestSongChange;
+        Task SetCurrentSongRequest(Guid id, SongRequest? currentSongRequest);
+        event EventHandler<PlaylistChangeArgs<SongRequest?>> CurrentSongRequestChanged;
 
-        Task SendSongsChange(Guid id, ICollection<Song> songs);
-        event EventHandler<PlaylistChangeArgs<ICollection<Song>>> OnSongsChange;
+        Task SetSongs(Guid id, ICollection<Song> songs);
+        event EventHandler<PlaylistChangeArgs<ICollection<Song>>> SongsChanged;
 
         Task<ICollection<FileMediaSourceRoot>> GetFileMediaSourceRoots();
         
         Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId);
 
-        Task SendFileMedisSourcesChange(Guid id, FileMediaSources fileMediaSources);
-        event EventHandler<PlaylistChangeArgs<FileMediaSources>> OnFileMedisSourcesChange;
+        Task SetFileMedisSources(Guid id, FileMediaSources fileMediaSources);
+        event EventHandler<PlaylistChangeArgs<FileMediaSources>> FileMedisSourcesChanged;
 
-        Task SendFilesLastUpdatedChange(Guid id, DateTime? filesLastUpdated);
-        event EventHandler<PlaylistChangeArgs<DateTime?>> OnFilesLastUpdatedChange;
+        Task SetFilesLastUpdated(Guid id, DateTime? filesLastUpdated);
+        event EventHandler<PlaylistChangeArgs<DateTime?>> FilesLastUpdatedChanged;
 
-        Task SendSongsLastUpdatedChange(Guid id, DateTime? songsLastUpdated);
-        event EventHandler<PlaylistChangeArgs<DateTime?>> OnSongsLastUpdatedChange;
+        Task SetSongsLastUpdated(Guid id, DateTime? songsLastUpdated);
+        event EventHandler<PlaylistChangeArgs<DateTime?>> SongsLastUpdatedChanged;
     }
 }

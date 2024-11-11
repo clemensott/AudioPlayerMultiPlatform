@@ -99,19 +99,18 @@
                 <ColumnDefinition Width="Auto" MinWidth="190" />
             </Grid.ColumnDefinitions>
 
-            <con:MultipleInputs7Converter x:Name="micSongs"
-                                          Input0="{Binding CurrentPlaylist.CurrentSong}" 
-                                          Input1="{Binding CurrentPlaylist.RequestedSong,Mode=TwoWay}"
-                                          Input2="{Binding CurrentPlaylist.Songs}"
-                                          Input3="{Binding SongSearch.SearchSongs}"
-                                          Input4="{Binding SongSearch.IsSearching}"
-                                          Input5="{StaticResource negativeOne}"
+            <con:MultipleInputs6Converter x:Name="micSongs"
+                                          Input0="{Binding CurrentPlaylist.CurrentSongRequest,Mode=TwoWay}"
+                                          Input1="{Binding CurrentPlaylist.Songs}"
+                                          Input2="{Binding SongSearch.SearchSongs}"
+                                          Input3="{Binding SongSearch.IsSearching}"
+                                          Input4="{StaticResource negativeOne}"
                                           ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
             <ListBox x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ItemsSource="{Binding ElementName=micSongs,Path=Output}"
-                     SelectedIndex="{Binding ElementName=micSongs,Path=Input5,Mode=TwoWay}"
+                     SelectedIndex="{Binding ElementName=micSongs,Path=Input4,Mode=TwoWay}"
                      IsSynchronizedWithCurrentItem="True"
                      SelectionChanged="LbxSongs_SelectionChanged">
                 <ListBox.ItemContainerStyle>
@@ -327,8 +326,8 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.ColumnSpan="2" Margin="0,0,0,5"
-                  DataContext="{Binding CurrentPlaylist.RequestedSong}"
-                  Visibility="{Binding Song,Converter={StaticResource visCon}}">
+                  DataContext="{Binding CurrentPlaylist.CurrentSongRequest}"
+                  Visibility="{Binding Id,Converter={StaticResource visCon}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />

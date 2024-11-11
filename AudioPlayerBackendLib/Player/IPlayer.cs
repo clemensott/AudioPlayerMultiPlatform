@@ -27,7 +27,7 @@ namespace AudioPlayerBackend.Player
 
         float Volume { get; set; }
 
-        Task Set(RequestSong? wanna);
+        Task Set(RequestSong? request);
 
         Task Stop();
     }

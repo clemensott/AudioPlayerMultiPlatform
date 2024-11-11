@@ -107,11 +107,10 @@
                         ThumbToolTipValueConverter="{StaticResource volTooTipCon}"/>
             </Grid>
 
-            <con:MultipleInputs4Converter x:Name="micSongs" 
+            <con:MultipleInputs3Converter x:Name="micSongs" 
                                           Input0="{Binding CurrentPlaylist.Songs}" 
-                                          Input1="{Binding CurrentPlaylist.CurrentSong}" 
-                                          Input2="{Binding CurrentPlaylist.RequestedSong,Mode=TwoWay}" 
-                                          Input3="{StaticResource negativeOne}"
+                                          Input1="{Binding CurrentPlaylist.CurrentSongRequest,Mode=TwoWay}" 
+                                          Input2="{StaticResource negativeOne}"
                                           ConvertRef="MicCurrentSongIndex_ConvertRef"/>
 
             <con:MultipleInputs2Converter x:Name="micDoRemove" 
@@ -120,7 +119,7 @@
 
             <ListBox Grid.Row="2" x:Name="lbxSongs" Margin="0,5" HorizontalAlignment="Stretch"
                      ItemsSource="{Binding ElementName=micSongs,Path=Output}"
-                     SelectedIndex="{Binding ElementName=micSongs,Path=Input3,Mode=TwoWay}"
+                     SelectedIndex="{Binding ElementName=micSongs,Path=Input2,Mode=TwoWay}"
                      SelectionChanged="LbxSongs_SelectionChanged">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
@@ -249,10 +248,11 @@
                 </StackPanel>
             </Grid>
 
-            <local:AudioPositionSlider Grid.Row="4" DataContext="{Binding CurrentPlaylist.RequestedSong}"
+            <local:AudioPositionSlider Grid.Row="4"
+                                       DataContext="{Binding CurrentPlaylist.CurrentSongRequest}"
                                        Position="{Binding Position}"
                                        Duration="{Binding Duration}"
-                                       Visibility="{Binding Song,Converter={StaticResource visCon}}"
+                                       Visibility="{Binding Id,Converter={StaticResource visCon}}"
                                        UserPositionChanged="AudioPositionSlider_UserPositionChanged"/>
         </Grid>
 
