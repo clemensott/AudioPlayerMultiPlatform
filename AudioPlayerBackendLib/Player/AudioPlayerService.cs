@@ -329,29 +329,24 @@ namespace AudioPlayerBackend.Player
 
         private async Task UpdateCurrentSong()
         {
-            Logs.Log("AudioPlayerService.UpdateCurrentSong1");
             StopTimer();
             isSetCurrentSong = true;
 
             if (currentPlaylistId.TryHasValue(out Guid playlistId))
             {
                 SongRequest? setSongRequest = request;
-                Logs.Log("AudioPlayerService.UpdateCurrentSong2");
                 Song? song = songs.Cast<Song?>().FirstOrDefault(s => s?.Id == setSongRequest?.Id);
                 RequestSong? requestSong = song.HasValue
                     ? (RequestSong?)new RequestSong(song.Value, setSongRequest.Value.Position, 
                         setSongRequest.Value.Duration, setSongRequest.Value.ContinuePlayback)
                     : null;
                 await Player.Set(requestSong);
-                Logs.Log("AudioPlayerService.UpdateCurrentSong3");
             }
             else await Player.Set(null);
 
             isSetCurrentSong = false;
 
-            Logs.Log("AudioPlayerService.UpdateCurrentSong5");
             await EnableTimer();
-            Logs.Log("AudioPlayerService.UpdateCurrentSong6");
         }
 
         private async Task EnableTimer()

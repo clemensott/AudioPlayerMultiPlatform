@@ -57,6 +57,7 @@ namespace AudioPlayerBackend
             {
                 string line = GetLogLine($"{text}: {string.Join(" | ", values)}");
                 builder.AppendLine(line);
+                System.Diagnostics.Debug.WriteLine(line);
                 //System.IO.File.AppendAllLines("./test.log", new string[] { line });
             }
             catch { }

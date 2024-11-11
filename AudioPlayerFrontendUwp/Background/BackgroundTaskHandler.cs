@@ -53,6 +53,7 @@ namespace AudioPlayerFrontend.Background
 
         private void CloseTimer_RanDown(object sender, EventArgs e)
         {
+            AudioPlayerBackend.Logs.Log("BackgroundTaskHandler.CloseTimer_RanDown", isInBackground, playState);
             if (isInBackground && playState != PlaybackState.Playing) Stop();
             else ResetCloseTimer();
         }
@@ -138,7 +139,8 @@ namespace AudioPlayerFrontend.Background
 
         public void Stop()
         {
-            if (IsRunning) sem.Release();
+            AudioPlayerBackend.Logs.Log("BackgroundTaskHandler.Stop", IsRunning, sem.CurrentCount);
+            if (IsRunning && sem.CurrentCount == 0) sem.Release();
         }
     }
 }
