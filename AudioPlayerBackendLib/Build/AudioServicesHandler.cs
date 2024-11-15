@@ -9,6 +9,7 @@ namespace AudioPlayerBackend.Build
 {
     public class AudioServicesHandler
     {
+        private readonly object isStartedLockObj;
         private readonly Dispatcher backgrounTaskDispatcher;
         private readonly SemaphoreSlim keepOpenSem;
         private AudioServicesBuilder builder;
@@ -50,6 +51,7 @@ namespace AudioPlayerBackend.Build
 
         public AudioServicesHandler(Dispatcher backgrounTaskDispatcher = null)
         {
+            isStartedLockObj = new object();
             this.backgrounTaskDispatcher = backgrounTaskDispatcher;
             keepOpenSem = new SemaphoreSlim(0);
         }
@@ -82,8 +84,11 @@ namespace AudioPlayerBackend.Build
 
         private async void StartKeepService()
         {
-            if (IsStarted) return;
-            IsStarted = true;
+            lock (isStartedLockObj)
+            {
+                if (IsStarted) return;
+                IsStarted = true;
+            }
 
             while (IsStarted)
             {
@@ -131,8 +136,8 @@ namespace AudioPlayerBackend.Build
         {
             await SetAudioServices(null);
 
-            IsStarted = false;
-            builder?.Cancel();
+            lock (isStartedLockObj) IsStarted = false;
+            Builder?.Cancel();
 
             Stopped?.Invoke(this, EventArgs.Empty);
         }

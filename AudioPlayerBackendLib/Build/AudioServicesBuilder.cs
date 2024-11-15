@@ -76,14 +76,6 @@ namespace AudioPlayerBackend.Build
             CompleteToken.Settings();
         }
 
-        public static AudioServicesBuilder Build(AudioServicesBuildConfig config, TimeSpan delayTime)
-        {
-            AudioServicesBuilder build = new AudioServicesBuilder(config.Clone());
-            build.StartBuild(delayTime);
-
-            return build;
-        }
-
         public async void StartBuild(TimeSpan delayTime)
         {
             Logs.Log("Builder.StartBuild1");

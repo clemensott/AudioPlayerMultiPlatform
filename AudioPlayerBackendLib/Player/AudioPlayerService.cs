@@ -190,7 +190,7 @@ namespace AudioPlayerBackend.Player
             errorCount = 0;
 
             await EnableTimer();
-            Logs.Log("AudioPlayerService.Player_MediaOpened1");
+            Logs.Log("AudioPlayerService.Player_MediaOpened2");
         }
 
         private async void Player_MediaFailed(object sender, MediaFailedEventArgs e)
