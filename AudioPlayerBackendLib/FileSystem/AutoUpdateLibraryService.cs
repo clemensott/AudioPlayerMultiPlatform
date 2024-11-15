@@ -21,7 +21,8 @@ namespace AudioPlayerBackend.FileSystem
         private readonly IInvokeDispatcherService dispatcherService;
         private readonly Timer timer;
 
-        private bool isCheckingForUpdates = false;
+        private bool isCheckingForUpdates;
+        private int libraryUpdateCount;
 
         public AutoUpdateLibraryService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistRepo,
             IUpdateLibraryService updateLibraryService, IInvokeDispatcherService dispatcherService)
@@ -32,6 +33,9 @@ namespace AudioPlayerBackend.FileSystem
             this.dispatcherService = dispatcherService;
 
             timer = new Timer(OnTick, null, Timeout.Infinite, timerInterval);
+
+            isCheckingForUpdates = false;
+            libraryUpdateCount = 0;
         }
 
         private async void OnTick(object sender)
@@ -64,7 +68,7 @@ namespace AudioPlayerBackend.FileSystem
 
         private async Task CheckNeededUpdates()
         {
-            if (isCheckingForUpdates) return;
+            if (isCheckingForUpdates || libraryUpdateCount > 0) return;
 
             try
             {
@@ -97,6 +101,9 @@ namespace AudioPlayerBackend.FileSystem
 
         public Task Start()
         {
+            updateLibraryService.UpdateStarted += UpdateLibraryService_UpdateStarted;
+            updateLibraryService.UpdateCompleted += UpdateLibraryService_UpdateCompleted;
+
             timer.Change(0, timerInterval);
 
             return Task.CompletedTask;
@@ -104,9 +111,22 @@ namespace AudioPlayerBackend.FileSystem
 
         public Task Stop()
         {
+            updateLibraryService.UpdateStarted -= UpdateLibraryService_UpdateStarted;
+            updateLibraryService.UpdateCompleted -= UpdateLibraryService_UpdateCompleted;
+
             timer.Change(Timeout.Infinite, timerInterval);
 
             return Task.CompletedTask;
+        }
+
+        private void UpdateLibraryService_UpdateStarted(object sender, EventArgs e)
+        {
+            libraryUpdateCount++;
+        }
+
+        private void UpdateLibraryService_UpdateCompleted(object sender, EventArgs e)
+        {
+            libraryUpdateCount--;
         }
 
         public async Task Dispose()
