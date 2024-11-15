@@ -86,28 +86,38 @@ namespace AudioPlayerBackend.Build
 
         public async void StartBuild(TimeSpan delayTime)
         {
+            Logs.Log("Builder.StartBuild1");
             if (State != BuildState.Init) throw new InvalidOperationException("Build has already benn started: " + State);
 
             while (true)
             {
+                Logs.Log("Builder.StartBuild2");
                 CompleteToken.Reset();
+                Logs.Log("Builder.StartBuild3");
 
                 AudioServices audioServices = null;
 
                 try
                 {
                     State = BuildState.Building;
+                    Logs.Log("Builder.StartBuild4");
                     audioServices = BuildAudioServices();
+                    Logs.Log("Builder.StartBuild5");
 
                     State = BuildState.Starting;
+                    Logs.Log("Builder.StartBuild6");
                     await audioServices.Start();
+                    Logs.Log("Builder.StartBuild7");
 
                     State = BuildState.Completing;
+                    Logs.Log("Builder.StartBuild8");
                     await CompleteServices(audioServices);
+                    Logs.Log("Builder.StartBuild9");
 
                     if (CompleteToken.IsEnded.HasValue) return;
 
                     CompleteToken.End(BuildEndedType.Successful, audioServices);
+                    Logs.Log("Builder.StartBuild10");
                 }
                 catch (Exception e)
                 {
@@ -219,12 +229,12 @@ namespace AudioPlayerBackend.Build
                 IPlaylistsRepo playlistsRepo = audioServices.GetPlaylistsRepo();
                 foreach (PlaylistInfo playlist in library.Playlists)
                 {
-                    await playlistsRepo.SendShuffleChange(playlist.Id, config.Shuffle.Value);
+                    await playlistsRepo.SetShuffle(playlist.Id, config.Shuffle.Value);
                 }
             }
 
-            if (config.Play.HasValue) await libraryRepo.SendPlayStateChange(config.Play.Value ? PlaybackState.Playing : PlaybackState.Paused);
-            if (config.Volume.HasValue) await libraryRepo.SendVolumeChange(config.Volume.Value);
+            if (config.Play.HasValue) await libraryRepo.SetPlayState(config.Play.Value ? PlaybackState.Playing : PlaybackState.Paused);
+            if (config.Volume.HasValue) await libraryRepo.SetVolume(config.Volume.Value);
 
             ILibraryViewModel libraryViewModel = audioServices.ServiceProvider.GetService<ILibraryViewModel>();
             ISongSearchViewModel songSearchViewModel = libraryViewModel.SongSearch;

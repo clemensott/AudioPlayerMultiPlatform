@@ -40,6 +40,7 @@ namespace AudioPlayerFrontend
 
         public App()
         {
+            Logs.SetFileSystemService(new FileSystemService());
             Logs.Log("App1");
             this.InitializeComponent();
             this.Suspending += OnSuspending;

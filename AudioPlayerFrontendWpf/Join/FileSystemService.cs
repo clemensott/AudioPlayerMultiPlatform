@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend.FileSystem;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -20,6 +21,12 @@ namespace AudioPlayerFrontend.Join
         public Task WriteTextFile(string fileName, string text)
         {
             File.WriteAllText(fileName, text);
+            return Task.CompletedTask;
+        }
+
+        public Task AppendTextLines(string fileName, IEnumerable<string> lines)
+        {
+            File.AppendAllLines(fileName, lines);
             return Task.CompletedTask;
         }
     }

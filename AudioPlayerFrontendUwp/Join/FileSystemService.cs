@@ -1,5 +1,6 @@
 ﻿using AudioPlayerBackend.FileSystem;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Windows.Storage;
 
@@ -27,6 +28,12 @@ namespace AudioPlayerFrontend.Join
         {
             StorageFile file = await ApplicationData.Current.LocalFolder.CreateFileAsync(fileName, CreationCollisionOption.OpenIfExists);
             await FileIO.WriteTextAsync(file, text);
+        }
+
+        public async Task AppendTextLines(string fileName, IEnumerable<string> lines)
+        {
+            StorageFile file = await ApplicationData.Current.LocalFolder.CreateFileAsync(fileName, CreationCollisionOption.OpenIfExists);
+            await FileIO.AppendLinesAsync(file, lines);
         }
     }
 }

@@ -202,7 +202,6 @@ namespace AudioPlayerBackend.Player
         private async void Player_MediaEnded(object sender, MediaEndedEventArgs e)
         {
             Logs.Log("AudioPlayerService.Player_MediaEnded1");
-            Logs.Log($"Player_MediaEnded: {e.Song?.FullPath}");
             StopTimer();
             await dispatcher.InvokeDispatcher(() => Continue(e.Song));
             Logs.Log("AudioPlayerService.Player_MediaEnded3");

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.FileSystem
 {
@@ -25,5 +26,7 @@ namespace AudioPlayerBackend.FileSystem
         /// <param name="text">Text to write</param>
         /// <returns></returns>
         Task WriteTextFile(string fileName, string text);
+
+        Task AppendTextLines(string fileName, IEnumerable<string> lines);
     }
 }
