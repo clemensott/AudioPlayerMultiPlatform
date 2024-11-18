@@ -18,19 +18,17 @@ namespace AudioPlayerBackend.FileSystem
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistRepo;
         private readonly IUpdateLibraryService updateLibraryService;
-        private readonly IInvokeDispatcherService dispatcherService;
         private readonly Timer timer;
 
         private bool isCheckingForUpdates;
         private int libraryUpdateCount;
 
         public AutoUpdateLibraryService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistRepo,
-            IUpdateLibraryService updateLibraryService, IInvokeDispatcherService dispatcherService)
+            IUpdateLibraryService updateLibraryService)
         {
             this.libraryRepo = libraryRepo;
             this.playlistRepo = playlistRepo;
             this.updateLibraryService = updateLibraryService;
-            this.dispatcherService = dispatcherService;
 
             timer = new Timer(OnTick, null, Timeout.Infinite, timerInterval);
 
@@ -41,11 +39,6 @@ namespace AudioPlayerBackend.FileSystem
         private async void OnTick(object sender)
         {
             await CheckNeededUpdates();
-        }
-
-        private async Task InvokeDispatcher(Func<Task> func)
-        {
-            await await dispatcherService.InvokeDispatcher(func);
         }
 
         private static bool NeedsFoldersUpdate(DateTime? foldersLastUpdated)
@@ -77,7 +70,7 @@ namespace AudioPlayerBackend.FileSystem
                 Library library = await libraryRepo.GetLibrary();
                 if (NeedsFoldersUpdate(library.FoldersLastUpdated))
                 {
-                    await InvokeDispatcher(() => updateLibraryService.UpdatePlaylists());
+                    await updateLibraryService.UpdatePlaylists();
                 }
 
                 library = await libraryRepo.GetLibrary();
@@ -85,11 +78,11 @@ namespace AudioPlayerBackend.FileSystem
                 {
                     if (NeedsSongsUpdate(playlistInfo.SongsLastUpdated))
                     {
-                        await InvokeDispatcher(() => updateLibraryService.ReloadSourcePlaylist(playlistInfo.Id));
+                        await updateLibraryService.ReloadSourcePlaylist(playlistInfo.Id);
                     }
                     else if (NeedsFilesUpdate(playlistInfo.FilesLastUpdated))
                     {
-                        await InvokeDispatcher(() => updateLibraryService.UpdateSourcePlaylist(playlistInfo.Id));
+                        await updateLibraryService.UpdateSourcePlaylist(playlistInfo.Id);
                     }
                 }
             }

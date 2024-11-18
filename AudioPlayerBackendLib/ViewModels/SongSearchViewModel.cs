@@ -16,6 +16,7 @@ namespace AudioPlayerBackend.ViewModels
     {
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
+        private readonly IInvokeDispatcherService dispatcher;
         private readonly IDictionary<Guid, ICollection<Song>> allSongs;
 
         private bool isEnabled, isSearching, isSearchShuffle, isCurrentPlaylist;
@@ -91,11 +92,13 @@ namespace AudioPlayerBackend.ViewModels
 
         public IPlaylistViewModel SearchPlaylist { get; }
 
-        public SongSearchViewModel(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo, IPlaylistViewModel searchPlaylist)
+        public SongSearchViewModel(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo,
+            IPlaylistViewModel searchPlaylist, IInvokeDispatcherService dispatcher)
         {
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
             SearchPlaylist = searchPlaylist;
+            this.dispatcher = dispatcher;
 
             allSongs = new Dictionary<Guid, ICollection<Song>>();
             SearchSongs = Enumerable.Empty<Song>();
@@ -271,7 +274,7 @@ namespace AudioPlayerBackend.ViewModels
             bool wasCurrentPlaylist = isCurrentPlaylist;
             isCurrentPlaylist = e.NewValue.HasValue && e.NewValue == SearchPlaylist.Id;
 
-            if (wasCurrentPlaylist != isCurrentPlaylist) await UpdateSearchSongs();
+            if (wasCurrentPlaylist != isCurrentPlaylist) await dispatcher.InvokeDispatcher(UpdateSearchSongs);
         }
 
         private void SubscribePlaylistsRepo()
@@ -316,7 +319,7 @@ namespace AudioPlayerBackend.ViewModels
 
             allSongs[e.Id] = e.NewValue;
             UpdateShuffledSongs();
-            await UpdateSearchSongs();
+            await dispatcher.InvokeDispatcher(UpdateSearchSongs);
         }
 
         private async Task LoadAllSongs()
@@ -338,7 +341,7 @@ namespace AudioPlayerBackend.ViewModels
             isCurrentPlaylist = searchPlaylistId == library.CurrentPlaylistId;
             await SearchPlaylist.SetPlaylistId(searchPlaylistId);
 
-            await UpdateSearchSongs();
+            await dispatcher.InvokeDispatcher(UpdateSearchSongs);
         }
 
         private void UpdateShuffledSongs()

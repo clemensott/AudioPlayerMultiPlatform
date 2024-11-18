@@ -19,6 +19,7 @@ namespace AudioPlayerBackend.ViewModels
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
         private readonly IUpdateLibraryService updateLibraryService;
+        private readonly IInvokeDispatcherService dispatcher;
         private bool isLoaded, isUpdatingPlaylist, isUpdatingPlaylists;
         private int currentPlaylistIndex, playlistsUpdatingCount;
         private PlaybackState playState;
@@ -113,7 +114,8 @@ namespace AudioPlayerBackend.ViewModels
 
         public LibraryViewModel(AudioServicesBuildConfig config, ILibraryRepo libraryRepo,
             IPlaylistsRepo playlistsRepo, IPlaylistViewModel playlistViewModel,
-            ISongSearchViewModel songSearchViewModel, IUpdateLibraryService updateLibraryService)
+            ISongSearchViewModel songSearchViewModel, IUpdateLibraryService updateLibraryService,
+            IInvokeDispatcherService dispatcher)
         {
             IsClient = config.BuildClient;
             IsLocalFileMediaSource = config.BuildStandalone || config.BuildServer;
@@ -121,6 +123,7 @@ namespace AudioPlayerBackend.ViewModels
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
             this.updateLibraryService = updateLibraryService;
+            this.dispatcher = dispatcher;
 
             CurrentPlaylist = playlistViewModel;
             SongSearch = songSearchViewModel;
@@ -167,9 +170,10 @@ namespace AudioPlayerBackend.ViewModels
             updateLibraryService.UpdateCompleted += UpdateLibraryService_UpdateCompleted;
         }
 
-        private void UpdateLibraryService_UpdateStarted(object sender, EventArgs e)
+        private async void UpdateLibraryService_UpdateStarted(object sender, EventArgs e)
         {
-            IsUpdatingPlaylists = ++playlistsUpdatingCount > 0;
+            playlistsUpdatingCount++;
+            await dispatcher.InvokeDispatcher(() => IsUpdatingPlaylists = playlistsUpdatingCount > 0);
         }
 
         private async void UpdateLibraryService_UpdateCompleted(object sender, EventArgs e)
@@ -177,7 +181,8 @@ namespace AudioPlayerBackend.ViewModels
             // make sure that IsUpdatingPlaylists is at least 1 second set to true
             await Task.Delay(1000);
 
-            IsUpdatingPlaylists = --playlistsUpdatingCount > 0;
+            playlistsUpdatingCount--;
+            await dispatcher.InvokeDispatcher(() => IsUpdatingPlaylists = playlistsUpdatingCount > 0);
         }
 
         private void Unsubscribe()
@@ -191,36 +196,45 @@ namespace AudioPlayerBackend.ViewModels
             playlistsRepo.SongsChanged -= OnSongsChanged;
         }
 
-        private void OnPlayStateChanged(object sender, AudioLibraryChangeArgs<PlaybackState> e)
+        private async void OnPlayStateChanged(object sender, AudioLibraryChangeArgs<PlaybackState> e)
         {
-            playState = e.NewValue;
-            OnPropertyChanged(nameof(PlayState));
+            await dispatcher.InvokeDispatcher(() =>
+            {
+                playState = e.NewValue;
+                OnPropertyChanged(nameof(PlayState));
+            });
         }
 
-        private void OnVolumeChanged(object sender, AudioLibraryChangeArgs<double> e)
+        private async void OnVolumeChanged(object sender, AudioLibraryChangeArgs<double> e)
         {
-            volume = e.NewValue;
-            OnPropertyChanged(nameof(Volume));
+            await dispatcher.InvokeDispatcher(() =>
+            {
+                volume = e.NewValue;
+                OnPropertyChanged(nameof(Volume));
+            });
         }
 
         private async void OnCurrentPlaylistIdChanged(object sender, AudioLibraryChangeArgs<Guid?> e)
         {
             await CurrentPlaylist.SetPlaylistId(e.NewValue);
-            UpdateCurrentPlaylistIndex();
+            await dispatcher.InvokeDispatcher(() => UpdateCurrentPlaylistIndex());
         }
 
-        private void OnInsertedPlaylist(object sender, InsertPlaylistArgs e)
+        private async void OnInsertedPlaylist(object sender, InsertPlaylistArgs e)
         {
-            Playlists.Insert(e.Index ?? Playlists.Count, e.Playlist.ToPlaylistInfo());
+            await dispatcher.InvokeDispatcher(() => Playlists.Insert(e.Index ?? Playlists.Count, e.Playlist.ToPlaylistInfo()));
         }
 
-        private void OnRemovedPlaylist(object sender, RemovePlaylistArgs e)
+        private async void OnRemovedPlaylist(object sender, RemovePlaylistArgs e)
         {
-            int index = Playlists.IndexOf(p => p.Id == e.Id);
-            Playlists.RemoveAt(index);
+            await dispatcher.InvokeDispatcher(() =>
+            {
+                int index = Playlists.IndexOf(p => p.Id == e.Id);
+                Playlists.RemoveAt(index);
+            });
         }
 
-        private void OnSongsChanged(object sender, PlaylistChangeArgs<ICollection<Song>> e)
+        private async void OnSongsChanged(object sender, PlaylistChangeArgs<ICollection<Song>> e)
         {
             try
             {
@@ -228,23 +242,28 @@ namespace AudioPlayerBackend.ViewModels
 
                 int index = Playlists.IndexOf(p => p.Id == e.Id);
                 bool restoreCurrentPlaylistIndex = index == CurrentPlaylistIndex;
-                PlaylistInfo playlist = Playlists[index];
-                Playlists[index] = new PlaylistInfo(playlist.Id, playlist.Type, playlist.Name, e.NewValue.Count,
-                    playlist.FilesLastUpdated, playlist.SongsLastUpdated);
+                PlaylistInfo oldPlaylist = Playlists[index];
+                PlaylistInfo newPlaylist = new PlaylistInfo(oldPlaylist.Id, oldPlaylist.Type, oldPlaylist.Name,
+                    e.NewValue.Count, oldPlaylist.FilesLastUpdated, oldPlaylist.SongsLastUpdated);
 
-                // updating the selected playlist of an listbox triggers a selection change. This restores the selection.
-                if (restoreCurrentPlaylistIndex)
+                await dispatcher.InvokeDispatcher(() =>
                 {
-                    try
-                    {
-                        currentPlaylistIndex = -2;
-                        OnPropertyChanged(nameof(CurrentPlaylistIndex));
-                    }
-                    // This workaround is only needed für WPF and throws an error for UWP
-                    catch { }
+                    Playlists[index] = newPlaylist;
 
-                    UpdateCurrentPlaylistIndex();
-                }
+                    // updating the selected playlist of an listbox triggers a selection change. This restores the selection.
+                    if (restoreCurrentPlaylistIndex)
+                    {
+                        try
+                        {
+                            currentPlaylistIndex = -2;
+                            OnPropertyChanged(nameof(CurrentPlaylistIndex));
+                        }
+                        // This workaround is only needed für WPF and throws an error for UWP
+                        catch { }
+
+                        UpdateCurrentPlaylistIndex();
+                    }
+                });
             }
             finally
             {

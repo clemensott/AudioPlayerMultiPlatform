@@ -18,7 +18,6 @@ namespace AudioPlayerBackend.Player
 
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
-        private readonly IInvokeDispatcherService dispatcher;
         private bool isSetCurrentSong;
         private int errorCount;
         private readonly Timer timer;
@@ -32,12 +31,11 @@ namespace AudioPlayerBackend.Player
 
         public IPlayer Player { get; }
 
-        public AudioPlayerService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo, IPlayer player, IInvokeDispatcherService dispatcher)
+        public AudioPlayerService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistsRepo, IPlayer player)
         {
             this.libraryRepo = libraryRepo;
             this.playlistsRepo = playlistsRepo;
             Player = player;
-            this.dispatcher = dispatcher;
 
             timer = new Timer(Timer_Elapsed, null, -1, updateInterval);
         }
@@ -106,7 +104,7 @@ namespace AudioPlayerBackend.Player
 
         private async void Timer_Elapsed(object state)
         {
-            await dispatcher.InvokeDispatcher(UpdatePosition);
+            await UpdatePosition();
         }
 
         private async Task UpdatePosition()
@@ -196,14 +194,14 @@ namespace AudioPlayerBackend.Player
         private async void Player_MediaFailed(object sender, MediaFailedEventArgs e)
         {
             StopTimer();
-            if (++errorCount < 10) await dispatcher.InvokeDispatcher(() => Continue(e.Song));
+            if (++errorCount < 10) await Continue(e.Song);
         }
 
         private async void Player_MediaEnded(object sender, MediaEndedEventArgs e)
         {
             Logs.Log("AudioPlayerService.Player_MediaEnded1");
             StopTimer();
-            await dispatcher.InvokeDispatcher(() => Continue(e.Song));
+            await Continue(e.Song);
             Logs.Log("AudioPlayerService.Player_MediaEnded3");
         }
 
@@ -231,7 +229,7 @@ namespace AudioPlayerBackend.Player
         {
             Player.PlayState = e.NewValue;
 
-            await dispatcher.InvokeDispatcher(() => EnableTimer());
+            await EnableTimer();
         }
 
         private void OnVolumeChanged(object sender, AudioLibraryChangeArgs<double> e)
@@ -354,7 +352,7 @@ namespace AudioPlayerBackend.Player
                 Player.PlayState == PlaybackState.Playing) StartTimer();
             else StopTimer();
 
-            await dispatcher.InvokeDispatcher(UpdatePosition);
+            await UpdatePosition();
         }
 
         private void StartTimer()

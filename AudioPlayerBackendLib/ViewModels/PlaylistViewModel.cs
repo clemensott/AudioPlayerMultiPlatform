@@ -13,6 +13,7 @@ namespace AudioPlayerBackend.ViewModels
     public class PlaylistViewModel : IPlaylistViewModel
     {
         private readonly IPlaylistsRepo playlistsRepo;
+        private readonly IInvokeDispatcherService dispatcher;
         private bool isRunning, isLoaded;
         private Guid? id;
         private PlaylistType type;
@@ -158,9 +159,10 @@ namespace AudioPlayerBackend.ViewModels
             }
         }
 
-        public PlaylistViewModel(IPlaylistsRepo playlistsRepo)
+        public PlaylistViewModel(IPlaylistsRepo playlistsRepo, IInvokeDispatcherService dispatcher)
         {
             this.playlistsRepo = playlistsRepo;
+            this.dispatcher = dispatcher;
         }
 
         public async Task SendShuffle(OrderType shuffle)
@@ -232,37 +234,48 @@ namespace AudioPlayerBackend.ViewModels
             return Task.CompletedTask;
         }
 
-        private void OnNameChanged(object sender, PlaylistChangeArgs<string> e)
+        private async void OnNameChanged(object sender, PlaylistChangeArgs<string> e)
         {
-            if (Id == e.Id) Name = e.NewValue;
+            if (Id == e.Id) await dispatcher.InvokeDispatcher(() => Name = e.NewValue);
         }
 
-        private void OnShuffleChanged(object sender, PlaylistChangeArgs<OrderType> e)
+        private async void OnShuffleChanged(object sender, PlaylistChangeArgs<OrderType> e)
         {
-            if (Id == e.Id) Shuffle = e.NewValue;
+            if (Id == e.Id) await dispatcher.InvokeDispatcher(() => Shuffle = e.NewValue);
         }
 
-        private void OnLoopChanged(object sender, PlaylistChangeArgs<LoopType> e)
+        private async void OnLoopChanged(object sender, PlaylistChangeArgs<LoopType> e)
         {
-            if (Id == e.Id) Loop = e.NewValue;
+            if (Id == e.Id) await dispatcher.InvokeDispatcher(() => Loop = e.NewValue);
         }
 
-        private void OnPlaybackRateChanged(object sender, PlaylistChangeArgs<double> e)
+        private async void OnPlaybackRateChanged(object sender, PlaylistChangeArgs<double> e)
         {
-            if (Id == e.Id) PlaybackRate = e.NewValue;
+            if (Id == e.Id) await dispatcher.InvokeDispatcher(() => PlaybackRate = e.NewValue);
         }
 
-        private void OnCurrentSongRequestChanged(object sender, PlaylistChangeArgs<SongRequest?> e)
+        private async void OnCurrentSongRequestChanged(object sender, PlaylistChangeArgs<SongRequest?> e)
         {
-            if (Id == e.Id) CurrentSongRequest = e.NewValue;
+            if (Id == e.Id) await dispatcher.InvokeDispatcher(() =>
+            {
+                if (Equals(e.NewValue, currentSongRequest)) return;
+
+                currentSongRequest = e.NewValue;
+                OnPropertyChanged(nameof(CurrentSongRequest));
+
+                CurrentSong = shuffledSongs.Cast<Song?>().FirstOrDefault(s => s?.Id == currentSongRequest?.Id);
+            });
         }
 
-        private void OnSongsChanged(object sender, PlaylistChangeArgs<ICollection<Song>> e)
+        private async void OnSongsChanged(object sender, PlaylistChangeArgs<ICollection<Song>> e)
         {
             if (Id == e.Id)
             {
-                shuffledSongs = e.NewValue;
-                UpdateSongs();
+                await dispatcher.InvokeDispatcher(() =>
+                {
+                    shuffledSongs = e.NewValue;
+                    UpdateSongs();
+                });
             }
         }
 
@@ -271,14 +284,17 @@ namespace AudioPlayerBackend.ViewModels
             if (Id.TryHasValue(out Guid id))
             {
                 Playlist playlist = await playlistsRepo.GetPlaylist(id);
-                Name = playlist.Name;
-                Type = playlist.Type;
-                Shuffle = playlist.Shuffle;
-                Loop = playlist.Loop;
-                PlaybackRate = playlist.PlaybackRate;
-                shuffledSongs = playlist.Songs;
-                CurrentSongRequest = playlist.CurrentSongRequest;
-                UpdateSongs();
+                await dispatcher.InvokeDispatcher(() =>
+                {
+                    Name = playlist.Name;
+                    Type = playlist.Type;
+                    Shuffle = playlist.Shuffle;
+                    Loop = playlist.Loop;
+                    PlaybackRate = playlist.PlaybackRate;
+                    shuffledSongs = playlist.Songs;
+                    CurrentSongRequest = playlist.CurrentSongRequest;
+                    UpdateSongs();
+                });
 
                 IsLoaded = true;
             }
