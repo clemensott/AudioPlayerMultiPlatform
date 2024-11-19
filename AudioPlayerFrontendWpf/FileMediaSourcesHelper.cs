@@ -1,24 +1,18 @@
-﻿using AudioPlayerBackend.Audio.MediaSource;
-using StdOttStandard.Linq;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace AudioPlayerFrontend
 {
     internal class FileMediaSourcesHelper
     {
-        internal struct FileMediaSourceRootPaths
+        internal class FileMediaSourceRootPaths
         {
             public string RootPath { get; }
 
             public IEnumerable<string> Children { get; }
-
-            public FileMediaSourceRootPaths(string rootPath, string child)
-            {
-                RootPath = rootPath;
-                Children = new string[] { child };
-            }
 
             public FileMediaSourceRootPaths(string rootPath, IEnumerable<string> children)
             {
@@ -27,14 +21,10 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private static readonly char[] diretorySeparators = new char[] { '/', '\\' };
-
-        private static string TrimRootPath(string path, string rootPath)
-        {
-            return path.Length > rootPath.Length
-                ? path.Remove(rootPath.Length + 1)
-                : string.Empty;
-        }
+        private static readonly char[] diretorySeparators = new char[] {
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar,
+        };
 
         private static (string root, string releative) SplitPath(string path, int depth)
         {
@@ -47,16 +37,15 @@ namespace AudioPlayerFrontend
 
             if (index + 1 >= path.Length) return (path, string.Empty);
 
-            string root = path.Remove(index - 1);
+            string root = path.Remove(index);
             string relative = path.Substring(index);
 
             return (root, relative);
         }
 
-        private static IEnumerable<IList<FileMediaSourceRootPaths>> GetPossibleRoots(
-            IList<string> paths)
+        private static IEnumerable<IList<FileMediaSourceRootPaths>> GetPossibleRoots(ICollection<string> paths)
         {
-            int depth = 1;
+            int depth = 0;
             while (true)
             {
                 var groups = paths.Select(path => SplitPath(path, depth))
@@ -71,68 +60,33 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private static (FileMediaSourceRoot root, IEnumerable<FileMediaSource> soruces) CreateFileMediaSources(
-            string rootPath, IEnumerable<string> children)
+        private static FileMediaSources CreateFileMediaSources(string rootPath, IEnumerable<string> children)
         {
-            FileMediaSourceRoot root = new FileMediaSourceRoot()
-            {
-                Id = Guid.NewGuid(),
-                Name = rootPath,
-                Type = FileMediaSourceRootType.Path,
-                Value = rootPath,
-            };
-
-            IEnumerable<FileMediaSource> soruces = children.Select(child => new FileMediaSource()
-            {
-                RootId = root.Id,
-                RelativePath = child,
-            });
-
-            return (root, soruces);
+            ICollection<FileMediaSource> sources = children
+                .Select(child=>FileMediaSource.NormalizeRelativePath(child))
+                .Select(child => new FileMediaSource(child))
+                .ToArray();
+            FileMediaSourceRoot root = new FileMediaSourceRoot(Guid.NewGuid(), FileMediaSourceRootUpdateType.Songs,
+                rootPath, FileMediaSourceRootPathType.Path, rootPath);
+            return new FileMediaSources(root, sources);
         }
 
-        private static (IList<FileMediaSource> newSources, IList<FileMediaSourceRoot> newRoots) GroupFileMediaPaths(IList<string> paths)
+        public static FileMediaSources ExtractFileMediaSources(ICollection<string> paths)
         {
-            IList<FileMediaSourceRootPaths> lastList = null;
+            if (paths == null) throw new ArgumentNullException(nameof(paths));
+            if (paths.Count == 0) throw new ArgumentException($"{nameof(paths)} has to have at leas one value");
+
+            FileMediaSourceRootPaths lastRoot = null;
             foreach (IList<FileMediaSourceRootPaths> list in GetPossibleRoots(paths))
             {
-                if (lastList != null && lastList.Count < list.Count) break;
+                if (lastRoot != null && list.Count > 1) break;
 
-                lastList = list;
+                lastRoot = list.First();
             }
 
-            if (lastList == null) return (new FileMediaSource[0], new FileMediaSourceRoot[0]);
+            if (lastRoot == null) throw new Exception("Could not extract root from paths");
 
-            var fileMediaPahts = lastList.Select(item => CreateFileMediaSources(item.RootPath, item.Children)).ToArray();
-            IList<FileMediaSource> newSources = fileMediaPahts.SelectMany(media => media.soruces).ToArray();
-            IList<FileMediaSourceRoot> newRoots = fileMediaPahts.Select(media => media.root).ToArray();
-
-            return (newSources, newRoots);
-        }
-
-        public static (IList<FileMediaSource> newSoruces, IList<FileMediaSourceRoot> newRoots) ExtractFileMediaSources(
-            IEnumerable<string> paths, IEnumerable<FileMediaSourceRoot> currentRoots)
-        {
-            FileMediaSourceRoot[] currentPathRoots = currentRoots.Where(r => r.Type == FileMediaSourceRootType.Path).ToArray();
-            List<FileMediaSource> newSources = new List<FileMediaSource>();
-            List<string> missingRootPaths = new List<string>();
-            foreach (string path in paths)
-            {
-                if (currentPathRoots.TryFirst(r => path.StartsWith(r.Value), out FileMediaSourceRoot matchingRoot))
-                {
-                    newSources.Add(new FileMediaSource()
-                    {
-                        RootId = matchingRoot.Id,
-                        RelativePath = TrimRootPath(path, matchingRoot.Value),
-                    });
-                }
-                else missingRootPaths.Add(path);
-            }
-
-            (IList<FileMediaSource> additionalSources, IList<FileMediaSourceRoot> newRoots) = GroupFileMediaPaths(missingRootPaths);
-            newSources.AddRange(additionalSources);
-
-            return (newSources, newRoots);
+            return CreateFileMediaSources(lastRoot.RootPath, lastRoot.Children);
         }
     }
 }

@@ -1,28 +1,18 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Build;
+﻿using AudioPlayerBackend.Build;
 using System;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Communication
 {
-    public interface ICommunicator : IDisposable
+    public interface ICommunicator : IAudioService
     {
         event EventHandler<DisconnectedEventArgs> Disconnected;
+        event EventHandler<ReceivedEventArgs> Received;
 
         bool IsOpen { get; }
 
-        string Name { get; }
+        Task<bool> SendCommand(string cmd);
 
-        IAudioServiceBase Service { get; }
-
-        Task OpenAsync(BuildStatusToken statusToken);
-
-        Task SendCommand(string cmd);
-
-        Task SetService(IAudioServiceBase service, BuildStatusToken statusToken);
-
-        Task SyncService(BuildStatusToken statusToken);
-
-        Task CloseAsync();
+        Task<byte[]> SendAsync(string topic, byte[] payload);
     }
 }

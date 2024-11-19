@@ -4,10 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AudioPlayerFrontend"
+        xmlns:ctl="clr-namespace:AudioPlayerFrontend.Controls"
         xmlns:con="clr-namespace:StdOttFramework.Converters;assembly=StdOttFrameworkLib"
-        xmlns:audio="clr-namespace:AudioPlayerBackend.Audio;assembly=AudioPlayerBackendLib"
         mc:Ignorable="d"
-        Title="SettingsWindow" MinHeight="400" MinWidth="400" Height="450" Width="700">
+        Title="Hotkey Music Settings" MinHeight="400" MinWidth="400" Height="450" Width="700">
 
     <Window.Resources>
         <con:FalsyConverter x:Key="inverter"/>
@@ -27,14 +27,11 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Orientation="Horizontal">
                         <StackPanel VerticalAlignment="Center" Margin="0,0,0,5">
-                            <TextBlock Text="Mode:" FontWeight="Bold" Margin="3,0"/>
+                            <TextBlock Text="Mode" FontWeight="Bold" Margin="3,0"/>
                             <RadioButton x:Name="rbnStandalone" Content="Standalone" GroupName="Mode"
                                          IsChecked="{Binding BuildStandalone,Mode=OneWay}"
                                          Margin="5,5,0,0" Checked="RbnStandalone_Checked"/>
@@ -70,79 +67,23 @@
                         </Grid>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="3">
-                        <TextBlock Text="Protocol:" FontWeight="Bold" Margin="3,0"/>
-
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton Content="Own TCP" Margin="2" HorizontalAlignment="Left" GroupName="Protocol"
-                                         IsChecked="{Binding CommunicatorProtocol,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
-                                           Converter={StaticResource communicatorProtocolCon},ConverterParameter=OwnTCP}"/>
-                            <RadioButton Content="Mqtt" Margin="2" HorizontalAlignment="Left" GroupName="Protocol"
-                                         IsChecked="{Binding CommunicatorProtocol,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,
-                                           Converter={StaticResource communicatorProtocolCon},ConverterParameter=MQTT}"/>
-                        </StackPanel>
+                    <StackPanel Grid.Row="1" Orientation="Vertical" VerticalAlignment="Center" Margin="0,0,0,5">
+                        <TextBlock Text="Auto Update" FontWeight="Bold" Margin="3,0"/>
+                        <CheckBox Name="cbxAutoUpdate" Content="Enable" Margin="3"
+                                  VerticalAlignment="Center" IsChecked="{Binding AutoUpdate,Mode=TwoWay}"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="2" Margin="3,10,3,3">
-                        <con:MultipleInputs3Converter x:Name="micVolume"
-                                              Input0="{Binding Volume,Mode=TwoWay}"
-                                              ConvertRef="MicVolume_ConvertRef"/>
-
-                        <CheckBox x:Name="cbxVolume" Margin="1,3"
-                                  IsChecked="{Binding ElementName=micVolume,Path=Input1,Mode=TwoWay}">
-                            <TextBlock Text="Volume:" FontWeight="Bold" />
-                        </CheckBox>
-                        <Slider Maximum="1" SmallChange="0.05" LargeChange="0.2"
-                                Width="300" Margin="3,0,0,0" HorizontalAlignment="Left"
-                                IsEnabled="{Binding ElementName=micVolume,Path=Input1}"
-                                Value="{Binding ElementName=micVolume,Path=Input2,Mode=TwoWay}"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="3" Margin="3,10,3,3" VerticalAlignment="Center">
-                        <TextBlock Text="Shuffle type:" FontWeight="Bold" Margin="3,0" VerticalAlignment="Center"/>
-                        <ComboBox Width="130" Margin="3" HorizontalAlignment="Left" SelectedValuePath="DataContext"
-                                  SelectedValue="{Binding Shuffle,Mode=TwoWay}">
-                            <ComboBoxItem>None</ComboBoxItem>
-                            <ComboBoxItem>
-                                <ComboBoxItem.DataContext>
-                                    <audio:OrderType>ByTitleAndArtist</audio:OrderType>
-                                </ComboBoxItem.DataContext>
-                                <ComboBoxItem.Content>Title and Artist</ComboBoxItem.Content>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <ComboBoxItem.DataContext>
-                                    <audio:OrderType>ByPath</audio:OrderType>
-                                </ComboBoxItem.DataContext>
-                                <ComboBoxItem.Content>File path</ComboBoxItem.Content>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <ComboBoxItem.DataContext>
-                                    <audio:OrderType>Custom</audio:OrderType>
-                                </ComboBoxItem.DataContext>
-                                <ComboBoxItem.Content>Shuffle</ComboBoxItem.Content>
-                            </ComboBoxItem>
-                        </ComboBox>
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="3">
-                        <CheckBox Name="cbxSearchShuffle" Content="Shuffle search songs" Margin="3,0"
-                                  VerticalAlignment="Center" IsChecked="{Binding IsSearchShuffle,Mode=TwoWay}"
-                                  MouseRightButtonUp="CbxSearchShuffle_MouseRightButtonUp"/>
-
-                        <CheckBox Name="cbxPlay" Content="Play" Margin="3,0"
-                                  VerticalAlignment="Center" IsChecked="{Binding Play,Mode=TwoWay}"
-                                  MouseRightButtonUp="CbxPlay_MouseRightButtonUp"/>
-
-                        <CheckBox Content="Stream to client:" VerticalAlignment="Center" Margin="10,0,0,0"
-                                  Visibility="Collapsed"
-                                  IsChecked="{Binding IsStreaming,Mode=TwoWay}"
-                                  IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}"
-                                  MouseRightButtonUp="CbxStreaming_MouseRightButtonUp"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="5" Margin="3,10,3,10">
-                        <TextBlock Text="Serach:" VerticalAlignment="Center" FontWeight="Bold" Margin="3,2"/>
-                        <TextBox Grid.Column="1" Text="{Binding SearchKey,Mode=TwoWay}"/>
+                    <StackPanel Grid.Row="2" Orientation="Vertical" VerticalAlignment="Center" Margin="0,0,0,5">
+                        <TextBlock Text="Default Update Roots" FontWeight="Bold" Margin="3,0"/>
+                        <ListBox Name="lbxDefaultUpdateRoots" SelectionChanged="LbxDefaultUpdateRoots_SelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <ctl:DefaultUpdateRootControl ValueChanged="DefaultUpdateRootControl_ValueChanged"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Button HorizontalAlignment="Left" Margin="3" Width="50" Content="+"
+                                Click="BtnAddDefaultUpdateRoot_Click"/>
                     </StackPanel>
                 </Grid>
             </TabItem>

@@ -32,12 +32,6 @@ namespace AudioPlayerFrontend
             set => SetValue(nameof(ApplicationBackgroundTaskRegistrationId), value.ToString());
         }
 
-        public DateTime LastUpdatedData
-        {
-            get => new DateTime(GetValue<long>(nameof(LastUpdatedData)));
-            set => SetValue(nameof(LastUpdatedData), value.Ticks);
-        }
-
         public string UnhandledExceptionText
         {
             get => GetValue<string>(nameof(UnhandledExceptionText));

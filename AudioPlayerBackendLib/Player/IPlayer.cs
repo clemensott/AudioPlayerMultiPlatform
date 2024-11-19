@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.GenericEventArgs;
 using System;
 using System.Threading.Tasks;
 
@@ -9,8 +10,14 @@ namespace AudioPlayerBackend.Player
         event EventHandler<MediaOpenedEventArgs> MediaOpened;
         event EventHandler<MediaFailedEventArgs> MediaFailed;
         event EventHandler<MediaEndedEventArgs> MediaEnded;
+        event EventHandler<HandledEventArgs> NextPressed;
+        event EventHandler<HandledEventArgs> PreviousPressed;
+        event EventHandler<ValueChangedEventArgs<PlaybackState>> PlayStateChanged;
+        event EventHandler<ValueChangedEventArgs<float>> VolumeChanged;
 
         PlaybackState PlayState { get; set; }
+
+        double PlaybackRate { get; set; }
 
         TimeSpan Position { get; }
 
@@ -20,7 +27,7 @@ namespace AudioPlayerBackend.Player
 
         float Volume { get; set; }
 
-        Task Set(RequestSong? wanna);
+        Task Set(RequestSong? request);
 
         Task Stop();
     }

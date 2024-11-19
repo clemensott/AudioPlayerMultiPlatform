@@ -5,11 +5,10 @@ using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
-using AudioPlayerBackend.Player;
 using StdOttStandard.Converter.MultipleInputs;
-using System.ComponentModel;
 using System.Threading.Tasks;
 using AudioPlayerBackend.Build;
+using Windows.UI.Core;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
 
@@ -20,44 +19,50 @@ namespace AudioPlayerFrontend
     /// </summary>
     public sealed partial class BuildOpenPage : Page
     {
-        private ServiceHandler serviceHandler;
+        private bool isPageClosed = false;
+        private AudioServicesHandler audioServicesHandler;
+
+        private AudioServicesBuilder Builder => DataContext as AudioServicesBuilder;
 
         public BuildOpenPage()
         {
+            AudioPlayerBackend.Logs.Log("BuildOpenPage1");
             this.InitializeComponent();
+            AudioPlayerBackend.Logs.Log("BuildOpenPage2");
         }
 
-        protected override async void OnNavigatedTo(NavigationEventArgs e)
+        protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            serviceHandler = (ServiceHandler)e.Parameter;
-            serviceHandler.PropertyChanged += ServiceHandler_PropertyChanged;
+            AudioPlayerBackend.Logs.Log("BuildOpenPage.OnNavigatedTo1");
+            audioServicesHandler = (AudioServicesHandler)e.Parameter;
+            audioServicesHandler.AddServiceBuildListener(AudioServicesHandler_ServicesBuild);
 
             IEnumerable<string> frames = Frame.BackStack.Select(s => s.SourcePageType.FullName);
             tblFrameStack.Text = string.Join("\r\n", frames);
 
-            await SetDataContext(serviceHandler.ServiceOpenBuild);
+            AudioPlayerBackend.Logs.Log("BuildOpenPage.OnNavigatedTo2");
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
-            serviceHandler.PropertyChanged -= ServiceHandler_PropertyChanged;
+            isPageClosed = true;
+            audioServicesHandler.ServicesBuild -= AudioServicesHandler_ServicesBuild;
         }
 
-        private async void ServiceHandler_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        private async void AudioServicesHandler_ServicesBuild(object sender, AudioServicesBuilder e)
         {
-            if (e.PropertyName == nameof(serviceHandler.ServiceOpenBuild))
-            {
-                await SetDataContext(serviceHandler.ServiceOpenBuild);
-            }
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () => await SetDataContext(e));
         }
 
-        private async Task SetDataContext(ServiceBuild dataContext)
+        private async Task SetDataContext(AudioServicesBuilder dataContext)
         {
+            AudioPlayerBackend.Logs.Log("BuildOpenPage.SetDataContext1");
             if (dataContext == null) return;
 
             // only show all options if opening takes to long
             await Task.Delay(TimeSpan.FromSeconds(5));
-            DataContext = dataContext;
+            if (!isPageClosed) DataContext = dataContext;
+            AudioPlayerBackend.Logs.Log("BuildOpenPage.SetDataContext2");
         }
 
         private object MicException_Convert(object sender, MultiplesInputsConvert4EventArgs args)
@@ -67,42 +72,17 @@ namespace AudioPlayerFrontend
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            serviceHandler.ServiceOpenBuild.Settings();
+            Builder.Settings();
         }
 
         private async void BtnException_Click(object sender, RoutedEventArgs e)
         {
-            Exception exception = (Exception)micException.Output;
+            Exception exception = audioServicesHandler?.Builder?.CompleteToken.Exception;
 
             if (exception != null)
             {
                 await new MessageDialog(exception.ToString(), "Building audio service error").ShowAsync();
             }
-        }
-
-        private async void AbbPrevious_Click(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetPreviousSong();
-        }
-
-        private async void AbbPlay_Click(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetPlayState(PlaybackState.Playing);
-        }
-
-        private async void AbbPause_Click(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetPlayState(PlaybackState.Paused);
-        }
-
-        private async void AtbToggle_Checked(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetToggle();
-        }
-
-        private async void AbbNext_Click(object sender, RoutedEventArgs e)
-        {
-            await serviceHandler.ServiceOpenBuild.SetNextSong();
         }
     }
 }

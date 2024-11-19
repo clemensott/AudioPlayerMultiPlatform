@@ -1,8 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Audio.MediaSource;
-using AudioPlayerBackend.Player;
-using StdOttStandard.Linq;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +6,7 @@ using System.Text;
 
 namespace AudioPlayerBackend.Communication.Base
 {
-    class ByteQueue : IEnumerable<byte>
+    public class ByteQueue : IEnumerable<byte>
     {
         private readonly Queue<byte> bytes;
 
@@ -24,9 +20,10 @@ namespace AudioPlayerBackend.Communication.Base
             this.bytes = new Queue<byte>(bytes);
         }
 
-        public void EnqueueRange(IEnumerable<byte> enqueueBytes)
+        public ByteQueue EnqueueRange(IEnumerable<byte> enqueueBytes)
         {
             foreach (byte item in enqueueBytes) bytes.Enqueue(item);
+            return this;
         }
 
         public byte[] DequeueRange(int count)
@@ -38,9 +35,9 @@ namespace AudioPlayerBackend.Communication.Base
             return dequeueBytes;
         }
 
-        public void Enqueue(bool value)
+        public ByteQueue Enqueue(bool value)
         {
-            EnqueueRange(BitConverter.GetBytes(value));
+            return EnqueueRange(BitConverter.GetBytes(value));
         }
 
         public bool DequeueBool()
@@ -48,9 +45,19 @@ namespace AudioPlayerBackend.Communication.Base
             return BitConverter.ToBoolean(DequeueRange(sizeof(bool)), 0);
         }
 
-        public void Enqueue(ushort value)
+        public ByteQueue Enqueue(bool? value)
         {
-            EnqueueRange(BitConverter.GetBytes(value));
+            return EnqueueNullable(value, Enqueue);
+        }
+
+        public bool? DequeueBoolNullable()
+        {
+            return DequeueNullable(DequeueBool);
+        }
+
+        public ByteQueue Enqueue(ushort value)
+        {
+            return EnqueueRange(BitConverter.GetBytes(value));
         }
 
         public ushort DequeueUShort()
@@ -58,9 +65,9 @@ namespace AudioPlayerBackend.Communication.Base
             return BitConverter.ToUInt16(DequeueRange(sizeof(ushort)), 0);
         }
 
-        public void Enqueue(int value)
+        public ByteQueue Enqueue(int value)
         {
-            EnqueueRange(BitConverter.GetBytes(value));
+            return EnqueueRange(BitConverter.GetBytes(value));
         }
 
         public int DequeueInt()
@@ -68,9 +75,20 @@ namespace AudioPlayerBackend.Communication.Base
             return BitConverter.ToInt32(DequeueRange(sizeof(int)), 0);
         }
 
-        public void Enqueue(long value)
+        public ByteQueue Enqueue(int? value)
+        {
+            return EnqueueNullable(value, Enqueue);
+        }
+
+        public int? DequeueIntNullable()
+        {
+            return DequeueNullable(DequeueInt);
+        }
+
+        public ByteQueue Enqueue(long value)
         {
             EnqueueRange(BitConverter.GetBytes(value));
+            return this;
         }
 
         public long DequeueLong()
@@ -78,23 +96,38 @@ namespace AudioPlayerBackend.Communication.Base
             return BitConverter.ToInt64(DequeueRange(sizeof(long)), 0);
         }
 
+        public ByteQueue Enqueue(float value)
+        {
+            EnqueueRange(BitConverter.GetBytes(value));
+            return this;
+        }
+
         public float DequeueFloat()
         {
             return BitConverter.ToSingle(DequeueRange(sizeof(float)), 0);
         }
 
-        public void Enqueue(float value)
+        public ByteQueue Enqueue(float? value)
         {
-            EnqueueRange(BitConverter.GetBytes(value));
+            return EnqueueNullable(value, Enqueue);
         }
 
-        public string DequeueString()
+        public float? DequeueFloatNullable()
         {
-            int length = DequeueInt();
-            return length >= 0 ? Encoding.UTF8.GetString(DequeueRange(length)) : null;
+            return DequeueNullable(DequeueFloat);
         }
 
-        public void Enqueue(string value)
+        public ByteQueue Enqueue(double value)
+        {
+            return EnqueueRange(BitConverter.GetBytes(value));
+        }
+
+        public double DequeueDouble()
+        {
+            return BitConverter.ToDouble(DequeueRange(sizeof(double)), 0);
+        }
+
+        public ByteQueue Enqueue(string value)
         {
             if (value == null) Enqueue(-1);
             else
@@ -104,11 +137,18 @@ namespace AudioPlayerBackend.Communication.Base
                 Enqueue(valueBytes.Length);
                 EnqueueRange(valueBytes);
             }
+            return this;
         }
 
-        public void Enqueue(IEnumerable<string> strings)
+        public string DequeueString()
         {
-            Enqueue(strings, Enqueue);
+            int length = DequeueInt();
+            return length >= 0 ? Encoding.UTF8.GetString(DequeueRange(length)) : null;
+        }
+
+        public ByteQueue Enqueue(IEnumerable<string> strings)
+        {
+            return Enqueue(strings, Enqueue);
         }
 
         public string[] DequeueStrings()
@@ -116,48 +156,29 @@ namespace AudioPlayerBackend.Communication.Base
             return DequeueArray(DequeueString);
         }
 
-        public void Enqueue(Song song)
+        public ByteQueue Enqueue(DateTime? value)
         {
-            Enqueue(song.Index);
-            Enqueue(song.Artist);
-            Enqueue(song.FullPath);
-            Enqueue(song.Title);
+            return EnqueueNullable(value, Enqueue);
         }
 
-        public Song DequeueSong()
+        public DateTime? DequeueDateTimeNullable()
         {
-            return new Song()
-            {
-                Index = DequeueInt(),
-                Artist = DequeueString(),
-                FullPath = DequeueString(),
-                Title = DequeueString()
-            };
+            return DequeueNullable(DequeueDateTime);
         }
 
-        public void Enqueue(Song? song)
+        public ByteQueue Enqueue(DateTime value)
         {
-            EnqueueNullable(song, Enqueue);
+            return Enqueue(value.Ticks);
         }
 
-        public Song? DequeueNullableSong()
+        public DateTime DequeueDateTime()
         {
-            return DequeueNullable(DequeueSong);
+            return new DateTime(DequeueLong());
         }
 
-        public void Enqueue(IEnumerable<Song> songs)
+        public ByteQueue Enqueue(TimeSpan span)
         {
-            Enqueue(songs, Enqueue);
-        }
-
-        public Song[] DequeueSongs()
-        {
-            return DequeueArray(DequeueSong);
-        }
-
-        public void Enqueue(TimeSpan span)
-        {
-            Enqueue(span.Ticks);
+            return Enqueue(span.Ticks);
         }
 
         public TimeSpan DequeueTimeSpan()
@@ -165,9 +186,19 @@ namespace AudioPlayerBackend.Communication.Base
             return TimeSpan.FromTicks(DequeueLong());
         }
 
-        public void Enqueue(Guid guid)
+        public ByteQueue Enqueue(TimeSpan? span)
         {
-            EnqueueRange(guid.ToByteArray());
+            return EnqueueNullable(span, Enqueue);
+        }
+
+        public TimeSpan? DequeueTimeSpanNullable()
+        {
+            return DequeueNullable(DequeueTimeSpan);
+        }
+
+        public ByteQueue Enqueue(Guid guid)
+        {
+            return EnqueueRange(guid.ToByteArray());
         }
 
         public Guid DequeueGuid()
@@ -175,19 +206,19 @@ namespace AudioPlayerBackend.Communication.Base
             return new Guid(DequeueRange(16));
         }
 
-        public void Enqueue(Guid? guid)
+        public ByteQueue Enqueue(Guid? guid)
         {
-            EnqueueNullable(guid, Enqueue);
+            return EnqueueNullable(guid, Enqueue);
         }
 
-        public Guid? DequeueNullableGuid()
+        public Guid? DequeueGuidNullable()
         {
             return DequeueNullable(DequeueGuid);
         }
 
-        public void Enqueue(IEnumerable<Guid> guids)
+        public ByteQueue Enqueue(IEnumerable<Guid> guids)
         {
-            Enqueue(guids, Enqueue);
+            return Enqueue(guids, Enqueue);
         }
 
         public Guid[] DequeueGuids()
@@ -195,167 +226,36 @@ namespace AudioPlayerBackend.Communication.Base
             return DequeueArray(DequeueGuid);
         }
 
-        public void Enqueue(RequestSong value)
+        public ByteQueue EnqueueNullable<T>(T? value, Func<T, ByteQueue> valueEnqueueAction) where T : struct
         {
-            Enqueue(value.Song);
-            EnqueueNullable(value.Position, Enqueue);
-            Enqueue(value.Duration);
-        }
-
-        public RequestSong DequeueRequestSong()
-        {
-            Song song = DequeueSong();
-            TimeSpan? position = DequeueNullable(DequeueTimeSpan);
-            TimeSpan duration = DequeueTimeSpan();
-
-            return RequestSong.Get(song, position, duration);
-        }
-
-        public void Enqueue(RequestSong? value)
-        {
-            EnqueueNullable(value, Enqueue);
-        }
-
-        public RequestSong? DequeueNullableRequestSong()
-        {
-            return DequeueNullable(DequeueRequestSong);
-        }
-
-        public void Enqueue(ISourcePlaylistBase playlist)
-        {
-            Enqueue((IPlaylistBase)playlist);
-            Enqueue(playlist.FileMediaSources);
-        }
-
-        public ISourcePlaylistBase DequeueSourcePlaylist(Func<Guid, ISourcePlaylistBase> createFunc)
-        {
-            ISourcePlaylistBase playlist = createFunc(DequeueGuid());
-
-            DequeuePlaylist(playlist);
-            playlist.FileMediaSources = DequeueFileMediaSources();
-
-            return playlist;
-        }
-
-        public void Enqueue(FileMediaSource fileMediaSource)
-        {
-            Enqueue(fileMediaSource.RootId);
-            Enqueue(fileMediaSource.RelativePath);
-        }
-
-        public FileMediaSource DequeueFileMediaSource()
-        {
-            return new FileMediaSource()
+            return EnqueueNullable(value, v =>
             {
-                RootId = DequeueGuid(),
-                RelativePath = DequeueString(),
-            };
+                valueEnqueueAction(v);
+            });
         }
 
-        public void Enqueue(IEnumerable<FileMediaSource> fileMediaSources)
-        {
-            Enqueue(fileMediaSources, Enqueue);
-        }
-
-        public FileMediaSource[] DequeueFileMediaSources()
-        {
-            return DequeueArray(DequeueFileMediaSource);
-        }
-
-        public void Enqueue(FileMediaSourceRoot fileMediaSourceRoot)
-        {
-            Enqueue(fileMediaSourceRoot.Id);
-            Enqueue(fileMediaSourceRoot.Name);
-        }
-
-        public FileMediaSourceRoot DequeueFileMediaSourceRoot(IEnumerable<FileMediaSourceRoot> currentRoots)
-        {
-            Guid id = DequeueGuid();
-            FileMediaSourceRoot currentRoot = currentRoots.ToNotNull().FirstOrDefault(root => root.Id == id);
-            return new FileMediaSourceRoot()
-            {
-                Id = id,
-                Name = DequeueString(),
-                Type = currentRoot.Type,
-                Value = currentRoot.Value,
-            };
-        }
-
-        public void Enqueue(IEnumerable<FileMediaSourceRoot> fileMediaSourceRoots)
-        {
-            Enqueue(fileMediaSourceRoots, Enqueue);
-        }
-
-        public FileMediaSourceRoot[] DequeueFileMediaSourceRoots(IEnumerable<FileMediaSourceRoot> currentRoots)
-        {
-            return DequeueArray(() => DequeueFileMediaSourceRoot(currentRoots));
-        }
-
-        public void Enqueue(IPlaylistBase playlist)
-        {
-            Enqueue(playlist.ID);
-            Enqueue(playlist.CurrentSong);
-            Enqueue(playlist.Songs);
-            Enqueue(playlist.Name);
-            Enqueue(playlist.Duration);
-            Enqueue((int)playlist.Shuffle);
-            Enqueue((int)playlist.Loop);
-            Enqueue(playlist.Position);
-            Enqueue(playlist.WannaSong);
-        }
-
-        public IPlaylistBase DequeuePlaylist(Func<Guid, IPlaylistBase> createFunc)
-        {
-            return DequeuePlaylist(createFunc(DequeueGuid()));
-        }
-
-        public IPlaylistBase DequeuePlaylist(IPlaylistBase playlist)
-        {
-            playlist.CurrentSong = DequeueNullableSong();
-            playlist.Songs = DequeueSongs();
-            playlist.Name = DequeueString();
-            playlist.Duration = DequeueTimeSpan();
-            playlist.Shuffle = (OrderType)DequeueInt();
-            playlist.Loop = (LoopType)DequeueInt();
-            playlist.Position = DequeueTimeSpan();
-            playlist.WannaSong = DequeueNullableRequestSong();
-
-            return playlist;
-        }
-
-        public void Enqueue(IEnumerable<ISourcePlaylistBase> playlists)
-        {
-            Enqueue(playlists, Enqueue);
-        }
-
-        public ISourcePlaylistBase[] DequeueSourcePlaylists(Func<Guid, ISourcePlaylistBase> createFunc)
-        {
-            return DequeueArray(() => DequeueSourcePlaylist(createFunc));
-        }
-
-        public void Enqueue(IEnumerable<IPlaylistBase> playlists)
-        {
-            Enqueue(playlists, Enqueue);
-        }
-
-        public IPlaylistBase[] DequeuePlaylists(Func<Guid, IPlaylistBase> createFunc)
-        {
-            return DequeueArray(() => DequeuePlaylist(createFunc));
-        }
-
-        private void EnqueueNullable<T>(T? value, Action<T> valueEnqueueAction) where T : struct
+        public ByteQueue EnqueueNullable<T>(T? value, Action<T> valueEnqueueAction) where T : struct
         {
             Enqueue(value.HasValue);
 
             if (value.HasValue) valueEnqueueAction(value.Value);
+            return this;
         }
 
-        private T? DequeueNullable<T>(Func<T> itemDequeueFunc) where T : struct
+        public T? DequeueNullable<T>(Func<T> itemDequeueFunc) where T : struct
         {
             return DequeueBool() ? (T?)itemDequeueFunc() : null;
         }
 
-        private void EnqueueClass<T>(T value, Action<T> valueEnqueueAction)
+        public ByteQueue EnqueueClass<T>(T value, Func<T, ByteQueue> valueEnqueueAction) where T : class
+        {
+            return EnqueueClass(value, v =>
+            {
+                valueEnqueueAction(v);
+            });
+        }
+
+        public ByteQueue EnqueueClass<T>(T value, Action<T> valueEnqueueAction) where T : class
         {
             if (value == null) Enqueue(false);
             else
@@ -363,39 +263,24 @@ namespace AudioPlayerBackend.Communication.Base
                 Enqueue(true);
                 valueEnqueueAction(value);
             }
+
+            return this;
         }
 
-        private T DequeueOrDefault<T>(Func<T> itemDequeueFunc)
+        public T DequeueOrDefault<T>(Func<T> itemDequeueFunc)
         {
             return DequeueBool() ? itemDequeueFunc() : default(T);
         }
 
-        public void Enqueue(IAudioServiceBase service)
+        public ByteQueue Enqueue<T>(IEnumerable<T> items, Func<T, ByteQueue> itemEnqueueAction)
         {
-            Enqueue(service.FileMediaSourceRoots);
-            Enqueue(service.SourcePlaylists);
-            Enqueue(service.Playlists);
-            Enqueue(service.CurrentPlaylist?.ID ?? Guid.Empty);
-            Enqueue(service.Volume);
-            Enqueue((int)service.PlayState);
+            return Enqueue(items, v =>
+            {
+                itemEnqueueAction(v);
+            });
         }
 
-        public void DequeueService(IAudioServiceBase service,
-            Func<Guid, ISourcePlaylistBase> createSourcePlaylistFunc, Func<Guid, IPlaylistBase> createPlaylistFunc)
-        {
-            service.FileMediaSourceRoots = DequeueFileMediaSourceRoots(service.FileMediaSourceRoots);
-            service.SourcePlaylists = DequeueSourcePlaylists(createSourcePlaylistFunc);
-            service.Playlists = DequeuePlaylists(createPlaylistFunc);
-
-            Guid currentPlaylistId = DequeueGuid();
-            service.CurrentPlaylist = service.GetAllPlaylists()
-                .FirstOrDefault(p => p.ID == currentPlaylistId) ?? service.GetAllPlaylists().FirstOrDefault();
-
-            service.Volume = DequeueFloat();
-            service.PlayState = (PlaybackState)DequeueInt();
-        }
-
-        private void Enqueue<T>(IEnumerable<T> items, Action<T> itemEnqueueAction)
+        public ByteQueue Enqueue<T>(IEnumerable<T> items, Action<T> itemEnqueueAction)
         {
             IList<T> list = items as IList<T> ?? items?.ToArray();
 
@@ -405,9 +290,11 @@ namespace AudioPlayerBackend.Communication.Base
                 foreach (T item in list) itemEnqueueAction(item);
             }
             else Enqueue(-1);
+
+            return this;
         }
 
-        private T[] DequeueArray<T>(Func<T> itemDequeueFunc)
+        public T[] DequeueArray<T>(Func<T> itemDequeueFunc)
         {
             int length = DequeueInt();
             if (length == -1) return null;
@@ -432,14 +319,14 @@ namespace AudioPlayerBackend.Communication.Base
             return bytes.GetEnumerator();
         }
 
-        public static implicit operator byte[](ByteQueue queue)
+        public static implicit operator byte[] (ByteQueue queue)
         {
             return queue.ToArray();
         }
 
         public static implicit operator ByteQueue(byte[] bytes)
         {
-            return new ByteQueue(bytes);
+            return bytes == null ? null : new ByteQueue(bytes);
         }
     }
 }

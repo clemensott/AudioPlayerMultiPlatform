@@ -33,7 +33,7 @@
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
             <TextBlock Text="Opening Service:" FontSize="20" Margin="5,0"/>
-            <TextBlock FontSize="18" VerticalAlignment="Center" Text="{Binding Communicator.Name}"/>
+            <TextBlock FontSize="18" VerticalAlignment="Center" Text="{Binding CommunicatorName}"/>
         </StackPanel>
 
         <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top"
@@ -44,7 +44,7 @@
                 <Button Content="Cancel" Width="100" Margin="5" Click="BtnCancel_Click"/>
                 <Button Content="Settings" Width="100" Margin="5" Click="BtnOpeningSettings_Click"/>
                 <Button Content="Exception" Width="100" Margin="5"
-                        Visibility="{Binding ElementName=micException,Path=Output,
+                        Visibility="{Binding Path=CompleteToken.Exception,
                           Converter={StaticResource excCon}}" Click="BtnException_Click"/>
             </StackPanel>
         </StackPanel>
@@ -54,43 +54,16 @@
             <Button Content="Retry" Width="100" Margin="5" Click="BtnRetry_Click"/>
             <Button Content="Settings" Width="100" Margin="5" Click="BtnSettings_Click"/>
             <Button Content="Exception" Width="100" Margin="5" 
-                    Visibility="{Binding ElementName=micException,Path=Output,
+                    Visibility="{Binding Path=CompleteToken.Exception,
                       Converter={StaticResource excCon}}" Click="BtnException_Click"/>
         </StackPanel>
 
         <TextBlock Grid.Row="2" HorizontalAlignment="Center" Margin="2" TextWrapping="Wrap"
-                   Text="{Binding ElementName=micException,Path=Output.Message}"/>
-
-        <StackPanel Grid.Row="3" Orientation="Horizontal"
-                    HorizontalAlignment="Center" VerticalAlignment="Top">
-            <Button Content="Previous" Width="75" Margin="5" Click="BtnPrevious_Click"/>
-            <Button Content="Play" Width="75" Margin="5" Click="BtnPlay_Click"
-                    IsEnabled="{Binding SendPlayState,Converter={StaticResource playCon}}"/>
-            <ToggleButton Content="Toggle" Width="75" Margin="5" 
-                          IsChecked="{Binding SendToggle,Mode=OneWay}" Checked="TbnToggle_Checked"/>
-            <Button Content="Pause" Width="75" Margin="5" Click="BtnPause_Click"
-                    IsEnabled="{Binding SendPlayState,Converter={StaticResource pauseCon}}"/>
-            <Button Content="Next" Width="75" Margin="5" Click="BtnNext_Click"/>
-        </StackPanel>
-
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="3"
-                    Visibility="{Binding CommunicatorToken.Result,Converter={StaticResource openVisCon}}">
-            <TextBlock Text="SongOffset: "/>
-            <TextBlock Text="{Binding SongOffset}"/>
-        </StackPanel>
-
-        <con:MultipleInputs4Converter Name="micException" 
-                                      Input0="{Binding CommunicatorToken.Exception}"
-                                      Input1="{Binding SyncToken.Exception}"
-                                      Input2="{Binding PlayerToken.Exception}"
-                                      Input3="{Binding CompleteToken.Exception}"
-                                      Convert="MicException_Convert"/>
+                   Text="{Binding Path=CompleteToken.Exception.Message}"/>
 
         <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="3">
             <TextBlock Text="State: "/>
             <TextBlock Text="{Binding State}"/>
         </StackPanel>
-
-        <ListBox Grid.Row="6" ItemsSource="{Binding Communicator.InitProps}"/>
     </Grid>
 </Window>

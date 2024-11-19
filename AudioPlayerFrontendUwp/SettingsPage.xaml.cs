@@ -1,13 +1,12 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.Build;
+using StdOttStandard.Linq;
 using StdOttStandard.TaskCompletionSources;
-using StdOttStandard.Converter.MultipleInputs;
 using StdOttUwp.Converters;
-using System;
-using System.Threading.Tasks;
+using System.Linq;
+using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=234238 dokumentiert.
@@ -20,17 +19,17 @@ namespace AudioPlayerFrontend
     public sealed partial class SettingsPage : Page
     {
         private bool submit;
-        private IntConverter serverPortConverter;
-        private IntNullableConverter clientPortConverter;
-        private ServiceBuilder serviceBuilder;
-        private TaskCompletionSourceS<ServiceBuilder> result;
+        private readonly IntConverter serverPortConverter;
+        private readonly IntNullableConverter clientPortConverter;
+        private AudioServicesBuildConfig audioServicesBuildConfig;
+        private TaskCompletionSourceS<AudioServicesBuildConfig> result;
 
-        public ServiceBuilder ServiceBuilder
+        public AudioServicesBuildConfig Config
         {
-            get => serviceBuilder;
+            get => audioServicesBuildConfig;
             private set
             {
-                serviceBuilder = null;
+                audioServicesBuildConfig = null;
 
                 serverPortConverter.Convert(value.ServerPort);
                 clientPortConverter.Convert(value.ClientPort);
@@ -40,10 +39,9 @@ namespace AudioPlayerFrontend
                 if (value.BuildServer) tbxPort.Text = serverPortConverter.Text;
                 else if (value.BuildClient) tbxPort.Text = clientPortConverter.Text;
 
-                DataContext = serviceBuilder = value;
+                DataContext = audioServicesBuildConfig = value;
 
-                if (!serviceBuilder.IsSearchShuffle.HasValue) cbxSearchShuffle.IsChecked = null;
-                if (!serviceBuilder.Play.HasValue) cbxPlay.IsChecked = null;
+                UpdateMusicDefaultRootCheckboxes();
             }
         }
 
@@ -61,93 +59,96 @@ namespace AudioPlayerFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            result = (TaskCompletionSourceS<ServiceBuilder>)e.Parameter;
-            serviceBuilder = result.Input;
+            result = (TaskCompletionSourceS<AudioServicesBuildConfig>)e.Parameter;
+            Config = result.Input;
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
 
-            result.SetResult(submit ? serviceBuilder : null);
-        }
-
-        private void Page_Loaded(object sender, RoutedEventArgs e)
-        {
-            ServiceBuilder = serviceBuilder;
-        }
-
-        private object ShuffleConverter_ConvertEvent(object value, Type targetType, object parameter, string language)
-        {
-            if (value == null) return parameter;
-            return (int)value;
-        }
-
-        private object ShuffleConverter_ConvertBackEvent(object value, Type targetType, object parameter, string language)
-        {
-            return parameter.Equals(value) ? (OrderType?)null : (OrderType)value;
+            result.SetResult(submit ? audioServicesBuildConfig : null);
         }
 
         private void RbnStandalone_Checked(object sender, RoutedEventArgs e)
         {
-            ServiceBuilder?.WithStandalone();
+            Config?.WithStandalone();
         }
 
         private void RbnServer_Checked(object sender, RoutedEventArgs e)
         {
             tbxPort.Text = serverPortConverter.Text;
 
-            ServiceBuilder?.WithServer(serverPortConverter.Value);
+            Config?.WithServer(serverPortConverter.Value);
         }
 
         private void RbnClient_Checked(object sender, RoutedEventArgs e)
         {
             tbxPort.Text = clientPortConverter.Text;
 
-            ServiceBuilder?.WithClient(tbxServerAddress.Text, clientPortConverter.Value);
+            Config?.WithClient(tbxServerAddress.Text, clientPortConverter.Value);
         }
 
         private void TbxPort_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (ServiceBuilder == null) return;
+            if (Config == null) return;
 
-            ServiceBuilder.ServerPort = serverPortConverter.ConvertBack(tbxPort.Text);
-            ServiceBuilder.ClientPort = clientPortConverter.ConvertBack(tbxPort.Text);
+            Config.ServerPort = serverPortConverter.ConvertBack(tbxPort.Text);
+            Config.ClientPort = clientPortConverter.ConvertBack(tbxPort.Text);
         }
 
-        private async void Cbx_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
+        private static bool IsMusicDefaultRoot(FileMediaSourceRootInfo defaultRoot)
         {
-            await Task.Delay(50);
-            if (ServiceBuilder != null) ((CheckBox)sender).IsChecked = null;
+            return defaultRoot.PathType == FileMediaSourceRootPathType.KnownFolder
+                && defaultRoot.Path == KnownFolderId.MusicLibrary.ToString();
         }
 
-        private object MicVolume_ConvertRef(object sender, MultiplesInputsConvert3EventArgs args)
+        private void UpdateMusicDefaultRootCheckboxes()
         {
-            if (args.Input2 == null) args.Input2 = 1;
-
-            switch (args.ChangedValueIndex)
+            if (Config.DefaultUpdateRoots.ToNotNull().TryFirst(IsMusicDefaultRoot, out FileMediaSourceRootInfo musicDefaultRoot))
             {
-                case 0:
-                    if (args.Input0 is float)
-                    {
-                        args.Input1 = true;
-                        args.Input2 = args.Input0;
-                    }
-                    else args.Input1 = false;
-                    break;
-
-                case 1:
-                case 2:
-                    args.Input0 = true.Equals(args.Input1) ? args.Input2 : null;
-                    break;
+                cbxMusicDefaultRoot.IsChecked = true;
+                cbxMusicWithSubFolders.IsChecked = musicDefaultRoot.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders);
             }
-
-            return null;
+            else
+            {
+                cbxMusicDefaultRoot.IsChecked = false;
+                cbxMusicWithSubFolders.IsChecked = false;
+            }
         }
 
-        private void CbxStreaming_RightTapped(object sender, RightTappedRoutedEventArgs e)
+        private void CbxMusicDefaultRoot_Checked(object sender, RoutedEventArgs e)
         {
-            if (ServiceBuilder != null) ServiceBuilder.IsStreaming = null;
+            FileMediaSourceRootInfo musicDefaultRoot = new FileMediaSourceRootInfo(
+                FileMediaSourceRootUpdateType.Songs | FileMediaSourceRootUpdateType.Folders,
+                KnownFolders.MusicLibrary.DisplayName,
+                FileMediaSourceRootPathType.KnownFolder,
+                KnownFolderId.MusicLibrary.ToString()
+            );
+            Config?.WithDefaultUpdateRoots(Config.DefaultUpdateRoots.ToNotNull().ConcatParams(musicDefaultRoot).ToArray());
+        }
+
+        private void CbxMusicDefaultRoot_Unchecked(object sender, RoutedEventArgs e)
+        {
+            Config?.WithDefaultUpdateRoots(Config.DefaultUpdateRoots.ToNotNull().Where(r => !IsMusicDefaultRoot(r)).ToArray());
+        }
+
+        private void SetMusicDefaultRootUpdateType(FileMediaSourceRootUpdateType updateType)
+        {
+            Config?.WithDefaultUpdateRoots(Config.DefaultUpdateRoots.ToNotNull().Select(r => IsMusicDefaultRoot(r)
+                ? new FileMediaSourceRootInfo(updateType, r.Name, r.PathType, r.Path)
+                : r
+            ).ToArray());
+        }
+
+        private void CbxMusicWithSubFolders_Checked(object sender, RoutedEventArgs e)
+        {
+            SetMusicDefaultRootUpdateType(FileMediaSourceRootUpdateType.Songs | FileMediaSourceRootUpdateType.Folders);
+        }
+
+        private void CbxMusicWithSubFolders_Unchecked(object sender, RoutedEventArgs e)
+        {
+            SetMusicDefaultRootUpdateType(FileMediaSourceRootUpdateType.Songs);
         }
 
         private void AbbOk_Click(object sender, RoutedEventArgs e)
@@ -159,12 +160,6 @@ namespace AudioPlayerFrontend
         private void AbbCancel_Click(object sender, RoutedEventArgs e)
         {
             Frame.GoBack();
-        }
-
-        private void CbxPlay_Holding(object sender, HoldingRoutedEventArgs e)
-        {
-            if (ServiceBuilder != null) cbxPlay.IsChecked = ServiceBuilder.Play = null;
-            e.Handled = true;
         }
     }
 }

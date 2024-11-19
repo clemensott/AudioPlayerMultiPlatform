@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Audio.MediaSource;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.FileSystem
@@ -7,22 +6,27 @@ namespace AudioPlayerBackend.FileSystem
     public interface IFileSystemService
     {
         /// <summary>
+        /// Creates an empty file.
+        /// </summary>
+        /// <param name="fileName">File name or path of file</param>
+        /// <returns>Absolut file path of File</returns>
+        Task<string> CreateFileIfNotExits(string fileName);
+
+        /// <summary>
         /// Reads text of file.
         /// </summary>
-        /// <param name="fileName">file name or path of file</param>
-        /// <returns>read text</returns>
+        /// <param name="fileName">File name or path of file</param>
+        /// <returns>Read text</returns>
         Task<string> ReadTextFile(string fileName);
 
         /// <summary>
         /// Writes text to file.
         /// </summary>
-        /// <param name="fileName">file name or path of file</param>
-        /// <param name="text">text to write</param>
+        /// <param name="fileName">File name or path of file</param>
+        /// <param name="text">Text to write</param>
         /// <returns></returns>
         Task WriteTextFile(string fileName, string text);
 
-        Task ReloadSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots);
-
-        Task UpdateSourcePlaylist(ISourcePlaylist playlist, FileMediaSourceRoot[] roots);
+        Task AppendTextLines(string fileName, IEnumerable<string> lines);
     }
 }

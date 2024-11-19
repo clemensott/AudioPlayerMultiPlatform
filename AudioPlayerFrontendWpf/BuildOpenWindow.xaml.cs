@@ -25,9 +25,9 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private ServiceBuild build, lastAwaitingBuild;
+        private AudioServicesBuilder build, lastAwaitingBuild;
 
-        public ServiceBuild Build
+        public AudioServicesBuilder Build
         {
             get => build;
             set => DataContext = build = value;
@@ -38,7 +38,7 @@ namespace AudioPlayerFrontend
             InitializeComponent();
         }
 
-        public BuildOpenWindow(ServiceBuild build) : this()
+        public BuildOpenWindow(AudioServicesBuilder build) : this()
         {
             Build = build;
         }
@@ -88,7 +88,7 @@ namespace AudioPlayerFrontend
 
         private void BtnException_Click(object sender, RoutedEventArgs e)
         {
-            Exception exception = (Exception)micException.Output;
+            Exception exception = Build.CompleteToken.Exception;
 
             if (exception != null)
             {
@@ -122,31 +122,6 @@ namespace AudioPlayerFrontend
         private object MicException_Convert(object sender, MultiplesInputsConvert4EventArgs args)
         {
             return args.Input3 ?? args.Input2 ?? args.Input1 ?? args.Input0;
-        }
-
-        private async void BtnPrevious_Click(object sender, RoutedEventArgs e)
-        {
-            await build.SetPreviousSong();
-        }
-
-        private async void BtnPlay_Click(object sender, RoutedEventArgs e)
-        {
-            await build.SetPlayState(PlaybackState.Playing);
-        }
-
-        private async void TbnToggle_Checked(object sender, RoutedEventArgs e)
-        {
-            await build.SetToggle();
-        }
-
-        private async void BtnPause_Click(object sender, RoutedEventArgs e)
-        {
-            await build.SetPlayState(PlaybackState.Paused);
-        }
-
-        private async void BtnNext_Click(object sender, RoutedEventArgs e)
-        {
-            await build.SetNextSong();
         }
     }
 }

@@ -1,6 +1,4 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Player;
-using StdOttStandard.Linq;
+﻿using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -13,92 +11,59 @@ using Windows.UI.Xaml.Navigation;
 using AudioPlayerBackend.Build;
 using StdOttStandard.Converter.MultipleInputs;
 using System.Threading.Tasks;
-using System.Collections.ObjectModel;
 using StdOttStandard.TaskCompletionSources;
-using System.Collections.Specialized;
 using Windows.UI.Xaml.Controls.Primitives;
 using StdOttUwp;
 using AudioPlayerBackend;
-using StdOttUwp.Converters;
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerFrontend.Extensions;
-using AudioPlayerBackend.Audio.MediaSource;
+using AudioPlayerBackend.ViewModels;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using StdOttStandard;
+using AudioPlayerFrontend.Controls;
+using Windows.UI.Core;
 
 namespace AudioPlayerFrontend
 {
     public sealed partial class MainPage : Page
     {
-        private readonly IFileSystemService fileSystemService;
-        private ServiceHandler serviceHandler;
-        private ViewModel viewModel;
-        private readonly ObservableCollection<IPlaylist> allPlaylists;
+        private AudioServicesHandler audioServicesHandler;
+        private ILibraryViewModel viewModel;
+        private IUpdateLibraryService updateLibraryService;
 
         public MainPage()
         {
-            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
-            allPlaylists = new ObservableCollection<IPlaylist>();
-
+            Logs.Log("MainPage1");
             this.InitializeComponent();
+            Logs.Log("MainPage2");
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            serviceHandler = (ServiceHandler)e.Parameter;
-            DataContext = viewModel = serviceHandler.ViewModel;
+            Logs.Log("MainPage.OnNavigatedTo1");
+            audioServicesHandler = (AudioServicesHandler)e.Parameter;
+            audioServicesHandler.AddAudioServicesChangedListener(AudioServicesHandler_AudioServicesChanged);
+            Logs.Log("MainPage.OnNavigatedTo2");
         }
 
-        private async void Page_Loaded(object sender, RoutedEventArgs e)
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
-            if (serviceHandler.ServiceOpenBuild?.CompleteToken?.IsEnded == BuildEndedType.Settings)
-            {
-                await NavigateToSettingsPage();
-            }
+            audioServicesHandler.AudioServicesChanged -= AudioServicesHandler_AudioServicesChanged;
         }
 
-        private object MicPlaylists_Convert(object sender, MultiplesInputsConvert4EventArgs args)
+        private async void AudioServicesHandler_AudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
         {
-            MultipleInputs4Converter converter = (MultipleInputs4Converter)sender;
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => SetAudioServices(e.NewServices));
+        }
 
-            if (args.ChangedValueIndex == 0)
-            {
-                if (args.OldValue is INotifyCollectionChanged oldList) oldList.CollectionChanged -= OnCollectionChanged;
-                if (args.Input0 is INotifyCollectionChanged newList) newList.CollectionChanged += OnCollectionChanged;
-            }
-            else if (args.ChangedValueIndex == 1)
-            {
-                if (args.OldValue is INotifyCollectionChanged oldList) oldList.CollectionChanged -= OnCollectionChanged;
-                if (args.Input1 is INotifyCollectionChanged newList) newList.CollectionChanged += OnCollectionChanged;
-            }
-
-            UpdateAllPlaylists();
-
-            if (args.ChangedValueIndex == 3 && args.Input3 != null) args.Input2 = args.Input3;
-            else args.Input3 = args.Input2;
-
-            return allPlaylists;
-
-            void OnCollectionChanged(object s, NotifyCollectionChangedEventArgs e)
-            {
-                UpdateAllPlaylists();
-            }
-
-            void UpdateAllPlaylists()
-            {
-                IPlaylist[] newAllPlaylists = ((IEnumerable<ISourcePlaylist>)converter.Input0).ToNotNull()
-                    .Concat(((IEnumerable<IPlaylist>)converter.Input1).ToNotNull()).ToArray();
-
-                for (int i = allPlaylists.Count - 1; i >= 0; i--)
-                {
-                    if (!newAllPlaylists.Contains(allPlaylists[i])) allPlaylists.RemoveAt(i);
-                }
-
-                foreach ((int newIndex, IPlaylist playlist) in newAllPlaylists.WithIndex())
-                {
-                    int oldIndex = allPlaylists.IndexOf(playlist);
-                    if (oldIndex == -1) allPlaylists.Insert(newIndex, playlist);
-                    else if (oldIndex != newIndex) allPlaylists.Move(oldIndex, newIndex);
-                }
-            }
+        private void SetAudioServices(AudioServices audioServices)
+        {
+            Logs.Log("MainPage.SetAudioServices1");
+            DataContext = viewModel = audioServices?.GetViewModel();
+            updateLibraryService = audioServices?.GetUpdateLibraryService();
+            Logs.Log("MainPage.SetAudioServices2");
         }
 
         private object MicViewPlaylists_Convert(object sender, MultiplesInputsConvert2EventArgs args)
@@ -125,98 +90,85 @@ namespace AudioPlayerFrontend
         /// <returns>Show remove IconButton on every Song (true) or not (false).</returns>
         private object MicDoRemove_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
-            return !(args.Input1 is ISourcePlaylistBase);
+            PlaylistType? playlistType = (PlaylistType?)args.Input1;
+            return playlistType?.HasFlag(PlaylistType.SourcePlaylist) == false;
         }
 
         /// <summary>
         /// Handles user input and programmatic changes for viewed songs and selected song
         /// </summary>
         /// <param name="sender"></param>
-        /// <param name="args">Input0: CurrentPlaylist.AllSongs, Input1: CurrentPlaylist.CurrentSong, Input2: CurrentPlaylist.WannaSong, Input3: lbxSongs.SelectedIndex</param>
+        /// <param name="args">Input0: CurrentPlaylist.AllSongs, Input1: CurrentPlaylist.CurrentSongRequest, Input2: lbxSongs.SelectedIndex</param>
         /// <returns>The list of Songs to view on UI.</returns>
-        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert4EventArgs args)
+        private object MicCurrentSongIndex_ConvertRef(object sender, MultiplesInputsConvert3EventArgs args)
         {
             if (args.Input0 == null)
             {
-                args.Input3 = -1;
+                args.Input2 = -1;
                 return null;
             }
-            if (args.ChangedValueIndex == 2) return args.Input0;
 
             IEnumerable<Song> allSongs = (IEnumerable<Song>)args.Input0;
-            Song? currentSong = (Song?)args.Input1;
-            int index = (int)args.Input3;
+            SongRequest? songRequest = (SongRequest?)args.Input1;
+            int index = (int)args.Input2;
+            Guid? currentSongId = songRequest?.Id;
 
-            if (args.ChangedValueIndex == 3 && index != -1) args.Input2 = RequestSong.Start(allSongs.ElementAt(index));
-            else if (!currentSong.HasValue) args.Input3 = -1;
-            else args.Input3 = allSongs.IndexOf(currentSong.Value);
+            if (args.ChangedValueIndex == 2 && index != -1) args.Input1 = SongRequest.Start(allSongs.ElementAt(index).Id);
+            else if (!currentSongId.HasValue) args.Input2 = -1;
+            else args.Input2 = allSongs.IndexOf(s => s.Id == currentSongId);
 
             return allSongs;
         }
 
-        private void IbnRemove_Click(object sender, RoutedEventArgs e)
+        private async void IbnRemove_Click(object sender, RoutedEventArgs e)
         {
             Song song = (Song)((FrameworkElement)sender).DataContext;
-            IAudioService service = viewModel.Audio;
-            IPlaylist playlist = service.CurrentPlaylist;
 
-            if (playlist.Songs.All(s => s == song))
+            if (!viewModel.CurrentPlaylist.Songs.All(s => s == song))
             {
-                service.CurrentPlaylist = service.GetAllPlaylists().Where(p => p != playlist).Any() ?
-                    service.GetAllPlaylists().Next(playlist).next : null;
-
-                service.Playlists.Remove(playlist);
+                await viewModel.CurrentPlaylist.RemoveSong(song.Id);
             }
-            else playlist.Songs = playlist.Songs.Where(s => s != song).ToArray();
-        }
-
-        private void IbnLoopType_Click(object sender, RoutedEventArgs e)
-        {
-            switch (viewModel.Audio?.CurrentPlaylist.Loop)
+            else if (viewModel.CurrentPlaylist.Id.TryHasValue(out Guid currentPlaylistId))
             {
-                case LoopType.Next:
-                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.Stop;
-                    break;
-
-                case LoopType.Stop:
-                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.CurrentPlaylist;
-                    break;
-
-                case LoopType.CurrentPlaylist:
-                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.CurrentSong;
-                    break;
-
-                case LoopType.CurrentSong:
-                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.StopCurrentSong;
-                    break;
-
-                case LoopType.StopCurrentSong:
-                    viewModel.Audio.CurrentPlaylist.Loop = LoopType.Next;
-                    break;
+                await viewModel.RemovePlaylist(currentPlaylistId);
             }
         }
 
-        private void IbnOrderType_Click(object sender, RoutedEventArgs e)
+        private async void IbnLoopType_Click(object sender, RoutedEventArgs e)
         {
-            switch (viewModel.Audio?.CurrentPlaylist.Shuffle)
+            IEnumerable<ListBoxDialogItem<LoopType?>> options = new ListBoxDialogItem<LoopType?>[]
             {
-                case OrderType.ByTitleAndArtist:
-                    viewModel.Audio.CurrentPlaylist.Shuffle = OrderType.ByPath;
-                    break;
+                new ListBoxDialogItem<LoopType?>(LoopType.CurrentPlaylist, "Repeat Current Playlist"),
+                new ListBoxDialogItem<LoopType?>(LoopType.Stop, "Stop Playback"),
+                new ListBoxDialogItem<LoopType?>(LoopType.Next, "Play Next Playlist"),
+                new ListBoxDialogItem<LoopType?>(LoopType.CurrentSong, "Repeat Current Song"),
+                new ListBoxDialogItem<LoopType?>(LoopType.StopCurrentSong, "Stop Playback & Keep Current Song"),
+            };
 
-                case OrderType.ByPath:
-                    viewModel.Audio.CurrentPlaylist.Shuffle = OrderType.Custom;
-                    break;
+            LoopType? newValue = await ListBoxDialog<LoopType?>
+                .Start(options, viewModel.CurrentPlaylist.Loop, "Loop Type");
 
-                case OrderType.Custom:
-                    viewModel.Audio.CurrentPlaylist.Shuffle = OrderType.ByTitleAndArtist;
-                    break;
-            }
+            if (newValue.HasValue) viewModel.CurrentPlaylist.Loop = newValue.Value;
+        }
+
+        private async void IbnOrderType_Click(object sender, RoutedEventArgs e)
+        {
+            IEnumerable<ListBoxDialogItem<OrderType?>> options = new ListBoxDialogItem<OrderType?>[]
+            {
+                new ListBoxDialogItem<OrderType?>(OrderType.ByTitleAndArtist, "By Title And Artist"),
+                new ListBoxDialogItem<OrderType?>(OrderType.ByPath, "By Path"),
+                new ListBoxDialogItem<OrderType?>(OrderType.Custom, "Shuffle"),
+            };
+
+            OrderType? newValue = await ListBoxDialog<OrderType?>
+                .Start(options, viewModel.CurrentPlaylist.Shuffle, "Order Type");
+
+            if (newValue.HasValue) viewModel.CurrentPlaylist.Shuffle = newValue.Value;
         }
 
         private void IbnSearch_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.Audio != null) Frame.NavigateToSearchPage(viewModel.Audio);
+            if (viewModel != null) Frame.NavigateToSearchPage(audioServicesHandler);
         }
 
         private void LbxPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -236,24 +188,20 @@ namespace AudioPlayerFrontend
 
         private object MicPlaylistUpdateable_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
-            return args.Input0 is ISourcePlaylist && false.Equals(args.Input1);
+            PlaylistType? playlistType = (PlaylistType?)args.Input0;
+            return playlistType?.HasFlag(PlaylistType.SourcePlaylist) == true && false.Equals(args.Input1);
         }
 
         private async void MfiUpdateSongs_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                viewModel.IsUpdatingPlaylists = true;
-                FileMediaSourceRoot[] roots = viewModel.Audio.FileMediaSourceRoots;
-                await fileSystemService.UpdateSourcePlaylist(UwpUtils.GetDataContext<ISourcePlaylist>(sender), roots);
+                PlaylistInfo playlist = UwpUtils.GetDataContext<PlaylistInfo>(sender);
+                await updateLibraryService.UpdateSourcePlaylist(playlist.Id);
             }
             catch (Exception exc)
             {
                 await DialogUtils.ShowSafeAsync(exc.Message, "Update songs error");
-            }
-            finally
-            {
-                viewModel.IsUpdatingPlaylists = false;
             }
         }
 
@@ -261,39 +209,25 @@ namespace AudioPlayerFrontend
         {
             try
             {
-                viewModel.IsUpdatingPlaylists = true;
-                FileMediaSourceRoot[] roots = viewModel.Audio.FileMediaSourceRoots;
-                await fileSystemService.ReloadSourcePlaylist(UwpUtils.GetDataContext<ISourcePlaylist>(sender), roots);
+                PlaylistInfo playlist = UwpUtils.GetDataContext<PlaylistInfo>(sender);
+                await updateLibraryService.ReloadSourcePlaylist(playlist.Id);
             }
             catch (Exception exc)
             {
                 await DialogUtils.ShowSafeAsync(exc.Message, "Reload songs error");
             }
-            finally
-            {
-                viewModel.IsUpdatingPlaylists = false;
-            }
         }
 
-        private void MfiRemixSongs_Click(object sender, RoutedEventArgs e)
+        private async void MfiRemixSongs_Click(object sender, RoutedEventArgs e)
         {
-            IPlaylist playlist = UwpUtils.GetDataContext<IPlaylist>(sender);
-            playlist.Songs = playlist.Songs.Shuffle().ToArray();
+            PlaylistInfo playlist = UwpUtils.GetDataContext<PlaylistInfo>(sender);
+            await viewModel.RemixSongs(playlist.Id);
         }
 
         private void MfiRemovePlaylist_Click(object sender, RoutedEventArgs e)
         {
-            IPlaylist playlist = UwpUtils.GetDataContext<IPlaylist>(sender);
-            IAudioService service = viewModel.Audio;
-
-            if (service.CurrentPlaylist == playlist)
-            {
-                service.CurrentPlaylist = service.GetAllPlaylists().Where(p => p != playlist).Any() ?
-                    service.GetAllPlaylists().Next(playlist).next : null;
-            }
-
-            if (playlist is ISourcePlaylist) service.SourcePlaylists.Remove((ISourcePlaylist)playlist);
-            else service.Playlists.Remove(playlist);
+            PlaylistInfo playlist = UwpUtils.GetDataContext<PlaylistInfo>(sender);
+            viewModel.RemovePlaylist(playlist.Id);
         }
 
         private void SplCurrentSong_Tapped(object sender, TappedRoutedEventArgs e)
@@ -301,38 +235,33 @@ namespace AudioPlayerFrontend
             Scroll();
         }
 
+        private async void SplPlaybackRate_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            double[] playbackRates = new double[] { 0.5, 0.75, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2, 2.25, 2.5 };
+            IEnumerable<ListBoxDialogItem<double>> options = playbackRates
+                .Select(rate => new ListBoxDialogItem<double>(rate, $"{rate,2}x"));
+
+            double newValue = await ListBoxDialog<double>
+                .Start(options, viewModel.CurrentPlaylist.PlaybackRate, "Playback Rate");
+
+            if (newValue > 0) viewModel.CurrentPlaylist.PlaybackRate = newValue;
+        }
+
         private async void AbbUpdatePlaylistsAndSongs_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                viewModel.IsUpdatingPlaylists = true;
-                await UpdateHelper.Update(viewModel.Audio);
-                Settings.Current.LastUpdatedData = DateTime.Now;
-            }
-            finally
-            {
-                viewModel.IsUpdatingPlaylists = false;
-            }
+            await updateLibraryService.UpdateLibrary();
         }
 
         private async void AbbUReloadPlaylistsAndSongs_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                viewModel.IsUpdatingPlaylists = true;
-                await UpdateHelper.Reload(viewModel.Audio);
-                Settings.Current.LastUpdatedData = DateTime.Now;
-            }
-            finally
-            {
-                viewModel.IsUpdatingPlaylists = false;
-            }
+            await updateLibraryService.ReloadLibrary();
         }
 
-        private void AudioPositionSlider_UserPositionChanged(object sender, TimeSpan e)
+        private async void AudioPositionSlider_UserPositionChanged(object sender, TimeSpan e)
         {
-            IPlaylist playlist = viewModel.Audio?.CurrentPlaylist;
-            if (playlist != null) playlist.WannaSong = RequestSong.Get(playlist.CurrentSong, e, playlist.Duration);
+            IPlaylistViewModel playlist = viewModel.CurrentPlaylist;
+            SongRequest? songRequest = SongRequest.Get(playlist.CurrentSongRequest?.Id, e, playlist.CurrentSongRequest?.Duration);
+            await viewModel.CurrentPlaylist.SetCurrentSongRequest(songRequest);
         }
 
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)
@@ -340,49 +269,35 @@ namespace AudioPlayerFrontend
             await NavigateToSettingsPage();
         }
 
-        private void AbbPrevious_Click(object sender, RoutedEventArgs e)
+        private async void AbbPrevious_Click(object sender, RoutedEventArgs e)
         {
-            viewModel.Audio?.SetPreviousSong();
+            await viewModel?.CurrentPlaylist.SetPreviousSong();
         }
 
         private void AbbPlayPause_Click(object sender, RoutedEventArgs e)
         {
-            IAudioService service = viewModel.Audio;
-
-            if (service == null) return;
-
-            service.PlayState = service.PlayState == PlaybackState.Playing
-                ? PlaybackState.Paused
-                : PlaybackState.Playing;
+            viewModel?.SetTogglePlayState();
         }
 
-        private void AbbNext_Click(object sender, RoutedEventArgs e)
+        private async void AbbNext_Click(object sender, RoutedEventArgs e)
         {
-            viewModel.Audio?.SetNextSong();
+            await viewModel?.CurrentPlaylist.SetNextSong();
         }
 
         private async void AbbSettings_Click(object sender, RoutedEventArgs e)
         {
-            if (viewModel.Audio != null)
-            {
-                serviceHandler.Builder.WithService(viewModel.Audio);
-            }
-
             await NavigateToSettingsPage();
         }
 
         private async Task NavigateToSettingsPage()
         {
-            TaskCompletionSourceS<ServiceBuilder> result = new TaskCompletionSourceS<ServiceBuilder>(serviceHandler.Builder.Clone());
+            TaskCompletionSourceS<AudioServicesBuildConfig> result =
+                new TaskCompletionSourceS<AudioServicesBuildConfig>(audioServicesHandler.Config.Clone());
             Frame.NavigateToSettingsPage(result);
 
-            ServiceBuilder newBuilder = await result.Task;
+            AudioServicesBuildConfig newConfig = await result.Task;
 
-            if (newBuilder == null) return;
-
-            serviceHandler.Builder = newBuilder;
-
-            await serviceHandler.Rebuild(true);
+            if (newConfig != null) audioServicesHandler.Start(newConfig);
         }
 
         private async void AbbDebug_Click(object sender, RoutedEventArgs e)
@@ -394,14 +309,17 @@ namespace AudioPlayerFrontend
 
             await new MessageDialog(exceptionText, time.ToString()).ShowAsync();
 
-            string message = $"Communicator: {serviceHandler?.Communicator?.Name}\r\n" +
-                $"State: {serviceHandler?.Communicator?.IsOpen}\r\n" +
-                $"Build: {serviceHandler?.ServiceOpenBuild != null}\r\n" +
-                $"BuildEnd: {serviceHandler?.ServiceOpenBuild?.CommunicatorToken.IsEnded}\r\n" +
-                $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}";
+            string message = $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}"
+                + $"\nAudioHandler: {audioServicesHandler.IsStarted}"
+                + $"\nConfig: {audioServicesHandler.Config != null}"
+                + $"\nAudioServices: {audioServicesHandler.AudioServices != null}";
             await new MessageDialog(message, "States").ShowAsync();
 
-            await new MessageDialog(Logs.Get(), "Logs").ShowAsync();
+            const int maxLength = 4000;
+            string logs = await Logs.GetFile();
+            if (logs.Length > maxLength) logs = logs.Substring(logs.Length - maxLength);
+            bool keepLogs = await DialogUtils.ShowTwoOptionsAsync(logs, "Logs", "OK", "Clear");
+            if (!keepLogs) await Logs.ClearAll();
         }
     }
 }

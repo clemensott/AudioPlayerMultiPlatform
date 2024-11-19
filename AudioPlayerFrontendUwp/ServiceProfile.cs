@@ -1,5 +1,7 @@
-﻿using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Build;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions;
+using AudioPlayerBackend.Communication.Base;
+using System.Linq;
 
 namespace AudioPlayerFrontend
 {
@@ -11,63 +13,43 @@ namespace AudioPlayerFrontend
 
         public bool BuildClient { get; set; }
 
-        public CommunicatorProtocol CommunicatorProtocol { get; set; }
-
-        public int? Shuffle { get; set; }
-
-        public bool? IsSearchShuffle { get; set; }
-
-        public bool? Play { get; set; }
-
-        public bool? IsStreaming { get; set; }
+        public bool AutoUpdate { get; set; }
 
         public int ServerPort { get; set; }
 
         public int? ClientPort { get; set; }
 
-        public string SearchKey { get; set; }
-
         public string ServerAddress { get; set; }
 
-        public float? Volume { get; set; }
+        public FileMediaSourceRootInfo[] DefaultUpdateRoots { get; set; }
 
-        public float? ClientVolume { get; set; }
-
-        public ServiceProfile(ServiceBuilder sb)
+        public byte[] ToData()
         {
-            BuildStandalone = sb.BuildStandalone;
-            BuildServer = sb.BuildServer;
-            BuildClient = sb.BuildClient;
-            CommunicatorProtocol = sb.CommunicatorProtocol;
-            Shuffle = (int?)sb.Shuffle;
-            IsSearchShuffle = sb.IsSearchShuffle;
-            Play = sb.Play;
-            IsStreaming = sb.IsStreaming;
-            ServerPort = sb.ServerPort;
-            ClientPort = sb.ClientPort;
-            SearchKey = sb.SearchKey;
-            ServerAddress = sb.ServerAddress;
-            Volume = sb.Volume;
-            ClientVolume = null;
+            return new ByteQueue()
+                .Enqueue(BuildStandalone)
+                .Enqueue(BuildServer)
+                .Enqueue(BuildClient)
+                .Enqueue(AutoUpdate)
+                .Enqueue(ServerPort)
+                .Enqueue(ClientPort)
+                .Enqueue(ServerAddress)
+                .Enqueue(DefaultUpdateRoots);
         }
 
-        public void FillServiceBuilder(ServiceBuilder builder)
+        public static ServiceProfile FromData(byte[] data)
         {
-            if (BuildStandalone) builder.WithStandalone();
-            else if (BuildServer) builder.WithServer(ServerPort);
-            else if (BuildClient) builder.WithClient(ServerAddress, ClientPort);
-
-            builder
-                .WithCommunicatorProtocol(CommunicatorProtocol)
-                .WithShuffle((OrderType?)Shuffle)
-                .WithIsSearchShuffle(IsSearchShuffle)
-                .WithPlay(Play)
-                .WithIsStreaming(IsStreaming)
-                .WithServerPort(ServerPort)
-                .WithClientPort(ClientPort)
-                .WithSearchKey(SearchKey)
-                .WithServerAddress(ServerAddress)
-                .WithVolume(Volume);
+            ByteQueue queue = data;
+            return new ServiceProfile()
+            {
+                BuildStandalone = queue.DequeueBool(),
+                BuildServer = queue.DequeueBool(),
+                BuildClient = queue.DequeueBool(),
+                AutoUpdate = queue.DequeueBool(),
+                ServerPort = queue.DequeueInt(),
+                ClientPort = queue.DequeueIntNullable(),
+                ServerAddress = queue.DequeueString(),
+                DefaultUpdateRoots = queue.DequeueFileMediaSourceRootInfos()?.ToArray(),
+            };
         }
     }
 }

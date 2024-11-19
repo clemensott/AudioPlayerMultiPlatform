@@ -5,9 +5,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using AudioPlayerBackend.Audio;
 using AudioPlayerBackend.Build;
-using AudioPlayerBackend.Communication.Base;
+using StdOttStandard.Linq;
 using StdOttStandard.Linq.DataStructures;
 
 namespace AudioPlayerBackend.Communication.OwnTcp
@@ -21,20 +20,19 @@ namespace AudioPlayerBackend.Communication.OwnTcp
         private Task openTask;
 
         public override event EventHandler<DisconnectedEventArgs> Disconnected;
+        public override event EventHandler<ReceivedEventArgs> Received;
 
         public override bool IsOpen => isOpen;
 
         public int Port { get; }
 
-        public override string Name => "TCP Server: " + Port;
-
-        public OwnTcpServerCommunicator(int port)
+        public OwnTcpServerCommunicator(AudioServicesBuildConfig config)
         {
-            Port = port;
+            Port = config.ServerPort;
             listener = new TcpListener(IPAddress.Any, Port);
         }
 
-        public override async Task OpenAsync(BuildStatusToken statusToken)
+        public override async Task Start()
         {
             if (isOpen) return;
 
@@ -42,27 +40,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             {
                 isOpen = true;
                 listener.Start();
-            }
-            catch
-            {
-                await CloseAsync();
-                throw;
-            }
-        }
 
-        public override Task SetService(IAudioServiceBase service, BuildStatusToken statusToken)
-        {
-            Unsubscribe(Service);
-            Service = service;
-            Subscribe(Service);
-
-            return SyncService(statusToken);
-        }
-
-        public override async Task SyncService(BuildStatusToken statusToken)
-        {
-            try
-            {
                 connections = new List<OwnTcpServerConnection>();
                 processQueue = new AsyncQueue<OwnTcpSendMessage>();
 
@@ -70,7 +48,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
             catch (Exception e)
             {
-                await CloseAsync(e, true);
+                await Stop(e, true);
                 throw;
             }
         }
@@ -94,13 +72,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
             catch (Exception e)
             {
-                await CloseAsync(e, false);
+                await Stop(e, false);
             }
         }
 
         private async Task SendClientHandler(OwnTcpServerConnection connection)
         {
-            uint count = 0;
             try
             {
                 while (connection.Client.Connected)
@@ -108,13 +85,13 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     OwnTcpSendMessage send = connection.SendQueue.Dequeue();
                     if (send == null || !connection.Client.Connected) break;
 
-                    if (!send.Message.HasID) send.Message.ID = count++;
+                    if (!send.Message.HasID) send.Message.ID = connection.GetNextMessageID();
 
                     byte[] data = GetBytes(send.Message).ToArray();
                     await connection.Stream.WriteAsync(data, 0, data.Length);
                     await connection.Stream.FlushAsync();
 
-                    send.SetResult(true);
+                    send.SetResult(null);
                 }
             }
             catch (Exception e)
@@ -135,13 +112,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                     switch (message.Topic)
                     {
                         case PingCmd:
-                            await SendAnswer(connection, message.ID, 200);
-                            break;
-
-                        case SyncCmd:
-                            ByteQueue data = new ByteQueue();
-                            data.Enqueue(Service);
-                            await SendMessageToClient(connection, SyncCmd, message.ID, data);
+                            await SendAnswer(connection, message.ID, (int)HttpStatusCode.OK);
                             break;
 
                         case CloseCmd:
@@ -152,17 +123,14 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                             OwnTcpSendMessage processItem = new OwnTcpSendMessage(message);
                             await processQueue.Enqueue(processItem);
 
-                            if (await processItem.Task)
-                            {
-                                Task responseTask = message.IsFireAndForget
-                                    ? Task.CompletedTask
-                                    : SendAnswer(connection, message.ID, 200);
+                            byte[] resultData = await processItem.Task;
+                            Task responseTask = message.IsFireAndForget
+                                ? Task.CompletedTask
+                                : SendAnswer(connection, message.ID, (int)HttpStatusCode.OK, resultData);
 
-                                await SendMessageToAllOtherClients(connection, message.Topic, message.Payload);
+                            await SendMessageToAllOtherClients(connection, message.Topic, message.Payload);
 
-                                await responseTask;
-                            }
-                            else await CloseConnection(connection);
+                            await responseTask;
                             break;
                     }
                 }
@@ -173,9 +141,18 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        private static Task SendAnswer(OwnTcpServerConnection connection, uint id, int value)
+        private static Task SendAnswer(OwnTcpServerConnection connection, uint id, int code)
         {
-            return SendMessageToClient(connection, AnwserCmd, id, BitConverter.GetBytes(value));
+            byte[] payload = BitConverter.GetBytes(code);
+
+            return SendMessageToClient(connection, AnwserCmd, id, payload);
+        }
+
+        private static Task SendAnswer(OwnTcpServerConnection connection, uint id, int code, byte[] data)
+        {
+            byte[] payload = BitConverter.GetBytes(code).Concat(data.ToNotNull()).ToArray();
+
+            return SendMessageToClient(connection, AnwserCmd, id, payload);
         }
 
         private async Task CloseConnection(OwnTcpServerConnection connection, bool sendClose = true)
@@ -193,42 +170,44 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             connections.Remove(connection);
         }
 
-        private Task SendMessageToAllOtherClients(OwnTcpServerConnection srcConnection, string topic, byte[] payload)
+        private Task<bool> SendMessageToAllOtherClients(OwnTcpServerConnection srcConnection, string topic, byte[] payload)
         {
             return SendMessageToClients(connections.Where(c => c != srcConnection), topic, payload);
         }
 
-        private Task SendMessageToClients(string topic, byte[] payload)
+        private Task<bool> SendMessageToClients(string topic, byte[] payload)
         {
             return SendMessageToClients(connections, topic, payload);
         }
 
-        private Task SendMessageToClients(IEnumerable<OwnTcpServerConnection> sendToConnections, string topic, byte[] payload)
+        private async Task<bool> SendMessageToClients(IEnumerable<OwnTcpServerConnection> sendToConnections, string topic, byte[] payload)
         {
-            return Task.WhenAll(sendToConnections.ToArray().Select(Send));
+            bool[] result = await Task.WhenAll(sendToConnections.ToArray().Select(Send));
+            return result.All(x => x);
 
-            async Task Send(OwnTcpServerConnection connection)
+            async Task<bool> Send(OwnTcpServerConnection connection)
             {
                 try
                 {
-                    await SendMessageToClient(connection, topic, payload);
+                    return await SendMessageToClient(connection, topic, payload);
                 }
                 catch
                 {
                     await CloseConnection(connection);
+                    return false;
                 }
             }
         }
 
-        private static Task SendMessageToClient(OwnTcpServerConnection connection, string topic, byte[] payload)
+        private static Task<bool> SendMessageToClient(OwnTcpServerConnection connection, string topic, byte[] payload)
         {
             return SendMessageToClient(connection, topic, 0, payload);
         }
 
-        private static async Task SendMessageToClient(OwnTcpServerConnection connection,
+        private static async Task<bool> SendMessageToClient(OwnTcpServerConnection connection,
             string topic, uint id, byte[] payload = null)
         {
-            if (!connection.Client.Connected) return;
+            if (!connection.Client.Connected) return false;
 
             OwnTcpMessage message = new OwnTcpMessage()
             {
@@ -239,6 +218,7 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             };
 
             await connection.SendQueue.Enqueue(message).ConfigureAwait(false);
+            return true;
         }
 
         private async Task ProcessHandler(AsyncQueue<OwnTcpSendMessage> queue)
@@ -252,8 +232,14 @@ namespace AudioPlayerBackend.Communication.OwnTcp
                 {
                     LockTopic(item.Message.Topic, item.Message.Payload);
 
-                    bool success = HandlerMessage(item.Message);
-                    item.SetResult(success);
+                    ReceivedEventArgs args = new ReceivedEventArgs(item.Message.Topic, item.Message.Payload);
+                    Received?.Invoke(this, args);
+                    if (args.IsAwserStarted)
+                    {
+                        byte[] result = await args.Anwser.Task;
+                        item.SetResult(result);
+                    }
+                    else item.SetException(new Exception("Handle message not successful"));
                 }
                 catch (Exception e)
                 {
@@ -266,12 +252,12 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        public override Task CloseAsync()
+        public override Task Stop()
         {
-            return CloseAsync(null, true);
+            return Stop(null, true);
         }
 
-        private async Task CloseAsync(Exception e, bool awaitAll)
+        private async Task Stop(Exception e, bool awaitAll)
         {
             if (!IsOpen) return;
 
@@ -297,20 +283,26 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             }
         }
 
-        public override void Dispose()
+        public override async Task Dispose()
         {
-            CloseAsync(null, false).Wait();
+            await Stop(null, false);
         }
 
-        public override Task SendCommand(string cmd)
+        public override Task<bool> SendCommand(string cmd)
         {
             byte[] payload = Encoding.UTF8.GetBytes(cmd);
             return SendMessageToClients(cmdString, payload);
         }
 
-        protected override Task SendAsync(string topic, byte[] payload, bool fireAndForget)
+        public override Task<byte[]> SendAsync(string topic, byte[] payload)
         {
-            return SendMessageToClients(topic, payload);
+            return SendAsync(topic, payload, false);
+        }
+
+        protected override async Task<byte[]> SendAsync(string topic, byte[] payload, bool fireAndForget)
+        {
+            await SendMessageToClients(topic, payload);
+            return null;
         }
     }
 }

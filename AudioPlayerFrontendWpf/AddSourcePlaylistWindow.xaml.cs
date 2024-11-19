@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows;
-using AudioPlayerBackend;
-using AudioPlayerBackend.Audio;
-using AudioPlayerBackend.Audio.MediaSource;
+using AudioPlayerBackend.AudioLibrary;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using AudioPlayerBackend.Build;
 using AudioPlayerBackend.FileSystem;
+using AudioPlayerFrontend.Join;
+using AudioPlayerFrontend.ViewModels;
 using StdOttStandard.Converter.MultipleInputs;
-using StdOttStandard.Linq;
 
 namespace AudioPlayerFrontend
 {
@@ -17,31 +20,37 @@ namespace AudioPlayerFrontend
     /// </summary>
     public partial class AddSourcePlaylistWindow : Window
     {
-        private readonly IFileSystemService fileSystemService;
-        private readonly IAudioService service;
-        private readonly ISourcePlaylist newPlaylist;
+        private readonly IUpdateLibraryService updateLibraryService;
+        private readonly AddSourcePlaylistViewModel viewModel;
 
-        public AddSourcePlaylistWindow(string[] sources, IAudioService service)
+        public AddSourcePlaylistWindow(string[] sources, AudioServices audioServices)
         {
             InitializeComponent();
 
-            fileSystemService = AudioPlayerServiceProvider.Current.GetFileSystemService();
-            this.service = service;
-            IAudioCreateService audioCreateService = AudioPlayerServiceProvider.Current.GetAudioCreateService();
-            newPlaylist = audioCreateService.CreateSourcePlaylist(Guid.NewGuid());
-            newPlaylist.Loop = LoopType.CurrentPlaylist;
+            updateLibraryService = audioServices.GetUpdateLibraryService();
+            viewModel = new AddSourcePlaylistViewModel(audioServices);
+            viewModel.AppendSources = true;
+            viewModel.Sources = string.Join("\n", sources);
 
             try
             {
-                newPlaylist.Name = sources.Length == 1 ?
+                viewModel.Name = sources.Length == 1 ?
                     Path.GetFileNameWithoutExtension(sources[0]) :
                     Path.GetFileName(Path.GetDirectoryName(sources[0]));
             }
             catch { }
 
-            DataContext = service;
-            gidNewPlaylist.DataContext = newPlaylist;
-            tbxSources.Text = sources.Join();
+            DataContext = viewModel;
+        }
+
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            await viewModel.Start();
+        }
+
+        private async void Window_Unloaded(object sender, RoutedEventArgs e)
+        {
+            await viewModel.Dispose();
         }
 
         private object MicNewPlaylist_Convert(object sender, MultiplesInputsConvert2EventArgs args)
@@ -58,46 +67,46 @@ namespace AudioPlayerFrontend
         {
             if (args.Input1 == null) return false;
 
-            ISourcePlaylist selectedPlaylist = (ISourcePlaylist)args.Input0;
+            PlaylistInfo selectedPlaylist = (PlaylistInfo)args.Input0;
             bool isNewPlaylist = (bool)args.Input1;
             string newPlaylistName = (string)args.Input2;
 
             return isNewPlaylist ? !string.IsNullOrWhiteSpace(newPlaylistName) : selectedPlaylist != null;
         }
 
-        private void BtnOk_Click(object sender, RoutedEventArgs e)
+        private async void BtnOk_Click(object sender, RoutedEventArgs e)
         {
-            string[] paths = tbxSources.Text?.Replace("\r\n", "\n").Split('\n').Where(l => l.Length > 0).ToArray();
-            var fileMediaSourceRoots = service.FileMediaSourceRoots.ToNotNull();
-            (IList<FileMediaSource> newSoruces, IList<FileMediaSourceRoot> newRoots) =
-                FileMediaSourcesHelper.ExtractFileMediaSources(paths, fileMediaSourceRoots);
+            string[] newPaths = viewModel.Sources?.Replace("\r\n", "\n").Split('\n').Where(l => l.Length > 0).ToArray();
 
-            if ((bool)micNewPlaylist.Output)
+            if (viewModel.NewPlaylist)
             {
-                FileMediaSourceRoot[] newAllRoots = fileMediaSourceRoots.ToNotNull().Concat(newRoots).ToArray();
-                newPlaylist.FileMediaSources = newSoruces.ToArray();
-                fileSystemService.UpdateSourcePlaylist(newPlaylist, newAllRoots);
-                service.SourcePlaylists.Add(newPlaylist);
-                service.CurrentPlaylist = newPlaylist;
-                service.FileMediaSourceRoots = newAllRoots;
+                FileMediaSources fileMediaSources = FileMediaSourcesHelper.ExtractFileMediaSources(newPaths);
+                Song[] songs = await updateLibraryService.ReloadSourcePlaylist(fileMediaSources);
+                Playlist newPlaylist = new Playlist(Guid.NewGuid(), PlaylistType.SourcePlaylist, viewModel.Name,
+                    viewModel.Shuffle, viewModel.Loop, 1, null, songs,
+                    fileMediaSources, null, DateTime.Now, DateTime.Now);
+
+                await viewModel.PlaylistsRepo.InsertPlaylist(newPlaylist, null);
+                await viewModel.LibraryRepo.SetCurrentPlaylistId(newPlaylist.Id);
             }
             else
             {
-                ISourcePlaylist selectedPlaylist = (ISourcePlaylist)lbxPlaylists.SelectedItem;
-                if (rbnAppend.IsChecked == true)
+                PlaylistInfo selectedPlaylistInfo = (PlaylistInfo)lbxPlaylists.SelectedItem;
+                string[] newAllPaths;
+                if (viewModel.AppendSources)
                 {
-                    selectedPlaylist.FileMediaSources = selectedPlaylist.FileMediaSources.Concat(newSoruces).ToArray();
-                    service.FileMediaSourceRoots = fileMediaSourceRoots.Concat(newRoots).ToArray();
+                    Playlist playlist = await viewModel.PlaylistsRepo.GetPlaylist(selectedPlaylistInfo.Id);
+                    IEnumerable<string> existingPaths = UpdateLibraryService.LoadAllFilePaths(playlist.FileMediaSources);
+                    newAllPaths = existingPaths.Concat(newPaths).Distinct().ToArray();
                 }
                 else
                 {
-                    selectedPlaylist.FileMediaSources = newSoruces.ToArray();
-                    service.FileMediaSourceRoots = fileMediaSourceRoots
-                        .Where(root => service.SourcePlaylists.SelectMany(p => p.FileMediaSources).Any(s => s.RootId == root.Id))
-                        .ToArray();
+                    newAllPaths = newPaths.ToArray();
                 }
 
-                fileSystemService.UpdateSourcePlaylist(selectedPlaylist, service.FileMediaSourceRoots);
+                FileMediaSources fileMediaSources = FileMediaSourcesHelper.ExtractFileMediaSources(newAllPaths);
+                await viewModel.PlaylistsRepo.SetFileMedisSources(selectedPlaylistInfo.Id, fileMediaSources);
+                await updateLibraryService.UpdateSourcePlaylist(selectedPlaylistInfo.Id);
             }
 
             Close();

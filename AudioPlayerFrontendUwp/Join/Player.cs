@@ -1,4 +1,5 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.GenericEventArgs;
 using AudioPlayerBackend.Player;
 using System;
 using System.Threading;
@@ -13,7 +14,7 @@ namespace AudioPlayerFrontend.Join
     class Player : IPlayer
     {
         private PlaybackState playState;
-        private RequestSong? wannaSong;
+        private RequestSong? request;
         private readonly SemaphoreSlim sem;
         private readonly MediaPlayer player;
 
@@ -23,6 +24,7 @@ namespace AudioPlayerFrontend.Join
         public event EventHandler<HandledEventArgs> NextPressed;
         public event EventHandler<HandledEventArgs> PreviousPressed;
         public event EventHandler<ValueChangedEventArgs<PlaybackState>> PlayStateChanged;
+        public event EventHandler<ValueChangedEventArgs<float>> VolumeChanged;
 
         public PlaybackState PlayState
         {
@@ -34,7 +36,10 @@ namespace AudioPlayerFrontend.Join
 
                 HandlePlayStateChange();
 
-                PlayStateChanged?.Invoke(this, new ValueChangedEventArgs<PlaybackState>(oldState, value));
+                if (oldState != value)
+                {
+                    PlayStateChanged?.Invoke(this, new ValueChangedEventArgs<PlaybackState>(oldState, value));
+                }
             }
         }
 
@@ -46,6 +51,12 @@ namespace AudioPlayerFrontend.Join
 
         public float Volume { get => (float)player.Volume; set => player.Volume = value; }
 
+        public double PlaybackRate
+        {
+            get => player.PlaybackSession.PlaybackRate;
+            set => player.PlaybackSession.PlaybackRate = value;
+        }
+
         public SystemMediaTransportControls SMTC => player.SystemMediaTransportControls;
 
         public Player()
@@ -55,6 +66,7 @@ namespace AudioPlayerFrontend.Join
             player.MediaOpened += Player_MediaOpened;
             player.MediaFailed += Player_MediaFailed;
             player.MediaEnded += Player_MediaEnded;
+            player.VolumeChanged += Player_VolumeChanged;
 
             player.CommandManager.IsEnabled = true;
             player.CommandManager.NextBehavior.EnablingRule = MediaCommandEnablingRule.Always;
@@ -63,6 +75,11 @@ namespace AudioPlayerFrontend.Join
             player.CommandManager.PreviousReceived += CommandManager_PreviousReceived;
             player.CommandManager.PlayReceived += CommandManager_PlayReceived;
             player.CommandManager.PauseReceived += CommandManager_PauseReceived;
+        }
+
+        private void Player_VolumeChanged(MediaPlayer sender, object args)
+        {
+            VolumeChanged?.Invoke(this, new ValueChangedEventArgs<float>(-1, Volume));
         }
 
         private void CommandManager_NextReceived(MediaPlaybackCommandManager sender, MediaPlaybackCommandManagerNextReceivedEventArgs args)
@@ -88,20 +105,20 @@ namespace AudioPlayerFrontend.Join
         }
 
         private void CommandManager_PauseReceived(MediaPlaybackCommandManager sender, MediaPlaybackCommandManagerPauseReceivedEventArgs args)
-        {   
+        {
             PlayState = PlaybackState.Paused;
             args.Handled = true;
         }
 
         private void Player_MediaOpened(MediaPlayer sender, object args)
         {
-            Source = wannaSong.Value.Song;
-            if (wannaSong.Value.Position.HasValue && wannaSong.Value.Duration == sender.PlaybackSession.NaturalDuration)
+            Source = request.Value.Song;
+            if (request.Value.Duration == sender.PlaybackSession.NaturalDuration)
             {
-                sender.PlaybackSession.Position = wannaSong.Value.Position.Value;
+                sender.PlaybackSession.Position = request.Value.Position;
             }
 
-            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, wannaSong.Value.Song));
+            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, request.Value.Song));
             ExecutePlayState();
             sem.Release();
         }
@@ -109,7 +126,7 @@ namespace AudioPlayerFrontend.Join
         private void Player_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
             Source = null;
-            MediaFailed?.Invoke(this, new MediaFailedEventArgs(wannaSong?.Song, args.ExtendedErrorCode));
+            MediaFailed?.Invoke(this, new MediaFailedEventArgs(request?.Song, args.ExtendedErrorCode));
             sem.Release();
         }
 
@@ -118,30 +135,29 @@ namespace AudioPlayerFrontend.Join
             MediaEnded?.Invoke(this, new MediaEndedEventArgs(Source));
         }
 
-        public Task Set(RequestSong? wanna)
+        public Task Set(RequestSong? request)
         {
-            return wanna.HasValue ? Set(wanna.Value) : Stop();
+            return request.HasValue ? Set(request.Value) : Stop();
         }
 
-        private async Task Set(RequestSong wanna)
+        private async Task Set(RequestSong request)
         {
-            wannaSong = wanna;
+            this.request = request;
 
             await sem.WaitAsync();
 
             bool release = true;
             try
             {
-                if (!wannaSong.Equals(wanna)) return;
+                if (!this.request.Equals(request)) return;
 
-                if (Source.HasValue && wanna.Song.FullPath == Source?.FullPath)
+                if (Source.HasValue && request.Song.FullPath == Source?.FullPath)
                 {
-                    if (wanna.Position.HasValue &&
-                        wanna.Position.Value != Position)
+                    if (!request.ContinuePlayback && request.Position != Position)
                     {
-                        player.PlaybackSession.Position = wanna.Position.Value;
+                        player.PlaybackSession.Position = request.Position;
                     }
-                    Source = wanna.Song;
+                    Source = request.Song;
                     ExecutePlayState();
                     return;
                 }
@@ -150,7 +166,7 @@ namespace AudioPlayerFrontend.Join
             catch (Exception e)
             {
                 Source = null;
-                MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
             }
             finally
             {
@@ -159,24 +175,24 @@ namespace AudioPlayerFrontend.Join
 
             try
             {
-                StorageFile file = await StorageFile.GetFileFromPathAsync(wanna.Song.FullPath);
+                StorageFile file = await StorageFile.GetFileFromPathAsync(request.Song.FullPath);
                 player.Source = MediaSource.CreateFromStorageFile(file);
 
                 await SMTC.DisplayUpdater.CopyFromFileAsync(MediaPlaybackType.Music, file);
                 if (string.IsNullOrWhiteSpace(SMTC.DisplayUpdater.MusicProperties.Title))
                 {
-                    SMTC.DisplayUpdater.MusicProperties.Title = wanna.Song.Title ?? string.Empty;
+                    SMTC.DisplayUpdater.MusicProperties.Title = request.Song.Title ?? string.Empty;
                 }
                 if (string.IsNullOrWhiteSpace(SMTC.DisplayUpdater.MusicProperties.Artist))
                 {
-                    SMTC.DisplayUpdater.MusicProperties.Artist = wanna.Song.Artist ?? string.Empty;
+                    SMTC.DisplayUpdater.MusicProperties.Artist = request.Song.Artist ?? string.Empty;
                 }
                 SMTC.DisplayUpdater.Update();
             }
             catch (Exception e)
             {
                 Source = null;
-                MediaFailed?.Invoke(this, new MediaFailedEventArgs(wanna.Song, e));
+                MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
                 sem.Release();
             }
         }

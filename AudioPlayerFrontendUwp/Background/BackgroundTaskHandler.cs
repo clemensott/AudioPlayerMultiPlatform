@@ -1,9 +1,9 @@
-﻿using AudioPlayerBackend.Audio;
+﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
 using StdOttStandard;
 using StdOttStandard.Dispatch;
 using System;
-using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.UI.Xaml;
@@ -17,14 +17,16 @@ namespace AudioPlayerFrontend.Background
         public static BackgroundTaskHandler Current { get; private set; }
 
         private bool isInBackground;
-        private readonly ServiceHandler service;
+        private readonly AudioServicesHandler servicesHandler;
         private readonly SemaphoreSlim sem;
         private readonly Dispatcher dispatcher;
         private readonly ResetTimer closeTimer;
+        private ILibraryRepo libraryRepo;
+        private PlaybackState playState;
 
         public bool IsRunning { get; private set; }
 
-        public BackgroundTaskHandler(Dispatcher dispatcher, ServiceHandler service)
+        public BackgroundTaskHandler(Dispatcher dispatcher, AudioServicesHandler servicesHandler)
         {
             if (Current != null) throw new InvalidOperationException("Only one instance of this class is allowed");
             Current = this;
@@ -33,64 +35,73 @@ namespace AudioPlayerFrontend.Background
             sem = new SemaphoreSlim(0, 1);
 
             this.dispatcher = dispatcher;
-            this.service = service;
+            this.servicesHandler = servicesHandler;
 
             closeTimer = ResetTimer.Start(inativeTime);
+        }
+
+        public void Start()
+        {
+            ResetCloseTimer();
             closeTimer.RanDown += CloseTimer_RanDown;
 
-            Subscribe(service);
             Application.Current.EnteredBackground += OnEnteredBackground;
             Application.Current.LeavingBackground += OnLeavingBackground;
+
+            SubscribeServicesHandler();
         }
 
         private void CloseTimer_RanDown(object sender, EventArgs e)
         {
-            if (isInBackground && service.Audio?.PlayState != PlaybackState.Playing) Stop();
+            AudioPlayerBackend.Logs.Log("BackgroundTaskHandler.CloseTimer_RanDown", isInBackground, playState);
+            if (isInBackground && playState != PlaybackState.Playing) Stop();
             else ResetCloseTimer();
         }
 
-        private void Subscribe(ServiceHandler serviceHandler)
+        private void SubscribeServicesHandler()
         {
-            if (serviceHandler == null) return;
-
-            serviceHandler.PropertyChanged += ServiceHandler_PropertyChanged;
-            Subscribe(service.Audio);
+            servicesHandler.AddAudioServicesChangedListener(ServicesHandler_AudioServicesChanged);
         }
 
-        private void Unsubscribe(ServiceHandler serviceHandler)
+        private void UnsubscribeServicesHandler()
         {
-            if (serviceHandler == null) return;
-
-            serviceHandler.PropertyChanged -= ServiceHandler_PropertyChanged;
-            Unsubscribe(service.Audio);
+            servicesHandler.AudioServicesChanged -= ServicesHandler_AudioServicesChanged;
         }
 
-        private void ServiceHandler_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        private void ServicesHandler_AudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
         {
-            ServiceHandler serviceHandler = (ServiceHandler)sender;
-            if (e.PropertyName == nameof(serviceHandler.Audio))
-            {
-                Subscribe(serviceHandler.Audio);
-                ResetCloseTimer();
-            }
+            HandleAudioServices(e.NewServices);
         }
 
-        private void Subscribe(IAudioService audioService)
+        private void HandleAudioServices(AudioServices audioServices)
         {
-            if (audioService == null) return;
+            UnsubscribeLibraryRepo();
 
-            audioService.PlayStateChanged += AudioService_PlayStateChanged;
+            if (audioServices == null) return;
+
+            libraryRepo = audioServices?.GetLibraryRepo();
+
+            SubscribeLibraryRepo();
+            ResetCloseTimer();
         }
 
-        private void Unsubscribe(IAudioService audioService)
+        private void SubscribeLibraryRepo()
         {
-            if (audioService == null) return;
+            if (libraryRepo == null) return;
 
-            audioService.PlayStateChanged -= AudioService_PlayStateChanged;
+            libraryRepo.PlayStateChanged += LibraryRepo_PlayStateChanged;
         }
 
-        private void AudioService_PlayStateChanged(object sender, ValueChangedEventArgs<PlaybackState> e)
+        private void UnsubscribeLibraryRepo()
         {
+            if (libraryRepo == null) return;
+
+            libraryRepo.PlayStateChanged -= LibraryRepo_PlayStateChanged;
+        }
+
+        private void LibraryRepo_PlayStateChanged(object sender, AudioLibraryChangeArgs<PlaybackState> e)
+        {
+            playState = e.NewValue;
             ResetCloseTimer();
         }
 
@@ -108,13 +119,16 @@ namespace AudioPlayerFrontend.Background
         public async Task Run()
         {
             IsRunning = true;
-            ResetCloseTimer();
 
             dispatcher.Start();
+            Start();
 
             await sem.WaitAsync();
-            Unsubscribe(service);
+            UnsubscribeServicesHandler();
+            UnsubscribeLibraryRepo();
+
             IsRunning = false;
+
             await dispatcher.Stop();
         }
 
@@ -125,7 +139,8 @@ namespace AudioPlayerFrontend.Background
 
         public void Stop()
         {
-            if (IsRunning) sem.Release();
+            AudioPlayerBackend.Logs.Log("BackgroundTaskHandler.Stop", IsRunning, sem.CurrentCount);
+            if (IsRunning && sem.CurrentCount == 0) sem.Release();
         }
     }
 }
