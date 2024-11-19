@@ -10,17 +10,13 @@ namespace AudioPlayerFrontend.Join
     {
         public async Task InvokeDispatcher(Action action)
         {
-            try
-            {
-                CoreDispatcher dispatcher = CoreApplication.MainView.CoreWindow.Dispatcher;
+            CoreDispatcher dispatcher = CoreApplication.MainView.CoreWindow.Dispatcher;
 
-                if (dispatcher.HasThreadAccess) action();
-                else
-                {
-                    await dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => action());
-                }
+            if (dispatcher.HasThreadAccess) action();
+            else
+            {
+                await dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => action());
             }
-            catch { }
         }
 
         public async Task<T> InvokeDispatcher<T>(Func<T> func)
