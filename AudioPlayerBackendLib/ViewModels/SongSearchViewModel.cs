@@ -309,7 +309,10 @@ namespace AudioPlayerBackend.ViewModels
 
         private async void OnInsertedPlaylist(object sender, InsertPlaylistArgs e)
         {
-            if (e.Playlist.Type.HasFlag(PlaylistType.Search)) await SearchPlaylist.SetPlaylistId(e.Playlist.Id);
+            if (e.Playlist.Type.HasFlag(PlaylistType.Search))
+            {
+                await dispatcher.InvokeDispatcher(() => SearchPlaylist.SetPlaylistId(e.Playlist.Id));
+            }
         }
 
         private async void OnSongsChanged(object sender, PlaylistChangeArgs<ICollection<Song>> e)

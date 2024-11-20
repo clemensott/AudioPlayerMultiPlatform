@@ -216,8 +216,11 @@ namespace AudioPlayerBackend.ViewModels
 
         private async void OnCurrentPlaylistIdChanged(object sender, AudioLibraryChangeArgs<Guid?> e)
         {
-            await CurrentPlaylist.SetPlaylistId(e.NewValue);
-            await dispatcher.InvokeDispatcher(() => UpdateCurrentPlaylistIndex());
+            await dispatcher.InvokeDispatcher(async () =>
+            {
+                await CurrentPlaylist.SetPlaylistId(e.NewValue);
+                UpdateCurrentPlaylistIndex();
+            });
         }
 
         private async void OnInsertedPlaylist(object sender, InsertPlaylistArgs e)
