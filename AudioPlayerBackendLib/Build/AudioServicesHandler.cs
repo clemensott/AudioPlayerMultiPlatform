@@ -12,6 +12,7 @@ namespace AudioPlayerBackend.Build
         private readonly object isStartedLockObj;
         private readonly Dispatcher backgrounTaskDispatcher;
         private readonly SemaphoreSlim keepOpenSem;
+        private readonly AudioServicesBuildConfigTransformer buildConfigTransformer;
         private AudioServicesBuilder builder;
         private AudioServices audioServices;
 
@@ -45,14 +46,16 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public AudioServicesBuildConfig Config { get; private set; }
+        public AudioServicesBuildConfig Config { get;private set; }
 
         public bool IsStarted { get; private set; }
 
-        public AudioServicesHandler(Dispatcher backgrounTaskDispatcher = null)
+        public AudioServicesHandler(Dispatcher backgrounTaskDispatcher = null,
+            AudioServicesBuildConfigTransformer buildConfigTransformer = null)
         {
             isStartedLockObj = new object();
             this.backgrounTaskDispatcher = backgrounTaskDispatcher;
+            this.buildConfigTransformer = buildConfigTransformer;
             keepOpenSem = new SemaphoreSlim(0);
         }
 
@@ -66,6 +69,11 @@ namespace AudioPlayerBackend.Build
         {
             AudioServicesChanged += eventHandler;
             if (AudioServices != null) eventHandler(this, new AudioServicesChangedEventArgs(null, AudioServices));
+        }
+
+        private AudioServicesBuildConfig GetBuildConfig()
+        {
+            return buildConfigTransformer == null ? Config : buildConfigTransformer(Config);
         }
 
         public async void Start(AudioServicesBuildConfig config = null)
@@ -96,7 +104,7 @@ namespace AudioPlayerBackend.Build
 
                 await SetAudioServices(null);
 
-                Builder = new AudioServicesBuilder(Config.Clone());
+                Builder = new AudioServicesBuilder(GetBuildConfig().Clone());
                 if (backgrounTaskDispatcher == null) Build();
                 else await backgrounTaskDispatcher.Run(Build);
 

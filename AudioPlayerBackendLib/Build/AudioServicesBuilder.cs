@@ -12,6 +12,7 @@ using AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.OwnTcp;
 using AudioPlayerBackend.FileSystem;
+using AudioPlayerBackend.FileSystem.OwnTcp;
 using AudioPlayerBackend.Player;
 using AudioPlayerBackend.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -135,7 +136,7 @@ namespace AudioPlayerBackend.Build
             IList<IAudioService> serviceList = new List<IAudioService>()
             {
                 // playlist repo must be before library repo
-                // because the order in which the init sqls run are important
+                // because the order in which the init sqls run is important
                 serviceProvider.GetService<IPlaylistsRepo>(),
                 serviceProvider.GetService<ILibraryRepo>(),
                 serviceProvider.GetService<IUpdateLibraryService>(),
@@ -151,6 +152,7 @@ namespace AudioPlayerBackend.Build
                 serviceList.Add(serviceProvider.GetService<IServerCommunicator>());
                 serviceList.Add(serviceProvider.GetService<IServerLibraryRepoConnector>());
                 serviceList.Add(serviceProvider.GetService<IServerPlaylistsRepoConnector>());
+                serviceList.Add(serviceProvider.GetService<IServerUpdateLibraryServiceConnector>());
             }
 
             if (config.BuildClient)
@@ -184,15 +186,14 @@ namespace AudioPlayerBackend.Build
                 services.AddSingleton<IClientCommunicator, OwnTcpClientCommunicator>();
                 services.AddSingleton<ILibraryRepo, OwnTcpLibraryRepo>();
                 services.AddSingleton<IPlaylistsRepo, OwnTcpPlaylistsRepo>();
+                services.AddSingleton<IUpdateLibraryService, OwnTcpUpdateLibraryService>();
             }
             else throw new NotSupportedException("Mode not supported");
 
-            if (config.BuildServer)
-            {
-                services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
-                services.AddSingleton<IServerLibraryRepoConnector, OwnTcpServerLibraryRepoConnector>();
-                services.AddSingleton<IServerPlaylistsRepoConnector, OwnTcpServerPlaylistsRepoConnector>();
-            }
+            services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
+            services.AddSingleton<IServerLibraryRepoConnector, OwnTcpServerLibraryRepoConnector>();
+            services.AddSingleton<IServerPlaylistsRepoConnector, OwnTcpServerPlaylistsRepoConnector>();
+            services.AddSingleton<IServerUpdateLibraryServiceConnector, OwnTcpServerUpdateLibraryServiceConnector>();
 
             services.AddTransient<IPlayerService, AudioPlayerService>();
 
@@ -204,7 +205,7 @@ namespace AudioPlayerBackend.Build
 
             foreach (ServiceDescriptor service in config.AdditionalServices.ToNotNull())
             {
-                services.Replace(service);
+                services.TryAdd(service);
             }
 
             return services.BuildServiceProvider();

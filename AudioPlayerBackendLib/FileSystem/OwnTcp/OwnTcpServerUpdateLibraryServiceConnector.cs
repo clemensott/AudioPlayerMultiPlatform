@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.FileSystem.OwnTcp
 {
-    internal class OwnTcpServerUpdateLibraryServiceConnector : OwnTcpBaseServerConnector
+    internal class OwnTcpServerUpdateLibraryServiceConnector : OwnTcpBaseServerConnector, IServerUpdateLibraryServiceConnector
     {
         private readonly IUpdateLibraryService updateLibraryService;
 

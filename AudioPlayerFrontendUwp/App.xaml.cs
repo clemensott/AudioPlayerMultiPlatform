@@ -18,8 +18,7 @@ using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.Player;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
-using Windows.Storage.Streams;
-using System.Runtime.InteropServices.WindowsRuntime;
+using System.Net;
 
 namespace AudioPlayerFrontend
 {
@@ -50,16 +49,34 @@ namespace AudioPlayerFrontend
             loadServiceProfileTask = Task.Run(StartAudioServicesHandler);
 
             Dispatcher dispatcher = new Dispatcher();
-            audioServicesHandler = new AudioServicesHandler(dispatcher);
-            audioServicesHandler.AudioServicesChanged += OnAudioServicesChanged;
+            audioServicesHandler = new AudioServicesHandler(dispatcher, AudioServicesBuildConfigTransformer);
+            audioServicesHandler.ServicesBuild += OnServicesBuild;
             audioServicesBuilderNavigationHandler = new AudioServicesBuilderNavigationHandler(audioServicesHandler);
             backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, audioServicesHandler);
-            backgroundTaskHelper = new BackgroundTaskHelper();
+            backgroundTaskHelper = new BackgroundTaskHelper(audioServicesHandler);
         }
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             Settings.Current.SetUnhandledException(e.Exception);
+        }
+
+        private static AudioServicesBuildConfig AudioServicesBuildConfigTransformer(AudioServicesBuildConfig originalConfig)
+        {
+            if (originalConfig.BuildClient) return originalConfig;
+
+            AudioServicesBuildConfig transformedConfig = originalConfig.Clone();
+            if (originalConfig.BuildStandalone)
+            {
+                transformedConfig.WithClient(IPAddress.Loopback.ToString(), Settings.Current.BackgroundTaskPort);
+            }
+            else if (originalConfig.BuildServer)
+            {
+                transformedConfig.WithClient(IPAddress.Loopback.ToString(), originalConfig.ServerPort);
+            }
+
+            return transformedConfig;
+
         }
 
         /// <summary>
@@ -113,43 +130,19 @@ namespace AudioPlayerFrontend
             config.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, InvokeDispatcherService>();
             config.AdditionalServices.TryAddSingleton<IUpdateLibraryService, UpdateLibraryService>();
 
-            ServiceProfile? profile = await LoadServiceProfile();
+            ServiceProfile? profile = await ServiceProfile.Load();
             if (profile.HasValue) config.WithServiceProfile(profile.Value);
 
             audioServicesHandler.Start(config);
         }
 
-        private async Task<ServiceProfile?> LoadServiceProfile()
-        {
-            try
-            {
-                IStorageItem item = await ApplicationData.Current.LocalFolder.TryGetItemAsync(serviceProfileFilename);
-                if (item is StorageFile)
-                {
-                    IBuffer buffer = await FileIO.ReadBufferAsync((StorageFile)item);
-                    ServiceProfile profile = ServiceProfile.FromData(buffer.ToArray());
-                    return profile;
-                }
-            }
-            catch (Exception exc)
-            {
-                System.Diagnostics.Debug.WriteLine("Loading service profile failed:\n" + exc);
-            }
-
-            return null;
-        }
-
-        private async void OnAudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
+        private async void OnServicesBuild(object sender, AudioServicesBuilder e)
         {
             // save service profile if service was built successfully by it
             if (audioServicesHandler.Config != null)
             {
                 ServiceProfile profile = audioServicesHandler.Config.ToServiceProfile();
-                byte[] data = profile.ToData();
-
-                StorageFile file = await ApplicationData.Current.LocalFolder
-                    .CreateFileAsync(serviceProfileFilename, CreationCollisionOption.OpenIfExists);
-                await FileIO.WriteBytesAsync(file, data);
+                await profile.Save();
             }
         }
 

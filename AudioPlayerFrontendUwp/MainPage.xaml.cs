@@ -315,9 +315,9 @@ namespace AudioPlayerFrontend
                 + $"\nAudioServices: {audioServicesHandler.AudioServices != null}";
             await new MessageDialog(message, "States").ShowAsync();
 
-            const int maxLength = 4000;
+            const int maxLength = 15000;
             string logs = await Logs.GetFile();
-            if (logs.Length > maxLength) logs = logs.Substring(logs.Length - maxLength);
+            if (logs.Length > maxLength) logs = "[...]" + logs.Substring(logs.Length - maxLength);
             bool keepLogs = await DialogUtils.ShowTwoOptionsAsync(logs, "Logs", "OK", "Clear");
             if (!keepLogs) await Logs.ClearAll();
         }

@@ -69,7 +69,7 @@ namespace AudioPlayerFrontend
 
                         AudioServicesBuildConfig newConfig = await settingsResult.Task;
 
-                        audioServicesHandler.Start(newConfig ?? audioServicesHandler.Config);
+                        audioServicesHandler.Start(newConfig);
                         break;
                 }
             });

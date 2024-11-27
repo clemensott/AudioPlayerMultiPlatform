@@ -18,6 +18,12 @@ namespace AudioPlayerFrontend
             }
         }
 
+        public int BackgroundTaskPort
+        {
+            get => GetValue(nameof(BackgroundTaskPort), 28171);
+            set => SetValue(nameof(BackgroundTaskPort), value);
+        }
+
         public Guid ApplicationBackgroundTaskRegistrationId
         {
             get
