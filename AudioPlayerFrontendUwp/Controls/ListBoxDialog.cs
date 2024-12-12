@@ -57,7 +57,7 @@ namespace AudioPlayerFrontend.Controls
             if (result != ContentDialogResult.None) taskCompletionSource.SetResult(default(T));
         }
 
-        public static Task<T> Start<T>(IEnumerable<ListBoxDialogItem<T>> items, T selectedValue, object title = null)
+        public static Task<T> Start(IEnumerable<ListBoxDialogItem<T>> items, T selectedValue, object title = null)
         {
             ListBoxDialog<T> dialog = new ListBoxDialog<T>(items, selectedValue, title);
             dialog.Start();
