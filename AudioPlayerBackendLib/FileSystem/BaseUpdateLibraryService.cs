@@ -163,13 +163,11 @@ namespace AudioPlayerBackend.FileSystem
                     else oldSongs.RemoveAt(i);
                 }
 
-                await Task.WhenAll(dict.Values.Select(async file =>
+                foreach (Task<Song?> task in dict.Values.Select(CreateSongInternal))
                 {
-                    Song? song = await CreateSongInternal(file);
-                    if (song == null) return;
-
-                    oldSongs.Insert(ran.Next(oldSongs.Count + 1), song.Value);
-                }));
+                    Song? song = await task;
+                    if (song.HasValue) oldSongs.Insert(ran.Next(oldSongs.Count + 1), song.Value);
+                }
 
                 return oldSongs.ToArray();
             });

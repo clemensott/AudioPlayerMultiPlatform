@@ -13,8 +13,10 @@ namespace AudioPlayerBackendUwpLib.Join
 {
     public class Player : IPlayer
     {
+        private int setSourceCount = 0;
         private PlaybackState playState;
         private RequestSong? request;
+        private RequestSong setRequest;
         private readonly SemaphoreSlim sem;
         private readonly MediaPlayer player;
 
@@ -112,26 +114,29 @@ namespace AudioPlayerBackendUwpLib.Join
 
         private void Player_MediaOpened(MediaPlayer sender, object args)
         {
-            Source = request.Value.Song;
-            if (request.Value.Duration == sender.PlaybackSession.NaturalDuration)
+            Source = setRequest.Song;
+            AudioPlayerBackend.Logs.Log("Player.Player_MediaOpened1", setRequest.Song.FullPath, setSourceCount);
+            if (setRequest.Duration == sender.PlaybackSession.NaturalDuration)
             {
-                sender.PlaybackSession.Position = request.Value.Position;
+                sender.PlaybackSession.Position = setRequest.Position;
             }
 
-            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, request.Value.Song));
+            MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, setRequest.Song));
             ExecutePlayState();
             sem.Release();
         }
 
         private void Player_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
+            AudioPlayerBackend.Logs.Log("Player.Player_MediaFailed1", setRequest.Song.FullPath, setSourceCount);
             Source = null;
-            MediaFailed?.Invoke(this, new MediaFailedEventArgs(request?.Song, args.ExtendedErrorCode));
+            MediaFailed?.Invoke(this, new MediaFailedEventArgs(setRequest.Song, args.ExtendedErrorCode));
             sem.Release();
         }
 
         private void Player_MediaEnded(MediaPlayer sender, object args)
         {
+            AudioPlayerBackend.Logs.Log("Player.Player_MediaEnded1", Source?.FullPath, setSourceCount);
             MediaEnded?.Invoke(this, new MediaEndedEventArgs(Source));
         }
 
@@ -157,6 +162,7 @@ namespace AudioPlayerBackendUwpLib.Join
                     {
                         player.PlaybackSession.Position = request.Position;
                     }
+                    setSourceCount++;
                     Source = request.Song;
                     ExecutePlayState();
                     return;
@@ -175,7 +181,10 @@ namespace AudioPlayerBackendUwpLib.Join
 
             try
             {
+                setRequest = request;
+                AudioPlayerBackend.Logs.Log("Player.Set5", request.Song.FullPath, request.ContinuePlayback, setSourceCount);
                 StorageFile file = await StorageFile.GetFileFromPathAsync(request.Song.FullPath);
+                AudioPlayerBackend.Logs.Log("Player.Set6", file.Path, setSourceCount);
                 player.Source = MediaSource.CreateFromStorageFile(file);
 
                 await SMTC.DisplayUpdater.CopyFromFileAsync(MediaPlaybackType.Music, file);
@@ -199,6 +208,7 @@ namespace AudioPlayerBackendUwpLib.Join
 
         public async Task Stop()
         {
+            request = null;
             await sem.WaitAsync();
 
             try

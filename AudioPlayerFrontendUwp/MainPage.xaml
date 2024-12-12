@@ -228,19 +228,21 @@
                   Visibility="{Binding Path=Id,Converter={StaticResource visCon},
                       FallbackValue={StaticResource collapsed}}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel DataContext="{Binding Path=CurrentSong}"
                             Tapped="SplCurrentSong_Tapped">
                     <TextBlock Text="{Binding Title}" Margin="1" FontWeight="SemiBold" TextWrapping="Wrap"
+                               MaxLines="3" TextTrimming="CharacterEllipsis"
                                Visibility="{Binding Title,Converter={StaticResource visCon}}"/>
                     <TextBlock Text="{Binding Artist}" Margin="1" FontStyle="Italic" TextWrapping="Wrap"
+                               MaxLines="2" TextTrimming="CharacterEllipsis"
                                Visibility="{Binding Artist,Converter={StaticResource visCon}}"/>
                 </StackPanel>
 
-                <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal"
+                <StackPanel Grid.Column="2" Orientation="Horizontal"
                             HorizontalAlignment="Right" VerticalAlignment="Center"
                             Tapped="SplPlaybackRate_Tapped">
                     <TextBlock Text="{Binding PlaybackRate,FallbackValue=1}" />

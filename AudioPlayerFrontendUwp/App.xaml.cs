@@ -171,6 +171,7 @@ namespace AudioPlayerFrontend
 
             try
             {
+                Logs.Log("App.Suspending");
                 backgroundTaskHandler.Stop();
 
                 await audioServicesHandler.Stop();

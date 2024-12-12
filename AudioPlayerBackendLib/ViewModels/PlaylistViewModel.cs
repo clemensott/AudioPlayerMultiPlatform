@@ -284,17 +284,14 @@ namespace AudioPlayerBackend.ViewModels
             if (Id.TryHasValue(out Guid id))
             {
                 Playlist playlist = await playlistsRepo.GetPlaylist(id);
-                await dispatcher.InvokeDispatcher(() =>
-                {
-                    Name = playlist.Name;
-                    Type = playlist.Type;
-                    Shuffle = playlist.Shuffle;
-                    Loop = playlist.Loop;
-                    PlaybackRate = playlist.PlaybackRate;
-                    shuffledSongs = playlist.Songs;
-                    CurrentSongRequest = playlist.CurrentSongRequest;
-                    UpdateSongs();
-                });
+                Name = playlist.Name;
+                Type = playlist.Type;
+                Shuffle = playlist.Shuffle;
+                Loop = playlist.Loop;
+                PlaybackRate = playlist.PlaybackRate;
+                shuffledSongs = playlist.Songs;
+                CurrentSongRequest = playlist.CurrentSongRequest;
+                UpdateSongs();
 
                 IsLoaded = true;
             }
