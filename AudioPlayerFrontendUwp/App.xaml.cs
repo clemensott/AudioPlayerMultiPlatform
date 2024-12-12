@@ -19,6 +19,7 @@ using AudioPlayerBackend.Player;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using System.Net;
+using AudioPlayerBackendUwpLib;
 
 namespace AudioPlayerFrontend
 {
@@ -43,7 +44,7 @@ namespace AudioPlayerFrontend
             Logs.Log("App1");
             this.InitializeComponent();
             this.Suspending += OnSuspending;
-            this.UnhandledException += OnUnhandledException;
+            //this.UnhandledException += OnUnhandledException; // TODO: revert
             this.LeavingBackground += OnLeavingBackground;
 
             loadServiceProfileTask = Task.Run(StartAudioServicesHandler);
@@ -56,10 +57,10 @@ namespace AudioPlayerFrontend
             backgroundTaskHelper = new BackgroundTaskHelper(audioServicesHandler);
         }
 
-        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            Settings.Current.SetUnhandledException(e.Exception);
-        }
+        //private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        //{
+        //    Settings.Current.SetUnhandledException(e.Exception);
+        //}
 
         private static AudioServicesBuildConfig AudioServicesBuildConfigTransformer(AudioServicesBuildConfig originalConfig)
         {

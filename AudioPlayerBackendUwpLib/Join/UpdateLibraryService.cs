@@ -11,9 +11,9 @@ using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.Storage.FileProperties;
 
-namespace AudioPlayerFrontend.Join
+namespace AudioPlayerBackendUwpLib.Join
 {
-    internal class UpdateLibraryService : BaseUpdateLibraryService<StorageFile>
+    public class UpdateLibraryService : BaseUpdateLibraryService<StorageFile>
     {
         private readonly StorageFileEqualityComparer storageFileEqualityComparer;
 

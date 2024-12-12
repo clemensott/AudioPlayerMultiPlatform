@@ -8,7 +8,7 @@ using Windows.Storage.Streams;
 using Windows.Storage;
 using System.Runtime.InteropServices.WindowsRuntime;
 
-namespace AudioPlayerFrontend
+namespace AudioPlayerBackendUwpLib
 {
     public struct ServiceProfile
     {

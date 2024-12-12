@@ -2,9 +2,9 @@
 using System;
 using Windows.Storage;
 
-namespace AudioPlayerFrontend
+namespace AudioPlayerBackendUwpLib
 {
-    class Settings : AppDataContainerObject
+    public class Settings : AppDataContainerObject
     {
         private static Settings instance;
 

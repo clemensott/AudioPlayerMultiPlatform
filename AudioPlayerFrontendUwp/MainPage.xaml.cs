@@ -24,6 +24,7 @@ using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using StdOttStandard;
 using AudioPlayerFrontend.Controls;
 using Windows.UI.Core;
+using AudioPlayerBackendUwpLib;
 
 namespace AudioPlayerFrontend
 {

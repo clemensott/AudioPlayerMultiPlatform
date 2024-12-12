@@ -9,9 +9,9 @@ using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage;
 
-namespace AudioPlayerFrontend.Join
+namespace AudioPlayerBackendUwpLib.Join
 {
-    class Player : IPlayer
+    public class Player : IPlayer
     {
         private PlaybackState playState;
         private RequestSong? request;

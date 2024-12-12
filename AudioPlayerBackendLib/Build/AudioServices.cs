@@ -8,6 +8,7 @@ using AudioPlayerBackend.ViewModels;
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.Build.Repo;
 
 namespace AudioPlayerBackend.Build
 {
@@ -45,6 +46,11 @@ namespace AudioPlayerBackend.Build
         public IUpdateLibraryService GetUpdateLibraryService()
         {
             return ServiceProvider.GetService<IUpdateLibraryService>();
+        }
+
+        public IAudioServicesRepo GetAudioServicesRepo()
+        {
+            return ServiceProvider.GetService<IAudioServicesRepo>();
         }
 
         public ILibraryRepo GetLibraryRepo()
