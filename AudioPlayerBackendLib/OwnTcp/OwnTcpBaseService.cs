@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.OwnTcp
 {
-    internal abstract class OwnTcpBaseService : IAudioService
+    public abstract class OwnTcpBaseService : IAudioService
     {
         private readonly string topicPrefix;
         private readonly IClientCommunicator clientCommunicator;

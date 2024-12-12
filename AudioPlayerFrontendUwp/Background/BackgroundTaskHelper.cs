@@ -47,6 +47,7 @@ namespace AudioPlayerFrontend.Background
             BackgroundTaskBuilder builder = new BackgroundTaskBuilder
             {
                 Name = applicationBackgroundTaskBuilderName,
+                TaskEntryPoint = "AudioPlayerBackendUWP.BackgroundTask",
             };
 
             builder.SetTrigger(appTrigger);

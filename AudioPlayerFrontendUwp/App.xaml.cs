@@ -20,6 +20,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using System.Net;
 using AudioPlayerBackendUwpLib;
+using AudioPlayerBackendUwpLib.Join;
+using AudioPlayerBackend.Build.Repo;
+using AudioPlayerBackend.Build.Repo.OwnTcp;
 
 namespace AudioPlayerFrontend
 {
@@ -34,9 +37,9 @@ namespace AudioPlayerFrontend
 
         private readonly AudioServicesHandler audioServicesHandler;
         private readonly AudioServicesBuilderNavigationHandler audioServicesBuilderNavigationHandler;
-        private readonly BackgroundTaskHandler backgroundTaskHandler;
+        //private readonly BackgroundTaskHandler backgroundTaskHandler;
         private readonly BackgroundTaskHelper backgroundTaskHelper;
-        private Task loadServiceProfileTask = null;
+        private Task<AudioServicesBuildConfig> loadAudioServicesBuildConfigTask = null;
 
         public App()
         {
@@ -44,23 +47,23 @@ namespace AudioPlayerFrontend
             Logs.Log("App1");
             this.InitializeComponent();
             this.Suspending += OnSuspending;
-            //this.UnhandledException += OnUnhandledException; // TODO: revert
+            this.UnhandledException += OnUnhandledException;
             this.LeavingBackground += OnLeavingBackground;
 
-            loadServiceProfileTask = Task.Run(StartAudioServicesHandler);
+            loadAudioServicesBuildConfigTask = Task.Run(LoadConfig);
 
-            Dispatcher dispatcher = new Dispatcher();
-            audioServicesHandler = new AudioServicesHandler(dispatcher, AudioServicesBuildConfigTransformer);
+            //Dispatcher dispatcher = new Dispatcher();
+            audioServicesHandler = new AudioServicesHandler(null, AudioServicesBuildConfigTransformer);
             audioServicesHandler.ServicesBuild += OnServicesBuild;
             audioServicesBuilderNavigationHandler = new AudioServicesBuilderNavigationHandler(audioServicesHandler);
-            backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, audioServicesHandler);
+            //backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, audioServicesHandler);
             backgroundTaskHelper = new BackgroundTaskHelper(audioServicesHandler);
         }
 
-        //private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        //{
-        //    Settings.Current.SetUnhandledException(e.Exception);
-        //}
+        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Settings.Current.SetUnhandledException(e.Exception);
+        }
 
         private static AudioServicesBuildConfig AudioServicesBuildConfigTransformer(AudioServicesBuildConfig originalConfig)
         {
@@ -100,15 +103,17 @@ namespace AudioPlayerFrontend
 
                 audioServicesBuilderNavigationHandler.Start(rootFrame);
 
-                await loadServiceProfileTask;
-                loadServiceProfileTask = null; // release memory
+                AudioServicesBuildConfig config = await loadAudioServicesBuildConfigTask;
+                loadAudioServicesBuildConfigTask = null; // release memory
+
+                audioServicesHandler.Start(config);
             }
 
             // Sicherstellen, dass das aktuelle Fenster aktiv ist
             Window.Current.Activate();
         }
 
-        private async Task StartAudioServicesHandler()
+        private async Task<AudioServicesBuildConfig> LoadConfig()
         {
             //var item = await ApplicationData.Current.LocalFolder.TryGetItemAsync("library.db");
             //if (item is StorageFile file) await file.DeleteAsync();
@@ -130,11 +135,12 @@ namespace AudioPlayerFrontend
             config.AdditionalServices.TryAddSingleton<IFileSystemService, FileSystemService>();
             config.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, InvokeDispatcherService>();
             config.AdditionalServices.TryAddSingleton<IUpdateLibraryService, UpdateLibraryService>();
+            config.AdditionalServices.TryAddSingleton<IAudioServicesRepo, OwnTcpAudioServicesRepo>();
 
             ServiceProfile? profile = await ServiceProfile.Load();
             if (profile.HasValue) config.WithServiceProfile(profile.Value);
 
-            audioServicesHandler.Start(config);
+            return config;
         }
 
         private async void OnServicesBuild(object sender, AudioServicesBuilder e)
@@ -172,7 +178,7 @@ namespace AudioPlayerFrontend
             try
             {
                 Logs.Log("App.Suspending");
-                backgroundTaskHandler.Stop();
+                //backgroundTaskHandler.Stop();
 
                 await audioServicesHandler.Stop();
             }
@@ -188,14 +194,15 @@ namespace AudioPlayerFrontend
 
         private async void OnLeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
-            if (!backgroundTaskHandler.IsRunning) await backgroundTaskHelper.Start();
+            //if (!backgroundTaskHandler.IsRunning)
+                await backgroundTaskHelper.Start();
         }
 
-        protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)
-        {
-            BackgroundTaskDeferral deferral = args.TaskInstance.GetDeferral();
-            await backgroundTaskHandler.Run();
-            deferral.Complete();
-        }
+        //protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)
+        //{
+        //    BackgroundTaskDeferral deferral = args.TaskInstance.GetDeferral();
+        //    await backgroundTaskHandler.Run();
+        //    deferral.Complete();
+        //}
     }
 }

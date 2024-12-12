@@ -1,14 +1,16 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Build.Repo
 {
-    internal class RootAudioServicesRepo : IAudioServicesRepo
+    public class RootAudioServicesRepo : IAudioServicesRepo
     {
         public event EventHandler<AudioServicesTriggeredRebuildArgs> TriggeredRebuild;
 
-        public void TriggerRebuild(AudioServicesRebuildSource source, AudioServicesRebuildLevel level)
+        public Task TriggerRebuild(AudioServicesRebuildSource source, AudioServicesRebuildLevel level)
         {
             TriggeredRebuild?.Invoke(this, new AudioServicesTriggeredRebuildArgs(source, level));
+            return Task.CompletedTask;
         }
     }
 }

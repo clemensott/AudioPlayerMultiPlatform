@@ -7,7 +7,7 @@ using AudioPlayerBackend.OwnTcp;
 
 namespace AudioPlayerBackend.Build.Repo.OwnTcp
 {
-    internal class OwnTcpAudioServicesRepo : OwnTcpBaseService, IAudioServicesRepo
+    public class OwnTcpAudioServicesRepo : OwnTcpBaseService, IAudioServicesRepo
     {
         public event EventHandler<AudioServicesTriggeredRebuildArgs> TriggeredRebuild;
 

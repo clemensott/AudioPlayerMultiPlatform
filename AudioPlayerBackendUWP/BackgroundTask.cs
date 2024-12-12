@@ -15,7 +15,7 @@ using AudioPlayerBackend.Build.Repo;
 using StdOttStandard;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.Communication;
-using AudioPlayerBackendUWP.Join;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AudioPlayerBackendUWP
 {
@@ -71,22 +71,23 @@ namespace AudioPlayerBackendUWP
         private static async Task<AudioServicesBuildConfig> LoadConfig()
         {
             AudioServicesBuildConfig config = new AudioServicesBuildConfig()
-             .WithAutoUpdate()
-             .WithDefaultUpdateRoots(new FileMediaSourceRootInfo[]
-             {
+                .WithAutoUpdate()
+                .WithDefaultUpdateRoots(new FileMediaSourceRootInfo[]
+                {
                     new FileMediaSourceRootInfo(
                         FileMediaSourceRootUpdateType.Songs | FileMediaSourceRootUpdateType.Folders,
                         KnownFolders.MusicLibrary.DisplayName,
                         FileMediaSourceRootPathType.KnownFolder,
                         KnownFolderId.MusicLibrary.ToString()
-                 ),
-             })
-             .WithDateFilePath("library.db");
+                    ),
+                })
+                .WithDateFilePath("library.db");
 
             config.AdditionalServices.TryAddSingleton<IPlayer, Player>();
             config.AdditionalServices.TryAddSingleton<IFileSystemService, FileSystemService>();
-            config.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, InvokeDispatcherService>();
+            config.AdditionalServices.TryAddSingleton<IInvokeDispatcherService, FakeInvokeDispatcherService>();
             config.AdditionalServices.TryAddSingleton<IUpdateLibraryService, UpdateLibraryService>();
+            config.AdditionalServices.TryAddSingleton<IAudioServicesRepo, RootAudioServicesRepo>();
 
             ServiceProfile? profile = await ServiceProfile.Load();
             if (profile.HasValue) config.WithServiceProfile(profile.Value);
