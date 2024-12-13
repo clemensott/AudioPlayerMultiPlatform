@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Windows.Storage;
 
-namespace AudioPlayerFrontend.Join
+namespace AudioPlayerBackendUwpLib.Join
 {
-    class FileSystemService : IFileSystemService
+    public class FileSystemService : IFileSystemService
     {
         public FileSystemService()
         {

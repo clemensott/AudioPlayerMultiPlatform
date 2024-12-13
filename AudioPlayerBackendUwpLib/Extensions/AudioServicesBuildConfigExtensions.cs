@@ -1,9 +1,8 @@
 ﻿using AudioPlayerBackend.Build;
-using AudioPlayerBackendUwpLib;
 
-namespace AudioPlayerFrontend.Extensions
+namespace AudioPlayerBackendUwpLib.Extensions
 {
-    static class AudioServicesBuildConfigExtensions
+    public static class AudioServicesBuildConfigExtensions
     {
         public static AudioServicesBuildConfig WithServiceProfile(this AudioServicesBuildConfig config, ServiceProfile profile)
         {

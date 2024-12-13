@@ -127,7 +127,7 @@ namespace AudioPlayerBackend.FileSystem
                 new FileMediaSource(relativePath),
             });
 
-            Song[] songs = await ReloadSourcePlaylist(fileMediaSources);
+            Song[] songs = await LoadSongs(fileMediaSources);
             if (songs.Length == 0) return;
 
             PlaylistType playlistType = PlaylistType.SourcePlaylist | PlaylistType.AutoSourcePlaylist;
@@ -206,7 +206,7 @@ namespace AudioPlayerBackend.FileSystem
             else await playlistsRepo.RemovePlaylist(id);
         }
 
-        public Task<Song[]> ReloadSourcePlaylist(FileMediaSources fileMediaSources)
+        public Task<Song[]> LoadSongs(FileMediaSources fileMediaSources)
         {
             return ReloadSourcePlaylist(fileMediaSources, null);
         }

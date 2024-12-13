@@ -109,11 +109,8 @@
     <Compile Include="Converter\LoopIconConverter.cs" />
     <Compile Include="Extensions\AudioServicesBuildConfigExtensions.cs" />
     <Compile Include="Extensions\PageExtensions.cs" />
-    <Compile Include="Join\FileSystemService.cs" />
-    <Compile Include="Join\InvokeDispatcherService.cs" />
-    <Compile Include="Join\Player.cs" />
-    <Compile Include="Join\UpdateLibraryService.cs" />
     <Compile Include="Controls\ListBoxDialog.cs" />
+    <Compile Include="Join\InvokeDispatcherService.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
@@ -123,8 +120,6 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AudioServicesBuilderNavigationHandler.cs" />
-    <Compile Include="ServiceProfile.cs" />
-    <Compile Include="Settings.cs" />
     <Compile Include="SettingsPage.xaml.cs">
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </Compile>
@@ -229,6 +224,14 @@
     <ProjectReference Include="..\AudioPlayerBackendLib\AudioPlayerBackendLib.csproj">
       <Project>{11301db7-5a97-4007-9a09-2354beed882c}</Project>
       <Name>AudioPlayerBackendLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\AudioPlayerBackendUwpLib\AudioPlayerBackendUwpLib.csproj">
+      <Project>{76b652cb-fd8e-4ba5-ba80-996ad4f22ddb}</Project>
+      <Name>AudioPlayerBackendUwpLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\AudioPlayerBackendUWP\AudioPlayerBackendUWP.csproj">
+      <Project>{674cdf86-a70e-4cb5-b39d-b0e75df26de6}</Project>
+      <Name>AudioPlayerBackendUWP</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">

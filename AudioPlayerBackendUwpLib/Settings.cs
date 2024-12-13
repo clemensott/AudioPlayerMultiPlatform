@@ -2,9 +2,9 @@
 using System;
 using Windows.Storage;
 
-namespace AudioPlayerFrontend
+namespace AudioPlayerBackendUwpLib
 {
-    class Settings : AppDataContainerObject
+    public class Settings : AppDataContainerObject
     {
         private static Settings instance;
 
@@ -16,6 +16,12 @@ namespace AudioPlayerFrontend
 
                 return instance;
             }
+        }
+
+        public int BackgroundTaskPort
+        {
+            get => GetValue(nameof(BackgroundTaskPort), 28171);
+            set => SetValue(nameof(BackgroundTaskPort), value);
         }
 
         public Guid ApplicationBackgroundTaskRegistrationId
