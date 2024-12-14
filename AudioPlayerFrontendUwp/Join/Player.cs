@@ -140,6 +140,11 @@ namespace AudioPlayerFrontend.Join
             MediaEnded?.Invoke(this, new MediaEndedEventArgs(Source));
         }
 
+        public Task<(TimeSpan position, TimeSpan duration)> GetTimesSafe()
+        {
+            return Task.FromResult((Position, Duration));
+        }
+
         public Task Set(RequestSong? request)
         {
             return request.HasValue ? Set(request.Value) : Stop();
@@ -252,6 +257,7 @@ namespace AudioPlayerFrontend.Join
 
         public void Dispose()
         {
+            AudioPlayerBackend.Logs.Log("Player.Dispose");
             player.MediaOpened -= Player_MediaOpened;
             player.MediaFailed -= Player_MediaFailed;
             player.MediaEnded -= Player_MediaEnded;

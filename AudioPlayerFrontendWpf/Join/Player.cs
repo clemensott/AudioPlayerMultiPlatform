@@ -160,6 +160,11 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
+        public async Task<(TimeSpan position, TimeSpan duration)> GetTimesSafe()
+        {
+            return await mediaElement.Dispatcher.InvokeAsync(() => (Position, Duration));
+        }
+
         public Task Set(RequestSong? request)
         {
             AudioPlayerBackend.Logs.Log($"Player.Set2: {request.HasValue}");
@@ -173,47 +178,50 @@ namespace AudioPlayerFrontend.Join
 
             await handleSem.WaitAsync();
 
-            bool release = true;
-            try
+            await mediaElement.Dispatcher.InvokeAsync(() =>
             {
-                AudioPlayerBackend.Logs.Log($"Player.Set5: {requestSong.Equals(request)}");
-                if (!requestSong.Equals(request)) return;
-
-                AudioPlayerBackend.Logs.Log($"Player.Set6: {Source.HasValue} | {request.Song.FullPath} | {Source?.FullPath}");
-                if (Source.HasValue && request.Song.FullPath == Source?.FullPath)
+                bool release = true;
+                try
                 {
-                    if (!request.ContinuePlayback && request.Position != Position)
-                    {
-                        SetPosition(request.Position);
-                    }
-                    Source = request.Song;
-                    ExecutePlayState();
-                    return;
-                }
-                release = false;
-            }
-            catch (Exception e)
-            {
-                Source = null;
-                MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
-            }
-            finally
-            {
-                if (release) handleSem.Release();
-            }
+                    AudioPlayerBackend.Logs.Log($"Player.Set5: {requestSong.Equals(request)}");
+                    if (!requestSong.Equals(request)) return;
 
-            try
-            {
-                AudioPlayerBackend.Logs.Log($"Player.Set8: {request.Song.FullPath}");
-                setRequestSong = request;
-                mediaElement.Source = new Uri(request.Song.FullPath);
-            }
-            catch (Exception e)
-            {
-                Source = null;
-                MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
-                handleSem.Release();
-            }
+                    AudioPlayerBackend.Logs.Log($"Player.Set6: {Source.HasValue} | {request.Song.FullPath} | {Source?.FullPath}");
+                    if (Source.HasValue && request.Song.FullPath == Source?.FullPath)
+                    {
+                        if (!request.ContinuePlayback && request.Position != Position)
+                        {
+                            SetPosition(request.Position);
+                        }
+                        Source = request.Song;
+                        ExecutePlayState();
+                        return;
+                    }
+                    release = false;
+                }
+                catch (Exception e)
+                {
+                    Source = null;
+                    MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
+                }
+                finally
+                {
+                    if (release) handleSem.Release();
+                }
+
+                try
+                {
+                    AudioPlayerBackend.Logs.Log($"Player.Set8: {request.Song.FullPath}");
+                    setRequestSong = request;
+                    mediaElement.Source = new Uri(request.Song.FullPath);
+                }
+                catch (Exception e)
+                {
+                    Source = null;
+                    MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
+                    handleSem.Release();
+                }
+            });
         }
 
         public async Task Stop()
@@ -239,7 +247,7 @@ namespace AudioPlayerFrontend.Join
 
             try
             {
-                ExecutePlayState();
+                await mediaElement.Dispatcher.InvokeAsync(ExecutePlayState);
             }
             finally
             {

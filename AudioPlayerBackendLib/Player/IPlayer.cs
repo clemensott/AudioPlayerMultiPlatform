@@ -27,6 +27,8 @@ namespace AudioPlayerBackend.Player
 
         float Volume { get; set; }
 
+        Task<(TimeSpan position, TimeSpan duration)> GetTimesSafe();
+
         Task Set(RequestSong? request);
 
         Task Stop();
