@@ -33,9 +33,10 @@ namespace AudioPlayerFrontend
             autoUpdatePlaylistsInterval = TimeSpan.FromHours(1);
 
         private readonly AudioServicesHandler audioServicesHandler;
-        private readonly AudioServicesBuilderNavigationHandler audioServicesBuilderNavigationHandler;
+        private readonly ForegroundTaskHandler foregroundTaskHandler;
         private readonly BackgroundTaskHandler backgroundTaskHandler;
         private readonly BackgroundTaskHelper backgroundTaskHelper;
+        private readonly MemoryHandler memoryHandler;
         private Task loadServiceProfileTask = null;
 
         public App()
@@ -52,9 +53,11 @@ namespace AudioPlayerFrontend
             Dispatcher dispatcher = new Dispatcher();
             audioServicesHandler = new AudioServicesHandler(dispatcher);
             audioServicesHandler.AudioServicesChanged += OnAudioServicesChanged;
-            audioServicesBuilderNavigationHandler = new AudioServicesBuilderNavigationHandler(audioServicesHandler);
-            backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, audioServicesHandler);
+
             backgroundTaskHelper = new BackgroundTaskHelper();
+            foregroundTaskHandler = new ForegroundTaskHandler(audioServicesHandler);
+            backgroundTaskHandler = new BackgroundTaskHandler(dispatcher, audioServicesHandler);
+            memoryHandler = new MemoryHandler(this, audioServicesHandler, backgroundTaskHandler, foregroundTaskHandler);
         }
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -71,23 +74,12 @@ namespace AudioPlayerFrontend
         {
             BackPressHandler.Current.Activate();
 
-            Frame rootFrame = Window.Current.Content as Frame;
+            memoryHandler.Start();
 
-            // App-Initialisierung nicht wiederholen, wenn das Fenster bereits Inhalte enthält.
-            // Nur sicherstellen, dass das Fenster aktiv ist.
-            if (rootFrame == null) Window.Current.Content = rootFrame = new Frame();
-            if (rootFrame.Content == null)
-            {
-                await Task.Yield(); // let OnLeavingBackground fire to start background task asap
+            await loadServiceProfileTask;
+            loadServiceProfileTask = null; // release memory
 
-                audioServicesBuilderNavigationHandler.Start(rootFrame);
-
-                await loadServiceProfileTask;
-                loadServiceProfileTask = null; // release memory
-            }
-
-            // Sicherstellen, dass das aktuelle Fenster aktiv ist
-            Window.Current.Activate();
+            foregroundTaskHandler.Start();
         }
 
         private async Task StartAudioServicesHandler()
@@ -195,6 +187,7 @@ namespace AudioPlayerFrontend
         private async void OnLeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
             if (!backgroundTaskHandler.IsRunning) await backgroundTaskHelper.Start();
+            foregroundTaskHandler.Start();
         }
 
         protected override async void OnBackgroundActivated(BackgroundActivatedEventArgs args)

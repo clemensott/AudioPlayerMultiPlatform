@@ -11,16 +11,23 @@ using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 
 namespace AudioPlayerBackend.Build
 {
-    public class AudioServices : IAudioService
+    public class AudioServices
     {
         public IServiceProvider ServiceProvider { get; }
 
-        public IEnumerable<IAudioService> Services { get; }
+        public IEnumerable<IAudioService> BackgroundServices { get; }
 
-        public AudioServices(IServiceProvider serviceProvider, IEnumerable<IAudioService> services)
+        public IEnumerable<IAudioService> ForegroundServices { get; }
+
+        public IEnumerable<IAudioService> IntensiveServices { get; }
+
+        public AudioServices(IServiceProvider serviceProvider, IEnumerable<IAudioService> services,
+            IEnumerable<IAudioService> uiServiceList, IEnumerable<IAudioService> intensiveServices)
         {
             ServiceProvider = serviceProvider;
-            Services = services;
+            BackgroundServices = services;
+            ForegroundServices = uiServiceList;
+            IntensiveServices = intensiveServices;
         }
 
         public IEnumerable<ICommunicator> GetCommunicators()
@@ -57,23 +64,82 @@ namespace AudioPlayerBackend.Build
             return ServiceProvider.GetService<IPlaylistsRepo>();
         }
 
-        public async Task Start()
+        private IEnumerable<IAudioService> GetAllAudioServices()
         {
-            foreach (IAudioService service in Services)
+            foreach (IAudioService service in BackgroundServices)
+            {
+                yield return service;
+            }
+
+            foreach (IAudioService service in ForegroundServices)
+            {
+                yield return service;
+            }
+
+            foreach (IAudioService service in IntensiveServices)
+            {
+                yield return service;
+            }
+        }
+
+        private async Task Start(IEnumerable<IAudioService> services)
+        {
+            foreach (IAudioService service in services)
             {
                 await service.Start();
             }
         }
 
-        public Task Stop()
+        private async Task Stop(IEnumerable<IAudioService> services)
         {
-            return Task.WhenAll(Services.Select(s => s.Stop()));
+            foreach (IAudioService service in services.Reverse())
+            {
+                await service.Stop();
+            }
+        }
+
+        public async Task Start()
+        {
+            await Start(GetAllAudioServices());
+        }
+
+        public async Task Stop()
+        {
+            await Stop(GetAllAudioServices());
+        }
+
+        public async Task StartUiServices()
+        {
+            Logs.Log("StartUiServices2");
+            await Start(ForegroundServices);
+            Logs.Log("StartUiServices3");
+        }
+
+        public async Task StopUiServices()
+        {
+            Logs.Log("StopUiServices2");
+            await Stop(ForegroundServices);
+            Logs.Log("StopUiServices3");
+        }
+
+        public async Task StartIntensiveServices()
+        {
+            Logs.Log("StartIntensiveServices2");
+            await Start(IntensiveServices);
+            Logs.Log("StartIntensiveServices3");
+        }
+
+        public async Task StopIntensiveServices()
+        {
+            Logs.Log("StopIntensiveServices2");
+            await Stop(IntensiveServices);
+            Logs.Log("StopIntensiveServices3");
         }
 
         public Task Dispose()
         {
             Logs.Log("AudioServices.Dispose");
-            return Task.WhenAll(Services.Select(s => s.Dispose()));
+            return Task.WhenAll(BackgroundServices.Select(s => s.Dispose()));
         }
     }
 }

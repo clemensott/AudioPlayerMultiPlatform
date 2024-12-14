@@ -309,12 +309,6 @@ namespace AudioPlayerFrontend
 
             await new MessageDialog(exceptionText, time.ToString()).ShowAsync();
 
-            string message = $"Back: {AudioPlayerFrontend.Background.BackgroundTaskHandler.Current?.IsRunning}"
-                + $"\nAudioHandler: {audioServicesHandler.IsStarted}"
-                + $"\nConfig: {audioServicesHandler.Config != null}"
-                + $"\nAudioServices: {audioServicesHandler.AudioServices != null}";
-            await new MessageDialog(message, "States").ShowAsync();
-
             const int maxLength = 4000;
             string logs = await Logs.GetFile();
             if (logs.Length > maxLength) logs = logs.Substring(logs.Length - maxLength);

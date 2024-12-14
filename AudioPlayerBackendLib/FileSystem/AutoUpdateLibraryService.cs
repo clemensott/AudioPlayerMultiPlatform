@@ -20,7 +20,7 @@ namespace AudioPlayerBackend.FileSystem
         private readonly IUpdateLibraryService updateLibraryService;
         private readonly Timer timer;
 
-        private bool isCheckingForUpdates;
+        private bool isCheckingForUpdates, isStopped;
         private int libraryUpdateCount;
 
         public AutoUpdateLibraryService(ILibraryRepo libraryRepo, IPlaylistsRepo playlistRepo,
@@ -33,6 +33,7 @@ namespace AudioPlayerBackend.FileSystem
             timer = new Timer(OnTick, null, Timeout.Infinite, timerInterval);
 
             isCheckingForUpdates = false;
+            isStopped = true;
             libraryUpdateCount = 0;
         }
 
@@ -68,6 +69,7 @@ namespace AudioPlayerBackend.FileSystem
                 isCheckingForUpdates = true;
 
                 Library library = await libraryRepo.GetLibrary();
+                if (isStopped) return;
                 if (NeedsFoldersUpdate(library.FoldersLastUpdated))
                 {
                     await updateLibraryService.UpdatePlaylists();
@@ -76,6 +78,8 @@ namespace AudioPlayerBackend.FileSystem
                 library = await libraryRepo.GetLibrary();
                 foreach (PlaylistInfo playlistInfo in library.Playlists.GetSourcePlaylists())
                 {
+                    if (isStopped) return;
+
                     if (NeedsSongsUpdate(playlistInfo.SongsLastUpdated))
                     {
                         await updateLibraryService.ReloadSourcePlaylist(playlistInfo.Id);
@@ -94,6 +98,8 @@ namespace AudioPlayerBackend.FileSystem
 
         public Task Start()
         {
+            isStopped = false;
+
             updateLibraryService.UpdateStarted += UpdateLibraryService_UpdateStarted;
             updateLibraryService.UpdateCompleted += UpdateLibraryService_UpdateCompleted;
 
@@ -104,6 +110,8 @@ namespace AudioPlayerBackend.FileSystem
 
         public Task Stop()
         {
+            isStopped = false;
+
             updateLibraryService.UpdateStarted -= UpdateLibraryService_UpdateStarted;
             updateLibraryService.UpdateCompleted -= UpdateLibraryService_UpdateCompleted;
 

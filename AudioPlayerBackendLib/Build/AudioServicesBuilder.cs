@@ -132,7 +132,7 @@ namespace AudioPlayerBackend.Build
         {
             IServiceProvider serviceProvider = BuildServiceProvider();
 
-            IList<IAudioService> serviceList = new List<IAudioService>()
+            IList<IAudioService> backgroundServices = new List<IAudioService>()
             {
                 // playlist repo must be before library repo
                 // because the order in which the init sqls run are important
@@ -140,32 +140,34 @@ namespace AudioPlayerBackend.Build
                 serviceProvider.GetService<ILibraryRepo>(),
                 serviceProvider.GetService<IUpdateLibraryService>(),
             };
+            IList<IAudioService> foregroundServicesList = new List<IAudioService>();
+            IList<IAudioService> intensiveServicesList = new List<IAudioService>();
 
             if (config.BuildStandalone || config.BuildServer)
             {
-                serviceList.Add(serviceProvider.GetService<IPlayerService>());
+                backgroundServices.Add(serviceProvider.GetService<IPlayerService>());
             }
 
             if (config.BuildServer)
             {
-                serviceList.Add(serviceProvider.GetService<IServerCommunicator>());
-                serviceList.Add(serviceProvider.GetService<IServerLibraryRepoConnector>());
-                serviceList.Add(serviceProvider.GetService<IServerPlaylistsRepoConnector>());
+                backgroundServices.Add(serviceProvider.GetService<IServerCommunicator>());
+                backgroundServices.Add(serviceProvider.GetService<IServerLibraryRepoConnector>());
+                backgroundServices.Add(serviceProvider.GetService<IServerPlaylistsRepoConnector>());
             }
 
             if (config.BuildClient)
             {
-                serviceList.Add(serviceProvider.GetService<IClientCommunicator>());
+                foregroundServicesList.Add(serviceProvider.GetService<IClientCommunicator>());
             }
 
             if (config.AutoUpdate && (config.BuildStandalone || config.BuildServer))
             {
-                serviceList.Add(serviceProvider.GetService<AutoUpdateLibraryService>());
+                intensiveServicesList.Add(serviceProvider.GetService<AutoUpdateLibraryService>());
             }
 
-            serviceList.Add(serviceProvider.GetService<ILibraryViewModel>());
+            foregroundServicesList.Add(serviceProvider.GetService<ILibraryViewModel>());
 
-            return new AudioServices(serviceProvider, serviceList);
+            return new AudioServices(serviceProvider, backgroundServices, foregroundServicesList, intensiveServicesList);
         }
 
         private IServiceProvider BuildServiceProvider()

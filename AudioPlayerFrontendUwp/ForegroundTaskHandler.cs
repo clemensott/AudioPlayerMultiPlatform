@@ -3,31 +3,44 @@ using AudioPlayerFrontend.Extensions;
 using StdOttStandard.TaskCompletionSources;
 using System;
 using System.Threading.Tasks;
-using Windows.ApplicationModel;
-using Windows.Foundation;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
 namespace AudioPlayerFrontend
 {
-    class AudioServicesBuilderNavigationHandler : IDisposable
+    class ForegroundTaskHandler
     {
         private readonly AudioServicesHandler audioServicesHandler;
         private Frame frame;
+        private AudioServicesBuilder currentBuilder;
 
-        public AudioServicesBuilderNavigationHandler(AudioServicesHandler audioServicesHandler)
+        public ForegroundTaskHandler(AudioServicesHandler audioServicesHandler)
         {
             this.audioServicesHandler = audioServicesHandler;
         }
 
-        public void Start(Frame frame)
+        public void Start()
         {
-            this.frame = frame;
+            audioServicesHandler.ServicesBuild -= AudioServicesHandler_ServicesBuild;
 
-            Application.Current.EnteredBackground += Application_EnteredBackground;
-            Application.Current.LeavingBackground += Application_LeavingBackground;
+            frame = Window.Current.Content as Frame;
 
-            audioServicesHandler.AddServiceBuildListener(AudioServicesHandler_ServicesBuild);
+            if (frame == null) Window.Current.Content = frame = new Frame();
+            if (frame.Content == null)
+            {
+                if (audioServicesHandler.AudioServices != null)
+                {
+                    frame.NavigateToMainPage(audioServicesHandler);
+                    audioServicesHandler.AudioServices.StartUiServices();
+                }
+                else
+                {
+                    frame.NavigateToBuildOpenPage(audioServicesHandler);
+                    HandleAudioServiceBuilder(audioServicesHandler.Builder);
+                }
+            }
+
+            Window.Current.Activate();
         }
 
         private async void AudioServicesHandler_ServicesBuild(object sender, AudioServicesBuilder e)
@@ -37,17 +50,25 @@ namespace AudioPlayerFrontend
 
         private async Task HandleAudioServiceBuilder(AudioServicesBuilder builder)
         {
+            AudioPlayerBackend.Logs.Log("HandleAudioServiceBuilder3", builder != null, frame != null);
             if (builder == null || frame == null) return;
 
             await frame.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
             {
+                AudioPlayerBackend.Logs.Log("HandleAudioServiceBuilder4", builder == currentBuilder);
+                if (builder == currentBuilder) return;
+                currentBuilder = builder;
+
                 bool wasOnOpenPage = frame.CurrentSourcePageType == typeof(BuildOpenPage);
+                AudioPlayerBackend.Logs.Log("HandleAudioServiceBuilder5", wasOnOpenPage);
                 if (!wasOnOpenPage) frame.NavigateToBuildOpenPage(audioServicesHandler);
 
                 BuildEndedType endedType = await builder.CompleteToken.EndTask;
+                AudioPlayerBackend.Logs.Log("HandleAudioServiceBuilder6", endedType);
                 switch (endedType)
                 {
                     case BuildEndedType.Successful:
+                        AudioPlayerBackend.Logs.Log("HandleAudioServiceBuilder7", frame.CanGoBack);
                         if (frame.CanGoBack) frame.GoBack();
                         else
                         {
@@ -75,32 +96,17 @@ namespace AudioPlayerFrontend
             });
         }
 
-        private async void Application_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
+        public async void Stop()
         {
-            if (audioServicesHandler.AudioServices != null) return;
-
-            Deferral deferral = e.GetDeferral();
-            try
-            {
-                await audioServicesHandler.Stop();
-            }
-            finally
-            {
-                deferral.Complete();
-            }
-        }
-
-        private void Application_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
-        {
-            if (!audioServicesHandler.IsStarted) audioServicesHandler.Start();
-        }
-
-        public void Dispose()
-        {
-            Application.Current.EnteredBackground -= Application_EnteredBackground;
-            Application.Current.LeavingBackground -= Application_LeavingBackground;
-
             audioServicesHandler.ServicesBuild -= AudioServicesHandler_ServicesBuild;
+            if (frame == null) return;
+
+            await frame.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
+            {
+                Window.Current.Content = frame = null;
+
+                if (audioServicesHandler.AudioServices != null) await audioServicesHandler.AudioServices.StopUiServices();
+            });
         }
     }
 }
