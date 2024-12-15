@@ -1,95 +1,56 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp.Extensions;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.Base;
+using AudioPlayerBackend.OwnTcp;
 using AudioPlayerBackend.Player;
 using System;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 {
-    internal class OwnTcpLibraryRepo : ILibraryRepo
+    internal class OwnTcpLibraryRepo : OwnTcpBaseService, ILibraryRepo
     {
-        private readonly IClientCommunicator clientCommunicator;
-
         public event EventHandler<AudioLibraryChangeArgs<PlaybackState>> PlayStateChanged;
         public event EventHandler<AudioLibraryChangeArgs<double>> VolumeChanged;
         public event EventHandler<AudioLibraryChangeArgs<Guid?>> CurrentPlaylistIdChanged;
         public event EventHandler<AudioLibraryChangeArgs<DateTime?>> FoldersLastUpdatedChanged;
 
-        public OwnTcpLibraryRepo(IClientCommunicator clientCommunicator)
+        public OwnTcpLibraryRepo(IClientCommunicator clientCommunicator) : base(nameof(ILibraryRepo), clientCommunicator)
         {
-            this.clientCommunicator = clientCommunicator;
         }
 
-        public Task Start()
+        protected override Task<byte[]> OnMessageReceived(string subTopic, byte[] payload)
         {
-            clientCommunicator.Received += ClientCommunicator_Received;
-            return Task.CompletedTask;
+            return Task.FromResult(OnMessageReceived(subTopic, payload));
         }
 
-        public Task Stop()
+        private byte[] OnMessageReceived(string subTopic, ByteQueue payload)
         {
-            clientCommunicator.Received -= ClientCommunicator_Received;
-            return Task.CompletedTask;
-        }
-
-        public Task Dispose()
-        {
-            return Stop();
-        }
-
-        private void ClientCommunicator_Received(object sender, ReceivedEventArgs e)
-        {
-            TaskCompletionSource<byte[]> anwser = null;
-            try
+            switch (subTopic)
             {
-                string[] parts = e.Topic.Split('.');
-                if (parts.Length != 2 || parts[0] != nameof(ILibraryRepo)) return;
+                case nameof(PlayStateChanged):
+                    PlaybackState playState = payload.DequeuePlaybackState();
+                    PlayStateChanged?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
+                    return null;
 
-                anwser = e.StartAnwser();
+                case nameof(VolumeChanged):
+                    double volume = payload.DequeueDouble();
+                    VolumeChanged?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
+                    return null;
 
-                ByteQueue payload = e.Payload;
-                switch (parts[1])
-                {
-                    case nameof(PlayStateChanged):
-                        PlaybackState playState = payload.DequeuePlaybackState();
-                        PlayStateChanged?.Invoke(this, new AudioLibraryChangeArgs<PlaybackState>(playState));
-                        anwser.SetResult(null);
-                        break;
+                case nameof(CurrentPlaylistIdChanged):
+                    Guid? currentPlaylistId = payload.DequeueGuidNullable();
+                    CurrentPlaylistIdChanged?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
+                    return null;
 
-                    case nameof(VolumeChanged):
-                        double volume = payload.DequeueDouble();
-                        VolumeChanged?.Invoke(this, new AudioLibraryChangeArgs<double>(volume));
-                        anwser.SetResult(null);
-                        break;
+                case nameof(FoldersLastUpdatedChanged):
+                    DateTime? foldersLastUpdated = payload.DequeueDateTimeNullable();
+                    FoldersLastUpdatedChanged?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
+                    return null;
 
-                    case nameof(CurrentPlaylistIdChanged):
-                        Guid? currentPlaylistId = payload.DequeueGuidNullable();
-                        CurrentPlaylistIdChanged?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(currentPlaylistId));
-                        anwser.SetResult(null);
-                        break;
-
-                    case nameof(FoldersLastUpdatedChanged):
-                        DateTime? foldersLastUpdated = payload.DequeueDateTimeNullable();
-                        FoldersLastUpdatedChanged?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
-                        anwser.SetResult(null);
-                        break;
-
-                    default:
-                        anwser.SetException(new NotSupportedException($"Received action is not supported: {parts[2]}"));
-                        break;
-                }
+                default:
+                    throw new NotSupportedException($"Received action is not supported: {subTopic}");
             }
-            catch (Exception exception)
-            {
-                if (anwser != null) anwser.SetException(exception);
-                else throw;
-            }
-        }
-
-        public Task<byte[]> SendAsync(string funcName, byte[] payload = null)
-        {
-            return clientCommunicator.SendAsync($"{nameof(ILibraryRepo)}.{funcName}", payload);
         }
 
         public async Task<Library> GetLibrary()

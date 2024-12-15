@@ -134,6 +134,9 @@ namespace AudioPlayerBackend.ViewModels
         {
             Subscribe();
 
+            playlistsUpdatingCount = 0;
+            IsUpdatingPlaylists = false;
+
             Library library = await libraryRepo.GetLibrary();
             PlayState = library.PlayState;
             Volume = library.Volume;
@@ -181,7 +184,7 @@ namespace AudioPlayerBackend.ViewModels
             // make sure that IsUpdatingPlaylists is at least 1 second set to true
             await Task.Delay(1000);
 
-            playlistsUpdatingCount--;
+            playlistsUpdatingCount = Math.Max(playlistsUpdatingCount - 1, 0);
             await dispatcher.InvokeDispatcher(() => IsUpdatingPlaylists = playlistsUpdatingCount > 0);
         }
 

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.FileSystem
 {
-    public interface IUpdateLibraryService
+    public interface IUpdateLibraryService : IAudioService
     {
         event EventHandler UpdateStarted;
         event EventHandler UpdateCompleted;
@@ -18,7 +18,7 @@ namespace AudioPlayerBackend.FileSystem
 
         Task ReloadSourcePlaylist(Guid id);
 
-        Task<Song[]> ReloadSourcePlaylist(FileMediaSources fileMediaSources);
+        Task<Song[]> LoadSongs(FileMediaSources fileMediaSources);
 
         Task UpdateSourcePlaylist(Guid id);
     }
