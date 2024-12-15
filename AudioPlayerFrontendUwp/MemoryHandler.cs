@@ -1,10 +1,10 @@
 ﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.Player;
-using AudioPlayerFrontend.Background;
 using StdOttStandard;
 using System;
-using Windows.UI.Xaml;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AudioPlayerFrontend
 {
@@ -13,22 +13,15 @@ namespace AudioPlayerFrontend
         private static readonly TimeSpan inativeTimeBackground = TimeSpan.FromMinutes(30),
             inativeTimeForeground = TimeSpan.FromMinutes(0.1);
 
-        private readonly Application application;
-        private readonly AudioServicesHandler servicesHandler;
-        private readonly BackgroundTaskHandler backgroundTaskHandler;
-        private readonly ForegroundTaskHandler foregroundTaskHandler;
+        private readonly App app;
         private readonly ResetTimer closeBackgroundTimer, closeForegroundTimer;
         private bool isStarted, isInBackground;
         private ILibraryRepo libraryRepo;
         private PlaybackState playState;
 
-        public MemoryHandler(Application application, AudioServicesHandler servicesHandler,
-            BackgroundTaskHandler backgroundTaskHandler, ForegroundTaskHandler foregroundTaskHandler)
+        public MemoryHandler(App app)
         {
-            this.application = application;
-            this.servicesHandler = servicesHandler;
-            this.backgroundTaskHandler = backgroundTaskHandler;
-            this.foregroundTaskHandler = foregroundTaskHandler;
+            this.app = app;
 
             closeBackgroundTimer = new ResetTimer(inativeTimeBackground);
             closeBackgroundTimer.RanDown += CloseBackgroundTimer_RanDown;
@@ -39,12 +32,16 @@ namespace AudioPlayerFrontend
 
         private void CloseBackgroundTimer_RanDown(object sender, EventArgs e)
         {
-            if (isInBackground && playState == PlaybackState.Paused) backgroundTaskHandler.Stop();
+            if (isInBackground && playState == PlaybackState.Paused) app.BackgroundTaskHandler.Stop();
         }
 
         private void CloseForegroundTimer_RanDown(object sender, EventArgs e)
         {
-            if (isInBackground) foregroundTaskHandler.Stop();
+            if (!isInBackground) return;
+
+            app.ForegroundTaskHandler.Stop();
+
+            if (!app.AudioServicesHandler.AudioServices.BackgroundServices.Any()) app.BackgroundTaskHandler.Stop();
         }
 
         public void Start()
@@ -52,25 +49,26 @@ namespace AudioPlayerFrontend
             if (isStarted) return;
             isStarted = true;
 
-            application.EnteredBackground += OnEnteredBackground;
-            application.LeavingBackground += OnLeavingBackground;
+            app.EnteredBackground += OnEnteredBackground;
+            app.LeavingBackground += OnLeavingBackground;
 
-            servicesHandler.AddAudioServicesChangedListener(ServicesHandler_AudioServicesChanged);
+            app.AudioServicesHandler.AddAudioServicesChangedListener(ServicesHandler_AudioServicesChanged);
         }
 
         private void UnsubscribeServicesHandler()
         {
-            servicesHandler.AudioServicesChanged -= ServicesHandler_AudioServicesChanged;
+            app.AudioServicesHandler.AudioServicesChanged -= ServicesHandler_AudioServicesChanged;
         }
 
-        private void ServicesHandler_AudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
+        private async void ServicesHandler_AudioServicesChanged(object sender, AudioServicesChangedEventArgs e)
         {
-            HandleAudioServices(e.NewServices);
+            await HandleAudioServices(e.NewServices);
         }
 
-        private void HandleAudioServices(AudioServices audioServices)
+        private async Task HandleAudioServices(AudioServices audioServices)
         {
             UnsubscribeLibraryRepo();
+            playState = PlaybackState.Paused;
 
             if (audioServices == null) return;
 
@@ -80,6 +78,9 @@ namespace AudioPlayerFrontend
 
             closeBackgroundTimer.TriggerReset();
             closeForegroundTimer.TriggerReset();
+
+            Library library = await libraryRepo.GetLibrary();
+            playState = library.PlayState;
         }
 
         private void SubscribeLibraryRepo()
@@ -111,17 +112,21 @@ namespace AudioPlayerFrontend
             closeBackgroundTimer.TriggerReset();
             closeForegroundTimer.TriggerReset();
 
-            servicesHandler.AudioServices?.StopIntensiveServices();
+            app.AudioServicesHandler.AudioServices?.StopIntensiveServices();
         }
 
-        private void OnLeavingBackground(object sender, object e)
+        private async void OnLeavingBackground(object sender, object e)
         {
             isInBackground = false;
 
             closeBackgroundTimer.Cancel();
             closeForegroundTimer.Cancel();
 
-            servicesHandler.AudioServices?.StartIntensiveServices();
+            if (!app.AudioServicesHandler.IsStarted) app.AudioServicesHandler.Start();
+            app.AudioServicesHandler.AudioServices?.StartIntensiveServices();
+
+            if (!app.BackgroundTaskHandler.IsRunning) await app.BackgroundTaskHelper.Start();
+            app.ForegroundTaskHandler.Start();
         }
 
         public void Stop()
@@ -131,8 +136,8 @@ namespace AudioPlayerFrontend
             closeBackgroundTimer.Cancel();
             closeForegroundTimer.Cancel();
 
-            backgroundTaskHandler.Stop();
-            foregroundTaskHandler.Stop();
+            app.BackgroundTaskHandler.Stop();
+            app.ForegroundTaskHandler.Stop();
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using AudioPlayerBackend.AudioLibrary.LibraryRepo;
-using AudioPlayerBackend.Build;
+﻿using AudioPlayerBackend.Build;
 using StdOttStandard.Dispatch;
 using System.Threading.Tasks;
 
@@ -27,6 +26,7 @@ namespace AudioPlayerFrontend.Background
 
             run = new TaskCompletionSource<bool>();
             await run.Task;
+            run = null;
 
             IsRunning = false;
 

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.FileSystem
 {
-    public interface IUpdateLibraryService : IAudioService
+    public interface IUpdateLibraryService
     {
         event EventHandler UpdateStarted;
         event EventHandler UpdateCompleted;

@@ -86,14 +86,14 @@ namespace AudioPlayerBackend.Build
         {
             lock (isStartedLockObj)
             {
-                if (IsStarted) return;
+                if (IsStarted || Config == null) return;
                 IsStarted = true;
             }
 
             while (IsStarted)
             {
                 await keepOpenSem.WaitAsync();
-
+             
                 await SetAudioServices(null);
 
                 Builder = new AudioServicesBuilder(Config.Clone());
@@ -138,6 +138,7 @@ namespace AudioPlayerBackend.Build
 
             lock (isStartedLockObj) IsStarted = false;
             Builder?.Cancel();
+            Builder = null;
 
             Stopped?.Invoke(this, EventArgs.Empty);
         }

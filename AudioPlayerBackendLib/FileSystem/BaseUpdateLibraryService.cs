@@ -261,21 +261,6 @@ namespace AudioPlayerBackend.FileSystem
 
         protected abstract string GetFileFullPath(TFile file);
 
-        public Task Start()
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task Stop()
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task Dispose()
-        {
-            return Task.CompletedTask;
-        }
-
         class SongEqualityComparer : IEqualityComparer<Song>
         {
             public bool Equals(Song x, Song y)

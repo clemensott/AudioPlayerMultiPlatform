@@ -21,11 +21,14 @@ namespace AudioPlayerFrontend
 
         public void Start()
         {
-            audioServicesHandler.ServicesBuild -= AudioServicesHandler_ServicesBuild;
-
             frame = Window.Current.Content as Frame;
 
-            if (frame == null) Window.Current.Content = frame = new Frame();
+            if (frame == null)
+            {
+                audioServicesHandler.ServicesBuild += AudioServicesHandler_ServicesBuild;
+                Window.Current.Content = frame = new Frame();
+            }
+
             if (frame.Content == null)
             {
                 if (audioServicesHandler.AudioServices != null)
@@ -59,16 +62,13 @@ namespace AudioPlayerFrontend
                 if (builder == currentBuilder) return;
                 currentBuilder = builder;
 
-                bool wasOnOpenPage = frame.CurrentSourcePageType == typeof(BuildOpenPage);
-                AudioPlayerBackend.Logs.Log("HandleAudioServiceBuilder5", wasOnOpenPage);
-                if (!wasOnOpenPage) frame.NavigateToBuildOpenPage(audioServicesHandler);
+                bool isOnOpenPage = frame.CurrentSourcePageType == typeof(BuildOpenPage);
+                if (!isOnOpenPage) frame.NavigateToBuildOpenPage(audioServicesHandler);
 
                 BuildEndedType endedType = await builder.CompleteToken.EndTask;
-                AudioPlayerBackend.Logs.Log("HandleAudioServiceBuilder6", endedType);
                 switch (endedType)
                 {
                     case BuildEndedType.Successful:
-                        AudioPlayerBackend.Logs.Log("HandleAudioServiceBuilder7", frame.CanGoBack);
                         if (frame.CanGoBack) frame.GoBack();
                         else
                         {
@@ -93,6 +93,8 @@ namespace AudioPlayerFrontend
                         audioServicesHandler.Start(newConfig ?? audioServicesHandler.Config);
                         break;
                 }
+
+                currentBuilder = null;
             });
         }
 
