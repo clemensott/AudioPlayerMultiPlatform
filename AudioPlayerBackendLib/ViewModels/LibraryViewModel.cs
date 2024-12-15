@@ -92,7 +92,7 @@ namespace AudioPlayerBackend.ViewModels
                 currentPlaylistIndex = value;
                 OnPropertyChanged(nameof(CurrentPlaylistIndex));
 
-                if (IsLoaded) libraryRepo.SetCurrentPlaylistId(Playlists.ElementAtOrDefault(value)?.Id);
+                if (IsLoaded && value >= 0) libraryRepo.SetCurrentPlaylistId(Playlists.ElementAtOrDefault(value)?.Id);
             }
         }
 

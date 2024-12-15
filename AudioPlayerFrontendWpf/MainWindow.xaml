@@ -339,7 +339,7 @@
 
             <Grid Grid.ColumnSpan="2" Margin="0,0,0,5"
                   DataContext="{Binding CurrentPlaylist.CurrentSongRequest}"
-                  Visibility="{Binding Id,Converter={StaticResource visCon}}">
+                  Visibility="{Binding Id,Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />

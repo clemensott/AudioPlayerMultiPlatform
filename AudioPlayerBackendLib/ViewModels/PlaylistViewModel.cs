@@ -141,7 +141,9 @@ namespace AudioPlayerBackend.ViewModels
                 currentSongRequest = value;
                 OnPropertyChanged(nameof(CurrentSongRequest));
 
-                CurrentSong = currentSongRequest.HasValue ? shuffledSongs.FirstOrNull(s => s.Id == currentSongRequest?.Id) : null;
+                CurrentSong = currentSongRequest.HasValue 
+                    ? shuffledSongs.ToNotNull().FirstOrNull(s => s.Id == currentSongRequest?.Id)
+                    : null;
 
                 if (isRunning) SetCurrentSongRequest(value);
             }
@@ -264,7 +266,7 @@ namespace AudioPlayerBackend.ViewModels
                 currentSongRequest = e.NewValue;
                 OnPropertyChanged(nameof(CurrentSongRequest));
 
-                CurrentSong = shuffledSongs.FirstOrNull(s => s.Id == currentSongRequest?.Id);
+                CurrentSong = shuffledSongs.ToNotNull().FirstOrNull(s => s.Id == currentSongRequest?.Id);
             });
         }
 
