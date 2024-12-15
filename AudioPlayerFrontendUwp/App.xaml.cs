@@ -76,7 +76,7 @@ namespace AudioPlayerFrontend
 
             memoryHandler.Start();
 
-            await loadServiceProfileTask;
+            await (loadServiceProfileTask ?? Task.CompletedTask);
             loadServiceProfileTask = null; // release memory
 
             foregroundTaskHandler.Start();
