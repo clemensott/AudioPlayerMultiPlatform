@@ -44,7 +44,7 @@
                         Visibility="{Binding Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}">
                 <Button Content="Settings" Width="100" Margin="5" HorizontalAlignment="Center" Click="BtnSettings_Click"/>
                 <Button Content="Exception" Width="100" Margin="5" HorizontalAlignment="Center" 
-                        Visibility="{Binding CompleteToken.Exception,
+                        Visibility="{Binding Path=CompleteToken.Exception,
                           Converter={StaticResource excCon}}" Click="BtnException_Click"/>
             </StackPanel>
         </StackPanel>

@@ -2,29 +2,24 @@
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.Base;
+using AudioPlayerBackend.OwnTcp;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
 {
-    internal class OwnTcpServerPlaylistsRepoConnector : IServerPlaylistsRepoConnector
+    internal class OwnTcpServerPlaylistsRepoConnector : OwnTcpBaseServerConnector, IServerPlaylistsRepoConnector
     {
         private readonly IPlaylistsRepo playlistsRepo;
-        private readonly IServerCommunicator serverCommunicator;
 
         public OwnTcpServerPlaylistsRepoConnector(IPlaylistsRepo playlistsRepo, IServerCommunicator serverCommunicator)
+            : base(nameof(IPlaylistsRepo), serverCommunicator)
         {
             this.playlistsRepo = playlistsRepo;
-            this.serverCommunicator = serverCommunicator;
         }
 
-        public Task<byte[]> SendAsync(string funcName, byte[] payload = null)
-        {
-            return serverCommunicator.SendAsync($"{nameof(IPlaylistsRepo)}.{funcName}", payload);
-        }
-
-        public Task Start()
+        protected override void SubscribeToService()
         {
             playlistsRepo.InsertedPlaylist += OnInsertedPlaylist;
             playlistsRepo.RemovedPlaylist += OnRemovedPlaylist;
@@ -37,13 +32,9 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             playlistsRepo.FileMedisSourcesChanged += OnFileMedisSourcesChanged;
             playlistsRepo.FilesLastUpdatedChanged += OnFilesLastUpdatedChanged;
             playlistsRepo.SongsLastUpdatedChanged += OnSongsLastUpdatedChanged;
-
-            serverCommunicator.Received += OnReceived;
-
-            return Task.CompletedTask;
         }
 
-        public Task Stop()
+        protected override void UnsubscribeFromService()
         {
             playlistsRepo.InsertedPlaylist -= OnInsertedPlaylist;
             playlistsRepo.RemovedPlaylist -= OnRemovedPlaylist;
@@ -56,10 +47,6 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             playlistsRepo.FileMedisSourcesChanged -= OnFileMedisSourcesChanged;
             playlistsRepo.FilesLastUpdatedChanged -= OnFilesLastUpdatedChanged;
             playlistsRepo.SongsLastUpdatedChanged -= OnSongsLastUpdatedChanged;
-
-            serverCommunicator.Received -= OnReceived;
-
-            return Task.CompletedTask;
         }
 
         private async void OnInsertedPlaylist(object sender, InsertPlaylistArgs e)
@@ -149,135 +136,97 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             await SendAsync(nameof(playlistsRepo.SongsLastUpdatedChanged), payload);
         }
 
-        private async void OnReceived(object sender, ReceivedEventArgs e)
+        protected override async Task<byte[]> OnMessageReceived(string subTopic, byte[] payload)
         {
-            TaskCompletionSource<byte[]> anwser = null;
-            try
+            Guid playlistId;
+            ByteQueue queue = payload;
+            switch (subTopic)
             {
-                string[] parts = e.Topic.Split('.');
-                if (parts.Length != 2 || parts[0] != nameof(IPlaylistsRepo)) return;
+                case nameof(playlistsRepo.GetPlaylist):
+                    playlistId = queue.DequeueGuid();
+                    Playlist playlist = await playlistsRepo.GetPlaylist(playlistId);
+                    return new ByteQueue()
+                        .Enqueue(playlist);
 
-                anwser = e.StartAnwser();
+                case nameof(playlistsRepo.InsertPlaylist):
+                    int? insertIndex = queue.DequeueIntNullable();
+                    Playlist insertPlaylist = queue.DequeuePlaylist();
+                    await playlistsRepo.InsertPlaylist(insertPlaylist, insertIndex);
+                    return null;
 
-                Guid playlistId;
-                ByteQueue payload = e.Payload;
-                ByteQueue result;
-                switch (parts[1])
-                {
-                    case nameof(playlistsRepo.GetPlaylist):
-                        playlistId = payload.DequeueGuid();
-                        Playlist playlist = await playlistsRepo.GetPlaylist(playlistId);
-                        result = new ByteQueue()
-                            .Enqueue(playlist);
-                        anwser.SetResult(result);
-                        break;
+                case nameof(playlistsRepo.RemovePlaylist):
+                    playlistId = queue.DequeueGuid();
+                    await playlistsRepo.RemovePlaylist(playlistId);
+                    return null;
 
-                    case nameof(playlistsRepo.InsertPlaylist):
-                        int? insertIndex = payload.DequeueIntNullable();
-                        Playlist insertPlaylist = payload.DequeuePlaylist();
-                        await playlistsRepo.InsertPlaylist(insertPlaylist, insertIndex);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.SetName):
+                    playlistId = queue.DequeueGuid();
+                    string name = queue.DequeueString();
+                    await playlistsRepo.SetName(playlistId, name);
+                    return null;
 
-                    case nameof(playlistsRepo.RemovePlaylist):
-                        playlistId = payload.DequeueGuid();
-                        await playlistsRepo.RemovePlaylist(playlistId);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.SetShuffle):
+                    playlistId = queue.DequeueGuid();
+                    OrderType shuffle = queue.DequeueOrderType();
+                    await playlistsRepo.SetShuffle(playlistId, shuffle);
+                    return null;
 
-                    case nameof(playlistsRepo.SetName):
-                        playlistId = payload.DequeueGuid();
-                        string name = payload.DequeueString();
-                        await playlistsRepo.SetName(playlistId, name);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.SetLoop):
+                    playlistId = queue.DequeueGuid();
+                    LoopType loop = queue.DequeueLoopType();
+                    await playlistsRepo.SetLoop(playlistId, loop);
+                    return null;
 
-                    case nameof(playlistsRepo.SetShuffle):
-                        playlistId = payload.DequeueGuid();
-                        OrderType shuffle = payload.DequeueOrderType();
-                        await playlistsRepo.SetShuffle(playlistId, shuffle);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.SetPlaybackRate):
+                    playlistId = queue.DequeueGuid();
+                    double playbackRate = queue.DequeueDouble();
+                    await playlistsRepo.SetPlaybackRate(playlistId, playbackRate);
+                    return null;
 
-                    case nameof(playlistsRepo.SetLoop):
-                        playlistId = payload.DequeueGuid();
-                        LoopType loop = payload.DequeueLoopType();
-                        await playlistsRepo.SetLoop(playlistId, loop);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.SetCurrentSongRequest):
+                    playlistId = queue.DequeueGuid();
+                    SongRequest? songRequest = queue.DequeueRequestSongNullable();
+                    await playlistsRepo.SetCurrentSongRequest(playlistId, songRequest);
+                    return null;
 
-                    case nameof(playlistsRepo.SetPlaybackRate):
-                        playlistId = payload.DequeueGuid();
-                        double playbackRate = payload.DequeueDouble();
-                        await playlistsRepo.SetPlaybackRate(playlistId, playbackRate);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.SetSongs):
+                    playlistId = queue.DequeueGuid();
+                    Song[] songs = queue.DequeueSongs();
+                    await playlistsRepo.SetSongs(playlistId, songs);
+                    return null;
 
-                    case nameof(playlistsRepo.SetCurrentSongRequest):
-                        playlistId = payload.DequeueGuid();
-                        SongRequest? songRequest = payload.DequeueRequestSongNullable();
-                        await playlistsRepo.SetCurrentSongRequest(playlistId, songRequest);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.GetFileMediaSourceRoots):
+                    ICollection<FileMediaSourceRoot> roots = await playlistsRepo.GetFileMediaSourceRoots();
+                    return new ByteQueue()
+                        .Enqueue(roots);
 
-                    case nameof(playlistsRepo.SetSongs):
-                        playlistId = payload.DequeueGuid();
-                        Song[] songs = payload.DequeueSongs();
-                        await playlistsRepo.SetSongs(playlistId, songs);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.GetFileMediaSourcesOfRoot):
+                    Guid rootId = queue.DequeueGuid();
+                    ICollection<FileMediaSource> sources = await playlistsRepo.GetFileMediaSourcesOfRoot(rootId);
+                    return new ByteQueue()
+                        .Enqueue(sources);
 
-                    case nameof(playlistsRepo.GetFileMediaSourceRoots):
-                        ICollection<FileMediaSourceRoot> roots = await playlistsRepo.GetFileMediaSourceRoots();
-                        result = new ByteQueue()
-                            .Enqueue(roots);
-                        anwser.SetResult(result);
-                        break;
-                        
-                    case nameof(playlistsRepo.GetFileMediaSourcesOfRoot):
-                        Guid rootId = payload.DequeueGuid();
-                        ICollection<FileMediaSource> sources = await playlistsRepo.GetFileMediaSourcesOfRoot(rootId);
-                        result = new ByteQueue()
-                            .Enqueue(sources);
-                        anwser.SetResult(result);
-                        break;
+                case nameof(playlistsRepo.SetFileMedisSources):
+                    playlistId = queue.DequeueGuid();
+                    FileMediaSources fileMediaSources = queue.DequeueFileMediaSources();
+                    await playlistsRepo.SetFileMedisSources(playlistId, fileMediaSources);
+                    return null;
 
-                    case nameof(playlistsRepo.SetFileMedisSources):
-                        playlistId = payload.DequeueGuid();
-                        FileMediaSources fileMediaSources = payload.DequeueFileMediaSources();
-                        await playlistsRepo.SetFileMedisSources(playlistId, fileMediaSources);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.SetFilesLastUpdated):
+                    playlistId = queue.DequeueGuid();
+                    DateTime? filesLastUpdated = queue.DequeueDateTimeNullable();
+                    await playlistsRepo.SetFilesLastUpdated(playlistId, filesLastUpdated);
+                    return null;
 
-                    case nameof(playlistsRepo.SetFilesLastUpdated):
-                        playlistId = payload.DequeueGuid();
-                        DateTime? filesLastUpdated = payload.DequeueDateTimeNullable();
-                        await playlistsRepo.SetFilesLastUpdated(playlistId, filesLastUpdated);
-                        anwser.SetResult(null);
-                        break;
+                case nameof(playlistsRepo.SetSongsLastUpdated):
+                    playlistId = queue.DequeueGuid();
+                    DateTime? songsLastUpdated = queue.DequeueDateTimeNullable();
+                    await playlistsRepo.SetSongsLastUpdated(playlistId, songsLastUpdated);
+                    return null;
 
-                    case nameof(playlistsRepo.SetSongsLastUpdated):
-                        playlistId = payload.DequeueGuid();
-                        DateTime? songsLastUpdated = payload.DequeueDateTimeNullable();
-                        await playlistsRepo.SetSongsLastUpdated(playlistId, songsLastUpdated);
-                        anwser.SetResult(null);
-                        break;
-
-                    default:
-                        anwser.SetException(new NotSupportedException($"Received action is not supported: {parts[1]}"));
-                        break;
-                }
+                default:
+                    throw new NotSupportedException($"Received action is not supported: {subTopic}");
             }
-            catch (Exception exception)
-            {
-                if (anwser != null) anwser.SetException(exception);
-                else throw;
-            }
-        }
-
-        public async Task Dispose()
-        {
-            await Stop();
         }
     }
 }

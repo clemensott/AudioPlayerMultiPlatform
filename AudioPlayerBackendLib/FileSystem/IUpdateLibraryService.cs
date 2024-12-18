@@ -18,7 +18,7 @@ namespace AudioPlayerBackend.FileSystem
 
         Task ReloadSourcePlaylist(Guid id);
 
-        Task<Song[]> ReloadSourcePlaylist(FileMediaSources fileMediaSources);
+        Task<Song[]> LoadSongs(FileMediaSources fileMediaSources);
 
         Task UpdateSourcePlaylist(Guid id);
     }

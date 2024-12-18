@@ -81,7 +81,7 @@ namespace AudioPlayerFrontend
             if (viewModel.NewPlaylist)
             {
                 FileMediaSources fileMediaSources = FileMediaSourcesHelper.ExtractFileMediaSources(newPaths);
-                Song[] songs = await updateLibraryService.ReloadSourcePlaylist(fileMediaSources);
+                Song[] songs = await updateLibraryService.LoadSongs(fileMediaSources);
                 Playlist newPlaylist = new Playlist(Guid.NewGuid(), PlaylistType.SourcePlaylist, viewModel.Name,
                     viewModel.Shuffle, viewModel.Loop, 1, null, songs,
                     fileMediaSources, null, DateTime.Now, DateTime.Now);

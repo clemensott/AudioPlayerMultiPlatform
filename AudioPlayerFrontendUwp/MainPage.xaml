@@ -34,6 +34,7 @@
         <local:OrderIconConverter x:Key="shuffleIcoCon" />
 
         <x:Int32 x:Key="negativeOne">-1</x:Int32>
+        <Visibility x:Key="visible">Visible</Visibility>
         <Visibility x:Key="collapsed">Collapsed</Visibility>
     </Page.Resources>
 
@@ -46,15 +47,17 @@
         <con:SingleInputConverter x:Name="sicIsUpdating" Output="{Binding IsUpdatingPlaylists}"/>
         <con:SingleInputConverter x:Name="sicIsClient" Output="{Binding IsClient}"/>
 
-        <Grid Visibility="{Binding Path=Playlists.Count,Converter={StaticResource visCon}}">
-            <StackPanel Visibility="{Binding IsUpdatingPlaylists,Converter={StaticResource visCon}}">
-                <TextBlock Text="Updating..." HorizontalAlignment="Center"/>
-                <ProgressBar IsIndeterminate="True" />
-            </StackPanel>
+        <Grid Visibility="{Binding IsLoaded,FallbackValue={StaticResource collapsed},Converter={StaticResource visCon}}">
+            <Grid Visibility="{Binding Path=Playlists.Count,Converter={StaticResource visCon}}">
+                <StackPanel Visibility="{Binding IsUpdatingPlaylists,Converter={StaticResource visCon}}">
+                    <TextBlock Text="Updating..." HorizontalAlignment="Center"/>
+                    <ProgressBar IsIndeterminate="True" />
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <Grid Grid.Row="1"
-              Visibility="{Binding IsLoaded,Converter={StaticResource visCon}}">
+              Visibility="{Binding IsLoaded,FallbackValue={StaticResource collapsed},Converter={StaticResource visCon}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -259,15 +262,15 @@
         </Grid>
 
         <StackPanel Grid.Row="1" VerticalAlignment="Center"
-                    Visibility="{Binding IsLoaded,Converter={StaticResource hidCon}}">
+                    Visibility="{Binding IsLoaded,FallbackValue={StaticResource visible},Converter={StaticResource hidCon}}">
             <ProgressRing Grid.Row="1" IsActive="True" Height="100" Width="100" Margin="10"/>
-            <Button Grid.Row="2" Content="Settings" Width="100" Margin="5"
-                    HorizontalAlignment="Center" Click="BtnSettings_Click"/>
+            <!--<Button Grid.Row="2" Content="Settings" Width="100" Margin="5"
+                    HorizontalAlignment="Center" Click="BtnSettings_Click"/>-->
         </StackPanel>
     </Grid>
 
     <Page.BottomAppBar>
-        <CommandBar Visibility="{Binding IsLoaded,Converter={StaticResource visCon}}">
+        <CommandBar Visibility="{Binding IsLoaded,FallbackValue={StaticResource collapsed},Converter={StaticResource visCon}}">
             <CommandBar.PrimaryCommands>
                 <AppBarToggleButton x:Name="atbPlaylists" Icon="List" Label="Playlists"/>
                 <AppBarButton Icon="Previous" Label="Previous" Click="AbbPrevious_Click"/>
