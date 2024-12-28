@@ -454,5 +454,11 @@ namespace AudioPlayerFrontend
                 currentPlaylist.SetCurrentSongRequest(SongRequest.Get(request.Id, TimeSpan.FromSeconds(positionSeconds), request.Duration));
             }
         }
+
+        private void BtnAddPlaylist_Click(object sender, RoutedEventArgs e)
+        {
+            Window addWindow = new AddSourcePlaylistWindow(new string[0], audioServices);
+            addWindow.ShowDialog();
+        }
     }
 }
