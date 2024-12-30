@@ -66,6 +66,13 @@ namespace AudioPlayerFrontend
             Logs.Log("MainPage.SetAudioServices2");
         }
 
+        private object SongIndexCon_ConvertEvent(object value, Type targetType, object parameter, string language)
+        {
+            Song song = (Song)value;
+            int index = viewModel.CurrentPlaylist?.GetIndexOfSong(song) ?? -1;
+            return index == -1 ? string.Empty : index.ToString();
+        }
+
         private object MicViewPlaylists_Convert(object sender, MultiplesInputsConvert2EventArgs args)
         {
             return true.Equals(args.Input0) || args.Input1 == null;

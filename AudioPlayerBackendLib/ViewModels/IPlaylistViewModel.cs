@@ -27,6 +27,8 @@ namespace AudioPlayerBackend.ViewModels
 
         ICollection<Song> Songs { get; }
 
+        int GetIndexOfSong(Song song);
+
         Task SetPlaylistId(Guid? id);
 
         Task SetCurrentSongRequest(SongRequest? requestSong);
