@@ -141,7 +141,9 @@ namespace AudioPlayerBackend.ViewModels
                 currentSongRequest = value;
                 OnPropertyChanged(nameof(CurrentSongRequest));
 
-                CurrentSong = shuffledSongs.Cast<Song?>().FirstOrDefault(s => s?.Id == currentSongRequest?.Id);
+                CurrentSong = currentSongRequest.HasValue 
+                    ? shuffledSongs.ToNotNull().FirstOrNull(s => s.Id == currentSongRequest?.Id)
+                    : null;
 
                 if (isRunning) SetCurrentSongRequest(value);
             }
@@ -230,6 +232,7 @@ namespace AudioPlayerBackend.ViewModels
             Shuffle = OrderType.ByTitleAndArtist;
             Loop = LoopType.CurrentPlaylist;
             PlaybackRate = 1;
+            CurrentSongRequest = null;
             CurrentSong = null;
             shuffledSongs = Array.Empty<Song>();
             Songs = Array.Empty<Song>();
@@ -268,7 +271,7 @@ namespace AudioPlayerBackend.ViewModels
                 currentSongRequest = e.NewValue;
                 OnPropertyChanged(nameof(CurrentSongRequest));
 
-                CurrentSong = shuffledSongs.Cast<Song?>().FirstOrDefault(s => s?.Id == currentSongRequest?.Id);
+                CurrentSong = shuffledSongs.ToNotNull().FirstOrNull(s => s.Id == currentSongRequest?.Id);
             });
         }
 
