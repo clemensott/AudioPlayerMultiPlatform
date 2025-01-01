@@ -86,9 +86,10 @@ namespace AudioPlayerFrontend.Join
                     return root.Path;
 
                 case FileMediaSourceRootPathType.KnownFolder:
+                    (string root, string releative) split = FileSystemUtils.SplitPath(root.Path);
                     return GetLocalKnownFolders()
-                        .TryFirst(f => f.Value == root.Path, out LocalKnownFolder folder)
-                        ? folder.CurrentFullPath : null;
+                        .TryFirst(f => f.Value == split.root, out LocalKnownFolder folder)
+                        ? Path.Combine(folder.CurrentFullPath, split.releative) : null;
 
                 default:
                     return null;

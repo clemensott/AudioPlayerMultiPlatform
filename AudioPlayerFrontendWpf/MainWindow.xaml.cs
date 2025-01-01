@@ -23,6 +23,7 @@ using AudioPlayerBackend.ViewModels;
 using AudioPlayerBackend.AudioLibrary;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using System.Globalization;
 
 namespace AudioPlayerFrontend
 {
@@ -407,14 +408,21 @@ namespace AudioPlayerFrontend
             }
             else if (lbxIndex != -1 && isSearching) ;
             else if (!songRequest.HasValue) lbxIndex = -1;
-            else if ( songs.Any(s => s.Id == currentSongId)) lbxIndex = songs.IndexOf(s => s.Id == currentSongId);
+            else if (songs.Any(s => s.Id == currentSongId)) lbxIndex = songs.IndexOf(s => s.Id == currentSongId);
             else if ((lbxIndex == -1 || changedInput == 3) && songs.Any()) lbxIndex = 0;
             else lbxIndex = Math.Min(lbxIndex, songs.Count() - 1);
 
             return songs;
         }
 
-        private object ValueConverter_ConvertEvent(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        private object SongIndexCon_ConvertEvent(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            Song song = (Song)value;
+            int index = viewModel.CurrentPlaylist?.GetIndexOfSong(song) ?? -1;
+            return index == -1 ? string.Empty : index.ToString();
+        }
+
+        private object PlaylistMenuItemVisCon_ConvertEvent(object value, Type targetType, object parameter, CultureInfo culture)
         {
             PlaylistType playlistType = (PlaylistType)value;
             return viewModel.IsLocalFileMediaSource && playlistType.HasFlag(PlaylistType.SourcePlaylist)
@@ -453,6 +461,12 @@ namespace AudioPlayerFrontend
             {
                 currentPlaylist.SetCurrentSongRequest(SongRequest.Get(request.Id, TimeSpan.FromSeconds(positionSeconds), request.Duration));
             }
+        }
+
+        private void BtnAddPlaylist_Click(object sender, RoutedEventArgs e)
+        {
+            Window addWindow = new AddSourcePlaylistWindow(new string[0], audioServices);
+            addWindow.ShowDialog();
         }
     }
 }

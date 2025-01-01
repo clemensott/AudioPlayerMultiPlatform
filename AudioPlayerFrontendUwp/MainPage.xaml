@@ -12,6 +12,7 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Page.Resources>
+        <con:ValueConverter x:Key="songIndexCon" ConvertEvent="SongIndexCon_ConvertEvent"/>
         <local:VolumeToolTipConverter x:Key="volTooTipCon"/>
 
         <com:PlaybackState x:Key="playingState">Playing</com:PlaybackState>
@@ -88,11 +89,11 @@
 
                 <ctl:IconButton Grid.Column="1" Margin="3" Click="IbnLoopType_Click"
                                 Symbol="{Binding CurrentPlaylist.Loop,Converter={StaticResource loopIcoCon}}"
-                                Visibility="{Binding CurrentPlaylist,Converter={StaticResource visCon}}"/>
+                                Visibility="{Binding CurrentPlaylist.Id,Converter={StaticResource visCon}}"/>
 
                 <ctl:IconButton Grid.Column="2" Margin="3" Click="IbnOrderType_Click"
                                 Symbol="{Binding CurrentPlaylist.Shuffle,Converter={StaticResource shuffleIcoCon}}"
-                                Visibility="{Binding CurrentPlaylist,Converter={StaticResource visCon}}"/>
+                                Visibility="{Binding CurrentPlaylist.Id,Converter={StaticResource visCon}}"/>
 
                 <ctl:IconButton Grid.Column="3" Symbol="Find" Margin="3" Click="IbnSearch_Click"/>
             </Grid>
@@ -144,7 +145,7 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.RowSpan="2" TextAlignment="Center" Margin="5,0,10,0"
-                                       VerticalAlignment="Center" Text="{Binding Index}"
+                                       VerticalAlignment="Center" Text="{Binding Converter={StaticResource songIndexCon}}"
                                        Visibility="{Binding ElementName=atbViewIndex,Path=IsChecked,Converter={StaticResource visCon}}"/>
 
                             <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}"/>
@@ -257,7 +258,7 @@
                                        DataContext="{Binding CurrentPlaylist.CurrentSongRequest}"
                                        Position="{Binding Position}"
                                        Duration="{Binding Duration}"
-                                       Visibility="{Binding Id,Converter={StaticResource visCon}}"
+                                       Visibility="{Binding Converter={StaticResource visCon},FallbackValue={StaticResource collapsed}}"
                                        UserPositionChanged="AudioPositionSlider_UserPositionChanged"/>
         </Grid>
 

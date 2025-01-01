@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AudioPlayerBackend;
+using AudioPlayerFrontend.Join;
+using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
@@ -9,6 +11,7 @@ namespace AudioPlayerFrontend
     {
         protected override void OnStartup(StartupEventArgs e)
         {
+            Logs.SetFileSystemService(new FileSystemService());
             Dispatcher.UnhandledException += Dispatcher_UnhandledException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 

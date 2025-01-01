@@ -65,7 +65,7 @@ namespace AudioPlayerBackend
             fileSystemService = service;
         }
 
-        public static async void Log(string text, params object[] values)
+        public static void Log(string text, params object[] values)
         {
             string line = GetLogLine($"{text}: {string.Join(" | ", values)}");
             System.Diagnostics.Debug.WriteLine(line);

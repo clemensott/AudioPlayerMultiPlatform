@@ -195,6 +195,9 @@ namespace AudioPlayerBackend.Build
             Option serviceVolOpt = new Option("v", "volume", "The volume of service (value between 0 and 1)", false, 1, 1);
             Option dataFileOpt = new Option("d", "data-file", "Filepath to where to read and write data.", false, 1, 1);
             Option autoUpdateOpt = new Option("a", "auto-update", "Enable auto update of library and its playlists.", false, 0, 0);
+            // Examples
+            //   --default-update-sources Songs+Folders KnownFolder MyMusic
+            //   --default-update-sources Songs Path D:\Music
             Option defaultUpdateRootsOpt = Option.GetLongOnly("default-update-sources", "Filepaths to source roots that create playlists.", false, 3, 3);
 
             Options options = new Options(sourcesOpt, clientOpt, serverOpt, playOpt,

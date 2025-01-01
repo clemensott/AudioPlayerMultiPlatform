@@ -167,19 +167,24 @@ namespace AudioPlayerBackend.ViewModels
             this.dispatcher = dispatcher;
         }
 
-        public async Task SendShuffle(OrderType shuffle)
+        private async Task SendShuffle(OrderType shuffle)
         {
             if (Id.TryHasValue(out Guid id)) await playlistsRepo.SetShuffle(id, shuffle);
         }
 
-        public async Task SendLoop(LoopType loop)
+        private async Task SendLoop(LoopType loop)
         {
             if (Id.TryHasValue(out Guid id)) await playlistsRepo.SetLoop(id, loop);
         }
 
-        public async Task SendPlaybackRate(double playbackRate)
+        private async Task SendPlaybackRate(double playbackRate)
         {
             if (Id.TryHasValue(out Guid id)) await playlistsRepo.SetPlaybackRate(id, playbackRate);
+        }
+
+        public int GetIndexOfSong(Song song)
+        {
+            return shuffledSongs.IndexOf(song);
         }
 
         public async Task SetCurrentSongRequest(SongRequest? songRequest)

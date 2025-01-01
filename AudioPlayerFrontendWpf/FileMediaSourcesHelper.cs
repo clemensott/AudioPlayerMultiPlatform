@@ -1,4 +1,5 @@
 ﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using AudioPlayerBackend.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,34 +22,12 @@ namespace AudioPlayerFrontend
             }
         }
 
-        private static readonly char[] diretorySeparators = new char[] {
-            Path.DirectorySeparatorChar,
-            Path.AltDirectorySeparatorChar,
-        };
-
-        private static (string root, string releative) SplitPath(string path, int depth)
-        {
-            int index = 0;
-            while (index < path.Length && depth > 0)
-            {
-                if (diretorySeparators.Contains(path[index])) depth--;
-                index++;
-            }
-
-            if (index + 1 >= path.Length) return (path, string.Empty);
-
-            string root = path.Remove(index);
-            string relative = path.Substring(index);
-
-            return (root, relative);
-        }
-
         private static IEnumerable<IList<FileMediaSourceRootPaths>> GetPossibleRoots(ICollection<string> paths)
         {
             int depth = 0;
             while (true)
             {
-                var groups = paths.Select(path => SplitPath(path, depth))
+                var groups = paths.Select(path => FileSystemUtils.SplitPath(path, depth))
                     .GroupBy(t => t.root, (key, g) => new FileMediaSourceRootPaths(key, g.Select(t => t.releative)))
                     .ToArray();
 

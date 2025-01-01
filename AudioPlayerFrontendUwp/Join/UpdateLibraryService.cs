@@ -86,9 +86,11 @@ namespace AudioPlayerFrontend.Join
                     }
 
                 case FileMediaSourceRootPathType.KnownFolder:
-                    KnownFolderId knownFolderId = (KnownFolderId)Enum.Parse(typeof(KnownFolderId), root.Path, true);
+                    (string root, string releative) split = FileSystemUtils.SplitPath(root.Path);
+                    KnownFolderId knownFolderId = (KnownFolderId)Enum.Parse(typeof(KnownFolderId), split.root, true);
 
-                    return GetKnownFolder(knownFolderId);
+                    StorageFolder knownFolder = GetKnownFolder(knownFolderId);
+                    return await GetStorageItemFromMediaSourcePath(knownFolder, split.releative);
 
                 default:
                     return null;
@@ -133,7 +135,7 @@ namespace AudioPlayerFrontend.Join
 
         private static async Task<IEnumerable<StorageFile>> LoadStorageFiles(FileMediaSource source, StorageFolder root)
         {
-            IStorageItem item = await GetStorageItemFromMediaSourcePath(source, root);
+            IStorageItem item = await GetStorageItemFromMediaSourcePath(root, source.RelativePath);
 
             if (item is StorageFile file) return new StorageFile[] { file };
             else if (item is StorageFolder folder) return await folder.GetFilesAsync();
@@ -141,11 +143,11 @@ namespace AudioPlayerFrontend.Join
             return Enumerable.Empty<StorageFile>();
         }
 
-        private static async Task<IStorageItem> GetStorageItemFromMediaSourcePath(FileMediaSource source, StorageFolder root)
+        private static async Task<IStorageItem> GetStorageItemFromMediaSourcePath(StorageFolder root, string relativePath)
         {
-            if (string.IsNullOrWhiteSpace(source.RelativePath)) return root;
+            if (string.IsNullOrWhiteSpace(relativePath)) return root;
 
-            string[] parts = source.RelativePath
+            string[] parts = relativePath
                 .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
