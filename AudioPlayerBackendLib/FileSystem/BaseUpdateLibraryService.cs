@@ -136,7 +136,46 @@ namespace AudioPlayerBackend.FileSystem
                 OrderType.ByTitleAndArtist, LoopType.CurrentPlaylist, 1,
                 null, songs, fileMediaSources, null, DateTime.Now, DateTime.Now);
 
-            await playlistsRepo.InsertPlaylist(playlist, null);
+            int index = await GetIndesForPlaylist(root, relativePath);
+            System.Diagnostics.Debug.WriteLine($"path: {relativePath} => {index}");
+            await playlistsRepo.InsertPlaylist(playlist, index);
+        }
+
+        private async Task<int> GetIndesForPlaylist(FileMediaSourceRoot root, string relativePath)
+        {
+            Library library = await libraryRepo.GetLibrary();
+
+            int index = 0;
+            foreach (PlaylistInfo playlistInfo in library.Playlists)
+            {
+                Playlist playlist = await playlistsRepo.GetPlaylist(playlistInfo.Id);
+                if (playlist.FileMediaSources.Root.Id == root.Id
+                    && playlist.FileMediaSources.Sources.Any(s => ComparePath(s.RelativePath, relativePath) > 0))
+                {
+                    break;
+                }
+
+                index++;
+            }
+
+            return index;
+        }
+
+        private static int ComparePath(string path1, string path2)
+        {
+            string[] parts1 = FileSystemUtils.GetPathParts(path1);
+            string[] parts2 = FileSystemUtils.GetPathParts(path2);
+
+            for (int i = 0; i < parts1.Length && i < parts2.Length; i++)
+            {
+                int compare = parts1[i].CompareTo(parts2[i]);
+                if (compare != 0) return compare;
+            }
+
+            if (parts1.Length < parts2.Length) return -1;
+            if (parts2.Length < parts1.Length) return 1;
+
+            return 0;
         }
 
         public Task UpdateSourcePlaylist(Guid id)

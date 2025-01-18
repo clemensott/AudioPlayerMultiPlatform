@@ -26,5 +26,10 @@ namespace AudioPlayerBackend.FileSystem
 
             return (root, relative);
         }
+
+        public static string[] GetPathParts(string path)
+        {
+            return path.Split(diretorySeparators);
+        }
     }
 }
