@@ -12,6 +12,7 @@ using AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite;
 using AudioPlayerBackend.Communication;
 using AudioPlayerBackend.Communication.OwnTcp;
 using AudioPlayerBackend.FileSystem;
+using AudioPlayerBackend.FileSystem.OwnTcp;
 using AudioPlayerBackend.Player;
 using AudioPlayerBackend.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -132,40 +133,47 @@ namespace AudioPlayerBackend.Build
         {
             IServiceProvider serviceProvider = BuildServiceProvider();
 
-            IList<IAudioService> serviceList = new List<IAudioService>()
+            IList<IAudioService> backgroundServices = new List<IAudioService>();
+            IList<IAudioService> foregroundServices = new List<IAudioService>();
+            IList<IAudioService> intensiveServices = new List<IAudioService>();
+
+            if (config.BuildClient)
             {
-                // playlist repo must be before library repo
-                // because the order in which the init sqls run are important
-                serviceProvider.GetService<IPlaylistsRepo>(),
-                serviceProvider.GetService<ILibraryRepo>(),
-                serviceProvider.GetService<IUpdateLibraryService>(),
-            };
+                foregroundServices.Add(serviceProvider.GetService<IClientCommunicator>());
+                foregroundServices.Add(serviceProvider.GetService<IPlaylistsRepo>());
+                foregroundServices.Add(serviceProvider.GetService<ILibraryRepo>());
+                //foregroundServices.Add(serviceProvider.GetService<IUpdateLibraryService>());
+            }
 
             if (config.BuildStandalone || config.BuildServer)
             {
-                serviceList.Add(serviceProvider.GetService<IPlayerService>());
+                // playlist repo must be before library repo
+                // because the order in which the init sqls run is important
+                backgroundServices.Add(serviceProvider.GetService<IPlaylistsRepo>());
+                backgroundServices.Add(serviceProvider.GetService<ILibraryRepo>());
+            }
+
+            if (config.BuildStandalone || config.BuildServer)
+            {
+                backgroundServices.Add(serviceProvider.GetService<IPlayerService>());
             }
 
             if (config.BuildServer)
             {
-                serviceList.Add(serviceProvider.GetService<IServerCommunicator>());
-                serviceList.Add(serviceProvider.GetService<IServerLibraryRepoConnector>());
-                serviceList.Add(serviceProvider.GetService<IServerPlaylistsRepoConnector>());
-            }
-
-            if (config.BuildClient)
-            {
-                serviceList.Add(serviceProvider.GetService<IClientCommunicator>());
+                backgroundServices.Add(serviceProvider.GetService<IServerCommunicator>());
+                backgroundServices.Add(serviceProvider.GetService<IServerLibraryRepoConnector>());
+                backgroundServices.Add(serviceProvider.GetService<IServerPlaylistsRepoConnector>());
+                backgroundServices.Add(serviceProvider.GetService<IServerUpdateLibraryServiceConnector>());
             }
 
             if (config.AutoUpdate && (config.BuildStandalone || config.BuildServer))
             {
-                serviceList.Add(serviceProvider.GetService<AutoUpdateLibraryService>());
+                intensiveServices.Add(serviceProvider.GetService<AutoUpdateLibraryService>());
             }
 
-            serviceList.Add(serviceProvider.GetService<ILibraryViewModel>());
+            foregroundServices.Add(serviceProvider.GetService<ILibraryViewModel>());
 
-            return new AudioServices(serviceProvider, serviceList);
+            return new AudioServices(serviceProvider, backgroundServices, foregroundServices, intensiveServices);
         }
 
         private IServiceProvider BuildServiceProvider()
@@ -184,6 +192,7 @@ namespace AudioPlayerBackend.Build
                 services.AddSingleton<IClientCommunicator, OwnTcpClientCommunicator>();
                 services.AddSingleton<ILibraryRepo, OwnTcpLibraryRepo>();
                 services.AddSingleton<IPlaylistsRepo, OwnTcpPlaylistsRepo>();
+                services.AddSingleton<IUpdateLibraryService, OwnTcpUpdateLibraryService>();
             }
             else throw new NotSupportedException("Mode not supported");
 
@@ -192,6 +201,7 @@ namespace AudioPlayerBackend.Build
                 services.AddSingleton<IServerCommunicator, OwnTcpServerCommunicator>();
                 services.AddSingleton<IServerLibraryRepoConnector, OwnTcpServerLibraryRepoConnector>();
                 services.AddSingleton<IServerPlaylistsRepoConnector, OwnTcpServerPlaylistsRepoConnector>();
+                services.AddSingleton<IServerUpdateLibraryServiceConnector, OwnTcpServerUpdateLibraryServiceConnector>();
             }
 
             services.AddTransient<IPlayerService, AudioPlayerService>();
@@ -204,7 +214,7 @@ namespace AudioPlayerBackend.Build
 
             foreach (ServiceDescriptor service in config.AdditionalServices.ToNotNull())
             {
-                services.Replace(service);
+                services.TryAdd(service);
             }
 
             return services.BuildServiceProvider();

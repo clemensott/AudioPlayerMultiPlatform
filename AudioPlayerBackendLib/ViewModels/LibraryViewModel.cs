@@ -92,7 +92,7 @@ namespace AudioPlayerBackend.ViewModels
                 currentPlaylistIndex = value;
                 OnPropertyChanged(nameof(CurrentPlaylistIndex));
 
-                if (IsLoaded) libraryRepo.SetCurrentPlaylistId(Playlists.ElementAtOrDefault(value)?.Id);
+                if (IsLoaded && value >= 0) libraryRepo.SetCurrentPlaylistId(Playlists.ElementAtOrDefault(value)?.Id);
             }
         }
 
@@ -133,6 +133,9 @@ namespace AudioPlayerBackend.ViewModels
         public async Task Start()
         {
             Subscribe();
+
+            playlistsUpdatingCount = 0;
+            IsUpdatingPlaylists = false;
 
             Library library = await libraryRepo.GetLibrary();
             PlayState = library.PlayState;
@@ -181,7 +184,7 @@ namespace AudioPlayerBackend.ViewModels
             // make sure that IsUpdatingPlaylists is at least 1 second set to true
             await Task.Delay(1000);
 
-            playlistsUpdatingCount--;
+            playlistsUpdatingCount = Math.Max(playlistsUpdatingCount - 1, 0);
             await dispatcher.InvokeDispatcher(() => IsUpdatingPlaylists = playlistsUpdatingCount > 0);
         }
 
