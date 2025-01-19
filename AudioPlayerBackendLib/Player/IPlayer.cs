@@ -1,6 +1,7 @@
 ﻿using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.GenericEventArgs;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AudioPlayerBackend.Player
@@ -28,6 +29,8 @@ namespace AudioPlayerBackend.Player
         float Volume { get; set; }
 
         Task<(TimeSpan position, TimeSpan duration)> GetTimesSafe();
+
+        Task SetSongs(ICollection<Song> songs);
 
         Task Set(RequestSong? request);
 

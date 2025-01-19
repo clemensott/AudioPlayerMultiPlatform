@@ -92,6 +92,8 @@ namespace AudioPlayerBackend.Player
                 songs = new Song[0];
             }
 
+            await Player.SetSongs(songs);
+
             Logs.Log("AudioPlayerService.ChangeCurrentPlaylist4");
             // if a request song has been set by CheckCurrentSongRequest then UpdateCurrentSong got called already
             if (!await CheckCurrentSongRequest())
@@ -196,6 +198,12 @@ namespace AudioPlayerBackend.Player
         {
             Logs.Log("AudioPlayerService.Player_MediaOpened1", e.Source.FullPath, updatePositionCount);
             errorCount = 0;
+
+            if (currentPlaylistId.TryHasValue(out Guid playlistId))
+            {
+                SongRequest newSongRequest = SongRequest.Get(e.Source.Id, e.Position, e.Duration, true);
+                await playlistsRepo.SetCurrentSongRequest(playlistId, newSongRequest);
+            }
 
             await EnableTimer();
             Logs.Log("AudioPlayerService.Player_MediaOpened2", updatePositionCount);

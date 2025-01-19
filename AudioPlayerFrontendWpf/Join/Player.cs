@@ -3,6 +3,7 @@ using AudioPlayerBackend.GenericEventArgs;
 using AudioPlayerBackend.Player;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -163,6 +164,11 @@ namespace AudioPlayerFrontend.Join
         public async Task<(TimeSpan position, TimeSpan duration)> GetTimesSafe()
         {
             return await mediaElement.Dispatcher.InvokeAsync(() => (Position, Duration));
+        }
+
+        public async Task SetSongs(ICollection<Song> songs)
+        {
+            
         }
 
         public Task Set(RequestSong? request)
