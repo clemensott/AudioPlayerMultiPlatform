@@ -29,5 +29,11 @@ namespace AudioPlayerFrontend.Join
             File.AppendAllLines(fileName, lines);
             return Task.CompletedTask;
         }
+
+        public Task DeleteFile(string path)
+        {
+            File.Delete(path);
+            return Task.CompletedTask;
+        }
     }
 }

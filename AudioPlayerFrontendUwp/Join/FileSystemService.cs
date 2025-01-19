@@ -35,5 +35,11 @@ namespace AudioPlayerFrontend.Join
             StorageFile file = await ApplicationData.Current.LocalFolder.CreateFileAsync(fileName, CreationCollisionOption.OpenIfExists);
             await FileIO.AppendLinesAsync(file, lines);
         }
+
+        public async Task DeleteFile(string path)
+        {
+            StorageFile file = await StorageFile.GetFileFromPathAsync(path);
+            await file.DeleteAsync();
+        }
     }
 }

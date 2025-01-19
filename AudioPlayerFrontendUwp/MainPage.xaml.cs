@@ -141,6 +141,43 @@ namespace AudioPlayerFrontend
             }
         }
 
+        private void GidSongItem_Holding(object sender, HoldingRoutedEventArgs e)
+        {
+            FlyoutBase.ShowAttachedFlyout(sender as FrameworkElement);
+        }
+
+        private void GidSongItem_RightTapped(object sender, RightTappedRoutedEventArgs e)
+        {
+            FlyoutBase.ShowAttachedFlyout(sender as FrameworkElement);
+        }
+
+        private async void MfiSongInfo_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Song song = UwpUtils.GetDataContext<Song>(sender);
+                SongInfoControl control = new SongInfoControl();
+                await control.LoadData(song);
+                await DialogUtils.ShowContentAsync(control, "Song Info");
+            }
+            catch (Exception exc)
+            {
+                await DialogUtils.ShowSafeAsync(exc.Message, "Exception");
+            }
+        }
+
+        private async void MfiDeleteFile_Click(object sender, RoutedEventArgs e)
+        {
+            Song song = UwpUtils.GetDataContext<Song>(sender);
+            bool delete = await DialogUtils.ShowTwoOptionsAsync($"Do you really want to delete \"{song.Title}\"?", "Delete File", "Yes", "No");
+            if (delete)
+            {
+                IFileSystemService fileSystemService = audioServicesHandler.AudioServices.GetFileSystemService();
+                await fileSystemService.DeleteFile(song.FullPath);
+                await updateLibraryService.UpdateSourcePlaylist(viewModel.CurrentPlaylist.Id.Value);
+            }
+        }
+
         private async void IbnLoopType_Click(object sender, RoutedEventArgs e)
         {
             IEnumerable<ListBoxDialogItem<LoopType?>> options = new ListBoxDialogItem<LoopType?>[]

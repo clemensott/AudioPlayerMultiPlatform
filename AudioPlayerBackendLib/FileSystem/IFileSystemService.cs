@@ -28,5 +28,7 @@ namespace AudioPlayerBackend.FileSystem
         Task WriteTextFile(string fileName, string text);
 
         Task AppendTextLines(string fileName, IEnumerable<string> lines);
+
+        Task DeleteFile(string path);
     }
 }

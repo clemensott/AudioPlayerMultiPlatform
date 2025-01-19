@@ -110,6 +110,9 @@
       <DependentUpon>BuildOpenPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\ListBoxDialogItem.cs" />
+    <Compile Include="Controls\SongInfoControl.xaml.cs">
+      <DependentUpon>SongInfoControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Converter\FilePathsToSingleStringConverter.cs" />
     <Compile Include="Converter\OrderIconConverter.cs" />
     <Compile Include="Converter\LoopIconConverter.cs" />
@@ -203,6 +206,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="BuildOpenPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\SongInfoControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
