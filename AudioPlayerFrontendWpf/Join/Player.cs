@@ -167,13 +167,11 @@ namespace AudioPlayerFrontend.Join
 
         public Task Set(RequestSong? request)
         {
-            AudioPlayerBackend.Logs.Log($"Player.Set2: {request.HasValue}");
             return request.HasValue ? Set(request.Value) : Stop();
         }
 
         private async Task Set(RequestSong request)
         {
-            AudioPlayerBackend.Logs.Log($"Player.Set4: {request.Song.FullPath} | {request.Position} / {request.Duration}");
             requestSong = request;
 
             await handleSem.WaitAsync();
@@ -183,10 +181,8 @@ namespace AudioPlayerFrontend.Join
                 bool release = true;
                 try
                 {
-                    AudioPlayerBackend.Logs.Log($"Player.Set5: {requestSong.Equals(request)}");
                     if (!requestSong.Equals(request)) return;
 
-                    AudioPlayerBackend.Logs.Log($"Player.Set6: {Source.HasValue} | {request.Song.FullPath} | {Source?.FullPath}");
                     if (Source.HasValue && request.Song.FullPath == Source?.FullPath)
                     {
                         if (!request.ContinuePlayback && request.Position != Position)
