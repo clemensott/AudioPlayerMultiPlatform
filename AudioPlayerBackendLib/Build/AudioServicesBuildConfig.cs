@@ -197,8 +197,8 @@ namespace AudioPlayerBackend.Build
             Option autoUpdateOpt = new Option("a", "auto-update", "Enable auto update of library and its playlists.", false, 0, 0);
             // Examples
             //   --default-update-sources Songs+Folders KnownFolder MyMusic
-            //   --default-update-sources Songs Path D:\Music
-            Option defaultUpdateRootsOpt = Option.GetLongOnly("default-update-sources", "Filepaths to source roots that create playlists.", false, 3, 3);
+            //   -dus Songs Path D:\Music
+            Option defaultUpdateRootsOpt = new Option("dus", "default-update-sources", "Filepaths to source roots that create playlists.", false, 3, 3);
 
             Options options = new Options(sourcesOpt, clientOpt, serverOpt, playOpt,
                 orderSongsOpt, searchShuffleOpt, searchKeyOpt, serviceVolOpt, dataFileOpt, autoUpdateOpt, defaultUpdateRootsOpt);
