@@ -136,17 +136,17 @@ namespace AudioPlayerBackend.FileSystem
                 OrderType.ByTitleAndArtist, LoopType.CurrentPlaylist, 1,
                 null, songs, fileMediaSources, null, DateTime.Now, DateTime.Now);
 
-            int index = await GetIndesForPlaylist(root, relativePath);
+            int index = await GetIndexForPlaylist(root, relativePath);
             System.Diagnostics.Debug.WriteLine($"path: {relativePath} => {index}");
             await playlistsRepo.InsertPlaylist(playlist, index);
         }
 
-        private async Task<int> GetIndesForPlaylist(FileMediaSourceRoot root, string relativePath)
+        private async Task<int> GetIndexForPlaylist(FileMediaSourceRoot root, string relativePath)
         {
             Library library = await libraryRepo.GetLibrary();
 
             int index = 0;
-            foreach (PlaylistInfo playlistInfo in library.Playlists)
+            foreach (PlaylistInfo playlistInfo in library.Playlists.GetSourcePlaylists())
             {
                 Playlist playlist = await playlistsRepo.GetPlaylist(playlistInfo.Id);
                 if (playlist.FileMediaSources.Root.Id == root.Id
