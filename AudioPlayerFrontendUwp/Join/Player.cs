@@ -20,8 +20,7 @@ namespace AudioPlayerFrontend.Join
 
         private int setSourceCount = 0;
         private PlaybackState playState;
-        private RequestSong? request;
-        private RequestSong setRequest;
+        private RequestSong? request, setRequest;
         private ICollection<Song> songs;
         private readonly IDictionary<Song, int> songsIndexes;
         private readonly IDictionary<MediaPlaybackItem, Song> mediaPlaybackItemDict;
@@ -58,7 +57,11 @@ namespace AudioPlayerFrontend.Join
 
         public TimeSpan Duration => player.PlaybackSession.NaturalDuration;
 
-        public Song? Source { get; private set; }
+        public Song? Source
+        {
+            get => mediaPlaybackList.CurrentItem != null
+                && mediaPlaybackItemDict.TryGetValue(mediaPlaybackList.CurrentItem, out Song song) ? (Song?)song : null;
+        }
 
         public float Volume { get => (float)player.Volume; set => player.Volume = value; }
 
@@ -129,22 +132,21 @@ namespace AudioPlayerFrontend.Join
 
         private void MediaPlaybackList_ItemOpened(MediaPlaybackList sender, MediaPlaybackItemOpenedEventArgs args)
         {
-            AudioPlayerBackend.Logs.Log("Player.MediaPlaybackList_ItemOpened1", setRequest.Song.FullPath, setSourceCount);
+            Song song = mediaPlaybackItemDict[args.Item];
+            AudioPlayerBackend.Logs.Log("Player.MediaPlaybackList_ItemOpened1", song.FullPath);
         }
 
         private void Player_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
-            AudioPlayerBackend.Logs.Log("Player.Player_MediaFailed1", setRequest.Song.FullPath, setSourceCount);
-            Source = null;
-            MediaFailed?.Invoke(this, new MediaFailedEventArgs(setRequest.Song, args.ExtendedErrorCode));
+            AudioPlayerBackend.Logs.Log("Player.Player_MediaFailed1", setRequest?.Song.FullPath, setSourceCount);
+            MediaFailed?.Invoke(this, new MediaFailedEventArgs(setRequest?.Song, args.ExtendedErrorCode));
             sem.Release();
         }
 
         private void MediaPlaybackList_ItemFailed(MediaPlaybackList sender, MediaPlaybackItemFailedEventArgs args)
         {
-            AudioPlayerBackend.Logs.Log("Player.MediaPlaybackList_ItemFailed1", setRequest.Song.FullPath, setSourceCount);
-            Source = null;
-            MediaFailed?.Invoke(this, new MediaFailedEventArgs(setRequest.Song, args.Error.ExtendedError));
+            AudioPlayerBackend.Logs.Log("Player.MediaPlaybackList_ItemFailed1", setRequest?.Song.FullPath, setSourceCount);
+            MediaFailed?.Invoke(this, new MediaFailedEventArgs(setRequest?.Song, args.Error.ExtendedError));
         }
 
         private void Player_MediaEnded(MediaPlayer sender, object args)
@@ -155,14 +157,16 @@ namespace AudioPlayerFrontend.Join
 
         private async void MediaPlaybackList_CurrentItemChanged(MediaPlaybackList sender, CurrentMediaPlaybackItemChangedEventArgs args)
         {
-            if (args.Reason == MediaPlaybackItemChangedReason.InitialItem) return;
             if (args.NewItem != null)
             {
                 Song newSong = mediaPlaybackItemDict[args.NewItem];
-                Source = newSong;
+                if (newSong == setRequest?.Song && setRequest?.Position > TimeSpan.Zero)
+                {
+                    player.PlaybackSession.Position = setRequest.Value.Position;
+                }
+
                 MediaOpened?.Invoke(this, new MediaOpenedEventArgs(Position, Duration, newSong));
             }
-            else Source = null;
 
             await sem.WaitAsync();
             try
@@ -170,18 +174,7 @@ namespace AudioPlayerFrontend.Join
                 if (args.NewItem != null)
                 {
                     Song newSong = mediaPlaybackItemDict[args.NewItem];
-                    await UpsertSongWithPreloadInPlaybackList(newSong, TimeSpan.Zero);
-                }
-
-                if (args.OldItem != null && args.OldItem.StartTime != TimeSpan.Zero)
-                {
-                    Song oldSong = mediaPlaybackItemDict[args.OldItem];
-                    StorageFile file = await StorageFile.GetFileFromPathAsync(oldSong.FullPath);
-                    MediaPlaybackItem mediaPlaybackItem = new MediaPlaybackItem(MediaSource.CreateFromStorageFile(file));
-                    mediaPlaybackItemDict[mediaPlaybackItem] = oldSong;
-                    mediaPlaybackItemDict.Remove(args.OldItem);
-                    int index = mediaPlaybackList.Items.IndexOf(args.OldItem);
-                    mediaPlaybackList.Items[index] = mediaPlaybackItem;
+                    await UpsertSongWithPreloadInPlaybackList(newSong);
                 }
             }
             finally
@@ -195,7 +188,12 @@ namespace AudioPlayerFrontend.Join
             return Task.FromResult((Position, Duration));
         }
 
-        public async Task SetSongs(ICollection<Song> songs)
+        public void SetLoop(bool loop)
+        {
+            mediaPlaybackList.AutoRepeatEnabled = loop;
+        }
+
+        public async Task SetSongs(ICollection<Song> songs, bool keepList)
         {
             await sem.WaitAsync();
             try
@@ -209,8 +207,36 @@ namespace AudioPlayerFrontend.Join
                     songsIndexes[song] = index++;
                 }
 
-                mediaPlaybackList.Items.Clear();
-                mediaPlaybackItemDict.Clear();
+                if (keepList && mediaPlaybackList.Items.Count > 0)
+                {
+                    // insert next so to "make" time for updating the rest of the list
+                    int currentSongIndex = songsIndexes[mediaPlaybackItemDict[mediaPlaybackList.CurrentItem]];
+                    Song nextSong = songs.ElementAtCycle(currentSongIndex + 1);
+                    MediaPlaybackItem nextItem = mediaPlaybackList.Items.FirstOrDefault(item => mediaPlaybackItemDict[item] == nextSong);
+                    int nextIndexList = nextSong == songs.First() ? 0 : (int)mediaPlaybackList.CurrentItemIndex;
+                    if (nextItem != null)
+                    {
+                        mediaPlaybackList.Items.Remove(nextItem);
+                        mediaPlaybackList.Items.Insert(nextIndexList, nextItem);
+                    }
+                    else nextItem = await InsertSongIntoMediaPlaybackList(nextSong, nextIndexList);
+
+                    // remove everything excpet current and next song
+                    for (int i = mediaPlaybackList.Items.Count - 1; i >= 0; i--)
+                    {
+                        if (i != mediaPlaybackList.CurrentItemIndex&& mediaPlaybackList.Items[i] != nextItem)
+                        {
+                            mediaPlaybackList.Items.RemoveAt(i);
+                        }
+                    }
+
+                    await UpsertSongWithPreloadInPlaybackList(mediaPlaybackItemDict[mediaPlaybackList.CurrentItem]);
+                }
+                else
+                {
+                    mediaPlaybackList.Items.Clear();
+                    mediaPlaybackItemDict.Clear();
+                }
             }
             finally
             {
@@ -228,8 +254,6 @@ namespace AudioPlayerFrontend.Join
             this.request = request;
 
             await sem.WaitAsync();
-
-            bool release = true;
             try
             {
                 if (!this.request.Equals(request)) return;
@@ -241,37 +265,17 @@ namespace AudioPlayerFrontend.Join
                         player.PlaybackSession.Position = request.Position;
                     }
                     setSourceCount++;
-                    Source = request.Song;
                     ExecutePlayState();
                     return;
                 }
-                release = false;
-            }
-            catch (Exception e)
-            {
-                Source = null;
-                MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
-            }
-            finally
-            {
-                if (release) sem.Release();
-            }
 
-            try
-            {
-                //setRequest = request;
-                //AudioPlayerBackend.Logs.Log("Player.Set5", request.Song.FullPath, request.ContinuePlayback, setSourceCount);
-                //StorageFile file = await StorageFile.GetFileFromPathAsync(request.Song.FullPath);
-                //AudioPlayerBackend.Logs.Log("Player.Set6", file.Path, setSourceCount);
-                //MediaSource mediaSource = MediaSource.CreateFromStorageFile(file);
-                //MediaPlaybackItem mediaPlaybackItem = new MediaPlaybackItem(mediaSource, request.Position);
-                //mediaPlaybackItem.AutoLoadedDisplayProperties = AutoLoadedDisplayPropertyKind.Music;
-                //mediaPlaybackList.Items.Clear();
-                //mediaPlaybackList.Items.Add(mediaPlaybackItem);
-
-                MediaPlaybackItem item = await UpsertSongWithPreloadInPlaybackList(request.Song, request.Position);
-                int index = mediaPlaybackList.Items.IndexOf(item);
-                mediaPlaybackList.MoveTo((uint)index);
+                setRequest = request;
+                MediaPlaybackItem item = await UpsertSongWithPreloadInPlaybackList(request.Song);
+                if (item != mediaPlaybackList.CurrentItem)
+                {
+                    int index = mediaPlaybackList.Items.IndexOf(item);
+                    mediaPlaybackList.MoveTo((uint)index);
+                }
 
                 //await SMTC.DisplayUpdater.CopyFromFileAsync(MediaPlaybackType.Music, file);
                 //if (string.IsNullOrWhiteSpace(SMTC.DisplayUpdater.MusicProperties.Title))
@@ -286,7 +290,6 @@ namespace AudioPlayerFrontend.Join
             }
             catch (Exception e)
             {
-                Source = null;
                 MediaFailed?.Invoke(this, new MediaFailedEventArgs(request.Song, e));
             }
             finally
@@ -295,7 +298,7 @@ namespace AudioPlayerFrontend.Join
             }
         }
 
-        private async Task<MediaPlaybackItem> UpsertSongWithPreloadInPlaybackList(Song upsertSong, TimeSpan startTime)
+        private async Task<MediaPlaybackItem> UpsertSongWithPreloadInPlaybackList(Song upsertSong)
         {
             MediaPlaybackItem result = null;
             int upsertSongIndex = songsIndexes[upsertSong];
@@ -308,9 +311,8 @@ namespace AudioPlayerFrontend.Join
             // when the total count of songs is smaller than the amount of songs that are preloaded
             // this is not a problem because it checks if a song is already in the list
             // it's "just" suboptimal for the performance
-            for (int i = upsertSongIndex - minPreLoadMediaSources; i < upsertSongIndex + minPreLoadMediaSources; i++)
+            foreach (Song insertSong in GetSongsToUpsert(upsertSong))
             {
-                Song insertSong = songs.ElementAtCycle(i);
                 int songsIndex = songsIndexes[insertSong];
                 int listInsertIndex;
                 if (mediaPlaybackList.Items.Count == 0)
@@ -332,6 +334,7 @@ namespace AudioPlayerFrontend.Join
                         Song listIndexSong = mediaPlaybackItemDict[mediaPlaybackList.Items[listIndex]];
                         if (listIndexSong == insertSong)
                         {
+                            // check for start time
                             if (upsertSong == insertSong) result = mediaPlaybackList.Items[listIndex];
 
                             // song ist already in list
@@ -358,19 +361,38 @@ namespace AudioPlayerFrontend.Join
 
                 if (listInsertIndex != -1)
                 {
-                    StorageFile file = await StorageFile.GetFileFromPathAsync(insertSong.FullPath);
-                    MediaSource mediaSource = MediaSource.CreateFromStorageFile(file);
-                    TimeSpan itemStartTime = insertSong == upsertSong ? startTime : TimeSpan.Zero;
-                    MediaPlaybackItem mediaPlaybackItem = new MediaPlaybackItem(mediaSource, itemStartTime);
-                    mediaPlaybackItem.AutoLoadedDisplayProperties = AutoLoadedDisplayPropertyKind.Music;
-                    mediaPlaybackItemDict[mediaPlaybackItem] = insertSong;
-                    mediaPlaybackList.Items.Insert(listInsertIndex, mediaPlaybackItem);
-
+                    MediaPlaybackItem mediaPlaybackItem = await InsertSongIntoMediaPlaybackList(insertSong, listInsertIndex);
                     if (insertSong == upsertSong) result = mediaPlaybackItem;
                 }
             }
 
             return result;
+        }
+
+        private async Task<MediaPlaybackItem> InsertSongIntoMediaPlaybackList(Song song, int index)
+        {
+            StorageFile file = await StorageFile.GetFileFromPathAsync(song.FullPath);
+            MediaSource mediaSource = MediaSource.CreateFromStorageFile(file);
+            MediaPlaybackItem mediaPlaybackItem = new MediaPlaybackItem(mediaSource);
+            mediaPlaybackItem.AutoLoadedDisplayProperties = AutoLoadedDisplayPropertyKind.Music;
+            mediaPlaybackItemDict[mediaPlaybackItem] = song;
+            mediaPlaybackList.Items.Insert(index, mediaPlaybackItem);
+
+            return mediaPlaybackItem;
+        }
+
+        private IEnumerable<Song> GetSongsToUpsert(Song mainSong)
+        {
+            yield return mainSong;
+
+            int mainSongIndex = songsIndexes[mainSong];
+            for (int i = mainSongIndex - minPreLoadMediaSources; i < mainSongIndex + minPreLoadMediaSources; i++)
+            {
+                if (i != mainSongIndex)
+                {
+                    yield return songs.ElementAtCycle(i);
+                }
+            }
         }
 
         public async Task Stop()
@@ -382,7 +404,6 @@ namespace AudioPlayerFrontend.Join
             {
                 mediaPlaybackList.Items.Clear();
                 mediaPlaybackItemDict.Clear();
-                Source = null;
             }
             finally
             {
@@ -425,7 +446,10 @@ namespace AudioPlayerFrontend.Join
             player.MediaFailed -= Player_MediaFailed;
             player.MediaEnded -= Player_MediaEnded;
 
-            Source = null;
+            songs = new Song[0];
+            songsIndexes.Clear();
+            mediaPlaybackItemDict.Clear();
+            mediaPlaybackList.Items.Clear();
 
             player.Dispose();
         }

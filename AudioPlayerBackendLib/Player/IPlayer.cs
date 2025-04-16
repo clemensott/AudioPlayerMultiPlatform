@@ -30,7 +30,9 @@ namespace AudioPlayerBackend.Player
 
         Task<(TimeSpan position, TimeSpan duration)> GetTimesSafe();
 
-        Task SetSongs(ICollection<Song> songs);
+        void SetLoop(bool loop);
+
+        Task SetSongs(ICollection<Song> songs, bool continuePlayback);
 
         Task Set(RequestSong? request);
 
