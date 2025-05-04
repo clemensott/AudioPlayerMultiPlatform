@@ -103,9 +103,12 @@ namespace AudioPlayerBackend
                     }
                     while (queue.Count > 0);
 
-                    if (fileSystemService != null) await fileSystemService?.AppendTextLines(logFileName, newLines);
-
-                    newLines.Clear();
+                    try
+                    {
+                        if (fileSystemService != null) await fileSystemService?.AppendTextLines(logFileName, newLines);
+                        newLines.Clear();
+                    }
+                    catch { }
                 }
             });
         }
