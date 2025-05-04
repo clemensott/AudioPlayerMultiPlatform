@@ -175,8 +175,11 @@ namespace AudioPlayerBackend.ViewModels
 
         private async void UpdateLibraryService_UpdateStarted(object sender, EventArgs e)
         {
-            playlistsUpdatingCount++;
-            await dispatcher.InvokeDispatcher(() => IsUpdatingPlaylists = playlistsUpdatingCount > 0);
+            await dispatcher.InvokeDispatcher(() =>
+            {
+                playlistsUpdatingCount++;
+                return IsUpdatingPlaylists = playlistsUpdatingCount > 0;
+            });
         }
 
         private async void UpdateLibraryService_UpdateCompleted(object sender, EventArgs e)
@@ -184,8 +187,11 @@ namespace AudioPlayerBackend.ViewModels
             // make sure that IsUpdatingPlaylists is at least 1 second set to true
             await Task.Delay(1000);
 
-            playlistsUpdatingCount = Math.Max(playlistsUpdatingCount - 1, 0);
-            await dispatcher.InvokeDispatcher(() => IsUpdatingPlaylists = playlistsUpdatingCount > 0);
+            await dispatcher.InvokeDispatcher(() =>
+            {
+                playlistsUpdatingCount = Math.Max(playlistsUpdatingCount - 1, 0);
+                return IsUpdatingPlaylists = playlistsUpdatingCount > 0;
+            });
         }
 
         private void Unsubscribe()
