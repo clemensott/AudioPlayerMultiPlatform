@@ -33,9 +33,11 @@ namespace AudioPlayerBackend.Communication.OwnTcp
 
         private static async Task<IPAddress> GetIpAddress(string serverAddress)
         {
-            IPHostEntry entry = await Dns.GetHostEntryAsync(serverAddress);
-            return entry.AddressList.First(a => a.AddressFamily.HasFlag(AddressFamily.InterNetwork) &&
-                                                !a.AddressFamily.HasFlag(AddressFamily.InterNetworkV6));
+            // TODO: fix this
+            return IPAddress.Loopback;
+            // IPHostEntry entry = await Dns.GetHostEntryAsync(serverAddress);
+            // return entry.AddressList.First(a => a.AddressFamily.HasFlag(AddressFamily.InterNetwork) &&
+            //                                     !a.AddressFamily.HasFlag(AddressFamily.InterNetworkV6));
         }
 
         public override async Task Start()
