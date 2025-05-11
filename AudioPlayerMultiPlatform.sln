@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StdOttUwpLib", "..\StdOttLi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioPlayerFrontendUwp", "AudioPlayerFrontendUwp\AudioPlayerFrontendUwp.csproj", "{4CC97E78-23C0-49B6-909E-CFC8C38A3666}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioPlayerFrontendAvalonia", "AudioPlayerFrontendAvalonia\AudioPlayerFrontendAvalonia.csproj", "{EF3155EF-3B8E-419F-B491-99587394F876}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -127,6 +129,22 @@ Global
 		{4CC97E78-23C0-49B6-909E-CFC8C38A3666}.Release|x86.ActiveCfg = Release|x86
 		{4CC97E78-23C0-49B6-909E-CFC8C38A3666}.Release|x86.Build.0 = Release|x86
 		{4CC97E78-23C0-49B6-909E-CFC8C38A3666}.Release|x86.Deploy.0 = Release|x86
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Debug|ARM.Build.0 = Debug|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Debug|x64.Build.0 = Debug|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Debug|x86.Build.0 = Debug|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Release|ARM.ActiveCfg = Release|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Release|ARM.Build.0 = Release|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Release|x64.ActiveCfg = Release|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Release|x64.Build.0 = Release|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Release|x86.ActiveCfg = Release|Any CPU
+		{EF3155EF-3B8E-419F-B491-99587394F876}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

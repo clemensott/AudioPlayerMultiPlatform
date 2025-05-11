@@ -57,7 +57,8 @@ namespace AudioPlayerBackend.Player
             await ChangeCurrentPlaylist(library.CurrentPlaylistId);
             Logs.Log("AudioPlayerService.Start5");
 
-            await libraryRepo.SetVolume(Player.Volume);
+            Player.Volume = (float)library.Volume;
+            // await libraryRepo.SetVolume(Player.Volume);
             Logs.Log("AudioPlayerService.Start6");
         }
 
