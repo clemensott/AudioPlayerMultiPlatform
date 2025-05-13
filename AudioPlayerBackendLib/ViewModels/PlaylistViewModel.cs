@@ -140,6 +140,8 @@ namespace AudioPlayerBackend.ViewModels
 
                 currentSongRequest = value;
                 OnPropertyChanged(nameof(CurrentSongRequest));
+                OnPropertyChanged(nameof(Position));
+                OnPropertyChanged(nameof(Duration));
 
                 CurrentSong = currentSongRequest.HasValue 
                     ? shuffledSongs.ToNotNull().FirstOrNull(s => s.Id == currentSongRequest?.Id)
@@ -148,6 +150,10 @@ namespace AudioPlayerBackend.ViewModels
                 if (isRunning) SetCurrentSongRequest(value);
             }
         }
+
+        public TimeSpan? Position => CurrentSongRequest?.Position;
+        
+        public TimeSpan? Duration => CurrentSongRequest?.Duration;
 
         public ICollection<Song> Songs
         {
@@ -270,6 +276,8 @@ namespace AudioPlayerBackend.ViewModels
 
                 currentSongRequest = e.NewValue;
                 OnPropertyChanged(nameof(CurrentSongRequest));
+                OnPropertyChanged(nameof(Position));
+                OnPropertyChanged(nameof(Duration));
 
                 CurrentSong = shuffledSongs.ToNotNull().FirstOrNull(s => s.Id == currentSongRequest?.Id);
             });
@@ -298,8 +306,8 @@ namespace AudioPlayerBackend.ViewModels
                 Loop = playlist.Loop;
                 PlaybackRate = playlist.PlaybackRate;
                 shuffledSongs = playlist.Songs;
-                CurrentSongRequest = playlist.CurrentSongRequest;
                 UpdateSongs();
+                CurrentSongRequest = playlist.CurrentSongRequest;
 
                 IsLoaded = true;
             }

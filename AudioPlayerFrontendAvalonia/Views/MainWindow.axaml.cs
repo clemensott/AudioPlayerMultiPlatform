@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AudioPlayerBackend;
+using AudioPlayerBackend.AudioLibrary;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.Build;
@@ -124,6 +126,19 @@ public partial class MainWindow : Window
         //
         // return window.ShowDialog();
         return true;
+    }
+
+    private object? SongIndexCon_ConvertEvent(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        Song song = (Song)value!;
+        int index = viewModel?.CurrentPlaylist.GetIndexOfSong(song) ?? -1;
+        return index == -1 ? string.Empty : index.ToString();
+    }
+
+    private object? PlaylistMenuItemVisCon_OnConvertEvent(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        PlaylistType? playlistType = (PlaylistType?)value;
+        return viewModel?.IsLocalFileMediaSource == true && playlistType?.HasFlag(PlaylistType.SourcePlaylist) == true;
     }
 
     private void LbxSongs_SelectionChanged(object? sender, SelectionChangedEventArgs e)
