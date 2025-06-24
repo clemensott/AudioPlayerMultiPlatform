@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:AudioPlayerFrontendAvalonia.ViewModels"
         xmlns:con="using:AudioPlayerFrontendAvalonia.Converter"
+        xmlns:ctl="using:AudioPlayerFrontendAvalonia.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -18,9 +19,8 @@
              to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel />
     </Design.DataContext>
-    
+
     <Window.Resources>
-        <con:ValueConverter x:Key="songIndexCon" ConvertEvent="SongIndexCon_ConvertEvent"/>
         <con:ValueConverter x:Key="playlistMenuItemVisCon" ConvertEvent="PlaylistMenuItemVisCon_OnConvertEvent" />
     </Window.Resources>
 
@@ -48,7 +48,7 @@
                           IsVisible="{Binding !SongSearch.IsSearching}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Text}"/>
+                            <TextBlock Text="{Binding Text}" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
@@ -71,30 +71,22 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ItemsSource="{Binding Path=CurrentPlaylist.Songs}"
                      SelectedItem="{Binding Path=CurrentPlaylist.CurrentSong}"
-                     IsVisible="{Binding Path=IsLoaded}"
+                     IsVisible="{Binding !SongSearch.IsSearching}"
                      SelectionChanged="LbxSongs_SelectionChanged">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid Margin="3">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="5" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
+                        <ctl:SongListItem Song="{Binding}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
 
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.RowSpan="2" TextAlignment="Center"
-                                       VerticalAlignment="Center" Margin="5,0"
-                                       Text="{Binding Converter={StaticResource songIndexCon}}" />
-
-                            <TextBlock Grid.Column="2" Grid.Row="0" TextWrapping="Wrap" Text="{Binding Title}" />
-                            <TextBlock Grid.Column="2" Grid.Row="1" TextWrapping="Wrap" FontStyle="Italic"
-                                       Text="{Binding Artist,TargetNullValue=&lt;Unkown&gt;}" />
-                        </Grid>
+            <ListBox x:Name="lbxSearchSongs" Margin="0,5" HorizontalAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ItemsSource="{Binding Path=SongSearch.SearchSongs}"
+                     IsVisible="{Binding Path=SongSearch.IsSearching}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <ctl:SongListItem Song="{Binding}" />
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
@@ -131,7 +123,7 @@
                           IsVisible="{Binding CurrentPlaylist.IsLoaded}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Text}"/>
+                            <TextBlock Text="{Binding Text}" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
@@ -143,7 +135,7 @@
                           IsVisible="{Binding CurrentPlaylist.IsLoaded}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Text}"/>
+                            <TextBlock Text="{Binding Text}" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
@@ -176,8 +168,8 @@
                                     <ContextMenu>
                                         <MenuItem Name="mimReloadSongs" Header="Reload songs"
                                                   IsVisible="{Binding Type,Converter={StaticResource playlistMenuItemVisCon}}"
-                                                  Click="MimReloadSongs_Click"/>
-                                        <Separator IsVisible="{Binding ElementName=mimReloadSongs,Path=IsVisible}"/>
+                                                  Click="MimReloadSongs_Click" />
+                                        <Separator IsVisible="{Binding ElementName=mimReloadSongs,Path=IsVisible}" />
                                         <MenuItem Header="Remix songs" Click="MimRemixSongs_Click" />
                                         <MenuItem Header="Remove" Click="MimRemovePlaylist_Click" />
                                     </ContextMenu>
@@ -193,7 +185,7 @@
                 </StackPanel>
             </Grid>
         </Grid>
-        
+
         <Grid Grid.Row="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -208,33 +200,33 @@
                 <TextBlock Grid.Column="0" Margin="5,0" MinWidth="40"
                            VerticalAlignment="Center" HorizontalAlignment="Right"
                            Text="{Binding Position,
-                             Converter={x:Static con:TimeSpanToStringConverter.Instance}}"/>
+                             Converter={x:Static con:TimeSpanToStringConverter.Instance}}" />
                 <Slider Grid.Column="1" Minimum="0" Margin="3,-20" VerticalAlignment="Center"
                         Value="{Binding Position,Mode=OneWay,
                           Converter={x:Static con:TimeSpanToSecondsConverter.Instance}}"
                         Maximum="{Binding Duration,
                           Converter={x:Static con:TimeSpanToSecondsConverter.Instance}}"
-                        ValueChanged="SldPosition_ValueChanged"/>
+                        ValueChanged="SldPosition_ValueChanged" />
                 <TextBlock Grid.Column="2" Margin="5,0" MinWidth="40"
                            VerticalAlignment="Center" HorizontalAlignment="Left"
                            Text="{Binding Duration,
-                             Converter={x:Static con:TimeSpanToStringConverter.Instance}}"/>
+                             Converter={x:Static con:TimeSpanToStringConverter.Instance}}" />
             </Grid>
 
             <Grid Grid.Row="1" MinHeight="32" ColumnDefinitions="Auto,Auto,Auto,*" Margin="5,0">
-                <Button Grid.Column="0" Content="Previous" Width="100" Click="OnPrevious"/>
+                <Button Grid.Column="0" Content="Previous" Width="100" Click="OnPrevious" />
                 <ToggleButton Grid.Column="1" Content="Play/Pause" Margin="5,0" Width="100"
                               IsChecked="{Binding PlayState,Mode=TwoWay,
                                 Converter={x:Static con:IsPlayingConverter.Instance}}" />
-                <Button Grid.Column="2" Content="Next" Width="100" Click="OnNext"/>
+                <Button Grid.Column="2" Content="Next" Width="100" Click="OnNext" />
 
                 <StackPanel Grid.Column="3" Margin="5" VerticalAlignment="Center" Background="Transparent"
-                            DataContext="{Binding CurrentPlaylist.CurrentSong}" 
+                            DataContext="{Binding CurrentPlaylist.CurrentSong}"
                             IsVisible="{Binding HasValue}"
                             PointerPressed="StpCurrentSong_PointerPressed">
-                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Margin="5,0,0,0" Text="{Binding Value.Title}"/>
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" Margin="5,0,0,0" Text="{Binding Value.Title}" />
                     <TextBlock TextWrapping="Wrap" FontStyle="Italic" Margin="5,0,0,0" Text="{Binding Value.Artist}"
-                               IsVisible="{Binding Value.Artist,Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                               IsVisible="{Binding Value.Artist,Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
             </Grid>
         </Grid>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -30,7 +31,9 @@ public partial class MainWindow : Window
     private AudioServicesBuildConfig servicesBuildConfig;
     private AudioServices? audioServices;
     private ILibraryViewModel? viewModel;
+    private int? nextLbxSearchSongsSelectedIndex;
 
+    // TODO: is this needed?
     public static FuncValueConverter<TimeSpan, double> TimeSecondsCon = new(value => value.TotalSeconds);
 
     public MainWindow()
@@ -39,6 +42,8 @@ public partial class MainWindow : Window
 
         audioServicesHandler = new AudioServicesHandler();
         servicesBuildConfig = new AudioServicesBuildConfig();
+
+        lbxSearchSongs.Items.CollectionChanged += LbxSearchSongs_OnCollectionChanged;
     }
 
     private void Window_Loaded(object? sender, RoutedEventArgs e)
@@ -75,7 +80,7 @@ public partial class MainWindow : Window
         await audioServicesHandler.Stop();
     }
 
-    private async void AudioServicesHandler_ServicesBuild(object sender, AudioServicesBuilder build)
+    private async void AudioServicesHandler_ServicesBuild(object? sender, AudioServicesBuilder build)
     {
         await Task.WhenAny(build.CompleteToken.ResultTask, Task.Delay(100));
 
@@ -104,6 +109,8 @@ public partial class MainWindow : Window
 
         try
         {
+            // TODO: implement this
+
             // return UpdateBuilders();
             return true;
         }
@@ -113,12 +120,14 @@ public partial class MainWindow : Window
         }
     }
 
-    private void AudioServicesHandler_Stopped(object sender, EventArgs e)
+    private void AudioServicesHandler_Stopped(object? sender, EventArgs e)
     {
     }
 
     private bool? ShowBuildOpenWindow(AudioServicesBuilder build)
     {
+        // TODO: implement this
+
         // BuildOpenWindow window = BuildOpenWindow.Current;
         //
         // //BuildOpenWindow window = new BuildOpenWindow(build);
@@ -128,14 +137,8 @@ public partial class MainWindow : Window
         return true;
     }
 
-    private object? SongIndexCon_ConvertEvent(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        Song song = (Song)value!;
-        int index = viewModel?.CurrentPlaylist.GetIndexOfSong(song) ?? -1;
-        return index == -1 ? string.Empty : index.ToString();
-    }
-
-    private object? PlaylistMenuItemVisCon_OnConvertEvent(object? value, Type targetType, object? parameter, CultureInfo culture)
+    private object? PlaylistMenuItemVisCon_OnConvertEvent(object? value, Type targetType, object? parameter,
+        CultureInfo culture)
     {
         PlaylistType? playlistType = (PlaylistType?)value;
         return viewModel?.IsLocalFileMediaSource == true && playlistType?.HasFlag(PlaylistType.SourcePlaylist) == true;
@@ -155,7 +158,19 @@ public partial class MainWindow : Window
         Scroll();
     }
 
-    private void TbxSearch_KeyDown(object? sender, KeyEventArgs e)
+    private async void LbxSearchSongs_OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        await Task.Delay(10);
+        if (nextLbxSearchSongsSelectedIndex.HasValue)
+        {
+            lbxSearchSongs.SelectedIndex =
+                Math.Min(nextLbxSearchSongsSelectedIndex.Value, lbxSearchSongs.Items.Count - 1);
+            nextLbxSearchSongsSelectedIndex = null;
+        }
+        else if (lbxSearchSongs.SelectedIndex == -1 && lbxSearchSongs.Items.Count > 0) lbxSearchSongs.SelectedIndex = 0;
+    }
+
+    private async void TbxSearch_KeyDown(object? sender, KeyEventArgs e)
     {
         if (viewModel == null) return;
         e.Handled = true;
@@ -163,7 +178,7 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.Enter:
-                if (lbxSongs.SelectedItem is Song addSong)
+                if (lbxSearchSongs.SelectedItem is Song addSong)
                 {
                     SearchPlaylistAddType addType;
                     if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
@@ -176,7 +191,8 @@ public partial class MainWindow : Window
                     }
                     else addType = SearchPlaylistAddType.LastInPlaylist;
 
-                    viewModel.SongSearch.AddSongsToSearchPlaylist(new Song[] { addSong }, addType);
+                    nextLbxSearchSongsSelectedIndex = lbxSearchSongs.SelectedIndex;
+                    await viewModel.SongSearch.AddSongsToSearchPlaylist(new Song[] { addSong }, addType);
                     viewModel.PlayState = PlaybackState.Playing;
                 }
 
@@ -187,19 +203,19 @@ public partial class MainWindow : Window
                 break;
 
             case Key.Up:
-                if (lbxSongs.Items.Count > 0 && viewModel.SongSearch.IsSearching)
+                if (lbxSearchSongs.Items.Count > 0 && viewModel.SongSearch.IsSearching)
                 {
-                    lbxSongs.SelectedIndex =
-                        StdUtils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, -1).index;
+                    lbxSearchSongs.SelectedIndex =
+                        StdUtils.OffsetIndex(lbxSearchSongs.SelectedIndex, lbxSearchSongs.Items.Count, -1).index;
                 }
 
                 break;
 
             case Key.Down:
-                if (lbxSongs.Items.Count > 0 && viewModel.SongSearch.IsSearching)
+                if (lbxSearchSongs.Items.Count > 0 && viewModel.SongSearch.IsSearching)
                 {
-                    lbxSongs.SelectedIndex =
-                        StdUtils.OffsetIndex(lbxSongs.SelectedIndex, lbxSongs.Items.Count, 1).index;
+                    lbxSearchSongs.SelectedIndex =
+                        StdUtils.OffsetIndex(lbxSearchSongs.SelectedIndex, lbxSearchSongs.Items.Count, 1).index;
                 }
 
                 break;

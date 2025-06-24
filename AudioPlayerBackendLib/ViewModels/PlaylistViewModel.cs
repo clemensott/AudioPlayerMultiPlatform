@@ -315,7 +315,7 @@ namespace AudioPlayerBackend.ViewModels
 
         private void UpdateSongs()
         {
-            Songs = SongsHelper.GetAllSongs(shuffledSongs.ToNotNull(), Shuffle).ToArray();
+            Songs = SongsHelper.GetAllSongs(shuffledSongs.ToNotNull(), Shuffle).Select((s, i) => s.WithIndex(i)).ToArray();
         }
 
         public async Task RemoveSong(Guid songId)
