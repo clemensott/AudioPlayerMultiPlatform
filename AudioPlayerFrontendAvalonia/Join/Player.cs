@@ -14,6 +14,7 @@ public class Player : IPlayer
     private readonly MediaPlayer mediaPlayer;
     private PlaybackState playState;
 
+    private bool addedOnPositionChangedEventHandler;
     private RequestSong openingRequestSong;
     private RequestSong? setRequestSong;
     private readonly SemaphoreSlim handleSem;
@@ -179,12 +180,29 @@ public class Player : IPlayer
         switch (PlayState)
         {
             case PlaybackState.Playing:
+                mediaPlayer.PositionChanged -= OnPositionChanged;
+                addedOnPositionChangedEventHandler = false;
                 mediaPlayer.Play();
                 break;
 
             case PlaybackState.Paused:
                 mediaPlayer.Pause();
+                if (!addedOnPositionChangedEventHandler)
+                {
+                    mediaPlayer.PositionChanged += OnPositionChanged;
+                    addedOnPositionChangedEventHandler = true;
+                }
+
                 break;
+        }
+    }
+
+    private void OnPositionChanged(object? sender, MediaPlayerPositionChangedEventArgs e)
+    {
+        // Sometimes player doesn't stop if .Pause() is called. This is workaround to fix this.
+        if (PlayState == PlaybackState.Paused)
+        {
+            mediaPlayer.Pause();
         }
     }
 
