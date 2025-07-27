@@ -13,7 +13,7 @@ public class Player : IPlayer
     private readonly LibVLC libVLC;
     private readonly MediaPlayer mediaPlayer;
     private PlaybackState playState;
-    
+
     private RequestSong openingRequestSong;
     private RequestSong? setRequestSong;
     private readonly SemaphoreSlim handleSem;
@@ -63,6 +63,7 @@ public class Player : IPlayer
         mediaPlayer = new MediaPlayer(libVLC);
         mediaPlayer.Opening += OnOpening;
         mediaPlayer.EndReached += OnEndReached;
+        mediaPlayer.EncounteredError += OnEncounteredError;
 
         handleSem = new SemaphoreSlim(1, 1);
     }
@@ -73,8 +74,7 @@ public class Player : IPlayer
         {
             Source = openingRequestSong.Song;
             if (openingRequestSong.Position > TimeSpan.Zero
-                && mediaPlayer.Length > 0
-                && Math.Abs(openingRequestSong.Duration.TotalMilliseconds - mediaPlayer.Length) < 10)
+                && Math.Abs(openingRequestSong.Duration.TotalMilliseconds - mediaPlayer.Length) > 50)
             {
                 mediaPlayer.SeekTo(openingRequestSong.Position);
             }
@@ -93,6 +93,11 @@ public class Player : IPlayer
         MediaEnded?.Invoke(this, new MediaEndedEventArgs(Source));
     }
 
+    private void OnEncounteredError(object? sender, EventArgs e)
+    {
+        MediaFailed?.Invoke(this, new MediaFailedEventArgs(Source, null));
+    }
+
     public Task<(TimeSpan position, TimeSpan duration)> GetTimesSafe()
     {
         return Task.FromResult((Position, Duration));
@@ -100,7 +105,7 @@ public class Player : IPlayer
 
     public async Task Set(RequestSong? request)
     {
-        if (request is { } song)  await Set(song);
+        if (request is { } song) await Set(song);
         else await Stop();
     }
 
@@ -120,7 +125,7 @@ public class Player : IPlayer
                 {
                     mediaPlayer.SeekTo(request.Position);
                 }
-                
+
                 Source = request.Song;
                 ExecutePlayState();
                 return;
@@ -137,7 +142,7 @@ public class Player : IPlayer
         {
             if (release) handleSem.Release();
         }
-        
+
         try
         {
             Media media = new Media(libVLC, new Uri(request.Song.FullPath));
