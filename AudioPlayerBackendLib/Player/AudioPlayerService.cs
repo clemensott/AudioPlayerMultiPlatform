@@ -348,7 +348,7 @@ namespace AudioPlayerBackend.Player
             isSetCurrentSongCount++;
             StopTimer();
 
-            if (currentPlaylistId.TryHasValue(out Guid playlistId))
+            if (currentPlaylistId.HasValue)
             {
                 SongRequest? setSongRequest = request;
                 Song? song = songs.FirstOrNull(s => s.Id == setSongRequest?.Id);
@@ -431,12 +431,15 @@ namespace AudioPlayerBackend.Player
             Logs.Log("AudioPlayerService.Continue9");
         }
 
-        public async Task Dispose()
+        public Task Dispose()
         {
-            await Stop();
+            UnsubsribePlayer();
+            UnsubscribeLibraryRepo();
+            UnsubscribePlaylistsRepo();
 
             timer.Dispose();
             Player.Dispose();
+            return Task.CompletedTask;
         }
     }
 }

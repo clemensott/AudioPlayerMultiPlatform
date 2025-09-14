@@ -139,7 +139,7 @@ namespace AudioPlayerBackend.Build
         public Task Dispose()
         {
             Logs.Log("AudioServices.Dispose");
-            return Task.WhenAll(BackgroundServices.Select(s => s.Dispose()));
+            return Task.WhenAll(GetAllAudioServices().Select(s => s.Dispose()));
         }
     }
 }

@@ -1,0 +1,79 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:bld="clr-namespace:AudioPlayerBackend.Build;assembly=AudioPlayerBackendLib"
+        xmlns:ctl="clr-namespace:AudioPlayerFrontendAvalonia.Controls"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="AudioPlayerFrontendAvalonia.Views.SettingsWindow"
+        Width="500"
+        Height="600"
+        ShowInTaskbar="False"
+        CanResize="False">
+    <Grid Margin="5" RowDefinitions="*,Auto" x:DataType="bld:AudioServicesBuildConfig">
+        <Grid RowDefinitions="Auto,Auto,Auto">
+
+            <StackPanel Orientation="Horizontal">
+                <StackPanel VerticalAlignment="Center" Margin="0,0,0,5">
+                    <TextBlock Text="Mode" FontWeight="Bold" Margin="3,0" />
+                    <RadioButton x:Name="rbnStandalone" Content="Standalone" GroupName="Mode"
+                                 IsChecked="{Binding BuildStandalone,Mode=OneWay}"
+                                 Margin="5,5,0,0" IsCheckedChanged="RbnStandalone_IsCheckedChanged" />
+                    <RadioButton x:Name="rbnServer" Content="Server" GroupName="Mode"
+                                 IsChecked="{Binding BuildServer,Mode=OneWay}"
+                                 Margin="5,5,0,0" IsCheckedChanged="RbnServer_IsCheckedChanged" />
+                    <RadioButton x:Name="rbnClient" Content="Client" GroupName="Mode"
+                                 IsChecked="{Binding BuildClient,Mode=OneWay}"
+                                 Margin="5,5,0,0" IsCheckedChanged="RbnClient_IsCheckedChanged" />
+                </StackPanel>
+
+                <Grid Grid.Column="1" Margin="10,0,10,3" VerticalAlignment="Center"
+                      IsEnabled="{Binding ElementName=rbnStandalone,Path=!IsChecked}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" MinWidth="100" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Server:" Margin="3,3,0,0" />
+                    <TextBlock Grid.Row="1" Text="Port:" Margin="3,3,0,0" />
+
+                    <TextBox Grid.Column="1" Grid.Row="0" Name="tbxServerAddress"
+                             Margin="3,3,0,0" Text="{Binding ServerAddress,Mode=TwoWay}"
+                             IsEnabled="{Binding ElementName=rbnClient,Path=IsChecked}" />
+                    <TextBox Grid.Column="1" Grid.Row="1" Name="tbxPort" Text=""
+                             Margin="3,3,0,0" TextChanged="TbxPort_TextChanged" />
+                </Grid>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Orientation="Vertical" VerticalAlignment="Center" Margin="0,0,0,5">
+                <TextBlock Text="Auto Update" FontWeight="Bold" Margin="3,0" />
+                <CheckBox Name="cbxAutoUpdate" Content="Enable" Margin="3"
+                          VerticalAlignment="Center" IsChecked="{Binding AutoUpdate,Mode=TwoWay}" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Orientation="Vertical" VerticalAlignment="Center" Margin="0,0,0,5">
+                <TextBlock Text="Default Update Roots" FontWeight="Bold" Margin="3,0" />
+                <ListBox Name="lbxDefaultUpdateRoots" SelectionChanged="LbxDefaultUpdateRoots_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <ctl:DefaultUpdateRootControl ValueChanged="DefaultUpdateRootControl_ValueChanged" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <Button HorizontalAlignment="Left" Margin="3" Width="50" Content="+"
+                        Click="BtnAddDefaultUpdateRoot_Click" />
+            </StackPanel>
+        </Grid>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="3">
+            <Button Grid.Column="3" Content="OK" Width="100"
+                    Margin="3" Click="BtnOk_Click"/>
+            <Button Grid.Column="4" Content="Cancel" Width="100" 
+                    Margin="3" Click="BtnCancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

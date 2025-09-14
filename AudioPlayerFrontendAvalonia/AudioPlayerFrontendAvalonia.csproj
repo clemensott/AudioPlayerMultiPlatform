@@ -36,4 +36,19 @@
     <ItemGroup>
       <ProjectReference Include="..\AudioPlayerBackendLib\AudioPlayerBackendLib.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Views\BuildOpenWindow.axaml.cs">
+        <DependentUpon>BuildOpenWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\SettingsWindow.axaml.cs">
+        <DependentUpon>Settings.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Controls\DefaultUpdateRootControl.axaml.cs">
+        <DependentUpon>DefaultUpdateRootControl.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+    </ItemGroup>
 </Project>

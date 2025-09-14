@@ -1,0 +1,147 @@
+using System;
+using System.Collections.ObjectModel;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
+using AudioPlayerBackend.FileSystem;
+using AudioPlayerFrontendAvalonia.Join;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+
+namespace AudioPlayerFrontendAvalonia.Controls;
+
+public partial class DefaultUpdateRootControl : UserControl
+{
+    public static ObservableCollection<LocalKnownFolder> LocalKnownFolders = new(UpdateLibraryService.GetLocalKnownFolders());
+    
+    private bool isUpdatingValue;
+
+    public event EventHandler<FileMediaSourceRootInfo>? ValueChanged;
+
+    public DefaultUpdateRootControl()
+    {
+        InitializeComponent();
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        ApplyDataContext();
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        ApplyDataContext();
+    }
+
+    private void ApplyDataContext()
+    {
+        if (isUpdatingValue) return;
+
+        try
+        {
+            isUpdatingValue = true;
+
+            FileMediaSourceRootInfo value = DataContext is FileMediaSourceRootInfo
+                ? (FileMediaSourceRootInfo)DataContext
+                : new FileMediaSourceRootInfo();
+
+            tbxName.Text = value.Name;
+            cbxWithSubFolders.IsChecked = value.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders);
+
+            switch (value.PathType)
+            {
+                case FileMediaSourceRootPathType.KnownFolder:
+                    rbnKnownFolder.IsChecked = true;
+                    cbxKnownFolder.SelectedValue = value.Path;
+
+                    rbnPath.IsChecked = false;
+                    tbxPath.Text = string.Empty;
+                    break;
+
+                case FileMediaSourceRootPathType.Path:
+                    rbnPath.IsChecked = true;
+                    tbxPath.Text = value.Path;
+
+                    rbnKnownFolder.IsChecked = false;
+                    cbxKnownFolder.SelectedValue = null;
+                    break;
+            }
+        }
+        finally
+        {
+            isUpdatingValue = false;
+        }
+    }
+
+    private void TriggerValueChanged()
+    {
+        if (isUpdatingValue) return;
+
+        try
+        {
+            isUpdatingValue = true;
+
+            FileMediaSourceRootPathType pathType;
+            string path;
+            if (rbnKnownFolder.IsChecked == true)
+            {
+                pathType = FileMediaSourceRootPathType.KnownFolder;
+                path = (string)cbxKnownFolder.SelectedValue;
+            }
+            else
+            {
+                pathType = FileMediaSourceRootPathType.Path;
+                path = tbxPath.Text;
+            }
+
+            ValueChanged?.Invoke(this, new FileMediaSourceRootInfo(
+                cbxWithSubFolders.IsChecked == true
+                    ? FileMediaSourceRootUpdateType.Songs | FileMediaSourceRootUpdateType.Folders
+                    : FileMediaSourceRootUpdateType.Songs,
+                tbxName.Text,
+                pathType,
+                path
+            ));
+        }
+        finally
+        {
+            isUpdatingValue = false;
+        }
+    }
+
+    private void TbxName_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        TriggerValueChanged();
+    }
+
+    private void CbxWithSubFolders_Checked(object sender, RoutedEventArgs e)
+    {
+        rbnPath.IsChecked = false;
+        TriggerValueChanged();
+    }
+
+    private void CbxWithSubFolders_Unchecked(object sender, RoutedEventArgs e)
+    {
+        TriggerValueChanged();
+    }
+
+    private void RbnKnownFolder_Checked(object sender, RoutedEventArgs e)
+    {
+        rbnPath.IsChecked = false;
+        TriggerValueChanged();
+    }
+
+    private void CbxKnownFolder_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        TriggerValueChanged();
+    }
+
+    private void RbnPath_Checked(object sender, RoutedEventArgs e)
+    {
+        rbnKnownFolder.IsChecked = false;
+        TriggerValueChanged();
+    }
+
+    private void TbxPath_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        TriggerValueChanged();
+    }
+}

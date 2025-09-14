@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AudioPlayerFrontendAvalonia.Controls"
+        xmlns:fs="clr-namespace:AudioPlayerBackend.FileSystem;assembly=AudioPlayerBackendLib"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="AudioPlayerFrontendAvalonia.Controls.DefaultUpdateRootControl"
+        DataContextChanged="OnDataContextChanged">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" MinWidth="50"/>
+            <ColumnDefinition Width="Auto" MinWidth="50"/>
+            <ColumnDefinition Width="Auto" MinWidth="150"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Name" FontWeight="SemiBold"/>
+        <TextBox Grid.Row="1" Name="tbxName" Margin="0,3" TextChanged="TbxName_TextChanged" />
+        <CheckBox Grid.Row="2" Name="cbxWithSubFolders" Content="With sub folders" Margin="0,3,0,0"
+                  Checked="CbxWithSubFolders_Checked"
+                  Unchecked="CbxWithSubFolders_Unchecked"/>
+
+        <TextBlock Grid.Column="1" Grid.ColumnSpan="2" Text="Path" FontWeight="SemiBold"/>
+        <RadioButton Grid.Column="1" Grid.Row="1" Name="rbnKnownFolder"
+                     Content="Known folder" VerticalAlignment="Center" Margin="5,3,3,3"
+                     Checked="RbnKnownFolder_Checked"/>
+        <ComboBox Grid.Column="2" Grid.Row="1" Name="cbxKnownFolder" Margin="0,3"
+                  x:DataType="fs:LocalKnownFolder"
+                  ItemsSource="{x:Static local:DefaultUpdateRootControl.LocalKnownFolders}"
+                  SelectedValueBinding="{Binding Value}"
+                  IsEnabled="{Binding ElementName=rbnKnownFolder,Path=IsChecked}"
+                  SelectionChanged="CbxKnownFolder_SelectionChanged">
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Name}"></TextBlock>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <RadioButton Grid.Column="1" Grid.Row="2" Name="rbnPath"
+                     Content="Path" VerticalAlignment="Center" Margin="5,3,3,3"
+                     Checked="RbnPath_Checked"/>
+        <TextBox Grid.Column="2" Grid.Row="2" Name="tbxPath" Margin="0,3,0,0"
+                 IsEnabled="{Binding ElementName=rbnPath,Path=IsChecked}"
+                 TextChanged="TbxPath_TextChanged" />
+    </Grid>
+</UserControl>
