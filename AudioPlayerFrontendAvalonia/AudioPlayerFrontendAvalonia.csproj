@@ -50,5 +50,9 @@
         <DependentUpon>DefaultUpdateRootControl.axaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>
+      <Compile Update="Views\AddSourcePlaylistWindow.axaml.cs">
+        <DependentUpon>AddSourcePlaylistWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
     </ItemGroup>
 </Project>

@@ -6,10 +6,13 @@
         xmlns:ctl="clr-namespace:AudioPlayerFrontendAvalonia.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="AudioPlayerFrontendAvalonia.Views.SettingsWindow"
+        Title="Settings - Audio Player"
+        MinHeight="500"
+        MinWidth="500"
         Width="500"
         Height="600"
         ShowInTaskbar="False"
-        CanResize="False">
+        CanResize="True">
     <Grid Margin="5" RowDefinitions="*,Auto" x:DataType="bld:AudioServicesBuildConfig">
         <Grid RowDefinitions="Auto,Auto,Auto">
 

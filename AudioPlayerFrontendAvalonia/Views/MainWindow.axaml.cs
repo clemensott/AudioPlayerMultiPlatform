@@ -273,7 +273,10 @@ public partial class MainWindow : Window
 
     private void BtnAddPlaylist_Click(object? sender, RoutedEventArgs e)
     {
-        throw new System.NotImplementedException();
+        if (audioServices == null) return;
+
+        AddSourcePlaylistWindow window = new AddSourcePlaylistWindow([], audioServices);
+        window.ShowDialog(this);
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)

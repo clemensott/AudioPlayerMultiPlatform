@@ -178,7 +178,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
+                <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,5">
                     <Button Margin="5,0" Content="Settings" Width="100" Click="BtnSettings_Click" />
                     <Button Content="+" Width="30" Click="BtnAddPlaylist_Click" />
                 </StackPanel>
