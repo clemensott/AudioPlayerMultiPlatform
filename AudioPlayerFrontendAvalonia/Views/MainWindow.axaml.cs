@@ -33,9 +33,6 @@ public partial class MainWindow : Window
     private ILibraryViewModel? viewModel;
     private int? nextLbxSearchSongsSelectedIndex;
 
-    // TODO: is this needed?
-    public static FuncValueConverter<TimeSpan, double> TimeSecondsCon = new(value => value.TotalSeconds);
-
     public MainWindow()
     {
         InitializeComponent();
@@ -46,7 +43,7 @@ public partial class MainWindow : Window
         lbxSearchSongs.Items.CollectionChanged += LbxSearchSongs_OnCollectionChanged;
     }
 
-    private void Window_Loaded(object? sender, RoutedEventArgs e)
+    private async void Window_Loaded(object? sender, RoutedEventArgs e)
     {
         string[] args = Environment.GetCommandLineArgs().Skip(1).ToArray();
         try
@@ -55,8 +52,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exc)
         {
-            // TODO: print error message
-            // MessageBox.Show(exc.Message, "Create service builder error");
+            await DialogWindow.ShowPrimary(this, exc.Message, "Create service builder error");
             Close();
             return;
         }
@@ -80,22 +76,27 @@ public partial class MainWindow : Window
         await audioServicesHandler.Stop();
     }
 
-    private async void AudioServicesHandler_ServicesBuild(object? sender, AudioServicesBuilder build)
+    private async void AudioServicesHandler_ServicesBuild(object? sender, AudioServicesBuilder? build)
     {
+        if (build == null) return;
+
         await Task.WhenAny(build.CompleteToken.ResultTask, Task.Delay(100));
 
-        if (build.CompleteToken.IsEnded == BuildEndedType.Canceled ||
-            (!build.CompleteToken.IsEnded.HasValue && ShowBuildOpenWindow(build) == false))
+        if (!build.CompleteToken.IsEnded.HasValue) await ShowBuildOpenWindow(build);
+
+        switch (build.CompleteToken.IsEnded)
         {
-            build.Cancel();
-            Close();
-            return;
+            case BuildEndedType.Canceled:
+                Close();
+                return;
+
+            case BuildEndedType.Settings:
+                await StopAndUpdateBuilder();
+                return;
         }
 
         AudioServices newAudioServices = await build.CompleteToken.ResultTask;
-
-        if (build.CompleteToken.IsEnded is BuildEndedType.Settings) await StopAndUpdateBuilder();
-        else if (newAudioServices != null)
+        if (newAudioServices != null)
         {
             audioServices = newAudioServices;
             viewModel = audioServices.GetViewModel();
@@ -103,16 +104,13 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task<bool> StopAndUpdateBuilder()
+    private async Task StopAndUpdateBuilder()
     {
         await audioServicesHandler.Stop();
 
         try
         {
-            // TODO: implement this
-
-            // return UpdateBuilders();
-            return true;
+            await UpdateBuildConfig();
         }
         finally
         {
@@ -120,21 +118,24 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task<bool> UpdateBuildConfig()
+    {
+        AudioServicesBuildConfig editServicesBuildConfig = servicesBuildConfig.Clone();
+        SettingsWindow window = new SettingsWindow(editServicesBuildConfig);
+        bool submitted = await window.ShowDialog<bool>(this);
+        if (submitted) servicesBuildConfig = editServicesBuildConfig;
+
+        return submitted;
+    }
+
     private void AudioServicesHandler_Stopped(object? sender, EventArgs e)
     {
     }
 
-    private bool? ShowBuildOpenWindow(AudioServicesBuilder build)
+    private async Task ShowBuildOpenWindow(AudioServicesBuilder build)
     {
-        // TODO: implement this
-
-        // BuildOpenWindow window = BuildOpenWindow.Current;
-        //
-        // //BuildOpenWindow window = new BuildOpenWindow(build);
-        // window.Build = build;
-        //
-        // return window.ShowDialog();
-        return true;
+        BuildOpenWindow window = new BuildOpenWindow(build);
+        await window.ShowDialog(this);
     }
 
     private object? PlaylistMenuItemVisCon_OnConvertEvent(object? value, Type targetType, object? parameter,
@@ -261,9 +262,13 @@ public partial class MainWindow : Window
         }
     }
 
-    private void BtnSettings_Click(object? sender, RoutedEventArgs e)
+    private async void BtnSettings_Click(object? sender, RoutedEventArgs e)
     {
-        throw new System.NotImplementedException();
+        if (await UpdateBuildConfig())
+        {
+            await audioServicesHandler.Stop();
+            audioServicesHandler.Start(servicesBuildConfig);
+        }
     }
 
     private void BtnAddPlaylist_Click(object? sender, RoutedEventArgs e)
