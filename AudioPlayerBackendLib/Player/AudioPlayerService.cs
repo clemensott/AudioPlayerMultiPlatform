@@ -26,6 +26,7 @@ namespace AudioPlayerBackend.Player
         private IList<Guid> playlistIds;
         private OrderType shuffle;
         private LoopType loop;
+        private double playbackRate;
         private SongRequest? request;
         private ICollection<Song> songs;
 
@@ -86,6 +87,7 @@ namespace AudioPlayerBackend.Player
                 loop = currentPlaylist.Loop;
                 request = currentPlaylist.CurrentSongRequest;
                 songs = currentPlaylist.Songs;
+                playbackRate = currentPlaylist.PlaybackRate;
             }
             else
             {
@@ -100,7 +102,9 @@ namespace AudioPlayerBackend.Player
                 Logs.Log("AudioPlayerService.ChangeCurrentPlaylist5");
                 await UpdateCurrentSong();
             }
-            Logs.Log("AudioPlayerService.ChangeCurrentPlaylist6");
+            Logs.Log("AudioPlayerService.ChangeCurrentPlaylist6", Player.PlaybackRate, playbackRate);
+
+            Player.PlaybackRate = playbackRate;
         }
 
         private async void Timer_Elapsed(object state)
@@ -300,6 +304,7 @@ namespace AudioPlayerBackend.Player
 
         private void OnPlaybackRateChanged(object sender, PlaylistChangeArgs<double> e)
         {
+            playbackRate = e.NewValue;
             Player.PlaybackRate = e.NewValue;
         }
 
@@ -358,6 +363,7 @@ namespace AudioPlayerBackend.Player
                         setSongRequest.Value.Duration, setSongRequest.Value.ContinuePlayback)
                     : null;
                 await Player.Set(requestSong);
+                Player.PlaybackRate = playbackRate;
             }
             else await Player.Set(null);
 
