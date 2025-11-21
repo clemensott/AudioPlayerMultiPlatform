@@ -25,7 +25,7 @@ public partial class BuildOpenWindow : Window
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
-        if (!e.IsProgrammatic) e.Cancel = true;
+        if (!e.IsProgrammatic) Builder.Cancel();
     }
 
     private async void OnLoaded(object? sender, RoutedEventArgs e)
