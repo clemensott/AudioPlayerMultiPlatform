@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:bld="using:AudioPlayerBackend.Build"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="AudioPlayerFrontendAvalonia.Views.BuildOpenWindow"
+        Width="500"
+        Height="300"
+        ShowInTaskbar="False"
+        CanResize="True"
+        Loaded="OnLoaded">
+
+    <Design.DataContext>
+        <bld:AudioServicesBuilder />
+    </Design.DataContext>
+
+    <Grid Margin="5" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*" x:DataType="bld:AudioServicesBuilder">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
+            <TextBlock Text="Opening Service:" FontSize="20" Margin="5,0" />
+            <TextBlock FontSize="18" VerticalAlignment="Center" Text="{Binding CommunicatorName}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top">
+            <ProgressBar IsIndeterminate="True" Height="20" Margin="30,5" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="Cancel" Width="100" Margin="5" Click="BtnCancel_Click" />
+                <Button Content="Settings" Width="100" Margin="5" Click="BtnOpeningSettings_Click" />
+                <Button Content="Exception" Width="100" Margin="5"
+                        IsVisible="{Binding Path=!CompleteToken.Exception}"
+                        Click="BtnException_Click" />
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock Grid.Row="2" HorizontalAlignment="Center" Margin="2" TextWrapping="Wrap"
+                   Text="{Binding Path=CompleteToken.Exception.Message}" />
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="3">
+            <TextBlock Text="State: " />
+            <TextBlock Text="{Binding State}" />
+        </StackPanel>
+    </Grid>
+</Window>

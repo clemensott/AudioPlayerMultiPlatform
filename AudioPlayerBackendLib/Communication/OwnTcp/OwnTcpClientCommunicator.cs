@@ -31,11 +31,9 @@ namespace AudioPlayerBackend.Communication.OwnTcp
             this.dispatcher = dispatcher;
         }
 
-        private static async Task<IPAddress> GetIpAddress(string serverAddress)
+        private static Task<IPAddress> GetIpAddress(string serverAddress)
         {
-            IPHostEntry entry = await Dns.GetHostEntryAsync(serverAddress);
-            return entry.AddressList.First(a => a.AddressFamily.HasFlag(AddressFamily.InterNetwork) &&
-                                                !a.AddressFamily.HasFlag(AddressFamily.InterNetworkV6));
+            throw new NotImplementedException();
         }
 
         public override async Task Start()

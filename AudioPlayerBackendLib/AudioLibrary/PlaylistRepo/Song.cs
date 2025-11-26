@@ -49,6 +49,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
             FullPath = fullPath;
         }
 
+        public Song WithIndex(int index)
+        {
+            return new Song(Id, index, Title, Artist, FullPath);
+        }
+
         public override bool Equals(object obj)
         {
             return obj is Song && Equals((Song)obj);

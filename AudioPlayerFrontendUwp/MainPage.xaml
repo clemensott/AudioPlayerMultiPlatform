@@ -160,7 +160,7 @@
                                 <MenuFlyout>
                                     <MenuFlyoutItem Text="Song Info" Icon="MusicInfo" Click="MfiSongInfo_Click"/>
                                     <MenuFlyoutItem Text="Delete File" Icon="Delete" Click="MfiDeleteFile_Click"
-                                                    Visibility="{Binding ElementName=sicIsClient,Path=Output,Converter={StaticResource visCon}}"/>
+                                                    Visibility="{Binding ElementName=sicIsClient,Path=Output,Converter={StaticResource hidCon}}"/>
                                 </MenuFlyout>
                             </FlyoutBase.AttachedFlyout>
                         </Grid>

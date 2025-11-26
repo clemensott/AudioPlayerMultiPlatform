@@ -10,6 +10,8 @@ namespace AudioPlayerBackend.ViewModels
     public interface IPlaylistViewModel : IAudioService, INotifyPropertyChanged
     {
         Guid? Id { get; }
+        
+        bool IsLoaded { get; }
 
         string Name { get; }
 
@@ -24,6 +26,10 @@ namespace AudioPlayerBackend.ViewModels
         Song? CurrentSong { get; }
 
         SongRequest? CurrentSongRequest { get; set; }
+        
+        TimeSpan? Position { get; }
+        
+        TimeSpan? Duration { get; }
 
         ICollection<Song> Songs { get; }
 

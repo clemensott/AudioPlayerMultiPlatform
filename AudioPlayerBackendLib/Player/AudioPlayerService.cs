@@ -26,6 +26,7 @@ namespace AudioPlayerBackend.Player
         private IList<Guid> playlistIds;
         private OrderType shuffle;
         private LoopType loop;
+        private double playbackRate;
         private SongRequest? request;
         private ICollection<Song> songs;
 
@@ -57,7 +58,8 @@ namespace AudioPlayerBackend.Player
             await ChangeCurrentPlaylist(library.CurrentPlaylistId);
             Logs.Log("AudioPlayerService.Start5");
 
-            await libraryRepo.SetVolume(Player.Volume);
+            Player.Volume = (float)library.Volume;
+            // await libraryRepo.SetVolume(Player.Volume);
             Logs.Log("AudioPlayerService.Start6");
         }
 
@@ -85,6 +87,7 @@ namespace AudioPlayerBackend.Player
                 loop = currentPlaylist.Loop;
                 request = currentPlaylist.CurrentSongRequest;
                 songs = currentPlaylist.Songs;
+                playbackRate = currentPlaylist.PlaybackRate;
             }
             else
             {
@@ -99,7 +102,9 @@ namespace AudioPlayerBackend.Player
                 Logs.Log("AudioPlayerService.ChangeCurrentPlaylist5");
                 await UpdateCurrentSong();
             }
-            Logs.Log("AudioPlayerService.ChangeCurrentPlaylist6");
+            Logs.Log("AudioPlayerService.ChangeCurrentPlaylist6", Player.PlaybackRate, playbackRate);
+
+            Player.PlaybackRate = playbackRate;
         }
 
         private async void Timer_Elapsed(object state)
@@ -299,6 +304,7 @@ namespace AudioPlayerBackend.Player
 
         private void OnPlaybackRateChanged(object sender, PlaylistChangeArgs<double> e)
         {
+            playbackRate = e.NewValue;
             Player.PlaybackRate = e.NewValue;
         }
 
@@ -347,7 +353,7 @@ namespace AudioPlayerBackend.Player
             isSetCurrentSongCount++;
             StopTimer();
 
-            if (currentPlaylistId.TryHasValue(out Guid playlistId))
+            if (currentPlaylistId.HasValue)
             {
                 SongRequest? setSongRequest = request;
                 Song? song = songs.FirstOrNull(s => s.Id == setSongRequest?.Id);
@@ -357,6 +363,7 @@ namespace AudioPlayerBackend.Player
                         setSongRequest.Value.Duration, setSongRequest.Value.ContinuePlayback)
                     : null;
                 await Player.Set(requestSong);
+                Player.PlaybackRate = playbackRate;
             }
             else await Player.Set(null);
 
@@ -430,12 +437,15 @@ namespace AudioPlayerBackend.Player
             Logs.Log("AudioPlayerService.Continue9");
         }
 
-        public async Task Dispose()
+        public Task Dispose()
         {
-            await Stop();
+            UnsubsribePlayer();
+            UnsubscribeLibraryRepo();
+            UnsubscribePlaylistsRepo();
 
             timer.Dispose();
             Player.Dispose();
+            return Task.CompletedTask;
         }
     }
 }

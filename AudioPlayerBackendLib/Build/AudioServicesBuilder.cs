@@ -60,6 +60,11 @@ namespace AudioPlayerBackend.Build
             }
         }
 
+        public AudioServicesBuilder()
+        {
+            
+        }
+
         public AudioServicesBuilder(AudioServicesBuildConfig config)
         {
             State = BuildState.Init;
