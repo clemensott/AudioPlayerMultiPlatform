@@ -10,6 +10,8 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/music.ico"
         Title="Audio Player"
+        Width="800"
+        Height="600"
         Loaded="Window_Loaded"
         KeyDown="Window_KeyDown"
         Closing="Window_Closing">
