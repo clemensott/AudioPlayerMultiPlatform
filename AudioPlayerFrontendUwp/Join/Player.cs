@@ -163,13 +163,15 @@ namespace AudioPlayerFrontend.Join
 
                 if (Source.HasValue && request.Song.FullPath == Source?.FullPath)
                 {
-                    if (!request.ContinuePlayback && request.Position != Position)
+                    if (!request.ContinuePlayback)
                     {
-                        player.PlaybackSession.Position = request.Position;
+                        if (request.Position != Position) player.PlaybackSession.Position = request.Position;
+
+                        ExecutePlayState();
                     }
+
                     setSourceCount++;
                     Source = request.Song;
-                    ExecutePlayState();
                     return;
                 }
                 release = false;
@@ -187,9 +189,9 @@ namespace AudioPlayerFrontend.Join
             try
             {
                 setRequest = request;
-                AudioPlayerBackend.Logs.Log("Player.Set5", request.Song.FullPath, request.ContinuePlayback, setSourceCount);
+                AudioPlayerBackend.Logs.Log("Player.Set10", request.Song.FullPath, request.ContinuePlayback, setSourceCount);
                 StorageFile file = await StorageFile.GetFileFromPathAsync(request.Song.FullPath);
-                AudioPlayerBackend.Logs.Log("Player.Set6", file.Path, setSourceCount);
+                AudioPlayerBackend.Logs.Log("Player.Set11", file.Path, setSourceCount);
                 player.Source = MediaSource.CreateFromStorageFile(file);
 
                 await SMTC.DisplayUpdater.CopyFromFileAsync(MediaPlaybackType.Music, file);
