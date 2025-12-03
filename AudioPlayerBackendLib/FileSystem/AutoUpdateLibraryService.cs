@@ -2,6 +2,7 @@
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.Extensions;
 using StdOttStandard;
+using StdOttStandard.Linq;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -76,7 +77,9 @@ namespace AudioPlayerBackend.FileSystem
                 }
 
                 library = await libraryRepo.GetLibrary();
-                foreach (PlaylistInfo playlistInfo in library.Playlists.GetSourcePlaylists())
+                // Check for updates in shuffled order to give all playlist the same chance to getting updated first.
+                // Because if service gets stopped during the update of one playlist tthe other playlists won't be updated.
+                foreach (PlaylistInfo playlistInfo in library.Playlists.GetSourcePlaylists().Shuffle())
                 {
                     if (isStopped) return;
 
