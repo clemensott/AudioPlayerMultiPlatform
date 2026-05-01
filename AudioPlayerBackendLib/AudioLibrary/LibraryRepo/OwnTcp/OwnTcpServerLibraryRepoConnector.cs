@@ -91,6 +91,12 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
                     await libraryRepo.SetFoldersLastUpdated(foldersLastUpdated);
                     return null;
 
+                case nameof(libraryRepo.SetNextPlaylistId):
+                    Guid playlistId = queue.DequeueGuid();
+                    bool forceChangeOfPlaylist = queue.DequeueBool();
+                    await libraryRepo.SetNextPlaylistId(playlistId, forceChangeOfPlaylist);
+                    return null;
+
                 default:
                     throw new NotSupportedException($"Received action is not supported: {subTopic}");
             }

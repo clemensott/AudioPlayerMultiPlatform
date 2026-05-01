@@ -23,7 +23,6 @@ namespace AudioPlayerBackend.Player
         private readonly Timer timer;
 
         private Guid? currentPlaylistId;
-        private IList<Guid> playlistIds;
         private OrderType shuffle;
         private LoopType loop;
         private double playbackRate;
@@ -51,7 +50,6 @@ namespace AudioPlayerBackend.Player
 
             Library library = await libraryRepo.GetLibrary();
             Logs.Log("AudioPlayerService.Start3");
-            playlistIds = library.Playlists.Select(p => p.Id).ToList();
 
             Player.PlayState = library.PlayState;
             Logs.Log("AudioPlayerService.Start4");
@@ -262,8 +260,6 @@ namespace AudioPlayerBackend.Player
 
         private void SubscribePlaylistsRepo()
         {
-            playlistsRepo.InsertedPlaylist += OnInsertedPlaylist;
-            playlistsRepo.RemovedPlaylist += OnRemovedPlaylist;
             playlistsRepo.ShuffleChanged += OnShuffleChanged;
             playlistsRepo.LoopChanged += OnLoopChanged;
             playlistsRepo.PlaybackRateChanged += OnPlaybackRateChanged;
@@ -273,23 +269,11 @@ namespace AudioPlayerBackend.Player
 
         private void UnsubscribePlaylistsRepo()
         {
-            playlistsRepo.InsertedPlaylist -= OnInsertedPlaylist;
-            playlistsRepo.RemovedPlaylist -= OnRemovedPlaylist;
             playlistsRepo.ShuffleChanged -= OnShuffleChanged;
             playlistsRepo.LoopChanged -= OnLoopChanged;
             playlistsRepo.PlaybackRateChanged -= OnPlaybackRateChanged;
             playlistsRepo.CurrentSongRequestChanged -= OnCurrentSongRequestChanged;
             playlistsRepo.SongsChanged -= OnSongsChanged;
-        }
-
-        private void OnInsertedPlaylist(object sender, InsertPlaylistArgs e)
-        {
-            playlistIds.Insert(e.Index ?? playlistIds.Count, e.Playlist.Id);
-        }
-
-        private void OnRemovedPlaylist(object sender, RemovePlaylistArgs e)
-        {
-            playlistIds.Remove(e.Id);
         }
 
         private void OnShuffleChanged(object sender, PlaylistChangeArgs<OrderType> e)
@@ -419,16 +403,13 @@ namespace AudioPlayerBackend.Player
                 if (loop == LoopType.Next)
                 {
                     Logs.Log("AudioPlayerService.Continue6");
-                    Guid newCurrentPlaylistId = playlistIds.Next(playlistId).next;
-                    await libraryRepo.SetCurrentPlaylistId(newCurrentPlaylistId);
+                    await libraryRepo.SetNextPlaylistId(playlistId,false);
                 }
                 else if (loop == LoopType.Stop)
                 {
                     Logs.Log("AudioPlayerService.Continue7");
                     await libraryRepo.SetPlayState(PlaybackState.Paused);
-
-                    Guid newCurrentPlaylistId = playlistIds.Next(playlistId).next;
-                    await libraryRepo.SetCurrentPlaylistId(newCurrentPlaylistId);
+                    await libraryRepo.SetNextPlaylistId(playlistId,false);
                 }
             }
 

@@ -19,5 +19,7 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo
 
         Task SetFoldersLastUpdated(DateTime? foldersLastUpdated);
         event EventHandler<AudioLibraryChangeArgs<DateTime?>> FoldersLastUpdatedChanged;
+
+        Task SetNextPlaylistId(Guid playlistId, bool forceChangeOfPlaylist);
     }
 }

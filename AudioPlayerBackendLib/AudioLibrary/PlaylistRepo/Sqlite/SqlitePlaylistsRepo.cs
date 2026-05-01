@@ -1,18 +1,20 @@
 ﻿using AudioPlayerBackend.AudioLibrary.Database.Sql;
 using AudioPlayerBackend.AudioLibrary.Database.Sql.Extensions;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
-using StdOttStandard;
 using StdOttStandard.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
 {
     internal class SqlitePlaylistsRepo : BaseSqlRepo, IPlaylistsRepo
     {
+        private ILibraryRepo libraryRepo;
+        
         public event EventHandler<PlaylistChangeArgs<string>> NameChanged;
         public event EventHandler<PlaylistChangeArgs<OrderType>> ShuffleChanged;
         public event EventHandler<PlaylistChangeArgs<LoopType>> LoopChanged;
@@ -25,8 +27,9 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         public event EventHandler<PlaylistChangeArgs<DateTime?>> FilesLastUpdatedChanged;
         public event EventHandler<PlaylistChangeArgs<DateTime?>> SongsLastUpdatedChanged;
 
-        public SqlitePlaylistsRepo(ISqlExecuteService sqlExecuteService) : base(sqlExecuteService)
+        public SqlitePlaylistsRepo(ISqlExecuteService sqlExecuteService, ILibraryRepo libraryRepo) : base(sqlExecuteService)
         {
+            this.libraryRepo = libraryRepo;
         }
 
         public override async Task Start()
@@ -361,7 +364,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             await sqlExecuteService.ExecuteNonQueryAsync(playlistSongsSql, playlistSongsParameters);
         }
 
-        private async Task DeleteUnuusedSongs()
+        private async Task DeleteUnusedSongs()
         {
             const string songsSql = @"
                 DELETE FROM songs
@@ -399,11 +402,12 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             await sqlExecuteService.ExecuteNonQueryAsync(playlistSql, playlistParameters);
         }
 
-        private async Task DeleteUnuusedFileMediaSourceRoots()
+        private async Task DeleteUnusedFileMediaSourceRoots()
         {
             const string fileMediaSourceRootSql = @"
-                DELETE FROM file_media_source_roots
-                WHERE id NOT IN (SELECT p.file_media_source_root_id FROM playlists p);
+                DELETE
+                FROM file_media_source_roots as fmsr
+                WHERE NOT EXISTS(SELECT * FROM playlists as p WHERE p.file_media_source_root_id = fmsr.id);
             ";
             await sqlExecuteService.ExecuteNonQueryAsync(fileMediaSourceRootSql);
         }
@@ -411,10 +415,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
         public async Task RemovePlaylist(Guid playlistId)
         {
             await DeletePlaylistSongs(playlistId);
-            await DeleteUnuusedSongs();
+            await DeleteUnusedSongs();
             await DeleteFileMediaSources(playlistId);
+            await libraryRepo.SetNextPlaylistId(playlistId, true);
             await DeletePlaylist(playlistId);
-            await DeleteUnuusedFileMediaSourceRoots();
+            await DeleteUnusedFileMediaSourceRoots();
 
             RemovedPlaylist?.Invoke(this, new RemovePlaylistArgs(playlistId));
         }
@@ -482,7 +487,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             await DeletePlaylistSongs(playlistId);
             if (songs?.Count > 0) await UpsertPlaylistSongs(playlistId, songs);
             await UpdatePlaylistValue("songs_count", playlistId, (long)(songs?.Count ?? 0));
-            await DeleteUnuusedSongs();
+            await DeleteUnusedSongs();
 
             SongsChanged?.Invoke(this, new PlaylistChangeArgs<ICollection<Song>>(playlistId, songs));
         }
@@ -537,7 +542,7 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.Sqlite
             }
 
             await UpdatePlaylistValue("file_media_source_root_id", playlistId, fileMediaSources?.Root.Id.ToString());
-            await DeleteUnuusedFileMediaSourceRoots();
+            await DeleteUnusedFileMediaSourceRoots();
 
             FileMedisSourcesChanged?.Invoke(this, new PlaylistChangeArgs<FileMediaSources>(playlistId, fileMediaSources));
         }

@@ -95,5 +95,13 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp
 
             FoldersLastUpdatedChanged?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
         }
+
+        public async Task SetNextPlaylistId(Guid playlistId, bool forceChangeOfPlaylist)
+        {
+            ByteQueue payload = new ByteQueue()
+                .Enqueue(playlistId)
+                .Enqueue(forceChangeOfPlaylist);
+            await SendAsync(nameof(SetNextPlaylistId), payload);
+        }
     }
 }

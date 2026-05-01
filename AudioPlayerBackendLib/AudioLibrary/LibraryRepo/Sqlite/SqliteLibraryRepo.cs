@@ -25,8 +25,8 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
 
         public override async Task Start()
         {
-            // IMPRTANT: this sql must run after the init sql in playlists repo
-            //           because this sql builds on the other
+            // IMPORTANT: this sql must run after the init sql in playlists repo
+            //            because this sql builds on the other
             const string sql = @"
                 CREATE TABLE IF NOT EXISTS libraries
                 (
@@ -123,6 +123,39 @@ namespace AudioPlayerBackend.AudioLibrary.LibraryRepo.Sqlite
         {
             await UpdateLibraryValue("folders_last_updated", foldersLastUpdated?.Ticks);
             FoldersLastUpdatedChanged?.Invoke(this, new AudioLibraryChangeArgs<DateTime?>(foldersLastUpdated));
+        }
+
+        public async Task SetNextPlaylistId(Guid playlistId, bool forceChangeOfPlaylist)
+        {
+            const string loadNextPlaylistIdSql = @"
+                SELECT src_playlist.id
+                FROM playlists as src_playlist
+                WHERE src_playlist.index_value in
+                      (SELECT (index_playlist.index_value + 1) % (SELECT count(*) FROM playlists) as 'next_index_value'
+                       FROM playlists as index_playlist
+                       WHERE index_playlist.id = @playlistId);
+            ";
+            KeyValuePair<string, object>[] loadNextPlaylistIdParameters = CreateParams("playlistId", playlistId.ToString());
+            string nextPlaylistIdText = await sqlExecuteService.ExecuteScalarAsync<string>(loadNextPlaylistIdSql, loadNextPlaylistIdParameters);
+            Guid? nextPlaylistId = nextPlaylistIdText == null ? (Guid?)null : Guid.Parse(nextPlaylistIdText);
+            if (nextPlaylistId == playlistId)
+            {
+                if (!forceChangeOfPlaylist) return;
+                nextPlaylistId = null;
+            }
+
+            const string updateCurrentPlaylistSql = @"
+                UPDATE libraries
+                SET current_playlist_id = @nextPlaylistId
+                WHERE current_playlist_id = @playlistId;
+            ";
+            KeyValuePair<string, object>[] parameters = CreateParams("playlistId", playlistId.ToString(), "nextPlaylistId", nextPlaylistId?.ToString());
+
+            int changedRows = await sqlExecuteService.ExecuteNonQueryAsync(updateCurrentPlaylistSql, parameters);
+            if (changedRows > 0)
+            {
+                CurrentPlaylistIdChanged?.Invoke(this, new AudioLibraryChangeArgs<Guid?>(nextPlaylistId));
+            }
         }
     }
 }
