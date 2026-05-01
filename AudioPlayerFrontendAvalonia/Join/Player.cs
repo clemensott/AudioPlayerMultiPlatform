@@ -197,8 +197,9 @@ public class Player : IPlayer
         }
     }
 
-    private void OnPositionChanged(object? sender, MediaPlayerPositionChangedEventArgs e)
+    private async void OnPositionChanged(object? sender, MediaPlayerPositionChangedEventArgs e)
     {
+        await Task.Delay(50);
         // Sometimes player doesn't stop if .Pause() is called. This is workaround to fix this.
         if (PlayState == PlaybackState.Paused)
         {
