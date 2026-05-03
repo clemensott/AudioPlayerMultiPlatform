@@ -59,12 +59,12 @@ public partial class SettingsWindow : Window
         lbxDefaultUpdateRoots.SelectedIndex = -1;
     }
 
-    private void DefaultUpdateRootControl_ValueChanged(object? sender, FileMediaSourceRootInfo e)
+    private void DefaultUpdateRootControl_ValueChanged(object? sender, FileMediaSourceRoot e)
     {
         int index = lbxDefaultUpdateRoots.ItemsSource.ToNotNull().IndexOf(((StyledElement)sender!).DataContext);
         if (index < 0) return;
 
-        FileMediaSourceRootInfo[] newDefaultRoots = ServiceConfig.DefaultUpdateRoots.ToArray();
+        FileMediaSourceRoot[] newDefaultRoots = ServiceConfig.DefaultUpdateRoots.ToArray();
         newDefaultRoots[index] = e;
         ServiceConfig.WithDefaultUpdateRoots(newDefaultRoots);
     }
@@ -72,7 +72,7 @@ public partial class SettingsWindow : Window
     private void BtnAddDefaultUpdateRoot_Click(object? sender, RoutedEventArgs e)
     {
         ServiceConfig.WithDefaultUpdateRoots(ServiceConfig.DefaultUpdateRoots.ToNotNull()
-            .ConcatParams(new FileMediaSourceRootInfo()).ToArray());
+            .ConcatParams(new FileMediaSourceRoot()).ToArray());
         lbxDefaultUpdateRoots.ItemsSource = ServiceConfig.DefaultUpdateRoots;
     }
 

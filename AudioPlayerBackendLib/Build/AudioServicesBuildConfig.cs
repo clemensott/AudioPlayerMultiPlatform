@@ -22,7 +22,7 @@ namespace AudioPlayerBackend.Build
         private int? clientPort;
         private string searchKey, serverAddress, dataFilePath;
         private float? volume;
-        private FileMediaSourceRootInfo[] defaultUpdateRoots;
+        private FileMediaSourceRoot[] defaultUpdateRoots;
         private ServiceCollection additionalServices;
 
         public bool BuildStandalone { get; private set; }
@@ -151,7 +151,7 @@ namespace AudioPlayerBackend.Build
             }
         }
 
-        public FileMediaSourceRootInfo[] DefaultUpdateRoots
+        public FileMediaSourceRoot[] DefaultUpdateRoots
         {
             get => defaultUpdateRoots;
             set
@@ -227,7 +227,7 @@ namespace AudioPlayerBackend.Build
             if (result.HasValidOptionParseds(autoUpdateOpt)) WithAutoUpdate();
             if (result.HasValidOptionParseds(defaultUpdateRootsOpt))
             {
-                IEnumerable<FileMediaSourceRootInfo> defaultRoots = result.GetValidOptionParseds(defaultUpdateRootsOpt).Select(option =>
+                IEnumerable<FileMediaSourceRoot> defaultRoots = result.GetValidOptionParseds(defaultUpdateRootsOpt).Select(option =>
                 {
                     FileMediaSourceRootUpdateType updateType = option.Values[0].Split('+')
                         .Select(raw => (FileMediaSourceRootUpdateType)Enum.Parse(typeof(FileMediaSourceRootUpdateType), raw, true))
@@ -237,7 +237,7 @@ namespace AudioPlayerBackend.Build
                     string path = option.Values[2];
                     string name = Path.GetFileName(path);
 
-                    return new FileMediaSourceRootInfo(updateType, name, pathType, path);
+                    return new FileMediaSourceRoot(Guid.NewGuid(),updateType, name, pathType, path);
                 });
                 WithDefaultUpdateRoots(defaultRoots.ToArray());
             }
@@ -356,7 +356,7 @@ namespace AudioPlayerBackend.Build
             return this;
         }
 
-        public AudioServicesBuildConfig WithDefaultUpdateRoots(FileMediaSourceRootInfo[] roots)
+        public AudioServicesBuildConfig WithDefaultUpdateRoots(FileMediaSourceRoot[] roots)
         {
             DefaultUpdateRoots = roots;
 

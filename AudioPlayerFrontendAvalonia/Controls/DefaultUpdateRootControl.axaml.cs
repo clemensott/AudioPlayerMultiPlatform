@@ -14,7 +14,7 @@ public partial class DefaultUpdateRootControl : UserControl
     
     private bool isUpdatingValue;
 
-    public event EventHandler<FileMediaSourceRootInfo>? ValueChanged;
+    public event EventHandler<FileMediaSourceRoot>? ValueChanged;
 
     public DefaultUpdateRootControl()
     {
@@ -39,9 +39,9 @@ public partial class DefaultUpdateRootControl : UserControl
         {
             isUpdatingValue = true;
 
-            FileMediaSourceRootInfo value = DataContext is FileMediaSourceRootInfo
-                ? (FileMediaSourceRootInfo)DataContext
-                : new FileMediaSourceRootInfo();
+            FileMediaSourceRoot value = DataContext is FileMediaSourceRoot
+                ? (FileMediaSourceRoot)DataContext
+                : new FileMediaSourceRoot();
 
             tbxName.Text = value.Name;
             cbxWithSubFolders.IsChecked = value.UpdateType.HasFlag(FileMediaSourceRootUpdateType.Folders);
@@ -92,7 +92,8 @@ public partial class DefaultUpdateRootControl : UserControl
                 path = tbxPath.Text;
             }
 
-            ValueChanged?.Invoke(this, new FileMediaSourceRootInfo(
+            ValueChanged?.Invoke(this, new FileMediaSourceRoot(
+                Guid.NewGuid(),
                 cbxWithSubFolders.IsChecked == true
                     ? FileMediaSourceRootUpdateType.Songs | FileMediaSourceRootUpdateType.Folders
                     : FileMediaSourceRootUpdateType.Songs,

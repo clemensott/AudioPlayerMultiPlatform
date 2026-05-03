@@ -19,7 +19,7 @@ namespace AudioPlayerBackend.FileSystem
         private static readonly Random ran = new Random();
 
         private readonly SongEqualityComparer songEqualityComparer;
-        private readonly FileMediaSourceRootInfo[] defaultUpdateRoots;
+        private readonly FileMediaSourceRoot[] defaultUpdateRoots;
         private readonly ILibraryRepo libraryRepo;
         private readonly IPlaylistsRepo playlistsRepo;
 
@@ -88,7 +88,7 @@ namespace AudioPlayerBackend.FileSystem
 
         public async Task UpdatePlaylistsInternal()
         {
-            FileMediaSourceRootInfo[] defaultUpdateRoots = this.defaultUpdateRoots.ToNotNull().ToArray();
+            FileMediaSourceRoot[] defaultUpdateRoots = this.defaultUpdateRoots.ToNotNull().ToArray();
             ICollection<FileMediaSourceRoot> roots = await playlistsRepo.GetFileMediaSourceRoots();
 
             foreach (FileMediaSourceRoot root in roots)
@@ -98,9 +98,9 @@ namespace AudioPlayerBackend.FileSystem
                 defaultUpdateRoots = defaultUpdateRoots.Where(r => !EqualRoot(r, root)).ToArray();
             }
 
-            foreach (FileMediaSourceRootInfo defaultRoot in defaultUpdateRoots)
+            foreach (FileMediaSourceRoot defaultRoot in defaultUpdateRoots)
             {
-                await CheckRootForNewPlaylists(defaultRoot.CreateRoot());
+                await CheckRootForNewPlaylists(defaultRoot);
             }
         }
 
@@ -111,9 +111,10 @@ namespace AudioPlayerBackend.FileSystem
             await CheckRootForNewPlaylists(allSources, root, withSubFolders);
         }
 
-        private static bool EqualRoot(FileMediaSourceRootInfo defaultRoot, FileMediaSourceRoot root)
+        private static bool EqualRoot(FileMediaSourceRoot defaultRoot, FileMediaSourceRoot root)
         {
-            return defaultRoot.UpdateType == root.UpdateType
+            return defaultRoot.Id == root.Id 
+                || defaultRoot.UpdateType == root.UpdateType
                 && defaultRoot.PathType == root.PathType
                 && defaultRoot.Path == root.Path;
         }
