@@ -44,7 +44,11 @@ public class Player : IPlayer
         }
     }
 
-    public double PlaybackRate { get; set; }
+    public double PlaybackRate
+    {
+        get => mediaPlayer.Rate;
+        set => mediaPlayer.SetRate((float)value);
+    }
 
     public TimeSpan Position => TimeSpan.FromMilliseconds(mediaPlayer.Position * mediaPlayer.Length);
 
