@@ -181,8 +181,9 @@
                 </ListBox>
 
                 <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,5">
-                    <Button Margin="5,0" Content="Settings" Width="100" Click="BtnSettings_Click" />
-                    <Button Content="+" Width="30" Click="BtnAddPlaylist_Click" />
+                    <Button Margin="3,0" Content="Settings" Width="80" Click="BtnSettings_Click" />
+                    <Button Margin="3,0" Content="Roots" Width="55" Click="BtnViewFileMediaSourceRoots_Click" />
+                    <Button Margin="3,0" Content="+" Width="30" Click="BtnAddPlaylist_Click" />
                 </StackPanel>
             </Grid>
         </Grid>

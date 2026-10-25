@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
@@ -7,6 +8,7 @@ using AudioPlayerBackend;
 using AudioPlayerBackend.AudioLibrary;
 using AudioPlayerBackend.AudioLibrary.LibraryRepo;
 using AudioPlayerBackend.AudioLibrary.PlaylistRepo;
+using AudioPlayerBackend.AudioLibrary.PlaylistRepo.MediaSource;
 using AudioPlayerBackend.Build;
 using AudioPlayerBackend.FileSystem;
 using AudioPlayerBackend.Player;
@@ -269,6 +271,16 @@ public partial class MainWindow : Window
             await audioServicesHandler.Stop();
             audioServicesHandler.Start(servicesBuildConfig);
         }
+    }
+
+    private async void BtnViewFileMediaSourceRoots_Click(object? sender, RoutedEventArgs e)
+    {
+        if (audioServices == null) return;
+
+        IPlaylistsRepo? playlistsRepo = audioServices.GetPlaylistsRepo();
+        ICollection<FileMediaSourceRootWithPlaylists> roots = await playlistsRepo.GetFileMediaSourceRootsWithPlaylists();
+        FileMediaSourceRootsWindow window = new FileMediaSourceRootsWindow(roots, playlistsRepo);
+        await window.ShowDialog(this);
     }
 
     private void BtnAddPlaylist_Click(object? sender, RoutedEventArgs e)

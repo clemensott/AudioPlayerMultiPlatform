@@ -200,6 +200,11 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
                     return new ByteQueue()
                         .Enqueue(roots);
 
+                case nameof(playlistsRepo.GetFileMediaSourceRootsWithPlaylists):
+                    ICollection<FileMediaSourceRoot> rootsWithPlaylists = await playlistsRepo.GetFileMediaSourceRoots();
+                    return new ByteQueue()
+                        .Enqueue(rootsWithPlaylists);
+
                 case nameof(playlistsRepo.GetFileMediaSourcesOfRoot):
                     Guid rootId = queue.DequeueGuid();
                     ICollection<FileMediaSource> sources = await playlistsRepo.GetFileMediaSourcesOfRoot(rootId);

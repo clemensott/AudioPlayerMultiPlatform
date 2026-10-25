@@ -35,6 +35,8 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo
 
         Task<ICollection<FileMediaSourceRoot>> GetFileMediaSourceRoots();
         
+        Task<ICollection<FileMediaSourceRootWithPlaylists>> GetFileMediaSourceRootsWithPlaylists();
+        
         Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId);
 
         Task SetFileMedisSources(Guid id, FileMediaSources fileMediaSources);

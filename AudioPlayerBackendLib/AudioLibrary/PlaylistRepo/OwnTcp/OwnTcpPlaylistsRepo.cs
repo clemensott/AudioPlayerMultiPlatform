@@ -211,6 +211,13 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp
             return result.DequeueFileMediaSourceRoots();
         }
 
+        public async Task<ICollection<FileMediaSourceRootWithPlaylists>> GetFileMediaSourceRootsWithPlaylists()
+        {
+            ByteQueue result = await SendAsync(nameof(GetFileMediaSourceRootsWithPlaylists), null);
+
+            return result.DequeueFileMediaSourceRootsWithPlaylists();
+        }
+
         public async Task<ICollection<FileMediaSource>> GetFileMediaSourcesOfRoot(Guid rootId)
         {
             ByteQueue payload = new ByteQueue()

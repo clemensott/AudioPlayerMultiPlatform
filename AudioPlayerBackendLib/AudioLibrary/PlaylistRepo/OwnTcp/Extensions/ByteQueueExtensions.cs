@@ -2,6 +2,8 @@
 using AudioPlayerBackend.Communication.Base;
 using System;
 using System.Collections.Generic;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo;
+using AudioPlayerBackend.AudioLibrary.LibraryRepo.OwnTcp.Extensions;
 
 namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
 {
@@ -157,6 +159,39 @@ namespace AudioPlayerBackend.AudioLibrary.PlaylistRepo.OwnTcp.Extensions
         public static ICollection<FileMediaSourceRoot> DequeueFileMediaSourceRoots(this ByteQueue queue)
         {
             return queue.DequeueArray(queue.DequeueFileMediaSourceRoot);
+        }
+
+        public static ByteQueue Enqueue(this ByteQueue queue, FileMediaSourceRootWithPlaylists fileMediaSourceRoot)
+        {
+            return queue
+                .Enqueue(fileMediaSourceRoot.Id)
+                .Enqueue(fileMediaSourceRoot.UpdateType)
+                .Enqueue(fileMediaSourceRoot.Name)
+                .Enqueue(fileMediaSourceRoot.PathType)
+                .Enqueue(fileMediaSourceRoot.Path)
+                .Enqueue(fileMediaSourceRoot.Playlists);
+        }
+
+        public static FileMediaSourceRootWithPlaylists DequeueFileMediaSourceRootWithPlaylists(this ByteQueue queue)
+        {
+            Guid id = queue.DequeueGuid();
+            FileMediaSourceRootUpdateType updateType = queue.DequeueFileMediaSourceRootUpdateType();
+            string name = queue.DequeueString();
+            FileMediaSourceRootPathType pathType = queue.DequeueFileMediaSourceRootPathType();
+            string path = queue.DequeueString();
+            PlaylistInfo[] playlists = queue.DequeuePlaylistInfos();
+
+            return new FileMediaSourceRootWithPlaylists(id, updateType, name, pathType, path, playlists);
+        }
+
+        public static ByteQueue Enqueue(this ByteQueue queue, ICollection<FileMediaSourceRootWithPlaylists> fileMediaSourceRoots)
+        {
+            return queue.Enqueue(fileMediaSourceRoots, queue.Enqueue);
+        }
+
+        public static ICollection<FileMediaSourceRootWithPlaylists> DequeueFileMediaSourceRootsWithPlaylists(this ByteQueue queue)
+        {
+            return queue.DequeueArray(queue.DequeueFileMediaSourceRootWithPlaylists);
         }
 
         public static ByteQueue Enqueue(this ByteQueue queue, FileMediaSource fileMediaSource)
